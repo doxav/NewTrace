@@ -158,6 +158,9 @@ class TraceMemoryDB:
                 return False
             # nested path look‑ups, e.g. "metadata.agent"
             for key, expected in additional_filters.items():
+                # Special case: if filtering by parent_goal_id in metadata but record has it as top-level
+                if key == "metadata.parent_goal_id" and rec.get("parent_goal_id") == expected:
+                    continue  # This filter matches, continue to check other filters
                 path = key.split(".")
                 cur = rec
                 for p in path:
@@ -165,7 +168,12 @@ class TraceMemoryDB:
                         cur = cur[p]
                     else:
                         return False
-                if cur != expected:
+                # Enhanced filtering logic for list membership
+                if isinstance(expected, list) and isinstance(cur, list):
+                    # Check if expected is a subset of cur (all items in expected are in cur)
+                    if not all(item in cur for item in expected):
+                        return False
+                elif cur != expected:
                     return False
             return True
 
@@ -202,7 +210,9 @@ class TraceMemoryDB:
             for c in candidates
             if isinstance(c.get("scores"), dict) and score_name in c["scores"]
         ]
-        return max(scored, default=(None, None))[1]
+        if not scored: return None
+        best = max(scored, key=lambda x: x[0])
+        return best[1] if best[0] is not None else None
 
     # ------------------------------------------------------------------ #
     #  Ranked / stochastic / diversity helpers  (R13 & R18)
@@ -356,6 +366,22 @@ class UnifiedVectorDBConfig:
         else:
             emb = self.embedding_function
 
+        # If no embedding function is provided, create a simple one
+        if emb is None:
+            # Create a simple embedding function that returns a fixed-size vector
+            class SimpleEmbedding:
+                def embed_query(self, text):
+                    # Simple hash-based embedding for testing
+                    import hashlib
+                    h = hashlib.md5(text.encode()).hexdigest()
+                    # Convert to a vector of floats
+                    return [float(int(h[i:i+2], 16))/255.0 for i in range(0, 32, 2)]
+                    
+                def embed_documents(self, texts):
+                    return [self.embed_query(text) for text in texts]
+            
+            emb = SimpleEmbedding()
+
         self.__class__.common_vectordb_embedding_function = emb
 
     def set_unique_collection_id(self, unique_id):
@@ -478,13 +504,8 @@ class UnifiedVectorDB:
 
     def get_unique_id(self):
         """Generate or retrieve a unique ID for the collection."""
-        from utils.human_llm import HumanLLMConfig
-        if HumanLLMConfig().common_vectordb_config.unique_collection_id is None:
-            HumanLLMConfig().common_vectordb_config.unique_collection_id = os.environ.get(
-                'unique_id',
-                f"{socket.gethostname()}_{datetime.now().strftime('%d-%m-%Y-%H-%M-%S')}"
-            )
-        self.config.unique_collection_id =  HumanLLMConfig().common_vectordb_config.unique_collection_id
+        if self.config.unique_collection_id is None:
+            self.config.unique_collection_id = os.environ.get('unique_id', f"{socket.gethostname()}_{datetime.now().strftime('%d-%m-%Y-%H-%M-%S')}")
         return self.config.unique_collection_id
 
     def check_db(self):
