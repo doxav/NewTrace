@@ -857,10 +857,6 @@ def test_d1_backward_compatibility_and_basic_logging(memdb, llm):
 
     # Set goal_id for testing
     opt._current_goal_id = "G1"
-    # # make a single optimization step
-    # upd = opt.step(goal_id="G1", step_id=1, parameters={"x": 0.})
-    # # now push back feedback
-    # opt.backward(response=upd, feedback="looks good")
 
     # Simulate the optimization workflow - Create a simple node to backward from
     target = node("result", name="output")

@@ -14,6 +14,13 @@ import socket
 class TraceMemoryDB:
     """Structured, cache‑backed logging layer on top of UnifiedVectorDB."""
 
+    # ─── Set of allowed data‐keys ─────────────────────────────
+    CANONICAL_DATA_TYPES = {
+        "goal","prompt","code","diff_patch","graph_nodes","score","scores",
+        "feedback","error","validation_result","hypothesis","observation",
+        "checkpoint","context","variables"
+    }
+
     # --------------------------------------------------------------------- #
     # Construction / hot‑cache                                              #
     # --------------------------------------------------------------------- #
@@ -129,7 +136,8 @@ class TraceMemoryDB:
         *,
         goal_id: Optional[str] = None,
         step_id: Optional[int] = None,
-        data_payload: Optional[str] = None,
+        data_type: Optional[str] = None,
+        data_payload: Optional[str] = None,  # alias for backward-compat
         candidate_id: Optional[int] = None,
         entry_id: Optional[str] = None,
         parent_goal_id: Optional[str] = None,
@@ -137,8 +145,9 @@ class TraceMemoryDB:
         additional_filters: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Retrieve matching records.  Falls back to in‑memory store only.
+        Retrieve matching records.  You can filter by any top-level field, or by `data_type` (requires that key exist in rec["data"]).
         """
+        if data_payload is not None: data_type = data_payload
         additional_filters = dict(additional_filters or {})  # mutable copy
         # Semantic vector query (ignored in pure in‑memory mode)
         additional_filters.pop("embedding_query", None)
@@ -150,7 +159,7 @@ class TraceMemoryDB:
                 return False
             if step_id is not None and rec["step_id"] != step_id:
                 return False
-            if data_payload is not None and rec["data_payload"] != data_payload:
+            if data_type is not None and rec.get("data_payload") != data_type:
                 return False
             if candidate_id is not None and rec["candidate_id"] != candidate_id:
                 return False
@@ -180,7 +189,6 @@ class TraceMemoryDB:
         hits = [copy.deepcopy(r) for r in reversed(self._store) if _match(r)]
         # honour random‑sampling after initial filtering
         if rand_n is not None and hits:
-            import random
             hits = random.sample(hits, min(int(rand_n), len(hits)))
 
         if entry_id is not None:
@@ -191,28 +199,32 @@ class TraceMemoryDB:
         return hits[: last_n] if last_n else hits
 
     # ..................................................................... #
-    def get_last_n(self, goal_id: str, data_payload: str, n: int) -> List[Dict]:
+    def get_last_n(self, goal_id: str, data_type: str, n: int) -> List[Dict]:
         """Return newest N records for that goal / payload."""
-        return self.get_data(goal_id=goal_id, data_payload=data_payload,
-                             last_n=n)
+        return self.get_data(goal_id=goal_id, data_type=data_type, last_n=n)
 
     def get_candidates(self, goal_id: str, step_id: int) -> List[Dict]:
         """All candidate entries at this (goal, step)."""
         return self.get_data(goal_id=goal_id, step_id=step_id)
 
-    def get_best_candidate(
-        self, goal_id: str, step_id: int, score_name: str = "score"
-    ) -> Optional[Dict]:
+    def get_best_candidate(self, goal_id: str, step_id: int, score_name: str = "score") -> Optional[Dict]:
         """Return candidate with highest <score_name> inside .scores."""
         candidates = self.get_candidates(goal_id, step_id)
-        scored = [
-            (c["scores"].get(score_name), c)
-            for c in candidates
-            if isinstance(c.get("scores"), dict) and score_name in c["scores"]
-        ]
-        if not scored: return None
-        best = max(scored, key=lambda x: x[0])
-        return best[1] if best[0] is not None else None
+        scored: List[tuple[float,dict]] = []
+        for c in candidates:
+            # look for either data["scores"] or data["score"]
+            d = c["data"]
+            val = None
+            if isinstance(d.get("scores"), dict):
+                val = d["scores"].get(score_name)
+            elif isinstance(d.get("score"), (int, float)):
+                val = d["score"]
+            if isinstance(val, (int, float)):
+                scored.append((val, c))
+        if not scored:
+            return None
+        _, best_rec = max(scored, key=lambda x: x[0])
+        return best_rec
 
     # ------------------------------------------------------------------ #
     #  Ranked / stochastic / diversity helpers  (R13 & R18)
@@ -222,11 +234,16 @@ class TraceMemoryDB:
     ) -> List[Dict]:
         """Return Top‑N candidates by descending <score_name> (R13)."""
         cands = self.get_candidates(goal_id, step_id)
-        scored = [
-            (c["scores"].get(score_name), c)
-            for c in cands
-            if isinstance(c.get("scores"), dict) and score_name in c["scores"]
-        ]
+        scored: List[tuple[float,dict]] = []
+        for c in cands:
+            d = c["data"]
+            val = None
+            if isinstance(d.get("scores"), dict):
+                val = d["scores"].get(score_name)
+            elif isinstance(d.get("score"), (int, float)):
+                val = d["score"]
+            if isinstance(val, (int, float)):
+                scored.append((val, c))
         scored.sort(key=lambda t: t[0], reverse=True)
         return [copy.deepcopy(c) for _, c in scored[:n]]
 
