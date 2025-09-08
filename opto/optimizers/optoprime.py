@@ -1,4 +1,4 @@
-from typing import Any, List, Dict, Union, Tuple
+from typing import Any, List, Dict, Union, Tuple, Optional
 from dataclasses import dataclass, asdict
 from textwrap import dedent, indent
 import warnings
@@ -6,6 +6,7 @@ import json
 import re
 import copy
 import pickle
+import ast
 from opto.trace.nodes import ParameterNode, Node, MessageNode
 from opto.trace.propagators import TraceGraph, GraphPropagator
 from opto.trace.propagators.propagators import Propagator
@@ -534,21 +535,81 @@ class OptoPrime(Optimizer):
         self, suggestion: Dict[str, Any]
     ) -> Dict[ParameterNode, Any]:
         """Convert the suggestion in text into the right data type."""
-        # TODO: might need some automatic type conversion
-        update_dict = {}
-        for node in self.parameters:
-            if node.trainable and node.py_name in suggestion:
+        try:
+            # optional black formatter (graceful fallback if black isn't installed)
+            from black import format_str, FileMode
+            def _format_code(s: str) -> str:
                 try:
-                    formatted_suggestion = suggestion[node.py_name]
-                    update_dict[node] = type(node.data)(formatted_suggestion)
-                except (ValueError, KeyError) as e:
-                    # catch error due to suggestion missing the key or wrong data type
-                    if self.ignore_extraction_error:
-                        warnings.warn(
-                            f"Cannot convert the suggestion '{suggestion[node.py_name]}' for {node.py_name} to the right data type"
-                        )
-                    else:
-                        raise e
+                    return format_str(s, mode=FileMode())
+                except Exception:
+                    return s # if black fails for some reason, return original string
+            _has_black = True
+
+        except Exception:
+            _has_black = False
+            def _format_code(s: str) -> str:
+                return s
+
+        def _find_key(node_name: str, sugg: Dict[str, Any]) -> Optional[str]:
+            """ Return the key in *suggestion* that corresponds to *node_name*.
+            - Exact match first.
+            - Otherwise allow the `__code8`  ↔ `__code:8` alias by
+            stripping one optional ':' between the stem and trailing digits.
+            """
+            if node_name in sugg:
+                return node_name
+
+            # Normalise once:  "__code:8" -> "__code8"
+            norm = re.sub(r":(?=\d+$)", "", node_name)
+            for k in sugg:
+                if re.sub(r":(?=\d+$)", "", k) == norm:
+                    return k
+            return None
+
+        update_dict: Dict[ParameterNode, Any] = {}
+
+        for node in self.parameters:
+            if not node.trainable:
+                continue
+
+            key = _find_key(node.py_name, suggestion)
+            if key is None:
+                continue
+
+            try:
+                raw_val = suggestion[key]
+                # Re-format code strings for consistency (only attempt if it looks like code)
+                if isinstance(raw_val, str) and "def" in raw_val:
+                    raw_val = _format_code(raw_val)
+                # If node.data is None, avoid calling type(None)(...) — just use the raw value.
+                if getattr(node, "data", None) is None:
+                    converted = raw_val
+                else:
+                    target_type = type(node.data)
+                    # Best-effort literal conversion for strings where appropriate
+                    if isinstance(raw_val, str) and target_type is not str:
+                        try:
+                            literal = ast.literal_eval(raw_val)
+                            raw_val = literal
+                        except Exception:
+                            # leave raw_val unchanged if literal_eval fails
+                            pass
+
+                    # Try to convert; if conversion fails, fall back to original raw_val
+                    try:
+                        converted = target_type(raw_val)
+                    except Exception:
+                        converted = raw_val
+                update_dict[node] = converted
+
+            except (ValueError, KeyError, TypeError) as e:
+                if self.ignore_extraction_error:
+                    warnings.warn(
+                        f"Cannot convert the suggestion '{suggestion.get(key, '<missing>')}' for {node.py_name}: {e}"
+                    )
+                else:
+                    raise e
+
         return update_dict
 
     def extract_llm_suggestion(self, response: str):
@@ -559,7 +620,8 @@ class OptoPrime(Optimizer):
         attempt_n = 0
         while attempt_n < 2:
             try:
-                suggestion = json.loads(response)[suggestion_tag]
+                json_extracted = json.loads(response)
+                suggestion = json_extracted.get(suggestion_tag, json_extracted)
                 break
             except json.JSONDecodeError:
                 # Remove things outside the brackets
@@ -571,7 +633,7 @@ class OptoPrime(Optimizer):
                 attempt_n += 1
 
         if not isinstance(suggestion, dict):
-            suggestion = {}
+            suggestion = json_extracted if isinstance(json_extracted, dict) else {}
 
         if len(suggestion) == 0:
             # we try to extract key/value separately and return it as a dictionary
