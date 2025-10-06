@@ -32,7 +32,8 @@ jobs:
     - name: Install vLLM and Models
       run: |
         python -m pip install --upgrade pip
-        pip install "vllm" openai
+        pip install --upgrade "torch>=2.3,<3" --index-url https://download.pytorch.org/whl/cpu
+        pip install "vllm>=0.5.4" openai
 
         pip install -U "huggingface_hub[cli]"
         #huggingface-cli download distilbert/distilgpt2
@@ -42,8 +43,14 @@ jobs:
     # 3) Launch vLLM OpenAI-compatible server (4K context)
     - name: Start vLLM server
       run: |
+        # Choose device: use CPU if no NVIDIA GPU is detected
+        if command -v nvidia-smi >/dev/null 2>&1; then
+          DEVICE_FLAG=""
+        else
+          DEVICE_FLAG="--device cpu"
+        fi
         # Start vLLM in background (single-line to avoid backslash issues)
-        nohup python -m vllm.entrypoints.openai.api_server --model $MODEL_ID --port 23333 --max-model-len 4000 > vllm.log 2>&1 &
+        nohup python -m vllm.entrypoints.openai.api_server --model $MODEL_ID --port 23333 --max-model-len 4000 $DEVICE_FLAG > vllm.log 2>&1 &
         # small initial sleep so process can initialize
         sleep 5
         # Probe the server for up to ~2 minutes (60 * 2s)
