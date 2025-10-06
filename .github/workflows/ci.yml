@@ -32,16 +32,29 @@ jobs:
     - name: Start LMDeploy server
       run: |
         #        nohup lmdeploy serve api_server internlm/internlm3-8b-instruct-awq \
-        nohup lmdeploy serve api_server distilgpt2 \
-        --server-port 23333 \
-          --session-len 4000 \
-          > lmdeploy.log 2>&1 &
-        # wait for server to be ready
-        for i in {1..60}; do
-          curl -fsS http://127.0.0.1:23333/v1/models && break
+        # Start LMDeploy in background (single-line to avoid backslash issues)
+        nohup lmdeploy serve api_server distilgpt2 --server-port 23333 --session-len 4000 > lmdeploy.log 2>&1 &
+        # small initial sleep so process can initialize
+        sleep 5
+        # Probe the server for up to ~2 minutes (60 * 2s)
+        up=false
+        for i in $(seq 1 60); do
+          if curl -fsS http://127.0.0.1:23333/v1/models >/dev/null 2>&1; then
+            up=true
+            break
+          fi
           sleep 2
         done
-        echo "LMDeploy server is up"
+        if [ "$up" = "true" ]; then
+          echo "LMDeploy server is up"
+        else
+          echo "LMDeploy failed to start - dumping lmdeploy.log for debugging"
+          sed -n '1,200p' lmdeploy.log || true
+          # also show last lines
+          echo "----- lmdeploy.log tail -----"
+          tail -n 200 lmdeploy.log || true
+          exit 1
+        fi
 
     # 4) (Optional) Show LMDeploy server logs on failure
     - name: Print LMDeploy logs on failure
