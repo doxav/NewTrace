@@ -33,7 +33,7 @@ jobs:
       run: |
         nohup lmdeploy serve api_server internlm/internlm3-8b-instruct-awq \
           --server-port 23333 \
-          --session-len 4000 \
+          --session-len 1000 \
           > lmdeploy.log 2>&1 &
         # wait for server to be ready
         for i in {1..60}; do
