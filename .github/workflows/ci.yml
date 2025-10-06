@@ -13,7 +13,9 @@ jobs:
     env:
       #MODEL_ID: "internlm/internlm3-8b-instruct-awq"
       #MODEL_ID: "distilbert/distilgpt2"
-      MODEL_ID: "microsoft/Phi-4-mini-instruct"
+      #MODEL_ID: "microsoft/Phi-4-mini-flash-reasoning"
+      MODEL_ID: "internlm/internlm2_5-1_8b-chat"
+      #MODEL_ID: "microsoft/Phi-4-mini-instruct"
 
     steps:
     - name: Checkout code
