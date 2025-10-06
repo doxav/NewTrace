@@ -10,6 +10,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    env:
+      #MODEL_ID: "internlm/internlm3-8b-instruct-awq"
+      #MODEL_ID: "distilbert/distilgpt2"
+      MODEL_ID: "microsoft/Phi-4-mini-instruct"
 
     steps:
     - name: Checkout code
@@ -20,7 +24,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/huggingface
-        key: hf-internlm3-8b-awq-v1
+        key: hf-${{ env.MODEL_ID.replace('/', '-') }}
 
     # 2) Install LMDeploy (OpenAI-compatible API server)
     - name: Install LMDeploy and Models
@@ -31,14 +35,13 @@ jobs:
         pip install -U "huggingface_hub[cli]"
         #huggingface-cli download distilbert/distilgpt2
         #huggingface-cli download internlm/internlm3-8b-instruct-awq
-        huggingface-cli download microsoft/Phi-4-mini-instruct
+        huggingface-cli download $MODEL_ID
 
     # 3) Launch LMDeploy OpenAI-compatible server (4K context)
     - name: Start LMDeploy server
       run: |
-        #        nohup lmdeploy serve api_server internlm/internlm3-8b-instruct-awq \
         # Start LMDeploy in background (single-line to avoid backslash issues)
-        nohup lmdeploy serve api_server microsoft/Phi-4-mini-instruct --server-port 23333 --session-len 4000 > lmdeploy.log 2>&1 &
+        nohup lmdeploy serve api_server $MODEL_ID --server-port 23333 --session-len 4000 > lmdeploy.log 2>&1 &
         # small initial sleep so process can initialize
         sleep 5
         # Probe the server for up to ~2 minutes (60 * 2s)
@@ -79,7 +82,7 @@ jobs:
       run: |
         echo "OPENAI_API_KEY=lmdeploy" >> $GITHUB_ENV
         echo "OPENAI_API_BASE=http://127.0.0.1:23333/v1" >> $GITHUB_ENV
-        echo "TRACE_LITELLM_MODEL=openai/internlm/internlm3-8b-instruct-awq" >> $GITHUB_ENV
+        echo "TRACE_LITELLM_MODEL=openai/${MODEL_ID}" >> $GITHUB_ENV
 
     # 7) Run all Trace unit tests
     - name: Run unit tests
