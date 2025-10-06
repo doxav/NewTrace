@@ -10,13 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     env:
-      #MODEL_ID: "internlm/internlm3-8b-instruct-awq"
-      #MODEL_ID: "distilbert/distilgpt2"
-      #MODEL_ID: "microsoft/Phi-4-mini-flash-reasoning"
-      #MODEL_ID: "internlm/internlm2_5-1_8b-chat"
-      #MODEL_ID: "microsoft/Phi-4-mini-instruct"
-      #MODEL_ID: "phi4-mini:3.8b"
-      MODEL_ID: "phi4-mini-reasoning:3.8b"
+      #HF for vLLM or LMDeploy: "internlm/internlm3-8b-instruct-awq" "distilbert/distilgpt2" "microsoft/Phi-4-mini-flash-reasoning" "microsoft/Phi-4-mini-instruct"
+      #MODEL_ID: "interns1:mini-q8_0"
+      #MODEL_ID: "phi4-mini-reasoning:3.8b"
+      MODEL_ID: "phi4-mini:3.8b"
       
     steps:
     - name: Checkout code
