@@ -5,7 +5,6 @@ on:
     branches: [ main, dev, ci-multi, CI, experimental ]
   pull_request:
     branches: [ main, dev, ci-multi, CI, experimental ]
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -14,71 +13,47 @@ jobs:
       #MODEL_ID: "internlm/internlm3-8b-instruct-awq"
       #MODEL_ID: "distilbert/distilgpt2"
       #MODEL_ID: "microsoft/Phi-4-mini-flash-reasoning"
-      MODEL_ID: "internlm/internlm2_5-1_8b-chat"
+      #MODEL_ID: "internlm/internlm2_5-1_8b-chat"
       #MODEL_ID: "microsoft/Phi-4-mini-instruct"
-
+      MODEL_ID: "phi4-mini:3.8b"
+      
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
   
-    # 1) Restore cached HuggingFace model data (vLLM pulls from HF)
-    - name: Restore HF cache
+    # 1) Restore any cached Ollama data (~2 GB)
+    - name: Restore Ollama cache
       uses: actions/cache@v4
       with:
-        path: ~/.cache/huggingface
-        key: hf-${{ env.MODEL_ID }}
+        path: ~/.ollama
+        key: ollama-${{ env.MODEL_ID }}
 
-    # 2) Install vLLM (OpenAI-compatible API server)
-    - name: Install vLLM and Models
+    # 2) Install Ollama
+    - name: Install Ollama
       run: |
-        python -m pip install --upgrade pip
-        pip install --upgrade "torch>=2.3,<3" --index-url https://download.pytorch.org/whl/cpu
-        pip install "vllm>=0.5.4" openai
+        curl -fsSL https://ollama.com/install.sh | sh
 
-        pip install -U "huggingface_hub[cli]"
-        #huggingface-cli download distilbert/distilgpt2
-        #huggingface-cli download internlm/internlm3-8b-instruct-awq
-        huggingface-cli download $MODEL_ID
-
-    # 3) Launch vLLM OpenAI-compatible server (4K context)
-    - name: Start vLLM server
+    # 3) Drop-in override to bump context window to 4k tokens
+    - name: Configure Ollama for 4K context
       run: |
-        # Choose device: use CPU if no NVIDIA GPU is detected
-        if command -v nvidia-smi >/dev/null 2>&1; then
-          DEVICE_FLAG=""
-        else
-          DEVICE_FLAG="--device cpu"
-        fi
-        # Start vLLM in background (single-line to avoid backslash issues)
-        nohup python -m vllm.entrypoints.openai.api_server --model $MODEL_ID --port 23333 --max-model-len 4000 $DEVICE_FLAG > vllm.log 2>&1 &
-        # small initial sleep so process can initialize
-        sleep 5
-        # Probe the server for up to ~2 minutes (60 * 2s)
-        up=false
-        for i in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:23333/v1/models >/dev/null 2>&1; then
-            up=true
-            break
-          fi
-          sleep 2
-        done
-        if [ "$up" = "true" ]; then
-          echo "vLLM server is up"
-        else
-          echo "vLLM failed to start - dumping vllm.log for debugging"
-          sed -n '1,200p' vllm.log || true
-          # also show last lines
-          echo "----- vllm.log tail -----"
-          tail -n 200 vllm.log || true
-          exit 1
-        fi
+        sudo mkdir -p /etc/systemd/system/ollama.service.d
+        sudo tee /etc/systemd/system/ollama.service.d/override.conf << 'EOF'
+        [Service]
+        ExecStart=
+        ExecStart=/usr/local/bin/ollama serve --num_ctx 4000
+        EOF
+        sudo systemctl daemon-reload
 
-    # 4) (Optional) Show vLLM server logs on failure
-    - name: Print vLLM logs on failure
-      if: ${{ failure() }}
-      run: cat vllm.log
+    # 4) Enable & start the systemd-managed Ollama daemon
+    - name: Enable & start Ollama
+      run: |
+        sudo systemctl enable --now ollama
 
-    # 5) Set up Python & install dependencies
+    # 5) Pull the model (uses cache if present)
+    - name: Pull $MODEL_ID model
+      run: ollama pull $MODEL_ID
+
+    # 6) Set up Python & install dependencies
     - uses: actions/setup-python@v5
       with: { python-version: "3.9" }
     - name: Install Python deps
@@ -86,18 +61,18 @@ jobs:
         pip install -e .
         pip install pytest datasets numpy
 
-    # 6) Point LiteLLM/OpenAI to our local vLLM server
+    # 7) Point LiteLLM/OpenAI to our local Ollama server
     - name: Configure LLM env
       run: |
-        echo "OPENAI_API_KEY=localserver" >> $GITHUB_ENV
-        echo "OPENAI_API_BASE=http://127.0.0.1:23333/v1" >> $GITHUB_ENV
+        echo "OPENAI_API_KEY=ollama"             >> $GITHUB_ENV
+        echo "OPENAI_API_BASE=http://localhost:11434/v1" >> $GITHUB_ENV
         echo "TRACE_LITELLM_MODEL=openai/${MODEL_ID}" >> $GITHUB_ENV
 
-    # 7) Run all Trace unit tests
+    # 8) Run all Trace unit tests
     - name: Run unit tests
       run: pytest tests/unit_tests/
 
-    # 8) Run basic tests for each optimizer (some may be skipped/xfail for CI-sized models)
+    # 9) Run basic tests for each optimizer (some will fail due to the small LLM model chosen for free GitHub CI)
     - name: Run optimizers test suite
       run: pytest tests/llm_optimizers_tests/test_optimizer.py || true 
       continue-on-error: true
