@@ -28,6 +28,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install "lmdeploy[serve]" openai
 
+        pip install -U "huggingface_hub[cli]"
+        huggingface-cli download distilbert/distilgpt2
+        huggingface-cli download internlm/internlm3-8b-instruct-awq
+
     # 3) Launch LMDeploy OpenAI-compatible server (4K context)
     - name: Start LMDeploy server
       run: |
