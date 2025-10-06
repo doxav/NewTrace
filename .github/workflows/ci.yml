@@ -23,21 +23,22 @@ jobs:
         key: hf-internlm3-8b-awq-v1
 
     # 2) Install LMDeploy (OpenAI-compatible API server)
-    - name: Install LMDeploy
+    - name: Install LMDeploy and Models
       run: |
         python -m pip install --upgrade pip
         pip install "lmdeploy[serve]" openai
 
         pip install -U "huggingface_hub[cli]"
-        huggingface-cli download distilbert/distilgpt2
-        huggingface-cli download internlm/internlm3-8b-instruct-awq
+        #huggingface-cli download distilbert/distilgpt2
+        #huggingface-cli download internlm/internlm3-8b-instruct-awq
+        huggingface-cli download microsoft/Phi-4-mini-instruct
 
     # 3) Launch LMDeploy OpenAI-compatible server (4K context)
     - name: Start LMDeploy server
       run: |
         #        nohup lmdeploy serve api_server internlm/internlm3-8b-instruct-awq \
         # Start LMDeploy in background (single-line to avoid backslash issues)
-        nohup lmdeploy serve api_server distilgpt2 --server-port 23333 --session-len 4000 > lmdeploy.log 2>&1 &
+        nohup lmdeploy serve api_server microsoft/Phi-4-mini-instruct --server-port 23333 --session-len 4000 > lmdeploy.log 2>&1 &
         # small initial sleep so process can initialize
         sleep 5
         # Probe the server for up to ~2 minutes (60 * 2s)
