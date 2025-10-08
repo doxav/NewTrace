@@ -10,29 +10,36 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     env:
-      #HF for vLLM or LMDeploy: "internlm/internlm3-8b-instruct-awq" "distilbert/distilgpt2" "microsoft/Phi-4-mini-flash-reasoning" "microsoft/Phi-4-mini-instruct"
-      #MODEL_ID: "interns1:mini-q8_0"
-      #MODEL_ID: "phi4-mini-reasoning:3.8b"
+      # Toggle this to "true" to use Ollama (phi4-mini), or "false" to use LMDeploy (internlm 4-bit)
+      USE_OLLAMA: "false"
+
+      # Ollama model (unchanged)
       MODEL_ID: "phi4-mini:3.8b"
-      
+
+      # LMDeploy model (lmdeploy-quantized AWQ model on HF; no offline conversion required)
+      LMDEPLOY_MODEL_ID: "internlm/internlm2_5-7b-chat-4bit"
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-  
-    # 1) Restore any cached Ollama data (~2 GB)
+
+    # --------------------
+    # Ollama path (unchanged; runs only if USE_OLLAMA == "true")
+    # --------------------
     - name: Restore Ollama cache
+      if: ${{ env.USE_OLLAMA == 'true' }}
       uses: actions/cache@v4
       with:
         path: ~/.ollama
         key: ollama-${{ env.MODEL_ID }}
 
-    # 2) Install Ollama
     - name: Install Ollama
+      if: ${{ env.USE_OLLAMA == 'true' }}
       run: |
         curl -fsSL https://ollama.com/install.sh | sh
 
-    # 3) Drop-in override to bump context window to 4k tokens
     - name: Configure Ollama for 4K context
+      if: ${{ env.USE_OLLAMA == 'true' }}
       run: |
         sudo mkdir -p /etc/systemd/system/ollama.service.d
         sudo tee /etc/systemd/system/ollama.service.d/override.conf << 'EOF'
@@ -42,35 +49,92 @@ jobs:
         EOF
         sudo systemctl daemon-reload
 
-    # 4) Enable & start the systemd-managed Ollama daemon
     - name: Enable & start Ollama
+      if: ${{ env.USE_OLLAMA == 'true' }}
       run: |
         sudo systemctl enable --now ollama
 
-    # 5) Pull the model (uses cache if present)
-    - name: Pull $MODEL_ID model
+    - name: Pull $MODEL_ID model (Ollama)
+      if: ${{ env.USE_OLLAMA == 'true' }}
       run: ollama pull $MODEL_ID
 
-    # 6) Set up Python & install dependencies
+    # --------------------
+    # LMDeploy path (runs only if USE_OLLAMA != "true")
+    # --------------------
+    - name: Restore HF cache for LMDeploy
+      if: ${{ env.USE_OLLAMA != 'true' }}
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/hf_cache
+        key: hf-${{ env.LMDEPLOY_MODEL_ID }}
+
+    - name: Install LMDeploy (no HF full download) 
+      if: ${{ env.USE_OLLAMA != 'true' }}
+      env:
+        TRANSFORMERS_CACHE: ${{ runner.temp }}/hf_cache
+        HF_HOME: ${{ runner.temp }}/hf_cache
+      run: |
+        python -m pip install --upgrade pip
+        pip install "lmdeploy[serve]" openai
+        # We *do not* forcibly download the HF model here — LMDeploy will load the lmdeploy-quantized AWQ repo directly,
+        # avoiding a separate full-model download + local conversion step.
+
+    - name: Start LMDeploy server (AWQ / no offline conversion)
+      if: ${{ env.USE_OLLAMA != 'true' }}
+      env:
+        TRANSFORMERS_CACHE: ${{ runner.temp }}/hf_cache
+        HF_HOME: ${{ runner.temp }}/hf_cache
+      run: |
+        nohup lmdeploy serve api_server ${LMDEPLOY_MODEL_ID} --server-port 23333 --session-len 4000 --model-format awq > lmdeploy.log 2>&1 &
+        sleep 5
+        up=false
+        for i in $(seq 1 60); do
+          if curl -fsS http://127.0.0.1:23333/v1/models >/dev/null 2>&1; then
+            up=true
+            break
+          fi
+          sleep 2
+        done
+        if [ "$up" = "true" ]; then
+          echo "LMDeploy server is up"
+        else
+          echo "LMDeploy failed to start - dumping lmdeploy.log for debugging"
+          sed -n '1,200p' lmdeploy.log || true
+          echo "----- lmdeploy.log tail -----"
+          tail -n 200 lmdeploy.log || true
+          exit 1
+        fi
+
+    - name: Print LMDeploy logs on failure
+      if: ${{ failure() && env.USE_OLLAMA != 'true' }}
+      run: cat lmdeploy.log
+
+    # --------------------
+    # Common test setup (runs after either server path)
+    # --------------------
     - uses: actions/setup-python@v5
       with: { python-version: "3.9" }
+
     - name: Install Python deps
       run: |
         pip install -e .
         pip install pytest datasets numpy
 
-    # 7) Point LiteLLM/OpenAI to our local Ollama server
-    - name: Configure LLM env
+    - name: Configure LLM env (selects Ollama vs LMDeploy at runtime)
       run: |
-        echo "OPENAI_API_KEY=ollama"             >> $GITHUB_ENV
-        echo "OPENAI_API_BASE=http://localhost:11434/v1" >> $GITHUB_ENV
-        echo "TRACE_LITELLM_MODEL=openai/${MODEL_ID}" >> $GITHUB_ENV
+        if [ "${USE_OLLAMA}" = "true" ]; then
+          echo "OPENAI_API_KEY=ollama"             >> $GITHUB_ENV
+          echo "OPENAI_API_BASE=http://localhost:11434/v1" >> $GITHUB_ENV
+          echo "TRACE_LITELLM_MODEL=openai/${MODEL_ID}" >> $GITHUB_ENV
+        else
+          echo "OPENAI_API_KEY=lmdeploy" >> $GITHUB_ENV
+          echo "OPENAI_API_BASE=http://127.0.0.1:23333/v1" >> $GITHUB_ENV
+          echo "TRACE_LITELLM_MODEL=openai/${LMDEPLOY_MODEL_ID}" >> $GITHUB_ENV
+        fi
 
-    # 8) Run all Trace unit tests
     - name: Run unit tests
       run: pytest tests/unit_tests/
 
-    # 9) Run basic tests for each optimizer (some will fail due to the small LLM model chosen for free GitHub CI)
     - name: Run optimizers test suite
       run: pytest tests/llm_optimizers_tests/test_optimizer.py || true 
       continue-on-error: true
