@@ -27,11 +27,46 @@ import hashlib
 from typing import Any, Callable, List, Tuple
 
 try:
-    from trace_bench.registry import load_task_module, discover_tasks
+    from trace_bench.registry import load_task_module, discover_tasks  # noqa: F401
 
     HAVE_TB = True
 except Exception:
     HAVE_TB = False
+
+# Trace-Bench's PUBLIC surface is a CLI/UI/config benchmarking framework, NOT a
+# uniform ``load_task_module(task_id) -> {program, evaluate}`` API. So we do NOT
+# assume that shape. Instead, real integration goes through an explicitly
+# registered adapter; if none is registered we fall back to the deterministic
+# STUB (and runmode prints which mode is active). This removes the "optimistic
+# real-mode that silently breaks or silently stubs" trap.
+_TASK_ADAPTER = None
+
+
+def register_task_adapter(adapter) -> None:
+    """Register the real Trace-Bench bridge.
+
+    ``adapter`` must provide:
+        adapter.run_task(cfg, task_id) -> (score: float, feedback: str)
+    and optionally:
+        adapter.agent_fn(task_id)      -> callable(artifact, x) -> output
+    Once registered, ``make_inner_runner`` / ``make_task_runner`` / ``make_agent_fn``
+    use it instead of the stub. This is the supported path to real benchmarks.
+    """
+    global _TASK_ADAPTER
+    _TASK_ADAPTER = adapter
+
+
+def using_real_tasks() -> bool:
+    return _TASK_ADAPTER is not None
+
+
+def real_mode_status() -> str:
+    if _TASK_ADAPTER is not None:
+        return "REAL (registered Trace-Bench adapter)"
+    if HAVE_TB:
+        return ("trace_bench is importable but NO adapter is registered; using STUB. "
+                "Call register_task_adapter(...) for real benchmarks.")
+    return "STUB (trace_bench not installed)"
 
 
 def list_tasks(suite: str = None) -> List[str]:
@@ -49,15 +84,8 @@ def list_tasks(suite: str = None) -> List[str]:
 
 def make_agent_fn(task_id: str) -> Callable:
     """O0 agent: consume the trainable artifact, produce an answer for input x."""
-    if HAVE_TB:
-        mod = load_task_module(task_id, "benchmarks")
-        # Trace-Bench task modules expose a callable agent/program; adapt it.
-        program = getattr(mod, "program", None) or getattr(mod, "agent", None)
-
-        def agent_fn(artifact, x):
-            return program(artifact.data if hasattr(artifact, "data") else artifact, x)
-
-        return agent_fn
+    if _TASK_ADAPTER is not None and hasattr(_TASK_ADAPTER, "agent_fn"):
+        return _TASK_ADAPTER.agent_fn(task_id)
 
     # STUB: artifact quality ~ how many "good" keywords it contains.
     def agent_fn(artifact, x):
@@ -97,47 +125,55 @@ def _stub_family_profile(task_id: str):
     }
 
 
+def _stub_run_task(cfg, task_id: str) -> Tuple[float, str]:
+    """Deterministic, family-sensitive analytic score for one (cfg, task)."""
+    profile = _stub_family_profile(task_id)
+    s = 0.5
+    s += profile["batch"].get(
+        cfg.batch_design, -0.03 if cfg.batch_design == "random" else 0.0
+    )
+    s += 0.08 if 3 <= cfg.batch_size <= 8 else -0.05
+    s += profile["memory"].get(cfg.memory_policy, 0.0)
+    s += profile["trace"].get(cfg.trace_type, 0.0)
+    s += 0.04 if cfg.optimizer in ("OptoPrime", "OptoPrimeMulti") else 0.0
+    s += profile["trainer"].get(cfg.trainer, 0.0)
+    h = int(hashlib.md5(f"{task_id}|{cfg.to_dict()}".encode()).hexdigest(), 16) % 1000
+    s += (h / 1000 - 0.5) * 0.06
+    s = max(0.0, min(1.0, s))
+    fb = (
+        f"[stub:{task_id}] design={cfg.batch_design}/bs={cfg.batch_size}/"
+        f"mem={cfg.memory_policy}/trainer={cfg.trainer}. "
+        f"{profile['note']}. "
+        f"{'good batch design' if cfg.batch_design!='random' else 'try a non-random batch design'}; "
+        f"{'memory helps here' if cfg.memory_policy in ('typed','retrieval') else 'enable typed or retrieval memory'}."
+    )
+    return s, fb
+
+
+def make_task_runner() -> Callable:
+    """Return ``run(cfg, task_id) -> (score, feedback)`` used by O1/O2/O3.
+
+    Uses the registered real adapter if present; otherwise the deterministic
+    stub. One contract for every recursion level (DRY).
+    """
+    def run(cfg, task_id: str) -> Tuple[float, str]:
+        if _TASK_ADAPTER is not None:
+            return _TASK_ADAPTER.run_task(cfg, task_id)
+        return _stub_run_task(cfg, task_id)
+
+    return run
+
+
 def make_inner_runner(task_id: str, n_tasks: int = 6) -> Callable:
-    """O1 inner runner: run an inner optimization with `cfg` on `family`,
-    return (held_out_score, feedback). Real mode delegates to Trace-Bench's
-    evaluator; stub mode scores the config analytically + with noise so that
-    *better designs win on average* (the property recursion must exploit)."""
-    if HAVE_TB:
-        mod = load_task_module(task_id, "benchmarks")
-        evaluate = getattr(mod, "evaluate", None) or getattr(mod, "run_eval", None)
+    """O1 inner runner bound to one task: ``inner_runner(cfg, family) -> (score, fb)``.
 
-        def inner_runner(cfg, family):
-            res = evaluate(cfg.to_dict(), n_tasks=n_tasks)
-            score = float(res.get("score", res) if isinstance(res, dict) else res)
-            fb = res.get("feedback", "") if isinstance(res, dict) else ""
-            return score, f"[{task_id}] {fb}"
-
-        return inner_runner
+    Delegates to the shared task runner (adapter or stub), so real-mode is opt-in
+    via ``register_task_adapter`` and never silently assumes a wrong public API.
+    """
+    run = make_task_runner()
 
     def inner_runner(cfg, family):
-        # Analytic stub: family-sensitive design preferences (see _stub_family_profile).
-        profile = _stub_family_profile(task_id)
-        s = 0.5
-        s += profile["batch"].get(
-            cfg.batch_design, -0.03 if cfg.batch_design == "random" else 0.0
-        )
-        s += 0.08 if 3 <= cfg.batch_size <= 8 else -0.05
-        s += profile["memory"].get(cfg.memory_policy, 0.0)
-        s += profile["trace"].get(cfg.trace_type, 0.0)
-        s += 0.04 if cfg.optimizer in ("OptoPrime", "OptoPrimeMulti") else 0.0
-        s += profile["trainer"].get(cfg.trainer, 0.0)
-        # deterministic per-TASK+config noise: reproducible but family-sensitive
-        h = int(hashlib.md5(f"{task_id}|{cfg.to_dict()}".encode()).hexdigest(), 16) % 1000
-        s += (h / 1000 - 0.5) * 0.06
-        s = max(0.0, min(1.0, s))
-        fb = (
-            f"[stub:{task_id}] design={cfg.batch_design}/bs={cfg.batch_size}/"
-            f"mem={cfg.memory_policy}/trainer={cfg.trainer}. "
-            f"{profile['note']}. "
-            f"{'good batch design' if cfg.batch_design!='random' else 'try a non-random batch design'}; "
-            f"{'memory helps here' if cfg.memory_policy in ('typed','retrieval') else 'enable typed or retrieval memory'}."
-        )
-        return s, fb
+        return run(cfg, task_id)
 
     return inner_runner
 

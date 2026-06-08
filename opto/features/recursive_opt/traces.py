@@ -114,6 +114,42 @@ class MultiTraceSession:
             self._sysmon.__exit__(*exc)
         return False
 
+    def record_internal(self, node, max_nodes: int = 100) -> "MultiTraceSession":
+        """Normalize the internal Trace graph feeding ``node`` into TGJ nodes/edges.
+
+        Until now the internal trace was only a label in ``sources``; this walks
+        the node's parents and adds real ``{id,label,value}`` nodes and ``{src,dst}``
+        edges, so multi-trace records actually include the internal view (not just
+        OTEL/Sysmon). Best-effort and version-tolerant.
+        """
+        seen = set()
+
+        def visit(n):
+            if n is None or id(n) in seen or len(self._tgj["nodes"]) >= max_nodes:
+                return
+            seen.add(id(n))
+            nid = str(id(n))
+            label = getattr(n, "name", None) or type(n).__name__
+            val = repr(getattr(n, "data", n))
+            self._tgj["nodes"].append(
+                {"id": nid, "label": label, "value": val[:80], "source": "internal"}
+            )
+            parents = getattr(n, "parents", None) or getattr(n, "_inputs", None) or []
+            try:
+                parents = list(parents.values()) if isinstance(parents, dict) else list(parents)
+            except Exception:
+                parents = []
+            for p in parents:
+                self._tgj["edges"].append({"src": str(id(p)), "dst": nid, "source": "internal"})
+                visit(p)
+
+        try:
+            visit(node)
+        except Exception as e:  # never break the optimization loop on tracing
+            import warnings
+            warnings.warn(f"internal-trace normalization failed: {e!r}", RuntimeWarning)
+        return self
+
     def to_tgj(self) -> Dict[str, Any]:
         """Merge enabled backends into one Trace-Graph-JSON feedback object."""
         if not HAVE_PR73:

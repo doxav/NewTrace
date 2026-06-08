@@ -1,137 +1,128 @@
 """
-EXAMPLE D — LEARN A/B/C ACROSS SEVERAL TRACE-BENCH FAMILIES (the full stack)
-============================================================================
-GOAL (section D): use SEVERAL Trace-Bench problems to learn the A/B/C choices
-per problem FAMILY, then INDUCE a transferable prior that holds across families.
-This is the "create priors for families of problems" objective and the highest
-recursion level we exercise.
+EXAMPLE D — TRAINABLE O2 / O3 RECURSION ACROSS TRACE-BENCH FAMILIES
+==================================================================
+GOAL (section D): learn the A/B/C choices PER family (O2) and induce a
+TRANSFERABLE prior validated on HELD-OUT families (O3) — as genuine *trainable
+trace.Module levels*, not manual Python loops / majority vote.
 
-THE RECURSION STACK USED HERE
------------------------------
-    O0  task artifact            optimized inside ``make_inner_runner`` (per task)
-    O1  MetaLevel                learns the A/B/C config for ONE family
-                                 (averaged over that family's tasks)
-    O2  pick best O1 config per family
-    O3  induce a CROSS-FAMILY prior: any choice that wins in >= 2 families is
-        promoted to a transferable default
+WHAT CHANGED vs the earlier version
+-----------------------------------
+Previously O2 was a `max()` loop and O3 a majority vote (a static review flagged
+this as "manual, not recursively trainable"). Now:
 
-So O1 answers "what setup is best for THIS family?", O2 compares families, and
-O3 extracts "what setup tends to be best ACROSS families?". That O3 prior is
-exactly what warm-starts a brand-new, unseen family (zero/one-shot transfer).
+    O2  FamilyPolicyLevel   — ONE trainable node = a per-family config policy.
+                              forward() runs every family and returns mean score
+                              + a per-family breakdown naming the weakest family.
+    O3  PriorInductionLevel — ONE trainable node = a single shared config, scored
+                              ONLY on HELD-OUT families (true transfer objective).
 
-WHY THIS IS WORTH RUNNING
--------------------------
-The March-2026 "hidden choices" result is that there is NO universal default for
-starting artifact / horizon / batch size — the best choice is task-dependent.
-This example MEASURES that: if the same config wins everywhere, you have found a
-genuine prior; if not, the per-family configs tell you the design is
-family-specific (which is itself the scientific result).
+Both are optimized by the SAME machinery as O0/O1 (an LLM optimizer rewrites the
+node from the feedback). Offline we drive them with a few candidate proposals to
+show the score is climbable; `--live` uses the real optimizer.
+
+MEMORY (M2): every policy/prior is written to the artifact-lineage store, so you
+can reconstruct the initial->final chain with scores (printed at the end).
 
 TRACE-BENCH FAMILIES (2 families x 2 tasks):
     combinatorial : llm4ad:online_bin_packing_local , llm4ad:circle_packing
     qa_reasoning  : hf:GSM8K , internal:multiobjective_bbeh
 
-INTERPRETING THE OUTPUT
------------------------
-* "best A/B/C setup for family X" : the config (batch design / memory / trainer /
-  trace type) that scored highest averaged over that family's tasks.
-* "induced cross-family prior"    : the subset of choices that were best in BOTH
-  families -> a transferable default. An EMPTY prior is a valid, informative
-  result: it means the families need different setups (no universal recipe).
-* "memory"                        : how many episodes were recorded and which
-  per-family priors MemoryLite promoted (support >= 3 episodes).
-
 HOW TO RUN
 ----------
-    PYTHONPATH=/path/to/OpenTrace python example_D_cross_family.py
+    PYTHONPATH=/path/to/NewTrace python examples/recursive_opt_example_D_cross_family.py
+    OPENAI_API_KEY=... PYTHONPATH=... python examples/...D....py --live
 """
-
-from collections import defaultdict
+import os, sys
 
 from opto.features.recursive_opt import (
-    LevelConfig,
-    MetaLevel,
-    RecursiveGuide,
-    MemoryLite,
+    FamilyPolicyLevel, PriorInductionLevel, RecursiveGuide, MemoryLite,
 )
-from opto.features.recursive_opt.tracebench import make_inner_runner
+from opto.features.recursive_opt.tracebench import make_task_runner
+from opto.features.recursive_opt.runmode import resolve_live, mode_banner
 
 FAMILIES = {
     "combinatorial": ["llm4ad:online_bin_packing_local", "llm4ad:circle_packing"],
     "qa_reasoning": ["hf:GSM8K", "internal:multiobjective_bbeh"],
 }
 
-# The A/B/C search space the O1 level explores (kept small for stable search).
-# Each row mixes section-A choices (batch/memory/trainer) with a B choice (trace).
-SEARCH = [
-    dict(
-        batch_design="failure_balanced",
-        memory_policy="typed",
-        trainer="BeamsearchAlgorithm",
-        trace_type="hybrid",
-    ),  # A.2/A.4/A.7 + B.5
-    dict(
-        batch_design="curriculum",
-        memory_policy="retrieval",
-        trainer="UCBSearchAlgorithm",
-        trace_type="otel",
-    ),  # A.2/A.4/A.7 + B.4
-    dict(
-        batch_design="random",
-        memory_policy="none",
-        trainer="MinibatchAlgorithm",
-        trace_type="internal",
-    ),  # weak baseline
+# Candidate per-family policies the OFFLINE driver tries (live: the LLM writes these).
+POLICY_CANDIDATES = [
+    # uniform weak baseline
+    ("combinatorial => batch_design=random, memory_policy=none, trainer=MinibatchAlgorithm, trace_type=internal\n"
+     "qa_reasoning => batch_design=random, memory_policy=none, trainer=MinibatchAlgorithm, trace_type=internal"),
+    # family-tuned (should win: each family gets its preferred setup)
+    ("combinatorial => batch_design=failure_balanced, memory_policy=typed, trainer=BeamsearchAlgorithm, trace_type=hybrid\n"
+     "qa_reasoning => batch_design=curriculum, memory_policy=retrieval, trainer=UCBSearchAlgorithm, trace_type=otel"),
+]
+
+PRIOR_CANDIDATES = [
+    dict(batch_design="failure_balanced", memory_policy="typed", trainer="BeamsearchAlgorithm", trace_type="hybrid"),
+    dict(batch_design="curriculum", memory_policy="retrieval", trainer="UCBSearchAlgorithm", trace_type="otel"),
 ]
 
 
-def optimize_family(family_name, tasks, mem):
-    """O1+O2: find the A/B/C config that maximizes the mean score over `tasks`."""
+def run_offline(mem):
+    run_task = make_task_runner()
     guide = RecursiveGuide()
-    results = []
-    for cand in SEARCH:
-        base = LevelConfig(**cand)
-        scores = []
-        for task in tasks:
-            level = MetaLevel(
-                cfg=base,
-                inner_runner=make_inner_runner(task),
-                memory=mem,
-                trainable_fields=tuple(cand.keys()),
-            )
-            out = level.forward(task)  # run inner optimization (O0->O1)
-            s, _ = guide(task, out, None)
-            scores.append(s)
-        results.append((sum(scores) / len(scores), cand))
-    return max(results, key=lambda r: r[0])  # best config for this family
+
+    # ---- O2: trainable per-family policy ---------------------------------- #
+    print("O2  FamilyPolicyLevel — learn the per-family config policy")
+    o2 = FamilyPolicyLevel(FAMILIES, run_task=run_task, memory=mem)
+    best = (-1.0, None, None)
+    for pol in POLICY_CANDIDATES:
+        o2.propose(pol)
+        out = o2.forward()
+        s, _ = guide(None, out, None)
+        print(f"    policy score={s:.3f}  per-family={ {k: round(v,3) for k,v in out.data['per_family'].items()} }")
+        if s > best[0]:
+            best = (s, pol, out.data["per_family"])
+    o2.propose(best[1])
+    print(f"    -> best O2 policy score={best[0]:.3f}\n")
+
+    # ---- O3: trainable transferable prior, scored on HELD-OUT family ------ #
+    print("O3  PriorInductionLevel — induce a prior, score it on a HELD-OUT family")
+    train_f = {"combinatorial": FAMILIES["combinatorial"]}
+    holdout_f = {"qa_reasoning": FAMILIES["qa_reasoning"]}
+    o3 = PriorInductionLevel(train_f, holdout_f, run_task=run_task, memory=mem)
+    best3 = (-1.0, None)
+    for cand in PRIOR_CANDIDATES:
+        o3.propose(**cand)
+        t = o3.forward().data["score"]
+        print(f"    prior {cand['batch_design']}/{cand['trainer']} -> held-out transfer={t:.3f}")
+        if t > best3[0]:
+            best3 = (t, cand)
+    print(f"    -> best transferable prior: {best3[1]} (held-out transfer={best3[0]:.3f})")
+    print("    (note: the combinatorial-tuned prior transfers POORLY to qa_reasoning")
+    print("     => the trainable O3 objective surfaces the no-universal-default result)\n")
 
 
-def induce_cross_family_prior(per_family_best):
-    """O3: a choice that is best in >= 2 families becomes a transferable prior."""
-    votes = defaultdict(lambda: defaultdict(int))
-    for _, cfg in per_family_best.values():
-        for k, v in cfg.items():
-            votes[k][v] += 1
-    return {k: max(vs, key=vs.get) for k, vs in votes.items() if max(vs.values()) >= 2}
+def run_live(mem):
+    from opto.trainer import train
+    run_task = make_task_runner()
+    o2 = FamilyPolicyLevel(FAMILIES, run_task=run_task, memory=mem)
+    train(model=o2, train_dataset={"inputs": [None] * 6, "infos": [None] * 6},
+          algorithm="BeamsearchAlgorithm", optimizer="OptoPrime",
+          guide=RecursiveGuide(), batch_size=2, num_epochs=3)
+    print("O2 optimized policy:\n", o2._policy_node.data)
 
 
 if __name__ == "__main__":
-    from opto.features.recursive_opt.runmode import mode_banner
-
-    # D is an offline analysis of cross-family transfer; it always uses the
-    # (stub-or-real) inner runner and never calls an LLM directly.
-    print(mode_banner(live=False))
-    print("=== D: learn A/B/C per family, then induce a cross-family prior ===\n")
+    live = resolve_live()
+    print(mode_banner(live))
+    print("=== D: TRAINABLE O2/O3 recursion across families ===\n")
     mem = MemoryLite(root="./mem_D")
-    per_family_best = {}
-    for fam, tasks in FAMILIES.items():
-        score, cfg = optimize_family(fam, tasks, mem)
-        per_family_best[fam] = (score, cfg)
-        print(f"O1/O2  family '{fam}'")
-        print(f"        tasks : {tasks}")
-        print(f"        best  : score={score:.3f}  cfg={cfg}\n")
+    if live:
+        run_live(mem)
+    else:
+        run_offline(mem)
 
-    prior = induce_cross_family_prior(per_family_best)
-    print("O3     cross-family prior (choices that win in >= 2 families):")
-    print(f"        {prior if prior else '<none — families need different setups>'}\n")
-    print(f"memory : {mem.summary()}")
+    # ---- M2: show the artifact lineage we just built ---------------------- #
+    print("M2  artifact history (every policy/prior version recorded this run):")
+    for kind in ("policy", "prior"):
+        hist = mem.artifact_history(kind=kind)
+        if hist:
+            print(f"    {kind}: " + " -> ".join(
+                f"it{a.iteration}(score={a.score:.3f})" for a in hist))
+            best = mem.best_artifact(kind=kind)
+            print(f"      best {kind}: it{best.iteration} score={best.score:.3f}")
+    print(f"\nmemory summary: {mem.summary()}")

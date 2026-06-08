@@ -293,3 +293,113 @@ def test_inspect_utils_code_diff_and_summary() -> None:
     assert inspect_utils.code_diff("x", "x") == "(no change to artifact)"
     verdict = inspect_utils.summarize(before, after, 0.8, 1.0, name="batch_design")
     assert "improved" in verdict and "changed" in verdict
+
+
+# --------------------------------------------------------------------------- #
+# Tests for the O2/O3 trainable levels, M2 lineage memory, the Trace-Bench
+# adapter contract, and internal-trace normalization (latest review round).
+# --------------------------------------------------------------------------- #
+from opto.features.recursive_opt import (
+    FamilyPolicyLevel,
+    PriorInductionLevel,
+    ArtifactRecord,
+    encode_cfg,
+    decode_cfg,
+)
+from opto.features.recursive_opt import tracebench as TB
+from opto.features.recursive_opt import traces as TR
+
+
+def _families():
+    return {
+        "combinatorial": ["llm4ad:online_bin_packing_local", "llm4ad:circle_packing"],
+        "qa_reasoning": ["hf:GSM8K", "internal:multiobjective_bbeh"],
+    }
+
+
+def test_family_policy_level_is_one_trainable_node_and_climbs() -> None:
+    o2 = FamilyPolicyLevel(_families(), run_task=TB.make_task_runner())
+    assert len(o2.parameters()) == 1  # ONE trainable policy node (low-dim O2)
+
+    weak = ("combinatorial => batch_design=random, memory_policy=none, trainer=MinibatchAlgorithm\n"
+            "qa_reasoning => batch_design=random, memory_policy=none, trainer=MinibatchAlgorithm")
+    tuned = ("combinatorial => batch_design=failure_balanced, memory_policy=typed, trainer=BeamsearchAlgorithm, trace_type=hybrid\n"
+             "qa_reasoning => batch_design=curriculum, memory_policy=retrieval, trainer=UCBSearchAlgorithm, trace_type=otel")
+    o2.propose(weak)
+    weak_score = o2.forward().data["score"]
+    o2.propose(tuned)
+    out = o2.forward()
+    assert out.data["score"] > weak_score  # the policy node is genuinely trainable
+    assert set(out.data["per_family"]) == set(_families())
+
+
+def test_prior_induction_scores_on_holdout_only() -> None:
+    fams = _families()
+    o3 = PriorInductionLevel(
+        train_families={"combinatorial": fams["combinatorial"]},
+        holdout_families={"qa_reasoning": fams["qa_reasoning"]},
+        run_task=TB.make_task_runner(),
+    )
+    assert len(o3.parameters()) == 1
+    out = o3.forward()
+    # transfer is reported only over held-out families
+    assert set(out.data["per_family"]) == {"qa_reasoning"}
+    # a qa-tuned prior transfers better to the qa held-out family than a combo-tuned one
+    o3.propose(batch_design="failure_balanced", trainer="BeamsearchAlgorithm", trace_type="hybrid")
+    combo = o3.forward().data["score"]
+    o3.propose(batch_design="curriculum", memory_policy="retrieval", trainer="UCBSearchAlgorithm", trace_type="otel")
+    qa = o3.forward().data["score"]
+    assert qa > combo
+
+
+def test_memory_m2_artifact_lineage_history_and_best(tmp_path: Path) -> None:
+    mem = MemoryLite(root=str(tmp_path))
+    a0 = mem.record_artifact("O1", "fam", "config", "batch_design: random", 0.5)
+    a1 = mem.record_artifact("O1", "fam", "config", "batch_design: failure_balanced", 0.8,
+                             parent_id=a0.artifact_id)
+    a2 = mem.record_artifact("O1", "fam", "config", "batch_design: curriculum", 0.7,
+                             parent_id=a1.artifact_id)
+    chain = mem.lineage(a2.artifact_id)
+    assert [a.artifact_id for a in chain] == [a0.artifact_id, a1.artifact_id, a2.artifact_id]
+    assert mem.best_artifact("fam", "config").score == pytest.approx(0.8)
+    assert len(mem.artifact_history("fam", "config")) == 3
+    assert mem.summary()["artifacts"] == 3
+    # persists across reloads (JSONL)
+    assert len(MemoryLite(root=str(tmp_path)).artifact_history("fam", "config")) == 3
+
+
+def test_register_task_adapter_overrides_stub() -> None:
+    class FakeAdapter:
+        def run_task(self, cfg, task_id):
+            return 0.99, f"real:{task_id}"
+
+    try:
+        TB.register_task_adapter(FakeAdapter())
+        assert TB.using_real_tasks() is True
+        score, fb = TB.make_task_runner()(LevelConfig(), "hf:GSM8K")
+        assert score == pytest.approx(0.99) and "real:hf:GSM8K" in fb
+    finally:
+        TB.register_task_adapter(None)  # never leak global state to other tests
+    assert TB.using_real_tasks() is False
+
+
+def test_multitrace_session_normalizes_internal_graph() -> None:
+    cfg = LevelConfig(batch_design="failure_balanced")
+    level = MetaLevel(cfg, inner_runner=make_inner_runner("hf:GSM8K"),
+                      trainable_fields=("batch_design",))
+    out = level.forward("hf:GSM8K")
+    sess = TR.MultiTraceSession(["internal"]).__enter__()
+    sess.record_internal(out)
+    tgj = sess.to_tgj()
+    sess.__exit__(None, None, None)
+    assert "internal" in tgj["sources"]
+    assert len(tgj["nodes"]) > 0  # internal trace now contributes REAL nodes
+    assert all(n["source"] == "internal" for n in tgj["nodes"])
+
+
+def test_encode_decode_cfg_roundtrip_is_shared_contract() -> None:
+    fields = ("batch_design", "memory_policy", "trainer")
+    cfg = LevelConfig(batch_design="curriculum", memory_policy="typed", trainer="UCBSearchAlgorithm")
+    restored = decode_cfg(encode_cfg(cfg, fields), LevelConfig(), fields)
+    assert (restored.batch_design, restored.memory_policy, restored.trainer) == (
+        "curriculum", "typed", "UCBSearchAlgorithm")

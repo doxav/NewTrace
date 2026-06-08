@@ -6,14 +6,15 @@ The PDF's converged "minimum missing viable base" is **EpisodeTrace +
 TieredMemoryLite + thin retrieval**. Markdown-only memory is explicitly
 rejected as too weak for promotion / rollback / cross-family comparison.
 
-Tiers (M0->M3):
-    M0  raw run scratch            (ephemeral, in-episode)
+Tiers (M0->M3) — implemented: M1 (episodes), M2 (artifact/experiment lineage),
+M3 (family priors). M0 (in-episode scratch) is intentionally ephemeral/in-memory.
+    M0  raw run scratch            (ephemeral, in-episode; not persisted)
     M1  EpisodeTrace store         (typed record of one optimization episode)
-    M2  Artifact / Experiment store (versioned configs+artifacts, diffs, scores)
+    M2  Artifact/Experiment store  (versioned configs/code/capabilities, lineage, scores)
     M3  Family-prior library       (promoted, transferable defaults per family)
 
-This is deliberately tiny (dataclasses + JSON files). It is enough to run
-O0/O1 recursive experiments *robustly* without committing to full O2/O3 infra.
+This is deliberately tiny (dataclasses + JSON files), enough to run O0..O3
+recursive experiments *robustly* with artifact lineage and rollback.
 """
 
 from __future__ import annotations
@@ -39,6 +40,20 @@ class EpisodeTrace:  # M1
 
 
 @dataclass
+class ArtifactRecord:  # M2 — artifact / experiment lineage
+    artifact_id: str
+    parent_id: Optional[str]
+    level: str  # O0 | O1 | O2 | O3 | capability | code
+    family: str
+    kind: str  # config | code | capability | policy | prior
+    content: str
+    score: float
+    iteration: int
+    metrics: Dict[str, float] = field(default_factory=dict)
+    ts: float = field(default_factory=time.time)
+
+
+@dataclass
 class FamilyPrior:  # M3
     family: str
     best_cfg: Dict[str, Any]
@@ -57,6 +72,7 @@ class MemoryLite:
         self._priors: Dict[str, FamilyPrior] = {
             p.family: p for p in self._load("priors.jsonl", FamilyPrior)
         }
+        self._artifacts: List[ArtifactRecord] = self._load("artifacts.jsonl", ArtifactRecord)
 
     # ---- persistence ----------------------------------------------------- #
     def _path(self, name):
@@ -100,6 +116,67 @@ class MemoryLite:
         self._append("episodes.jsonl", ep)
         self._maybe_promote(family)  # M1 -> M3 promotion
         return ep
+
+    # ---- M2: artifact / experiment lineage store ------------------------ #
+    def record_artifact(
+        self,
+        level: str,
+        family: str,
+        kind: str,
+        content: str,
+        score: float,
+        parent_id: Optional[str] = None,
+        metrics: Optional[Dict] = None,
+    ) -> ArtifactRecord:
+        """Append a versioned artifact (config/code/capability/policy/prior).
+
+        ``parent_id`` links a revised artifact to the one it was derived from, so
+        ``lineage()`` can reconstruct the initial->final chain with scores/diffs.
+        """
+        iteration = sum(1 for a in self._artifacts if a.family == family and a.kind == kind)
+        rec = ArtifactRecord(
+            artifact_id=f"{family}:{kind}:{iteration}:{int(time.time()*1000)%100000}",
+            parent_id=parent_id,
+            level=level,
+            family=family,
+            kind=kind,
+            content=str(content),
+            score=float(score),
+            iteration=iteration,
+            metrics=metrics or {},
+        )
+        self._artifacts.append(rec)
+        self._append("artifacts.jsonl", rec)
+        return rec
+
+    def lineage(self, artifact_id: str) -> List[ArtifactRecord]:
+        """Return the chain [root, ..., artifact_id] following parent links."""
+        by_id = {a.artifact_id: a for a in self._artifacts}
+        chain: List[ArtifactRecord] = []
+        cur = by_id.get(artifact_id)
+        seen = set()
+        while cur is not None and cur.artifact_id not in seen:
+            chain.append(cur)
+            seen.add(cur.artifact_id)
+            cur = by_id.get(cur.parent_id) if cur.parent_id else None
+        return list(reversed(chain))
+
+    def artifact_history(
+        self, family: Optional[str] = None, kind: Optional[str] = None
+    ) -> List[ArtifactRecord]:
+        out = [
+            a
+            for a in self._artifacts
+            if (family in (None, "*") or a.family == family)
+            and (kind in (None, "*") or a.kind == kind)
+        ]
+        return sorted(out, key=lambda a: (a.family, a.kind, a.iteration))
+
+    def best_artifact(
+        self, family: Optional[str] = None, kind: Optional[str] = None
+    ) -> Optional[ArtifactRecord]:
+        hist = self.artifact_history(family, kind)
+        return max(hist, key=lambda a: a.score) if hist else None
 
     # ---- M3: promotion (PromotionEngine, with a support gate) ------------ #
     def _maybe_promote(self, family: str, min_support: int = 3):
@@ -147,6 +224,7 @@ class MemoryLite:
     def summary(self) -> Dict[str, Any]:
         return {
             "episodes": len(self._episodes),
+            "artifacts": len(self._artifacts),
             "families": sorted({e.family for e in self._episodes}),
             "priors": {f: p.best_score for f, p in self._priors.items()},
         }

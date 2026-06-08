@@ -143,6 +143,43 @@ class ArtifactLevel(Module):
 # =========================================================================== #
 # O1+ — META level: forward() runs the level below; params = below's config
 # =========================================================================== #
+def encode_cfg(cfg: "LevelConfig", fields: Tuple[str, ...]) -> str:
+    """Serialize selected config fields as ``key: value`` lines (the trainable text)."""
+    d = cfg.to_dict()
+    return "\n".join(f"{k}: {d[k]}" for k in fields)
+
+
+def decode_cfg(text: str, base_cfg: "LevelConfig", fields: Tuple[str, ...]) -> "LevelConfig":
+    """Parse ``key: value`` lines back into a LevelConfig (typed, validated).
+
+    Shared by MetaLevel (O1), FamilyPolicyLevel (O2) and PriorInductionLevel (O3)
+    so there is exactly one config (de)serialisation contract.
+    """
+    cfg = copy.deepcopy(base_cfg)
+    for line in str(text).splitlines():
+        if ":" not in line:
+            continue
+        k, v = (s.strip() for s in line.split(":", 1))
+        if k in fields and hasattr(cfg, k):
+            cur = getattr(cfg, k)
+            try:
+                if isinstance(cur, tuple):
+                    parsed = tuple(v.split(",")) if v else ()
+                elif isinstance(cur, int) and not isinstance(cur, bool):
+                    parsed = int(v)
+                    if parsed <= 0:
+                        raise ValueError("must be positive")
+                else:
+                    parsed = type(cur)(v)
+            except (TypeError, ValueError) as exc:
+                expected = "positive int" if isinstance(cur, int) else type(cur).__name__
+                raise ValueError(
+                    f"Invalid value for {k}: expected {expected}, got {v!r}"
+                ) from exc
+            setattr(cfg, k, parsed)
+    return cfg
+
+
 @trace.model
 class MetaLevel(Module):
     """O1/O2 over the SELECTION surface.
@@ -179,35 +216,10 @@ class MetaLevel(Module):
         self._memory = memory  # MemoryLite for active knowledge building
 
     def _encode(self, cfg: LevelConfig) -> str:
-        d = cfg.to_dict()
-        return "\n".join(f"{k}: {d[k]}" for k in self._fields)
+        return encode_cfg(cfg, self._fields)
 
     def _decode(self, text: str) -> LevelConfig:
-        cfg = copy.deepcopy(self._base_cfg)
-        for line in str(text).splitlines():
-            if ":" not in line:
-                continue
-            k, v = (s.strip() for s in line.split(":", 1))
-            if k in self._fields and hasattr(cfg, k):
-                cur = getattr(cfg, k)
-                try:
-                    if isinstance(cur, tuple):
-                        parsed = tuple(v.split(",")) if v else ()
-                    elif isinstance(cur, int) and not isinstance(cur, bool):
-                        parsed = int(v)
-                        if parsed <= 0:
-                            raise ValueError("must be positive")
-                    else:
-                        parsed = type(cur)(v)
-                except (TypeError, ValueError) as exc:
-                    expected = (
-                        "positive int" if isinstance(cur, int) else type(cur).__name__
-                    )
-                    raise ValueError(
-                        f"Invalid value for {k}: expected {expected}, got {v!r}"
-                    ) from exc
-                setattr(cfg, k, parsed)
-        return cfg
+        return decode_cfg(text, self._base_cfg, self._fields)
 
     @trace.bundle()
     def _run_inner(self, cfg_text: str, family: Any):
@@ -240,6 +252,143 @@ class MetaLevel(Module):
             return
         cfg = self._memory.apply_priors(copy.deepcopy(self._base_cfg), str(family))
         self._cfg_node._data = self._encode(cfg)
+
+
+# =========================================================================== #
+# O2 / O3 — TRAINABLE recursive levels (not manual loops / majority vote)
+# =========================================================================== #
+def _mean(xs):
+    xs = list(xs)
+    return sum(xs) / len(xs) if xs else 0.0
+
+
+@trace.model
+class FamilyPolicyLevel(Module):
+    """O2: learn a *per-family* config policy as ONE trainable parameter.
+
+    The trainable node is a policy text with one line per family::
+
+        combinatorial => batch_design=failure_balanced, trainer=BeamsearchAlgorithm
+        qa_reasoning  => batch_design=curriculum, trainer=UCBSearchAlgorithm
+
+    ``forward()`` decodes the policy, runs the inner optimization for every task
+    of every family, and returns the mean score plus a per-family breakdown that
+    names the worst family. An LLM optimizer reads that breakdown and rewrites the
+    policy — i.e. O2 is a genuine trainable level, not a Python ``max`` loop.
+    """
+
+    def __init__(
+        self,
+        families: Dict[str, List[str]],
+        run_task: Callable[[LevelConfig, str], Tuple[float, str]],
+        base_cfg: Optional[LevelConfig] = None,
+        policy_fields: Tuple[str, ...] = ("batch_design", "memory_policy", "trainer", "trace_type"),
+        memory: Optional[object] = None,
+    ):
+        super().__init__()
+        self._families = families
+        self._run_task = run_task
+        self._base = base_cfg or LevelConfig()
+        self._fields = policy_fields
+        self._memory = memory
+        seed = "\n".join(
+            f"{fam} => " + ", ".join(f"{f}={getattr(self._base, f)}" for f in policy_fields)
+            for fam in families
+        )
+        self._policy_node = node(seed, trainable=True, name="family_policy")
+
+    def _decode_policy(self, text: str) -> Dict[str, LevelConfig]:
+        out: Dict[str, LevelConfig] = {}
+        for line in str(text).splitlines():
+            if "=>" not in line:
+                continue
+            fam, rhs = (s.strip() for s in line.split("=>", 1))
+            kv_lines = "\n".join(p.strip().replace("=", ": ", 1) for p in rhs.split(",") if p.strip())
+            out[fam] = decode_cfg(kv_lines, self._base, self._fields)
+        return out
+
+    @trace.bundle()
+    def _run_policy(self, policy_text: str):
+        policy = self._decode_policy(policy_text)
+        per_family = {}
+        for fam, tasks in self._families.items():
+            cfg = policy.get(fam, self._base)
+            per_family[fam] = _mean(self._run_task(cfg, t)[0] for t in tasks)
+        score = _mean(per_family.values())
+        worst = min(per_family, key=per_family.get) if per_family else None
+        fb = "; ".join(f"{f}={s:.3f}" for f, s in per_family.items())
+        if worst is not None:
+            fb += f". Weakest family: {worst} ({per_family[worst]:.3f}) — try a different per-family config for it."
+        if self._memory is not None:
+            self._memory.record(level="O2", cfg={"policy": policy_text}, family="<multi>",
+                                 score=score, feedback=fb)
+            self._memory.record_artifact(level="O2", family="<multi>", kind="policy",
+                                          content=policy_text, score=score)
+        return {"score": float(score), "feedback": fb, "per_family": per_family}
+
+    def forward(self, _: Any = None):
+        return self._run_policy(self._policy_node)
+
+    def propose(self, policy_text: str):
+        self._policy_node._data = policy_text
+
+
+@trace.model
+class PriorInductionLevel(Module):
+    """O3: learn ONE transferable config, scored on HELD-OUT families.
+
+    The trainable node is a single shared config; ``forward()`` applies it to
+    families NOT used to induce it and returns the transfer score + which
+    held-out families it fails on. Optimizing this node maximises genuine
+    cross-family transfer — replacing the majority-vote heuristic with a
+    trainable objective.
+    """
+
+    def __init__(
+        self,
+        train_families: Dict[str, List[str]],
+        holdout_families: Dict[str, List[str]],
+        run_task: Callable[[LevelConfig, str], Tuple[float, str]],
+        base_cfg: Optional[LevelConfig] = None,
+        fields: Tuple[str, ...] = ("batch_design", "memory_policy", "trainer", "trace_type"),
+        memory: Optional[object] = None,
+    ):
+        super().__init__()
+        self._train = train_families
+        self._holdout = holdout_families
+        self._run_task = run_task
+        self._base = base_cfg or LevelConfig()
+        self._fields = fields
+        self._memory = memory
+        self._prior_node = node(encode_cfg(self._base, fields), trainable=True, name="transfer_prior")
+
+    @trace.bundle()
+    def _run_prior(self, prior_text: str):
+        cfg = decode_cfg(prior_text, self._base, self._fields)
+        per_family = {
+            fam: _mean(self._run_task(cfg, t)[0] for t in tasks)
+            for fam, tasks in self._holdout.items()
+        }
+        transfer = _mean(per_family.values())
+        worst = min(per_family, key=per_family.get) if per_family else None
+        fb = "held-out transfer: " + "; ".join(f"{f}={s:.3f}" for f, s in per_family.items())
+        if worst is not None:
+            fb += f". Worst held-out family: {worst} — adjust the prior to generalise to it."
+        if self._memory is not None:
+            self._memory.record(level="O3", cfg={"prior": prior_text}, family="<holdout>",
+                                 score=transfer, feedback=fb)
+            self._memory.record_artifact(level="O3", family="<holdout>", kind="prior",
+                                          content=prior_text, score=transfer)
+        return {"score": float(transfer), "feedback": fb, "per_family": per_family}
+
+    def forward(self, _: Any = None):
+        return self._run_prior(self._prior_node)
+
+    def propose(self, **field_values):
+        cfg = copy.deepcopy(self._base)
+        for k, v in field_values.items():
+            setattr(cfg, k, v)
+        self._prior_node._data = encode_cfg(cfg, self._fields)
 
 
 # =========================================================================== #

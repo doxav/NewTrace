@@ -54,14 +54,10 @@ def resolve_live(argv: Optional[list] = None) -> bool:
 
 def tracebench_mode() -> str:
     try:
-        from .tracebench import HAVE_TB
+        from .tracebench import real_mode_status
+        return real_mode_status()
     except Exception:
-        HAVE_TB = False
-    return (
-        "REAL (Trace-Bench installed)"
-        if HAVE_TB
-        else "STUB (synthetic analytic scores — tests plumbing, NOT efficacy)"
-    )
+        return "STUB (synthetic analytic scores — tests plumbing, NOT efficacy)"
 
 
 def pr73_mode() -> str:
