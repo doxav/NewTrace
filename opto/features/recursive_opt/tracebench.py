@@ -67,6 +67,36 @@ def make_agent_fn(task_id: str) -> Callable:
     return agent_fn
 
 
+def _stub_family_profile(task_id: str):
+    """Family-specific preferences so OFFLINE recursion learns real per-family
+    differences (otherwise example D's cross-family prior is trivially identical
+    for every family). Returns small score bonuses keyed by config choice."""
+    tid = task_id.lower()
+    if tid.startswith("llm4ad:") or tid.startswith("kernelbench:") or tid.startswith("veribench:"):
+        return {
+            "batch": {"failure_balanced": 0.10, "curriculum": 0.04},
+            "memory": {"typed": 0.07, "retrieval": 0.04},
+            "trace": {"hybrid": 0.06, "otel": 0.02},
+            "trainer": {"BeamsearchAlgorithm": 0.06, "UCBSearchAlgorithm": 0.03},
+            "note": "favor hard-example mining, typed memory, and hybrid traces",
+        }
+    if tid.startswith("hf:") or "multiobjective" in tid:
+        return {
+            "batch": {"curriculum": 0.10, "failure_balanced": 0.04},
+            "memory": {"retrieval": 0.07, "typed": 0.04},
+            "trace": {"otel": 0.06, "hybrid": 0.03},
+            "trainer": {"UCBSearchAlgorithm": 0.06, "BeamsearchAlgorithm": 0.03},
+            "note": "favor curriculum, retrieval, and lighter OTEL-style summaries",
+        }
+    return {
+        "batch": {"failure_balanced": 0.06, "curriculum": 0.03},
+        "memory": {"typed": 0.05, "retrieval": 0.03},
+        "trace": {"hybrid": 0.04, "otel": 0.02},
+        "trainer": {"BeamsearchAlgorithm": 0.04, "UCBSearchAlgorithm": 0.03},
+        "note": "favor balanced batches and typed memory",
+    }
+
+
 def make_inner_runner(task_id: str, n_tasks: int = 6) -> Callable:
     """O1 inner runner: run an inner optimization with `cfg` on `family`,
     return (held_out_score, feedback). Real mode delegates to Trace-Bench's
@@ -85,27 +115,27 @@ def make_inner_runner(task_id: str, n_tasks: int = 6) -> Callable:
         return inner_runner
 
     def inner_runner(cfg, family):
-        # Analytic stub: encode known-good design choices from the PDF.
+        # Analytic stub: family-sensitive design preferences (see _stub_family_profile).
+        profile = _stub_family_profile(task_id)
         s = 0.5
-        s += 0.10 if cfg.batch_design in ("failure_balanced", "curriculum") else 0.0
-        s += 0.08 if 3 <= cfg.batch_size <= 8 else -0.05
-        s += 0.06 if cfg.memory_policy in ("typed", "retrieval") else 0.0
-        s += 0.05 if cfg.trace_type in ("hybrid", "otel") else 0.0
-        s += 0.04 if cfg.optimizer in ("OptoPrime", "OptoPrimeMulti") else 0.0
-        s += (
-            0.05
-            if cfg.trainer in ("BeamsearchAlgorithm", "UCBSearchAlgorithm")
-            else 0.0
+        s += profile["batch"].get(
+            cfg.batch_design, -0.03 if cfg.batch_design == "random" else 0.0
         )
-        # deterministic per-config "noise" so search is non-trivial but reproducible
-        h = int(hashlib.md5(str(cfg.to_dict()).encode()).hexdigest(), 16) % 1000
+        s += 0.08 if 3 <= cfg.batch_size <= 8 else -0.05
+        s += profile["memory"].get(cfg.memory_policy, 0.0)
+        s += profile["trace"].get(cfg.trace_type, 0.0)
+        s += 0.04 if cfg.optimizer in ("OptoPrime", "OptoPrimeMulti") else 0.0
+        s += profile["trainer"].get(cfg.trainer, 0.0)
+        # deterministic per-TASK+config noise: reproducible but family-sensitive
+        h = int(hashlib.md5(f"{task_id}|{cfg.to_dict()}".encode()).hexdigest(), 16) % 1000
         s += (h / 1000 - 0.5) * 0.06
         s = max(0.0, min(1.0, s))
         fb = (
             f"[stub:{task_id}] design={cfg.batch_design}/bs={cfg.batch_size}/"
             f"mem={cfg.memory_policy}/trainer={cfg.trainer}. "
-            f"{'good batch design' if cfg.batch_design!='random' else 'try failure_balanced batches'}; "
-            f"{'memory helps here' if cfg.memory_policy=='typed' else 'enable typed memory'}."
+            f"{profile['note']}. "
+            f"{'good batch design' if cfg.batch_design!='random' else 'try a non-random batch design'}; "
+            f"{'memory helps here' if cfg.memory_policy in ('typed','retrieval') else 'enable typed or retrieval memory'}."
         )
         return s, fb
 

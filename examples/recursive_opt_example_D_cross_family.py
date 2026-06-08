@@ -116,6 +116,11 @@ def induce_cross_family_prior(per_family_best):
 
 
 if __name__ == "__main__":
+    from opto.features.recursive_opt.runmode import mode_banner
+
+    # D is an offline analysis of cross-family transfer; it always uses the
+    # (stub-or-real) inner runner and never calls an LLM directly.
+    print(mode_banner(live=False))
     print("=== D: learn A/B/C per family, then induce a cross-family prior ===\n")
     mem = MemoryLite(root="./mem_D")
     per_family_best = {}

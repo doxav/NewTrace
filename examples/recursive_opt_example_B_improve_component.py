@@ -56,6 +56,9 @@ from opto.features.recursive_opt import (
 )
 from opto.features.recursive_opt.tracebench import make_code_evaluator
 
+# Live mode is resolved loudly in __main__ (see bottom). Safe default for imports.
+_LIVE = False
+
 
 # --------------------------------------------------------------------------- #
 # BASELINE IMPLEMENTATIONS (their SOURCE is what gets optimized).
@@ -120,7 +123,7 @@ def improve_component(problem, name, baseline, improved, objective):
     print(f"  [{name}] baseline score={base_score:.3f}")
     print(f"           feedback: {base_fb}")
 
-    if "--live" in sys.argv and os.environ.get("OPENAI_API_KEY"):
+    if _LIVE:
         # 2-LIVE) let the LLM optimizer REWRITE the function body from the feedback
         from opto.optimizers import OptoPrime
 
@@ -147,7 +150,11 @@ def improve_component(problem, name, baseline, improved, objective):
 
 
 if __name__ == "__main__":
-    print("=== B: improving COMPONENT CODE (rewrite, not select) ===")
+    from opto.features.recursive_opt.runmode import resolve_live, mode_banner
+
+    _LIVE = resolve_live()  # raises if --live without a key (no silent fallback)
+    print(mode_banner(_LIVE))
+    print("\n=== B: improving COMPONENT CODE (rewrite, not select) ===")
     print(
         "\n-- component 1: batch_design  (problem: llm4ad:online_bin_packing_local) --"
     )

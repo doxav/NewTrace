@@ -148,10 +148,12 @@ def run_live(problem):
 
 
 if __name__ == "__main__":
-    live = "--live" in sys.argv and os.environ.get("OPENAI_API_KEY")
+    from opto.features.recursive_opt.runmode import resolve_live, mode_banner
+    live = resolve_live()  # raises if --live without a key (no silent fallback)
+    print(mode_banner(live))
     for p in PROBLEMS:
         print(
-            f"\n=== A: learning best setup for {p} ({'LIVE' if live else 'offline stub'}) ==="
+            f"\n=== A: learning best setup for {p} ({'LIVE' if live else 'OFFLINE STUB'}) ==="
         )
         if live:
             cfg, mem = run_live(p)

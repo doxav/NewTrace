@@ -274,6 +274,43 @@ class ComponentSpec:
         self.objective = objective
 
 
+def _normalize_eval_result(result):
+    """Normalize evaluator outputs to ``(score: float, feedback: str, metrics: dict)``.
+
+    Supported evaluator contracts (so one level handles single- AND multi-objective
+    evaluators: ``make_code_evaluator`` returns ``(score, feedback)`` while
+    ``make_multiobjective_evaluator`` returns ``(metrics_dict, feedback, scalar)``):
+      1) ``(score, feedback)``
+      2) ``(metrics_dict, feedback, scalar_score)``
+      3) ``scalar_score`` (bare float)
+    """
+    metrics: Dict[str, float] = {}
+    feedback = ""
+    score = None
+    if isinstance(result, tuple):
+        if len(result) == 2:
+            score, feedback = result
+        elif len(result) == 3:
+            first, feedback, scalar = result
+            if isinstance(first, dict):
+                metrics = {k: float(v) for k, v in first.items()}
+            score = scalar if scalar is not None else first
+        else:
+            raise ValueError(
+                "Evaluator must return (score, feedback) or (metrics, feedback, scalar)."
+            )
+    else:
+        score = result
+    if isinstance(score, dict):
+        metrics = {k: float(v) for k, v in score.items()}
+        if "score" not in metrics:
+            raise ValueError(
+                "Dict score outputs must contain a 'score' entry or provide a scalar third return."
+            )
+        score = metrics["score"]
+    return float(score), str(feedback), metrics
+
+
 @trace.model
 class CodeArtifactLevel(Module):
     """Optimize the SOURCE CODE of a component (improve / invent a new one).
@@ -301,6 +338,13 @@ class CodeArtifactLevel(Module):
         # The trainable code node. We wrap spec.baseline so its source is the param.
         self._impl = trace.bundle(trainable=True)(spec.baseline)
 
+    @trace.bundle()
+    def _attach_eval(self, anchor, payload: Dict[str, Any]):
+        # ``anchor`` is the last traced output of the trainable code. Taking it as
+        # an input keeps the returned node CONNECTED to the trainable code param,
+        # so a live optimizer's ``backward`` on this output reaches the code.
+        return payload
+
     def current_code(self) -> str:
         """Return the current (possibly optimized) source code of the component."""
         params = self.parameters()
@@ -314,12 +358,24 @@ class CodeArtifactLevel(Module):
         self._calls = []
 
         def component(*args, **kwargs):
-            res = self._impl(self, *args, **kwargs)  # traced call -> Node
+            try:
+                res = self._impl(self, *args, **kwargs)  # traced call -> Node
+            except trace.ExecutionError as exc:
+                self._calls.append(exc.exception_node)
+                raise
             self._calls.append(res)
             return res.data if hasattr(res, "data") else res
 
-        score, feedback = self._spec.evaluate(component, family)
+        score, feedback, metrics = _normalize_eval_result(
+            self._spec.evaluate(component, family)
+        )
         self._last_node = self._calls[-1] if self._calls else None
+        if self._last_node is None:
+            raise RuntimeError(
+                "Component evaluator did not invoke the candidate callable; no "
+                "traced path exists from the final output back to the trainable "
+                "code, so the optimizer cannot improve it."
+            )
         if self._memory is not None:
             self._memory.record(
                 level="O1-code",
@@ -327,8 +383,13 @@ class CodeArtifactLevel(Module):
                 family=str(family),
                 score=score,
                 feedback=feedback,
+                metrics=metrics,
             )
-        return {"score": float(score), "feedback": str(feedback)}
+        payload: Dict[str, Any] = {"score": float(score), "feedback": str(feedback)}
+        if metrics:
+            payload["metrics"] = metrics
+        # Re-anchor to the trainable code path so live ``backward`` reaches it.
+        return self._attach_eval(self._last_node, payload)
 
 
 # =========================================================================== #

@@ -45,6 +45,20 @@ except Exception:  # pragma: no cover
     HAVE_PR73 = False
 
 
+def require_pr73(feature: str = "this feature") -> None:
+    """Raise a clear error if PR #73 (graph/OTEL/Sysmon) is not installed.
+
+    Use this at the top of any code path that genuinely needs PR #73, so the
+    absence is a LOUD failure rather than a silent no-op.
+    """
+    if not HAVE_PR73:
+        raise RuntimeError(
+            f"{feature} requires PR #73 (opto.features.graph + opto.trace.io), "
+            "which is NOT installed in this environment. Install/merge PR #73 "
+            "before using the graph adapter / OTEL / Sysmon trace backends."
+        )
+
+
 def graph_to_module(build_graph: Callable, bindings: Dict[str, Any]):
     """B.3: turn any graph + named knobs into a trainable ``trace.Module``.
 
@@ -109,15 +123,17 @@ class MultiTraceSession:
                 self._tgj = merge_tgj(
                     self._tgj, otlp_traces_to_trace_json(self._otel.export())
                 )
-            except Exception:
-                pass
+            except Exception as e:  # don't hide failures behind a clean-looking result
+                import warnings
+                warnings.warn(f"OTEL->TGJ merge failed: {e!r}", RuntimeWarning)
         if self._sysmon is not None:
             try:
                 self._tgj = merge_tgj(
                     self._tgj, sysmon_profile_to_tgj(self._sysmon.profile())
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                import warnings
+                warnings.warn(f"Sysmon->TGJ merge failed: {e!r}", RuntimeWarning)
         return self._tgj
 
     def feedback_text(self, base: str = "") -> str:

@@ -165,3 +165,131 @@ def test_multiobjective_evaluator_rewards_verified_capability() -> None:
     assert score["cost"] < 0.4
     assert scalar > 0.7
     assert "verify/check" in feedback
+
+
+# --------------------------------------------------------------------------- #
+# Tests added for the two-agent review fixes (traced code surface, global
+# memory retrieval, family-sensitive stub, and the live-path connection).
+# --------------------------------------------------------------------------- #
+from opto.features.recursive_opt import AgenticOptimizer, default_optimizer_tools
+from opto.features.recursive_opt import inspect_utils
+
+
+class _DummyOptimizer:
+    """Records backward calls without needing an LLM backend."""
+
+    def __init__(self, parameters, **kwargs):
+        self.parameters = parameters
+        self.last = None
+
+    def zero_feedback(self):
+        return None
+
+    def backward(self, target, feedback, *args, **kwargs):
+        self.last = (target, feedback)
+        return None
+
+    def step(self, *args, **kwargs):
+        return None
+
+
+def test_code_artifact_level_supports_multiobjective_and_keeps_backward_path(tmp_path: Path) -> None:
+    def baseline(self, task):
+        return {"answer": f"verify {task}"}
+
+    def evaluator(component, family):
+        out = component(task="demo")
+        assert "verify" in out["answer"]
+        # 3-tuple multi-objective contract: (metrics, feedback, scalar)
+        return {"accuracy": 0.8, "cost": 0.2}, "keep explicit verify step", 0.7
+
+    level = CodeArtifactLevel(
+        ComponentSpec("capability", baseline, evaluator),
+        memory=MemoryLite(root=str(tmp_path / "mem")),
+    )
+
+    out = level("dummy-family")
+    data = out.data if hasattr(out, "data") else out
+    assert data["score"] == pytest.approx(0.7)
+    assert data["feedback"] == "keep explicit verify step"
+    assert data["metrics"]["accuracy"] == pytest.approx(0.8)
+    assert data["metrics"]["cost"] == pytest.approx(0.2)
+
+    # backward on the (now connected) output must reach the trainable code param
+    opt = AgenticOptimizer(level.parameters(), tools={}, base_optimizer_cls=_DummyOptimizer)
+    opt.zero_feedback()
+    opt.backward(out, "improve this capability")
+    assert opt.opt.last[0] is out
+
+
+def test_code_artifact_level_raises_when_evaluator_never_calls_candidate() -> None:
+    def baseline(self, task):
+        return {"answer": task}
+
+    def evaluator(component, family):
+        return 0.5, "no candidate invocation"  # never calls component(...)
+
+    level = CodeArtifactLevel(ComponentSpec("broken", baseline, evaluator))
+    with pytest.raises(RuntimeError, match="did not invoke the candidate callable"):
+        level("dummy-family")
+
+
+def test_default_optimizer_tools_searches_global_failures(tmp_path: Path) -> None:
+    mem = MemoryLite(root=str(tmp_path))
+    mem.record(level="O1", cfg={}, family="hf:GSM8K", score=0.10, feedback="failure-a")
+    mem.record(level="O1", cfg={}, family="llm4ad:online_bin_packing_local",
+               score=0.20, feedback="failure-b")
+
+    tools = default_optimizer_tools(memory=mem)  # default family=None => global
+    hits = tools["trace_search"]("ignored")
+    assert len(hits) == 2
+    assert any("failure-a" in h for h in hits)
+    assert any("failure-b" in h for h in hits)
+
+
+def test_tracebench_stub_is_family_sensitive() -> None:
+    llm4ad_runner = make_inner_runner("llm4ad:online_bin_packing_local")
+    hf_runner = make_inner_runner("hf:GSM8K")
+
+    llm4ad_cfg = LevelConfig(batch_size=4, batch_design="failure_balanced",
+                             memory_policy="typed", trainer="BeamsearchAlgorithm",
+                             trace_type="hybrid")
+    hf_cfg = LevelConfig(batch_size=8, batch_design="curriculum",
+                         memory_policy="retrieval", trainer="UCBSearchAlgorithm",
+                         trace_type="otel")
+
+    # each family prefers its own profile
+    assert llm4ad_runner(llm4ad_cfg, "combinatorial")[0] > llm4ad_runner(hf_cfg, "combinatorial")[0]
+    assert hf_runner(hf_cfg, "qa_reasoning")[0] > hf_runner(llm4ad_cfg, "qa_reasoning")[0]
+
+
+def test_capability_artifact_live_path_keeps_trace_connection(tmp_path: Path) -> None:
+    from examples.recursive_opt_example_C_learn_capability import (
+        CapabilityArtifact, PROBLEMS,
+    )
+
+    evaluator = make_multiobjective_evaluator(PROBLEMS, {"accuracy": "max", "cost": "min"})
+    art = CapabilityArtifact(seed_impl="Answer the task.", evaluator=evaluator,
+                             memory=MemoryLite(root=str(tmp_path)))
+    guide = RecursiveGuide()
+
+    out = art.forward(PROBLEMS[0])
+    score, feedback = guide(PROBLEMS[0], out, None)
+    assert hasattr(out, "data")
+    assert "objectives" in out.data
+
+    opt = AgenticOptimizer(art.parameters(), tools={}, base_optimizer_cls=_DummyOptimizer)
+    opt.zero_feedback()
+    opt.backward(out, feedback)
+    assert opt.opt.last[0] is out
+    assert opt.opt.last[1] == feedback
+
+
+def test_inspect_utils_code_diff_and_summary() -> None:
+    before = "def f(self, n, k):\n    return list(range(k))\n"
+    after = "def f(self, n, k):\n    return [i for i in range(n) if i % 3 == 0][:k]\n"
+    diff = inspect_utils.code_diff(before, after, name="batch_design")
+    assert "batch_design (initial)" in diff and "+    return [i" in diff
+    assert inspect_utils.code_diff("x", "x") == "(no change to artifact)"
+    verdict = inspect_utils.summarize(before, after, 0.8, 1.0, name="batch_design")
+    assert "improved" in verdict and "changed" in verdict

@@ -128,11 +128,18 @@ class MemoryLite:
                 setattr(cfg, k, v)
         return cfg
 
-    def similar_failures(self, family: str, k: int = 3) -> List[EpisodeTrace]:
-        eps = sorted(
-            (e for e in self._episodes if e.family == family), key=lambda e: e.score
-        )[:k]
-        return eps
+    def similar_failures(
+        self, family: Optional[str] = None, k: int = 3
+    ) -> List[EpisodeTrace]:
+        # ``family=None`` or ``"*"`` searches across *all* families (global).
+        # This is what the default agentic ``trace_search`` tool relies on; the
+        # previous exact-match-only behaviour made ``family="*"`` always empty.
+        pool = (
+            self._episodes
+            if family in (None, "*")
+            else [e for e in self._episodes if e.family == family]
+        )
+        return sorted(pool, key=lambda e: (e.score, e.ts))[:k]
 
     def family_prior(self, family: str) -> Optional[FamilyPrior]:
         return self._priors.get(family)

@@ -84,9 +84,12 @@ class CapabilityArtifact(Module):
         self._eval = evaluator
         self._memory = memory
 
-    def forward(self, family):
-        # Build a callable capability from the (trainable) text and evaluate it.
-        impl_text = self.impl.data if hasattr(self.impl, "data") else str(self.impl)
+    @trace.bundle()
+    def _evaluate_impl(self, impl_text, family):
+        # Taking the trainable ``self.impl`` node as an input keeps the returned
+        # node CONNECTED to the capability parameter, so a live optimizer can
+        # backpropagate from this output to ``self.impl``.
+        impl_text = impl_text.data if hasattr(impl_text, "data") else str(impl_text)
 
         def capability(task):
             # In real mode this would drive the agent with `impl_text` as its
@@ -104,6 +107,10 @@ class CapabilityArtifact(Module):
                 metrics=score_dict,
             )
         return {"score": scalar, "feedback": feedback, "objectives": score_dict}
+
+    def forward(self, family):
+        # Keep the capability text on the traced path (see _evaluate_impl).
+        return self._evaluate_impl(self.impl, family)
 
 
 # Candidate capability implementations explored by the OFFLINE driver.
@@ -130,7 +137,9 @@ def learn_capability():
         tie_break="weighted",
     )
 
-    if "--live" in sys.argv and os.environ.get("OPENAI_API_KEY"):
+    from opto.features.recursive_opt.runmode import resolve_live
+
+    if resolve_live():  # raises if --live without a key (no silent fallback)
         # ---- LIVE: optimizer rewrites the capability text under multi-objective ----
         from opto.optimizers import OptoPrimeMulti
 
@@ -139,7 +148,7 @@ def learn_capability():
         )
         # C.2: agentic optimizer with a quick subset-eval tool to gather evidence
         tools = default_optimizer_tools(
-            memory=mem, run_subset=lambda: art.forward(PROBLEMS[0])["score"]
+            memory=mem, run_subset=lambda: art.forward(PROBLEMS[0]).data["score"]
         )
         opt = AgenticOptimizer(
             art.parameters(),
@@ -147,13 +156,16 @@ def learn_capability():
             base_optimizer_cls=OptoPrimeMulti,
             objective=str(OBJECTIVES),
         )
+        guide = RecursiveGuide()
         for step in range(4):
             out = art.forward(PROBLEMS[0])
+            _, fb = guide(PROBLEMS[0], out, None)  # extract feedback from the node
             opt.zero_feedback()
-            opt.backward(out, out["feedback"])  # multi-objective feedback -> rewrite
+            opt.backward(out, fb)  # multi-objective feedback -> rewrite (traced)
             opt.step()
         final = art.forward(PROBLEMS[0])
-        return art.impl.data, final["objectives"], mem, None
+        final_data = final.data if hasattr(final, "data") else final
+        return art.impl.data, final_data["objectives"], mem, None
 
     # ---- OFFLINE: evaluate candidate capabilities, pick the Pareto-best ----
     scored = []  # list of (score_dict, payload)
@@ -162,7 +174,8 @@ def learn_capability():
         # average objectives across the 2 target problems
         agg = {"accuracy": 0.0, "cost": 0.0}
         for p in PROBLEMS:
-            objs = art.forward(p)["objectives"]
+            out = art.forward(p)
+            objs = out.data["objectives"] if hasattr(out, "data") else out["objectives"]
             for k in agg:
                 agg[k] += objs[k] / len(PROBLEMS)
         scored.append((agg, impl))
@@ -190,10 +203,13 @@ def learn_capability():
 
 
 if __name__ == "__main__":
-    live = "--live" in sys.argv and os.environ.get("OPENAI_API_KEY")
+    from opto.features.recursive_opt.runmode import resolve_live, mode_banner
+
+    live = resolve_live()  # raises if --live without a key (no silent fallback)
+    print(mode_banner(live))
     print(
         f"=== C: learning a NEW CAPABILITY from spec + objectives "
-        f"({'LIVE' if live else 'offline stub'}) ==="
+        f"({'LIVE' if live else 'OFFLINE STUB'}) ==="
     )
     print(f"  spec      : {CAPABILITY_SPEC}")
     print(f"  objectives: {OBJECTIVES}")

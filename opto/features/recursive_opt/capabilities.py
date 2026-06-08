@@ -81,13 +81,21 @@ class AgenticOptimizer:
 
 
 def default_optimizer_tools(
-    memory=None, run_subset: Callable = None, pytest_fn: Callable = None
+    memory=None,
+    run_subset: Callable = None,
+    pytest_fn: Callable = None,
+    *,
+    family: Optional[str] = None,
 ) -> Dict[str, Callable]:
-    """Standard optimizer toolset used in the examples."""
+    """Standard optimizer toolset used in the examples.
+
+    ``family`` scopes the ``trace_search`` tool: ``None`` (default) searches all
+    families globally; pass a concrete id to restrict retrieval to that family.
+    """
     tools: Dict[str, Callable] = {}
     if memory is not None:
-        tools["trace_search"] = lambda fb: [
-            e.feedback[:120] for e in memory.similar_failures(family="*", k=2)
+        tools["trace_search"] = lambda fb, fam=family: [
+            e.feedback[:120] for e in memory.similar_failures(family=fam, k=2)
         ]
     if run_subset is not None:
         tools["run_subset"] = lambda fb: run_subset()
