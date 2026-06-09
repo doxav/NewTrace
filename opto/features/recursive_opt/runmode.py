@@ -7,14 +7,14 @@ is to remove the "it looked like it worked but it was a stub" trap:
 
   * ``resolve_live()`` — returns True only if ``--live`` AND a key are present.
     If ``--live`` is requested WITHOUT a key, it RAISES instead of silently
-    falling back to the offline stub.
+    falling back to a non-live run.
   * ``mode_banner()`` — one loud line stating LIVE vs OFFLINE-STUB and whether
     Trace-Bench / PR #73 are actually in use, plus the efficacy caveat.
 
-Read this once: OFFLINE-STUB mode exercises the *plumbing* (do nodes connect,
-does backward reach the trainable parameter, does the loop run) using synthetic
-analytic scores. Stub scores are NOT a measure of whether meta-optimization
-*works* on real tasks — only a LIVE run with a real LLM measures efficacy.
+Read this once: non-live mode does not call an optimizer LLM. Task-scoring
+examples require an explicitly registered Trace-Bench adapter; otherwise they
+raise instead of inventing synthetic benchmark scores. Only a LIVE run with a
+real LLM optimizer measures recursive optimization efficacy.
 """
 
 from __future__ import annotations
@@ -138,7 +138,7 @@ def resolve_live(argv: Optional[list] = None) -> bool:
     """True iff ``--live`` AND an API key are present.
 
     Raises SystemExit if ``--live`` is requested but no key is set, so a live
-    test can NEVER silently degrade to the offline stub.
+    test can NEVER silently degrade to a non-live run.
     """
     argv = sys.argv if argv is None else argv
     want = "--live" in argv
@@ -146,7 +146,7 @@ def resolve_live(argv: Optional[list] = None) -> bool:
         raise SystemExit(
             "\nERROR: --live was requested but no API key is set "
             "(OPENAI_API_KEY / OPENROUTER_API_KEY).\n"
-            "Refusing to silently fall back to the offline stub.\n"
+            "Refusing to silently fall back to a non-live run.\n"
             "Set a key for a real LLM run, or drop --live to run the offline "
             "PLUMBING demo (synthetic scores).\n"
         )
@@ -183,6 +183,16 @@ def pr73_mode() -> str:
     )
 
 
+def _using_real_task_adapter() -> bool:
+    """Return True when task scoring is backed by a registered real adapter."""
+    try:
+        from .tracebench import using_real_tasks
+
+        return using_real_tasks()
+    except Exception:
+        return False
+
+
 def mode_banner(live: bool) -> str:
     bar = "=" * 72
     if live:
@@ -191,13 +201,20 @@ def mode_banner(live: bool) -> str:
         )
         head = f"[MODE] LIVE LLM run  ·  model = {model}"
         caveat = "Scores below reflect a REAL optimizer run."
-    else:
-        head = "[MODE] OFFLINE STUB run  ·  NO LLM is called"
+    elif _using_real_task_adapter():
+        head = "[MODE] OFFLINE real Trace-Bench eval  ·  NO optimizer LLM is called"
         caveat = (
-            "Scores below are SYNTHETIC (analytic formula). They show the "
-            "plumbing runs and the optimization path is wired; they do NOT "
-            "measure whether meta-optimization actually improves real tasks. "
-            "Use --live with a key for efficacy."
+            "Task scores below come from the registered Trace-Bench adapter. "
+            "Any search in this section is deterministic/manual; use --live "
+            "or the live notebook cells for LLM-driven optimization."
+        )
+    else:
+        head = "[MODE] OFFLINE run  ·  NO optimizer LLM and NO task adapter"
+        caveat = (
+            "Task-scoring examples will raise until a Trace-Bench adapter is "
+            "registered. Use ensure_eval_only_task_adapter(...) for bounded "
+            "real eval-only scoring, or --live with a key for LLM-driven "
+            "optimization."
         )
     return (
         f"{bar}\n{head}\n  Trace-Bench: {tracebench_mode()}\n"

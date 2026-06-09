@@ -71,23 +71,22 @@ REPORT.md          # the 3-approach comparison, conformity tables, convergence
 
 | Example | Question it answers | Surface | Elements | Trace-Bench problems |
 |---|---|---|---|---|
-| **A** `recursive_opt_example_A_learn_setup.py` | What is the best *setup* for a family? | selection/config | A.2 batch, A.4 memory, A.7 trainer | offline: `llm4ad:online_bin_packing_local`, `internal:multi_param`; live: `internal:multi_param` |
+| **A** `recursive_opt_example_A_learn_setup.py` | What is the best *setup* for a family? | selection/config | A.2 batch, A.4 memory, A.7 trainer | eval-only: `llm4ad:online_bin_packing_local`, `internal:multi_param`; live: `internal:multi_param` |
 | **B** `recursive_opt_example_B_improve_component.py` | Can we *rewrite a component's code* to a better one? | code/implementation | B.2 trainer sampling, B.5 trace repr | `llm4ad:online_bin_packing_local`, `internal:code_param` |
 | **C** `recursive_opt_example_C_learn_capability.py` | Can we *learn a new capability* from a spec under multiple objectives? | prompt artifact + multi-objective | C.1 + C.2 + C.4 (C.3 stub) | `internal:multiobjective_gsm8k` |
 | **D** `recursive_opt_example_D_cross_family.py` | Do the best choices *transfer across families*? | full stack O0→O3 | A/B/C combined | `{online_bin_packing_local, circle_packing}`, `{internal:multiobjective_gsm8k, internal:multi_param}` |
 
-Each example runs **offline in a deterministic stub** (no API key, no GPU) so the
-recursion machinery is testable before the full stack is installed. The stub
-rewards the design properties the analysis identified as helpful, so scores are
-*climbable* — e.g. B shows `batch_design` 0.80→1.00 and `trace_summarizer`
-0.82→0.96; C selects the verify-step capability (acc 0.95) on the Pareto front;
-D induces a cross-family prior.
+A/C/D non-live runs now register a bounded **real Trace-Bench eval-only adapter**
+when Trace-Bench is installed: one real example, no nested trainer, and no
+optimizer LLM. That checks wiring without synthetic task scores, but it is not a
+full efficacy benchmark. B still uses a deterministic code validator because it
+tests source-code rewriting mechanics rather than external benchmark scoring.
 
 ---
 
 ## 4. HowTo
 
-### 4.1 Run the offline demos
+### 4.1 Run the non-live demos
 ```bash
 # from a checkout of OpenTrace@pr73 with recursive_opt placed under opto/features/
 export PYTHONPATH=/path/to/OpenTrace
@@ -108,9 +107,9 @@ pip install opentelemetry-api opentelemetry-sdk            # graph/OTEL backends
 git clone https://github.com/AgentOpt/Trace-Bench && cd Trace-Bench
 pip install -e ".[hf]"        # HotpotQA / BBEH / GSM8K ; add ".[dspy]" etc. as needed
 ```
-With Trace-Bench installed, live mode registers the default bundle adapter and
-uses real task evaluators instead of the analytic stub. You can also register a
-custom adapter with `register_task_adapter(...)`. With PR #73 installed,
+With Trace-Bench installed, non-live examples register a bounded eval-only
+adapter and live mode registers the default bundle adapter. You can also
+register a custom adapter with `register_task_adapter(...)`. With PR #73 installed,
 `traces.py` emits real OTEL/Sysmon spans merged into TGJ.
 
 ### 4.3 Run with the real LLM optimizer

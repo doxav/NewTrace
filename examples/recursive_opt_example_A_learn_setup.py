@@ -30,10 +30,12 @@ TRACE-BENCH PROBLEMS (2):
 
 HOW TO RUN
 ----------
-    PYTHONPATH=/path/to/OpenTrace python example_A_learn_setup.py            # offline stub
+    PYTHONPATH=/path/to/OpenTrace python example_A_learn_setup.py            # real eval-only scoring
     OPENAI_API_KEY=... PYTHONPATH=... python example_A_learn_setup.py --live # real LLM optimizer
 
-Offline mode drives the loop by hand (no LLM) so the machinery is testable.
+Offline mode drives the loop by hand (no optimizer LLM) with a bounded real
+Trace-Bench eval-only adapter so the machinery is testable without synthetic
+task scores.
 Live mode replaces the hand driver with the real ``opto.trainer.train`` facade
 (shown in ``run_live``); the LLM optimizer then proposes configs itself.
 """
@@ -47,7 +49,11 @@ from opto.features.recursive_opt import (
     MemoryLite,
     best_config_from,
 )
-from opto.features.recursive_opt.tracebench import make_inner_runner, make_dataset
+from opto.features.recursive_opt.tracebench import (
+    ensure_eval_only_task_adapter,
+    make_inner_runner,
+    make_dataset,
+)
 
 PROBLEMS = ["llm4ad:online_bin_packing_local", "internal:multi_param"]
 LIVE_PROBLEMS = ["internal:multi_param"]
@@ -118,7 +124,7 @@ def run_offline(problem):
     mem = MemoryLite(root=f"./mem_A_{problem.split(':')[-1]}")
     level = build_level(problem, mem)
     guide = RecursiveGuide()
-    best = (-1.0, None)
+    best = (float("-inf"), None)
     for cand in CANDIDATES:
         level.propose(**cand)  # write the candidate into the config node
         out = level.forward(problem)  # run the inner optimization with that config
@@ -148,11 +154,13 @@ def run_live(problem):
 if __name__ == "__main__":
     from opto.features.recursive_opt.runmode import resolve_live, mode_banner
     live = resolve_live()  # raises if --live without a key (no silent fallback)
+    if not live:
+        ensure_eval_only_task_adapter(require=True)
     print(mode_banner(live))
     problems = LIVE_PROBLEMS if live else PROBLEMS
     for p in problems:
         print(
-            f"\n=== A: learning best setup for {p} ({'LIVE' if live else 'OFFLINE STUB'}) ==="
+            f"\n=== A: learning best setup for {p} ({'LIVE' if live else 'EVAL-ONLY'}) ==="
         )
         if live:
             cfg, mem = run_live(p)

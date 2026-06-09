@@ -29,6 +29,83 @@ from opto.features.recursive_opt.tracebench import (
 from opto.trainer.objectives import ObjectiveConfig
 from opto.trainer.guide import Guide
 
+import pytest as _pytest
+from opto.features.recursive_opt import tracebench as _TB
+
+
+class _FakeTaskAdapter:
+    """Explicit registered test double (NOT a library stub): deterministic,
+    cfg/family-sensitive ``run_task`` so the recursion machinery is testable
+    offline without an LLM or real Trace-Bench."""
+
+    status = "fake test adapter"
+
+    def run_task(self, cfg, task_id: str):
+        tid = str(task_id).lower()
+        combo = tid.startswith("llm4ad:") or tid.startswith("kernelbench:")
+        if combo:
+            batch = {"failure_balanced": 0.10, "curriculum": 0.04}
+            mem = {"typed": 0.07, "retrieval": 0.04}
+            trainer = {"BeamsearchAlgorithm": 0.06, "UCBSearchAlgorithm": 0.03}
+        else:
+            batch = {"curriculum": 0.10, "failure_balanced": 0.04}
+            mem = {"retrieval": 0.07, "typed": 0.04}
+            trainer = {"UCBSearchAlgorithm": 0.06, "BeamsearchAlgorithm": 0.03}
+        s = 0.5
+        s += batch.get(cfg.batch_design, -0.03 if cfg.batch_design == "random" else 0.0)
+        s += 0.08 if 3 <= cfg.batch_size <= 8 else -0.05
+        s += mem.get(cfg.memory_policy, 0.0)
+        s += trainer.get(cfg.trainer, 0.0)
+        import hashlib as _hl
+        h = int(_hl.md5(f"{task_id}|{cfg.to_dict()}".encode()).hexdigest(), 16) % 1000
+        s += (h / 1000 - 0.5) * 0.04  # deterministic per-config tie-break
+        s = max(0.0, min(1.0, s))
+        return s, f"[fake:{task_id}] design={cfg.batch_design}/bs={cfg.batch_size}/mem={cfg.memory_policy}"
+
+
+@_pytest.fixture(autouse=True)
+def _register_fake_adapter(monkeypatch):
+    from opto.features.recursive_opt.budget import reset_budget
+
+    for name in (
+        "RECURSIVE_OPT_BUDGET_PRESET",
+        "RECURSIVE_OPT_MAX_OPTIMIZER_LLM_CALLS",
+        "RECURSIVE_OPT_MAX_EVAL_LLM_CALLS",
+        "RECURSIVE_OPT_MAX_CANDIDATES",
+        "RECURSIVE_OPT_MAX_WALL_TIME_SECONDS",
+        "RECURSIVE_OPT_BUDGET_STOP_POLICY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    reset_budget()
+    _TB.register_task_adapter(_FakeTaskAdapter())
+    try:
+        yield
+    finally:
+        reset_budget()
+        _TB.register_task_adapter(None)
+
+
+def _inline_multiobjective(task_ids, objectives):
+    """Inline multi-objective evaluator for tests (decoupled from Trace-Bench):
+    accuracy from verify/plan keywords, cost = length proxy (matches _text_cost)."""
+    from opto.features.recursive_opt.tracebench import _text_cost
+
+    def evaluate(capability_callable, family):
+        accs, costs = [], []
+        for tid in task_ids:
+            out = capability_callable(task=tid)
+            text = str(out.get("answer", out)) if isinstance(out, dict) else str(out)
+            acc = 0.45 + 0.30 * (("verify" in text.lower()) or ("check" in text.lower())) \
+                + 0.20 * (("step" in text.lower()) or ("plan" in text.lower()))
+            accs.append(min(acc, 1.0))
+            costs.append(_text_cost(text))
+        score = {"accuracy": sum(accs) / len(accs), "cost": sum(costs) / len(costs)}
+        scalar = score["accuracy"] - 0.5 * score["cost"]
+        fb = f"[inline-mo] accuracy={score['accuracy']:.2f} cost={score['cost']:.2f}; verify/check helps."
+        return score, fb, scalar
+
+    return evaluate
+
 
 def _batch_design_baseline(self: Any, n: int, k: int) -> List[int]:
     """Return a simple first-k batch for code-artifact tests."""
@@ -189,18 +266,14 @@ def test_batch_design_validator_names_missing_hard_items() -> None:
 
 
 def test_multiobjective_evaluator_rewards_verified_capability() -> None:
-    evaluator = make_multiobjective_evaluator(
+    evaluator = _inline_multiobjective(
         ["internal:multiobjective_gsm8k"],
         {"accuracy": "max", "cost": "min"},
     )
 
     def capability(task: str) -> Dict[str, str]:
         """Return a concise verified capability answer."""
-        return {
-            "answer": (
-                f"{task}: make a short plan, execute it, then verify/check the answer."
-            )
-        }
+        return {"answer": f"{task}: plan, execute, then verify/check the answer."}
 
     score, feedback, scalar = evaluator(capability, "reasoning_control")
 
@@ -208,6 +281,15 @@ def test_multiobjective_evaluator_rewards_verified_capability() -> None:
     assert score["cost"] < 0.4
     assert scalar > 0.7
     assert "verify/check" in feedback
+
+
+def test_text_cost_penalizes_verbosity() -> None:
+    from opto.features.recursive_opt.tracebench import _text_cost
+
+    terse = "plan, execute, verify."
+    verbose = "Write an extremely detailed multi-paragraph chain-of-thought " * 4
+    assert _text_cost(verbose) > _text_cost(terse)  # longer policy => higher cost
+    assert 0.0 <= _text_cost(terse) <= 1.0 and _text_cost(verbose) <= 1.0
 
 
 # --------------------------------------------------------------------------- #
@@ -290,20 +372,17 @@ def test_default_optimizer_tools_searches_global_failures(tmp_path: Path) -> Non
     assert any("failure-b" in h for h in hits)
 
 
-def test_tracebench_stub_is_family_sensitive() -> None:
-    llm4ad_runner = make_inner_runner("llm4ad:online_bin_packing_local")
-    hf_runner = make_inner_runner("hf:GSM8K")
-
-    llm4ad_cfg = LevelConfig(batch_size=4, batch_design="failure_balanced",
-                             memory_policy="typed", trainer="BeamsearchAlgorithm",
-                             trace_type="hybrid")
-    hf_cfg = LevelConfig(batch_size=8, batch_design="curriculum",
-                         memory_policy="retrieval", trainer="UCBSearchAlgorithm",
-                         trace_type="otel")
-
-    # each family prefers its own profile
-    assert llm4ad_runner(llm4ad_cfg, "combinatorial")[0] > llm4ad_runner(hf_cfg, "combinatorial")[0]
-    assert hf_runner(hf_cfg, "reasoning_control")[0] > hf_runner(llm4ad_cfg, "reasoning_control")[0]
+def test_make_task_runner_requires_registered_adapter() -> None:
+    # With no adapter registered, task scoring must RAISE (no synthetic stub).
+    _TB.register_task_adapter(None)
+    try:
+        with pytest.raises(RuntimeError, match="requires a registered Trace-Bench adapter"):
+            make_inner_runner("hf:GSM8K")(LevelConfig(), "hf:GSM8K")
+    finally:
+        _TB.register_task_adapter(_FakeTaskAdapter())  # restore for remaining asserts
+    # With an adapter, it routes through run_task.
+    score, fb = make_inner_runner("hf:GSM8K")(LevelConfig(), "hf:GSM8K")
+    assert 0.0 <= score <= 1.0 and "fake:hf:GSM8K" in fb
 
 
 def test_capability_artifact_live_path_keeps_trace_connection(tmp_path: Path) -> None:
@@ -311,7 +390,7 @@ def test_capability_artifact_live_path_keeps_trace_connection(tmp_path: Path) ->
         CapabilityArtifact, PROBLEMS,
     )
 
-    evaluator = make_multiobjective_evaluator(PROBLEMS, {"accuracy": "max", "cost": "min"})
+    evaluator = _inline_multiobjective(PROBLEMS, {"accuracy": "max", "cost": "min"})
     art = CapabilityArtifact(seed_impl="Answer the task.", evaluator=evaluator,
                              memory=MemoryLite(root=str(tmp_path)))
     guide = RecursiveGuide()
@@ -443,6 +522,18 @@ def test_tracebench_adapter_scores_real_internal_task_when_available() -> None:
 
     assert score == pytest.approx(-3.0)
     assert "[real_trace_bench:internal:numeric_param]" in feedback
+
+
+def test_eval_only_adapter_helper_registers_real_bounded_adapter() -> None:
+    pytest.importorskip("trace_bench.registry")
+
+    TB.register_task_adapter(None)
+    try:
+        assert TB.ensure_eval_only_task_adapter(require=True) is True
+        assert TB.using_real_tasks() is True
+        assert "inner_steps=0" in TB.real_mode_status()
+    finally:
+        TB.register_task_adapter(_FakeTaskAdapter())
 
 
 def test_tracebench_multiobjective_scalarization_uses_objective_config() -> None:
@@ -855,6 +946,36 @@ def test_global_optimizer_llm_budget_zero_blocks_live_calls(monkeypatch) -> None
         reset_budget()
 
 
+def test_budgeted_live_llm_can_be_deepcopied_for_trainer_proposals(monkeypatch) -> None:
+    import copy
+
+    from opto.features.recursive_opt import runmode
+    from opto.features.recursive_opt.budget import current_budget, reset_budget
+    import opto.utils.llm as llm_mod
+
+    calls = []
+
+    class FakeLiteLLM:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __call__(self, *args, **kwargs):
+            calls.append(kwargs)
+            return object()
+
+    monkeypatch.setattr(llm_mod, "LiteLLM", FakeLiteLLM)
+    reset_budget()
+    try:
+        llm = runmode.make_live_llm("gpt-5.4-nano")
+        copied = copy.deepcopy(llm)
+        copied(messages=[{"role": "user", "content": "ping"}], max_tokens=7)
+
+        assert calls
+        assert current_budget().used_optimizer_llm_calls == 1
+    finally:
+        reset_budget()
+
+
 def test_gpt5_live_llm_maps_max_tokens(monkeypatch) -> None:
     from opto.features.recursive_opt import runmode
     import opto.utils.llm as llm_mod
@@ -877,3 +998,66 @@ def test_gpt5_live_llm_maps_max_tokens(monkeypatch) -> None:
     assert calls
     assert calls[0]["max_completion_tokens"] == 7
     assert "max_tokens" not in calls[0]
+
+
+# --------------------------------------------------------------------------- #
+# P0/P1 regression tests: A read-back, Pareto get_score_dict, repeat helper.
+# --------------------------------------------------------------------------- #
+def test_best_config_from_is_non_empty_and_decodable_after_optimize() -> None:
+    from opto.features.recursive_opt import best_config_from, decode_cfg, optimize
+    from opto.features.recursive_opt.tracebench import make_dataset
+
+    level = MetaLevel(LevelConfig(), inner_runner=make_inner_runner("hf:GSM8K"),
+                      trainable_fields=("batch_design", "trainer"))
+    opt = _NoLLMOptimizer(level.parameters())
+    optimize(level, make_dataset(["hf:GSM8K"], repeats=8), optimizer=opt,
+             iterations=3, num_candidates=2)
+    cfg_text = best_config_from(level)
+    assert cfg_text.strip()                      # never empty (was empty in live A)
+    decoded = decode_cfg(cfg_text, LevelConfig(), ("batch_design", "trainer"))
+    assert decoded.batch_design and decoded.trainer
+
+    # even if the trained node is blanked, best_config_from falls back, never empty
+    level.parameters()[0]._data = "   "
+    assert best_config_from(level).strip()
+
+
+def test_recursive_guide_get_score_dict_exposes_objectives() -> None:
+    guide = RecursiveGuide()
+
+    class _Node:
+        data = {"score": 0.7, "feedback": "fb", "objectives": {"accuracy": 0.9, "cost": 0.2}}
+
+    sd = guide.get_score_dict("task", _Node(), None)
+    assert sd == {"accuracy": 0.9, "cost": 0.2}
+    # scalar-only output -> {"score": ...}
+    class _Plain:
+        data = {"score": 0.5, "feedback": "x"}
+    assert guide.get_score_dict("t", _Plain(), None) == {"score": 0.5}
+
+
+def test_pareto_path_runs_with_objective_config(tmp_path: Path) -> None:
+    # keep the Pareto path: passing objective_config + a dict-returning guide
+    # must drive a real trainer end-to-end (no LLM) without error.
+    from opto.features.recursive_opt import optimize
+    from opto.features.recursive_opt.tracebench import make_dataset
+    from opto.trainer.objectives import ObjectiveConfig
+    from examples.recursive_opt_example_C_learn_capability import CapabilityArtifact
+
+    ev = _inline_multiobjective(["internal:multiobjective_gsm8k"], {"accuracy": "max", "cost": "min"})
+    art = CapabilityArtifact(seed_impl="plan; verify.", evaluator=ev,
+                             memory=MemoryLite(root=str(tmp_path)))
+    opt = _NoLLMOptimizer(art.parameters())
+    optimize(art, make_dataset(["internal:multiobjective_gsm8k"], repeats=8),
+             optimizer=opt, iterations=2, num_candidates=2,
+             objective_config=ObjectiveConfig(mode="pareto", minimize={"cost"}))
+    assert len(art.parameters()) == 1
+
+
+def test_repeat_scores_reports_mean_and_std() -> None:
+    from opto.features.recursive_opt import inspect_utils
+
+    stats = inspect_utils.repeat_scores(lambda s: 0.8 + 0.1 * s, seeds=(0, 1, 2))
+    assert stats["n"] == 3
+    assert abs(stats["mean"] - 0.9) < 1e-9 and stats["std"] > 0
+    assert "± " in inspect_utils.fmt_mean_std(stats)

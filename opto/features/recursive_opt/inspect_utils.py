@@ -93,3 +93,24 @@ def summarize(before: str, after: str, score_before: float, score_after: float,
     arrow = "improved" if delta > 0 else ("unchanged" if delta == 0 else "regressed")
     return (f"{name}: score {score_before:.3f} -> {score_after:.3f} "
             f"(Δ={delta:+.3f}, {arrow}); artifact {'changed' if changed else 'unchanged'}.")
+
+
+def repeat_scores(eval_fn, seeds=(0, 1, 2)):
+    """Run ``eval_fn(seed) -> float`` over several seeds and return stats.
+
+    Returns ``{"scores", "mean", "std", "n"}``. Use this so reported numbers come
+    with a mean±std over seeds instead of a single (often noisy) run — especially
+    important when the eval set is tiny.
+    """
+    import math
+
+    scores = [float(eval_fn(s)) for s in seeds]
+    n = len(scores)
+    mean = sum(scores) / n if n else 0.0
+    var = sum((x - mean) ** 2 for x in scores) / n if n else 0.0
+    return {"scores": scores, "mean": mean, "std": math.sqrt(var), "n": n}
+
+
+def fmt_mean_std(stats: dict, name: str = "score") -> str:
+    """Pretty 'name = mean ± std (n=…)' from ``repeat_scores`` output."""
+    return f"{name} = {stats['mean']:.3f} ± {stats['std']:.3f} (n={stats['n']})"

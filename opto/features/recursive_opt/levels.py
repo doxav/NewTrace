@@ -712,8 +712,36 @@ class RecursiveGuide(Guide):
         ok = str(data).strip() == str(reference).strip()  # deterministic fallback
         return (1.0 if ok else 0.0), ("correct" if ok else f"expected: {reference}")
 
+    def get_score_dict(
+        self, query: str, response: Any, reference: Any = None, **kwargs
+    ) -> dict:
+        """Per-objective scores for the Trainer's multi-objective (Pareto) path.
+
+        Returns the level's ``objectives`` dict when present (e.g. capability
+        artifacts expose {"accuracy", "cost"}); otherwise a single ``score`` key.
+        Only consulted by trainers when an ``ObjectiveConfig`` is supplied, so the
+        scalar path is unaffected.
+        """
+        data = response.data if hasattr(response, "data") else response
+        if isinstance(data, dict) and isinstance(data.get("objectives"), dict):
+            return {k: float(v) for k, v in data["objectives"].items()}
+        score, _ = self.get_feedback(query, response, reference, **kwargs)
+        return {"score": float(score)}
+
 
 def best_config_from(level: MetaLevel) -> str:
-    """Current optimized config text of a MetaLevel."""
-    level.canonicalize()
-    return level._cfg_node.data
+    """Current optimized config text of a MetaLevel.
+
+    Reads the *live* trainable parameter (like ``CodeArtifactLevel.current_code``)
+    rather than a cached attribute, so it reflects what the Trainer wrote back.
+    Always returns a non-empty, canonicalized config (falls back to the encoded
+    base config if the trained text is blank or unparizable).
+    """
+    params = level.parameters()
+    text = str(params[0].data) if params else ""
+    if not text.strip():
+        return encode_cfg(level._base_cfg, level._fields)
+    try:
+        return canonicalize_cfg_text(text, level._base_cfg, level._fields)
+    except Exception:
+        return text

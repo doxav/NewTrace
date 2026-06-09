@@ -29,7 +29,7 @@ SUPPORTING CAPABILITIES (composed, not the headline):
     C.2  agentic optimizer         : tools (run a subset eval / note) enrich feedback
     C.4  HITL                      : a human confirms the Pareto-front pick
     C.3  Tinker                    : reward can instead come from Tinker rollouts
-                                     (swap the evaluator; stub shown in example earlier)
+                                     (swap in a Tinker-backed evaluator)
 
 TRACE-BENCH PROBLEM the capability is tested on:
     internal:multiobjective_gsm8k  (real GSM8K learner prompt + token usage)
@@ -43,7 +43,7 @@ OBJECTIVES:
 
 HOW TO RUN
 ----------
-    PYTHONPATH=/path/to/OpenTrace python example_C_learn_capability.py
+    PYTHONPATH=/path/to/OpenTrace python example_C_learn_capability.py        # real eval-only scoring
     OPENAI_API_KEY=... PYTHONPATH=... python example_C_learn_capability.py --live
 """
 
@@ -60,7 +60,10 @@ from opto.features.recursive_opt import (
     HITLGate,
     auto_allow,
 )
-from opto.features.recursive_opt.tracebench import make_multiobjective_evaluator
+from opto.features.recursive_opt.tracebench import (
+    ensure_eval_only_task_adapter,
+    make_multiobjective_evaluator,
+)
 
 # The capability we want the agent to LEARN, stated as a spec the optimizer reads.
 CAPABILITY_SPEC = (
@@ -96,7 +99,8 @@ class CapabilityArtifact(Module):
         def capability(task):
             # In real mode the evaluator applies impl_text to compatible
             # Trace-Bench artifacts, e.g. as GSM8K's learner system prompt.
-            # In offline mode the stub evaluator inspects this text directly.
+            # In non-live mode the eval-only adapter applies this text to a
+            # bounded real Trace-Bench bundle without an optimizer LLM.
             return {"answer": impl_text, "task": task}
 
         score_dict, feedback, scalar = self._eval(capability, family)
@@ -151,13 +155,22 @@ def learn_capability():
 
         art = CapabilityArtifact(seed_impl=CANDIDATE_IMPLS[-1], evaluator=evaluator, memory=mem)
         iterations = current_iterations()
+        # Keep the Pareto path: RecursiveGuide.get_score_dict exposes {accuracy,cost}
+        # and the trainer ranks candidates on the Pareto front (minimize cost).
         optimize(
             art,
             make_dataset([PROBLEMS[0]], repeats=iterations),
             iterations=iterations,
+            objective_config=ObjectiveConfig(mode="pareto", minimize={"cost"}),
         )
         final = art.forward(PROBLEMS[0])
         final_data = final.data if hasattr(final, "data") else final
+        # Wire live memory: persist the learned capability as a versioned artifact.
+        mem.record_artifact(
+            level="capability", family=PROBLEMS[0], kind="capability",
+            content=art.impl.data, score=float(final_data["objectives"].get("accuracy", 0.0)),
+            metrics=final_data["objectives"],
+        )
         return art.impl.data, final_data["objectives"], mem, None
 
     # ---- OFFLINE: evaluate candidate capabilities, pick the Pareto-best ----
@@ -199,10 +212,12 @@ if __name__ == "__main__":
     from opto.features.recursive_opt.runmode import resolve_live, mode_banner
 
     live = resolve_live()  # raises if --live without a key (no silent fallback)
+    if not live:
+        ensure_eval_only_task_adapter(require=True)
     print(mode_banner(live))
     print(
         f"=== C: learning a NEW CAPABILITY from spec + objectives "
-        f"({'LIVE' if live else 'OFFLINE STUB'}) ==="
+        f"({'LIVE' if live else 'EVAL-ONLY'}) ==="
     )
     print(f"  spec      : {CAPABILITY_SPEC}")
     print(f"  objectives: {OBJECTIVES}")
@@ -217,4 +232,8 @@ if __name__ == "__main__":
         print(
             f"  Pareto front had {len(front)} candidate(s); HITL decision: {gate.audit[-1]['via']}"
         )
-    print(f"  memory: {mem.summary()['priors']}")
+    s = mem.summary()
+    print(f"  memory: episodes={s['episodes']} artifacts={s['artifacts']} priors={s['priors']}")
+    best = mem.best_artifact(kind="capability")
+    if best is not None:
+        print(f"  best capability artifact: score={best.score:.2f} :: {best.content[:60]}")

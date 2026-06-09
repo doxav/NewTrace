@@ -78,9 +78,9 @@ def real_mode_status() -> str:
         status = getattr(_TASK_ADAPTER, "status", "registered Trace-Bench adapter")
         return f"REAL ({status})"
     if HAVE_TB:
-        return ("trace_bench is importable but NO adapter is registered; using STUB. "
-                "Call register_task_adapter(...) for real benchmarks.")
-    return "STUB (trace_bench not installed)"
+        return ("trace_bench is importable but NO adapter is registered; "
+                "task scoring will RAISE until register_task_adapter(...) is called.")
+    return "NO adapter registered (task scoring will raise; no stub fallback)."
 
 
 def normalize_task_id(task_id: str) -> str:
@@ -438,84 +438,82 @@ def ensure_default_task_adapter(*, require: bool = False) -> bool:
         return False
 
 
+def ensure_eval_only_task_adapter(
+    *,
+    require: bool = False,
+    max_examples: int = 1,
+    timeout_seconds: int = 1,
+    eval_kwargs: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """Register a bounded real Trace-Bench adapter for non-live demos.
+
+    This is not a synthetic fallback: it loads real Trace-Bench bundles, scores a
+    small number of examples, and runs no nested trainer (`inner_steps=0`). Use
+    it when examples should be runnable without an optimizer LLM but still need
+    benchmark-backed task scoring.
+    """
+    if _TASK_ADAPTER is not None:
+        return True
+    if not HAVE_TB:
+        if require:
+            raise RuntimeError("Trace-Bench is not importable; cannot run real eval-only scoring.")
+        return False
+    try:
+        kwargs = dict(eval_kwargs or {})
+        kwargs.setdefault("n_train", 1)
+        kwargs.setdefault("n_val", 0)
+        kwargs.setdefault("timeout_seconds", timeout_seconds)
+        register_task_adapter(
+            TraceBenchTaskAdapter(
+                eval_kwargs=kwargs,
+                max_examples=max_examples,
+                inner_steps=0,
+            )
+        )
+        return True
+    except Exception as exc:
+        if require:
+            raise RuntimeError(f"Could not initialize eval-only Trace-Bench adapter: {exc}") from exc
+        return False
+
+
+def _text_cost(text: str, cap: int = 600) -> float:
+    """Length-based token/compute proxy in [0,1]; longer policy => higher cost.
+
+    Shared by every objective so 'minimize cost' consistently penalises verbosity
+    (the capability text is the trainable artifact, so its length is a faithful,
+    always-available proxy when token usage isn't reported by the backend).
+    """
+    return min(1.0, len(str(text)) / float(cap))
+
+
+def _require_adapter(what: str):
+    """Return the registered Trace-Bench adapter or raise (no stub fallback)."""
+    if _TASK_ADAPTER is None:
+        raise RuntimeError(
+            f"{what} requires a registered Trace-Bench adapter; none is registered. "
+            "Call register_task_adapter(<adapter>) first. No synthetic stub scoring "
+            "is provided — results must come from a real benchmark."
+        )
+    return _TASK_ADAPTER
+
+
 def make_agent_fn(task_id: str) -> Callable:
     """O0 agent: consume the trainable artifact, produce an answer for input x."""
-    if _TASK_ADAPTER is not None and hasattr(_TASK_ADAPTER, "agent_fn"):
-        return _TASK_ADAPTER.agent_fn(task_id)
-
-    # STUB: artifact quality ~ how many "good" keywords it contains.
-    def agent_fn(artifact, x):
-        text = artifact.data if hasattr(artifact, "data") else str(artifact)
-        return {"answer": f"{x}::{text[:24]}", "_artifact": text}
-
-    return agent_fn
-
-
-def _stub_family_profile(task_id: str):
-    """Family-specific preferences so OFFLINE recursion learns real per-family
-    differences (otherwise example D's cross-family prior is trivially identical
-    for every family). Returns small score bonuses keyed by config choice."""
-    tid = task_id.lower()
-    if tid.startswith("llm4ad:") or tid.startswith("kernelbench:") or tid.startswith("veribench:"):
-        return {
-            "batch": {"failure_balanced": 0.10, "curriculum": 0.04},
-            "memory": {"typed": 0.07, "retrieval": 0.04},
-            "trace": {"hybrid": 0.06, "otel": 0.02},
-            "trainer": {"BeamsearchAlgorithm": 0.06, "UCBSearchAlgorithm": 0.03},
-            "note": "favor hard-example mining, typed memory, and hybrid traces",
-        }
-    if tid.startswith("hf:") or "multiobjective" in tid:
-        return {
-            "batch": {"curriculum": 0.10, "failure_balanced": 0.04},
-            "memory": {"retrieval": 0.07, "typed": 0.04},
-            "trace": {"otel": 0.06, "hybrid": 0.03},
-            "trainer": {"UCBSearchAlgorithm": 0.06, "BeamsearchAlgorithm": 0.03},
-            "note": "favor curriculum, retrieval, and lighter OTEL-style summaries",
-        }
-    return {
-        "batch": {"failure_balanced": 0.06, "curriculum": 0.03},
-        "memory": {"typed": 0.05, "retrieval": 0.03},
-        "trace": {"hybrid": 0.04, "otel": 0.02},
-        "trainer": {"BeamsearchAlgorithm": 0.04, "UCBSearchAlgorithm": 0.03},
-        "note": "favor balanced batches and typed memory",
-    }
-
-
-def _stub_run_task(cfg, task_id: str) -> Tuple[float, str]:
-    """Deterministic, family-sensitive analytic score for one (cfg, task)."""
-    profile = _stub_family_profile(task_id)
-    s = 0.5
-    s += profile["batch"].get(
-        cfg.batch_design, -0.03 if cfg.batch_design == "random" else 0.0
-    )
-    s += 0.08 if 3 <= cfg.batch_size <= 8 else -0.05
-    s += profile["memory"].get(cfg.memory_policy, 0.0)
-    s += profile["trace"].get(cfg.trace_type, 0.0)
-    s += 0.04 if cfg.optimizer in ("OptoPrime", "OptoPrimeMulti") else 0.0
-    s += profile["trainer"].get(cfg.trainer, 0.0)
-    h = int(hashlib.md5(f"{task_id}|{cfg.to_dict()}".encode()).hexdigest(), 16) % 1000
-    s += (h / 1000 - 0.5) * 0.06
-    s = max(0.0, min(1.0, s))
-    fb = (
-        f"[stub:{task_id}] design={cfg.batch_design}/bs={cfg.batch_size}/"
-        f"mem={cfg.memory_policy}/trainer={cfg.trainer}. "
-        f"{profile['note']}. "
-        f"{'good batch design' if cfg.batch_design!='random' else 'try a non-random batch design'}; "
-        f"{'memory helps here' if cfg.memory_policy in ('typed','retrieval') else 'enable typed or retrieval memory'}."
-    )
-    return s, fb
+    adapter = _require_adapter("make_agent_fn")
+    if hasattr(adapter, "agent_fn"):
+        return adapter.agent_fn(task_id)
+    raise RuntimeError("The registered adapter does not implement agent_fn(task_id).")
 
 
 def make_task_runner() -> Callable:
     """Return ``run(cfg, task_id) -> (score, feedback)`` used by O1/O2/O3.
 
-    Uses the registered real adapter if present; otherwise the deterministic
-    stub. One contract for every recursion level (DRY).
+    Requires a registered Trace-Bench adapter (``adapter.run_task``); there is no
+    synthetic fallback. One contract for every recursion level (DRY).
     """
     def run(cfg, task_id: str) -> Tuple[float, str]:
-        if _TASK_ADAPTER is not None:
-            return _TASK_ADAPTER.run_task(cfg, task_id)
-        return _stub_run_task(cfg, task_id)
+        return _require_adapter("make_task_runner").run_task(cfg, task_id)
 
     return run
 
@@ -696,7 +694,10 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4):
                 if old_prompt is not None:
                     param.system_prompt._data = old_prompt
             accuracy = sum(row["accuracy"] for row in rows) / len(rows)
-            cost = sum(row["cost"] for row in rows) / len(rows)
+            # Cost is a token/length proxy on the trainable capability text so that
+            # "minimize cost" actually penalises verbosity (benchmark score_dicts
+            # do not carry a comparable compute cost). Consistent across objectives.
+            cost = _text_cost(capability_text)
             objective_rows.append({"accuracy": accuracy, "cost": cost})
             notes.append(
                 f"{normalized}:{dataset_name} n={limit} "
@@ -719,57 +720,16 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4):
         return score, feedback, scalar
 
     def evaluate(capability_callable, family):
-        if _TASK_ADAPTER is not None:
-            try:
-                return _evaluate_real(capability_callable, family)
-            except BudgetExceeded:
-                raise
-            except Exception as exc:
-                return (
-                    {"accuracy": 0.0, "cost": 1.0},
-                    f"[real_trace_bench_multiobjective] raised {type(exc).__name__}: {exc}",
-                    -0.5,
-                )
-
-        accs, costs, notes = [], [], []
-        for tid in task_ids:
-            try:
-                out = capability_callable(task=tid)
-            except Exception as e:
-                return (
-                    {"accuracy": 0.0, "cost": 1.0},
-                    f"[capability@{tid}] raised {type(e).__name__}: {e}",
-                )
-            spec_text = (
-                str(out.get("answer", out)) if isinstance(out, dict) else str(out)
+        _require_adapter("make_multiobjective_evaluator")
+        try:
+            return _evaluate_real(capability_callable, family)
+        except BudgetExceeded:
+            raise
+        except Exception as exc:
+            return (
+                {"accuracy": 0.0, "cost": 1.0},
+                f"[real_trace_bench_multiobjective] raised {type(exc).__name__}: {exc}",
+                -0.5,
             )
-            # STUB scoring: capability that (a) cites a verification step and
-            # (b) is concise scores higher accuracy at lower cost.
-            verifies = ("verify" in spec_text.lower()) or ("check" in spec_text.lower())
-            decomposes = ("step" in spec_text.lower()) or ("plan" in spec_text.lower())
-            acc = 0.45 + 0.30 * verifies + 0.20 * decomposes
-            cost = 0.3 + 0.0009 * len(spec_text)  # longer => costlier
-            accs.append(min(acc, 1.0))
-            costs.append(min(cost, 1.0))
-            notes.append(f"{tid}:acc={acc:.2f},cost={cost:.2f}")
-        score = {"accuracy": sum(accs) / len(accs), "cost": sum(costs) / len(costs)}
-        # scalarize for single-objective optimizers (max accuracy - cost)
-        scalar = score["accuracy"] - 0.5 * score["cost"]
-        fb = (
-            "[multi-objective] "
-            + "; ".join(notes)
-            + f". aggregate acc={score['accuracy']:.2f} cost={score['cost']:.2f}. "
-            + (
-                "good: includes a verify/check step; "
-                if score["accuracy"] > 0.7
-                else "tip: ADD an explicit verify/check step to raise accuracy; "
-            )
-            + (
-                "keep it terse to lower cost."
-                if score["cost"] > 0.45
-                else "cost is acceptable."
-            )
-        )
-        return score, fb, scalar
 
     return evaluate

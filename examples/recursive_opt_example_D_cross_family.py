@@ -17,8 +17,9 @@ this as "manual, not recursively trainable"). Now:
                               ONLY on HELD-OUT families (true transfer objective).
 
 Both are optimized by the SAME machinery as O0/O1 (an LLM optimizer rewrites the
-node from the feedback). Offline we drive them with a few candidate proposals to
-show the score is climbable; `--live` uses the real optimizer.
+node from the feedback). Non-live mode drives them with a few candidate
+proposals against a bounded real eval-only adapter; `--live` uses the real
+optimizer.
 
 MEMORY (M2): every policy/prior is written to the artifact-lineage store, so you
 can reconstruct the initial->final chain with scores (printed at the end).
@@ -37,7 +38,10 @@ import os, sys
 from opto.features.recursive_opt import (
     FamilyPolicyLevel, PriorInductionLevel, RecursiveGuide, MemoryLite,
 )
-from opto.features.recursive_opt.tracebench import make_task_runner
+from opto.features.recursive_opt.tracebench import (
+    ensure_eval_only_task_adapter,
+    make_task_runner,
+)
 from opto.features.recursive_opt.runmode import resolve_live, mode_banner
 
 FAMILIES = {
@@ -68,7 +72,7 @@ def run_offline(mem):
     # ---- O2: trainable per-family policy ---------------------------------- #
     print("O2  FamilyPolicyLevel — learn the per-family config policy")
     o2 = FamilyPolicyLevel(FAMILIES, run_task=run_task, memory=mem)
-    best = (-1.0, None, None)
+    best = (float("-inf"), None, None)
     for pol in POLICY_CANDIDATES:
         o2.propose(pol)
         out = o2.forward()
@@ -84,7 +88,7 @@ def run_offline(mem):
     train_f = {"combinatorial": FAMILIES["combinatorial"]}
     holdout_f = {"reasoning_control": FAMILIES["reasoning_control"]}
     o3 = PriorInductionLevel(train_f, holdout_f, run_task=run_task, memory=mem)
-    best3 = (-1.0, None)
+    best3 = (float("-inf"), None)
     for cand in PRIOR_CANDIDATES:
         o3.propose(**cand)
         t = o3.forward().data["score"]
@@ -98,20 +102,34 @@ def run_offline(mem):
 
 def run_live(mem):
     from opto.features.recursive_opt.optimize import optimize, current_iterations
+    from opto.features.recursive_opt import PriorInductionLevel
+
     run_task = make_task_runner()
-    o2 = FamilyPolicyLevel(FAMILIES, run_task=run_task, memory=mem)
     iterations = current_iterations()
-    # Trainer = PrioritySearch (or GEPA-Base), optimizer = OptoPrimeV2.
-    optimize(
-        o2,
-        {"inputs": [None] * iterations, "infos": [None] * iterations},
-        iterations=iterations,
-    )
+    fam_names = list(FAMILIES)
+
+    # O2: learn the per-family policy (one trainable node).
+    o2 = FamilyPolicyLevel(FAMILIES, run_task=run_task, memory=mem)
+    optimize(o2, {"inputs": [None] * iterations, "infos": [None] * iterations},
+             iterations=iterations)
     print("O2 optimized policy:\n", o2._policy_node.data)
+    print("  O2 per-family scores:", {k: round(v, 3) for k, v in o2.forward().data["per_family"].items()})
+
+    # O3: induce a prior on the first family, score TRANSFER on the held-out family.
+    train_f = {fam_names[0]: FAMILIES[fam_names[0]]}
+    holdout_f = {fam_names[1]: FAMILIES[fam_names[1]]}
+    o3 = PriorInductionLevel(train_f, holdout_f, run_task=run_task, memory=mem)
+    optimize(o3, {"inputs": [None] * iterations, "infos": [None] * iterations},
+             iterations=iterations)
+    print("O3 induced transfer prior:\n", o3._prior_node.data)
+    print(f"  O3 held-out transfer ({fam_names[1]}):",
+          {k: round(v, 3) for k, v in o3.forward().data["per_family"].items()})
 
 
 if __name__ == "__main__":
     live = resolve_live()
+    if not live:
+        ensure_eval_only_task_adapter(require=True)
     print(mode_banner(live))
     print("=== D: TRAINABLE O2/O3 recursion across families ===\n")
     mem = MemoryLite(root="./mem_D")

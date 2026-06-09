@@ -20,6 +20,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass, field
+from copy import deepcopy
 from typing import Any, Literal, Optional
 
 BudgetResource = Literal["optimizer_llm_calls", "eval_llm_calls", "candidates"]
@@ -200,6 +201,17 @@ class BudgetedLLM:
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         current_budget().charge(self.resource)
         return self._llm(*args, **kwargs)
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> "BudgetedLLM":
+        """Return a wrapper copy that shares the underlying provider callable.
+
+        Trace trainers deep-copy optimizers when proposing candidates. Copying a
+        provider client is unnecessary and can recurse through dynamic attrs, but
+        each copied wrapper should still charge the same global budget.
+        """
+        copied = type(self)(self._llm, deepcopy(self.resource, memo))
+        memo[id(self)] = copied
+        return copied
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._llm, name)
