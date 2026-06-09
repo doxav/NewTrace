@@ -4,9 +4,26 @@ from opto.trace import node, bundle
 from opto.trace.containers import NodeContainer
 from opto.trace.broadcast import apply_op
 import opto.trace.operators as ops
-import shutil, pytest
+import shutil, subprocess, pytest
 
-GRAPHVIZ_AVAILABLE = shutil.which("dot") is not None
+
+def _graphviz_dot_available() -> bool:
+    """Return True only when Graphviz dot exists and can run."""
+    dot = shutil.which("dot")
+    if dot is None:
+        return False
+    try:
+        return subprocess.run(
+            [dot, "-V"],
+            capture_output=True,
+            timeout=2,
+            check=False,
+        ).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+GRAPHVIZ_AVAILABLE = _graphviz_dot_available()
 
 # ========== Case 1 ==========
 

@@ -1,0 +1,276 @@
+"""
+opto.features.recursive_opt.optimize  —  ONE DRY optimization entry-point
+=========================================================================
+
+The examples must NOT hand-roll their own ``for step: backward(); step()`` loop.
+They delegate to a real **Trainer** through this single helper, configured by
+three knobs (overridable via env, so you set them "at the beginning"):
+
+    RECURSIVE_OPT_TRAINER     trainer type           (default "PrioritySearch";
+                                                       falls back to GEPA-Base
+                                                       = "ParetobasedPS")
+    RECURSIVE_OPT_OPTIMIZER   optimizer the trainer uses (default "OptoPrimeV2")
+    RECURSIVE_OPT_ITERATIONS  number of search iterations (default 10)
+    RECURSIVE_OPT_NUM_CANDIDATES  candidates per search step (default 4)
+
+``optimize(level, dataset)`` works for EVERY recursive level (MetaLevel,
+CodeArtifactLevel, CapabilityArtifact, FamilyPolicyLevel, PriorInductionLevel)
+because they are all ``trace.Module`` s. The trainer updates the level's
+parameters in place; the helper returns the trainer result.
+"""
+from __future__ import annotations
+
+import os
+from typing import Any, Optional, Union
+
+from opto import trace
+from opto.optimizers.optimizer import Optimizer
+from opto.trace.nodes import ParameterNode
+from opto.trainer.algorithms import Trainer
+from opto.trainer.guide import Guide
+from opto.trainer.loggers import BaseLogger
+from opto.trainer.train import (
+    dataset_check,
+    load_guide,
+    load_logger,
+    load_optimizer,
+    load_trainer_class,
+)
+
+from .levels import RecursiveGuide
+from .runmode import make_live_llm
+
+# --- the three knobs, set once (env-overridable) --------------------------- #
+TRAINER = "PrioritySearch"
+OPTIMIZER = "OptoPrimeV2"
+ITERATIONS = 10
+NUM_CANDIDATES = 4
+
+
+def _positive_int_env(name: str, default: int) -> int:
+    """Read a positive integer environment override used by live demos."""
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer, got {raw_value!r}") from exc
+    if value <= 0:
+        raise ValueError(f"{name} must be positive, got {value}")
+    return value
+
+
+def _positive_int(value: int, name: str) -> int:
+    """Validate an explicit positive integer option."""
+    if not isinstance(value, int):
+        raise TypeError(f"{name} must be an integer, got {type(value).__name__}")
+    if value <= 0:
+        raise ValueError(f"{name} must be positive, got {value}")
+    return value
+
+
+def current_iterations(default: int = ITERATIONS) -> int:
+    """Return the current recursive-opt outer iteration budget."""
+    return _positive_int_env("RECURSIVE_OPT_ITERATIONS", default)
+
+
+def current_num_candidates(default: int = NUM_CANDIDATES) -> int:
+    """Return the current candidates-per-step budget."""
+    return _positive_int_env("RECURSIVE_OPT_NUM_CANDIDATES", default)
+
+
+def current_trainer(default: str = TRAINER) -> str:
+    """Return the current Trainer name."""
+    return os.environ.get("RECURSIVE_OPT_TRAINER", default)
+
+
+def current_optimizer(default: str = OPTIMIZER) -> str:
+    """Return the current optimizer name."""
+    return os.environ.get("RECURSIVE_OPT_OPTIMIZER", default)
+
+
+def resolve_trainer(name: Optional[str] = None) -> str:
+    """Return ``name`` if that Trainer exists, else the GEPA-Base fallback.
+
+    GEPA-Base = ``ParetobasedPS`` ("GEPA-style Pareto-based exploration on top of
+    the PrioritySearch pipeline").
+    """
+    import opto.trainer.algorithms as algos
+
+    requested = current_trainer() if name is None else name
+    if requested and hasattr(algos, requested):
+        return requested
+    return "ParetobasedPS"
+
+
+def optimize(
+    model,
+    train_dataset: dict,
+    *,
+    guide: Optional[object] = None,
+    trainer: Optional[str] = None,
+    optimizer: Optional[str] = None,
+    optimizer_kwargs: Optional[dict] = None,
+    guide_kwargs: Optional[dict] = None,
+    logger: Union[BaseLogger, str] = "ConsoleLogger",
+    logger_kwargs: Optional[dict] = None,
+    iterations: Optional[int] = None,
+    num_candidates: Optional[int] = None,
+    batch_size: int = 1,
+    keep_best_validated: bool = True,
+    **trainer_kwargs,
+) -> Any:
+    """Optimize a recursive level with a Trainer (no hand-rolled loop).
+
+    Parameters
+    ----------
+    model : trace.Module
+        Any recursive level; its trainable parameters are updated in place.
+    train_dataset : dict
+        ``{"inputs": [...], "infos": [...]}`` (e.g. ``make_dataset([task], repeats=iterations)``).
+    guide : Guide, optional
+        Defaults to ``RecursiveGuide`` (maps a level's output to (score, feedback)).
+    trainer, optimizer, iterations
+        The three configurable knobs (see module docstring / env vars).
+    num_candidates, batch_size, **trainer_kwargs
+        Passed through to the Trainer (sane, cheap defaults for demos).
+    """
+    resolved_iterations = (
+        current_iterations() if iterations is None else _positive_int(iterations, "iterations")
+    )
+    resolved_num_candidates = (
+        current_num_candidates()
+        if num_candidates is None
+        else _positive_int(num_candidates, "num_candidates")
+    )
+
+    result = _train_returning_trainer(
+        model=model,
+        train_dataset=train_dataset,
+        algorithm=resolve_trainer(trainer),
+        optimizer=current_optimizer() if optimizer is None else optimizer,
+        guide=guide or RecursiveGuide(),
+        optimizer_kwargs=_optimizer_kwargs(optimizer_kwargs),
+        guide_kwargs=guide_kwargs,
+        logger=logger,
+        logger_kwargs=logger_kwargs,
+        # search_template loops `while n_epochs < num_epochs or n_iters < num_steps`;
+        # num_epochs=0 makes `iterations` (num_steps) the exact, sole stop condition.
+        num_steps=resolved_iterations,
+        num_epochs=0,
+        num_candidates=resolved_num_candidates,
+        batch_size=batch_size,
+        **trainer_kwargs,
+    )
+    if keep_best_validated:
+        restore_best_validated(result)
+    canonicalize_model(model)
+    return result
+
+
+def _optimizer_kwargs(user_kwargs: Optional[dict]) -> dict:
+    """Return optimizer kwargs with a live-model LLM adapter when configured."""
+    kwargs = dict(user_kwargs or {})
+    model_name = os.environ.get("RECURSIVE_OPT_MODEL") or os.environ.get("TRACE_LITELLM_MODEL")
+    if model_name and "llm" not in kwargs:
+        kwargs["llm"] = make_live_llm(model_name)
+    return kwargs
+
+
+def _train_returning_trainer(
+    *,
+    model: Union[trace.Module, ParameterNode],
+    train_dataset: dict,
+    algorithm: Union[Trainer, str],
+    optimizer: Union[Optimizer, str, None],
+    guide: Union[Guide, str],
+    logger: Union[BaseLogger, str],
+    optimizer_kwargs: Optional[dict],
+    guide_kwargs: Optional[dict],
+    logger_kwargs: Optional[dict],
+    **trainer_kwargs: Any,
+) -> Any:
+    """Run a Trace trainer and return the trainer when core ``train`` returns None."""
+    dataset_check(train_dataset)
+    trainer_class = load_trainer_class(algorithm)
+    if not issubclass(trainer_class, Trainer):
+        raise TypeError(f"Invalid trainer class: {trainer_class!r}")
+
+    optimizer = optimizer or ("OPROv2" if isinstance(model, ParameterNode) else "OptoPrimeV2")
+
+    if isinstance(model, ParameterNode):
+        if not model.trainable:
+            raise ValueError("The parameter must be trainable.")
+
+        @trace.model
+        class SingleNodeModel:
+            def __init__(self, param: ParameterNode) -> None:
+                self.param = param
+
+            def forward(self, _x: Any) -> ParameterNode:
+                return self.param
+
+        model = SingleNodeModel(model)
+
+    if not model.parameters():
+        raise ValueError("Model must have non-empty parameters.")
+
+    optimizer_kwargs = optimizer_kwargs or {}
+    guide_kwargs = guide_kwargs or {}
+    logger_kwargs = logger_kwargs or {}
+
+    if isinstance(optimizer_kwargs, list):
+        if not all(isinstance(item, dict) for item in optimizer_kwargs):
+            raise TypeError("optimizer_kwargs list entries must be dictionaries.")
+        optimizer_obj = [load_optimizer(optimizer, model, **item) for item in optimizer_kwargs]
+        if not all(isinstance(item, Optimizer) for item in optimizer_obj):
+            raise TypeError("Loaded optimizer list contains an invalid optimizer.")
+    else:
+        optimizer_obj = load_optimizer(optimizer, model, **optimizer_kwargs)
+        if not isinstance(optimizer_obj, Optimizer):
+            raise TypeError(f"Invalid optimizer instance: {optimizer_obj!r}")
+
+    guide_obj = load_guide(guide, **guide_kwargs)
+    if not isinstance(guide_obj, Guide):
+        raise TypeError(f"Invalid guide instance: {guide_obj!r}")
+
+    logger_obj = load_logger(logger, **logger_kwargs)
+    if not isinstance(logger_obj, BaseLogger):
+        raise TypeError(f"Invalid logger instance: {logger_obj!r}")
+
+    algo = trainer_class(model, optimizer_obj, logger=logger_obj)
+    result = algo.train(
+        guide=guide_obj,
+        train_dataset=train_dataset,
+        **trainer_kwargs,
+    )
+    return result if result is not None else algo
+
+
+def restore_best_validated(trainer_result: Any) -> bool:
+    """Restore the best candidate known to PrioritySearch-like trainers."""
+    if trainer_result is None:
+        return False
+    try:
+        best_candidate = getattr(trainer_result, "_best_candidate", None)
+        if best_candidate is None:
+            if not hasattr(trainer_result, "exploit"):
+                return False
+            best_candidate, _priority, _info = trainer_result.exploit()
+        best_candidate.apply_update(getattr(trainer_result, "agent", None))
+        return True
+    except Exception:
+        return False
+
+
+def canonicalize_model(model: Any) -> bool:
+    """Normalize generated recursive-opt artifacts when the model supports it."""
+    canonicalize = getattr(model, "canonicalize", None)
+    if not callable(canonicalize):
+        return False
+    try:
+        canonicalize()
+        return True
+    except ValueError:
+        return False

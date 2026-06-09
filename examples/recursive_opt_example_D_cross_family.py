@@ -25,7 +25,7 @@ can reconstruct the initial->final chain with scores (printed at the end).
 
 TRACE-BENCH FAMILIES (2 families x 2 tasks):
     combinatorial : llm4ad:online_bin_packing_local , llm4ad:circle_packing
-    qa_reasoning  : hf:GSM8K , internal:multiobjective_bbeh
+    reasoning_control : internal:multiobjective_gsm8k , internal:multi_param
 
 HOW TO RUN
 ----------
@@ -42,17 +42,17 @@ from opto.features.recursive_opt.runmode import resolve_live, mode_banner
 
 FAMILIES = {
     "combinatorial": ["llm4ad:online_bin_packing_local", "llm4ad:circle_packing"],
-    "qa_reasoning": ["hf:GSM8K", "internal:multiobjective_bbeh"],
+    "reasoning_control": ["internal:multiobjective_gsm8k", "internal:multi_param"],
 }
 
 # Candidate per-family policies the OFFLINE driver tries (live: the LLM writes these).
 POLICY_CANDIDATES = [
     # uniform weak baseline
     ("combinatorial => batch_design=random, memory_policy=none, trainer=MinibatchAlgorithm, trace_type=internal\n"
-     "qa_reasoning => batch_design=random, memory_policy=none, trainer=MinibatchAlgorithm, trace_type=internal"),
+     "reasoning_control => batch_design=random, memory_policy=none, trainer=MinibatchAlgorithm, trace_type=internal"),
     # family-tuned (should win: each family gets its preferred setup)
     ("combinatorial => batch_design=failure_balanced, memory_policy=typed, trainer=BeamsearchAlgorithm, trace_type=hybrid\n"
-     "qa_reasoning => batch_design=curriculum, memory_policy=retrieval, trainer=UCBSearchAlgorithm, trace_type=otel"),
+     "reasoning_control => batch_design=curriculum, memory_policy=retrieval, trainer=UCBSearchAlgorithm, trace_type=otel"),
 ]
 
 PRIOR_CANDIDATES = [
@@ -82,7 +82,7 @@ def run_offline(mem):
     # ---- O3: trainable transferable prior, scored on HELD-OUT family ------ #
     print("O3  PriorInductionLevel — induce a prior, score it on a HELD-OUT family")
     train_f = {"combinatorial": FAMILIES["combinatorial"]}
-    holdout_f = {"qa_reasoning": FAMILIES["qa_reasoning"]}
+    holdout_f = {"reasoning_control": FAMILIES["reasoning_control"]}
     o3 = PriorInductionLevel(train_f, holdout_f, run_task=run_task, memory=mem)
     best3 = (-1.0, None)
     for cand in PRIOR_CANDIDATES:
@@ -92,17 +92,21 @@ def run_offline(mem):
         if t > best3[0]:
             best3 = (t, cand)
     print(f"    -> best transferable prior: {best3[1]} (held-out transfer={best3[0]:.3f})")
-    print("    (note: the combinatorial-tuned prior transfers POORLY to qa_reasoning")
+    print("    (note: the combinatorial-tuned prior transfers POORLY to reasoning_control")
     print("     => the trainable O3 objective surfaces the no-universal-default result)\n")
 
 
 def run_live(mem):
-    from opto.trainer import train
+    from opto.features.recursive_opt.optimize import optimize, current_iterations
     run_task = make_task_runner()
     o2 = FamilyPolicyLevel(FAMILIES, run_task=run_task, memory=mem)
-    train(model=o2, train_dataset={"inputs": [None] * 6, "infos": [None] * 6},
-          algorithm="BeamsearchAlgorithm", optimizer="OptoPrime",
-          guide=RecursiveGuide(), batch_size=2, num_epochs=3)
+    iterations = current_iterations()
+    # Trainer = PrioritySearch (or GEPA-Base), optimizer = OptoPrimeV2.
+    optimize(
+        o2,
+        {"inputs": [None] * iterations, "infos": [None] * iterations},
+        iterations=iterations,
+    )
     print("O2 optimized policy:\n", o2._policy_node.data)
 
 

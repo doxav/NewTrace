@@ -58,7 +58,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from opto import trace
 from opto.trace import node, Module
@@ -113,6 +113,80 @@ class LevelConfig:
 
     def to_dict(self) -> Dict[str, Any]:
         return dataclasses.asdict(self)
+
+
+CONFIG_ALLOWED_VALUES: Dict[str, Tuple[str, ...]] = {
+    "batch_design": ("random", "failure_balanced", "diversity", "curriculum"),
+    "trace_type": ("internal", "otel", "sysmon", "hybrid"),
+    "credit_horizon": ("step", "episode", "truncated", "full"),
+    "memory_policy": ("none", "fifo", "typed", "retrieval"),
+    "optimizer": ("OptoPrime", "OptoPrimeMulti", "OptoPrimeV2", "OPRO", "TextGrad"),
+    "guide": ("LLMJudge", "ExactMatch", "ExactMatchGuide", "staged", "deterministic"),
+    "trainer": (
+        "MinibatchAlgorithm",
+        "BeamsearchAlgorithm",
+        "UCBSearchAlgorithm",
+        "PrioritySearch",
+        "ParetobasedPS",
+        "SequentialUpdate",
+        "SequentialSearch",
+        "BeamSearch",
+    ),
+}
+
+INVALID_CONFIG_SCORE = -1_000_000_000.0
+
+
+def register_config_values(field: str, values: Iterable[str], *, replace: bool = False) -> None:
+    """Register allowed enum-like values for a LevelConfig field.
+
+    This keeps generated configs validated while preserving the extension path for
+    new trainer, optimizer, batch-design, or trace labels.
+    """
+    if not field:
+        raise ValueError("field must be a non-empty string")
+    normalized = tuple(str(value).strip() for value in values if str(value).strip())
+    if not normalized:
+        raise ValueError("values must contain at least one non-empty entry")
+    if replace:
+        CONFIG_ALLOWED_VALUES[field] = normalized
+        return
+    existing = CONFIG_ALLOWED_VALUES.get(field, ())
+    CONFIG_ALLOWED_VALUES[field] = tuple(dict.fromkeys((*existing, *normalized)))
+
+
+def validate_config_field(field: str, value: Any) -> None:
+    """Validate one enum-like config field when a value registry exists."""
+    allowed = CONFIG_ALLOWED_VALUES.get(field)
+    if allowed is None:
+        return
+    if str(value) not in allowed:
+        raise ValueError(
+            f"Invalid value for {field}: expected one of {list(allowed)}, got {value!r}. "
+            "Register new values with register_config_values(...) before using them."
+        )
+
+
+def validate_level_config(cfg: "LevelConfig", fields: Tuple[str, ...]) -> None:
+    """Validate all enum-like fields in a LevelConfig for the selected surface."""
+    for field in fields:
+        if hasattr(cfg, field):
+            validate_config_field(field, getattr(cfg, field))
+
+
+def describe_config_fields(fields: Tuple[str, ...]) -> str:
+    """Describe the editable LevelConfig surface for LLM optimizers."""
+    lines = ["YAML-like LevelConfig. Edit only these fields:"]
+    for field in fields:
+        allowed = CONFIG_ALLOWED_VALUES.get(field)
+        if allowed:
+            lines.append(f"- {field}: one of {', '.join(allowed)}")
+        elif field == "batch_size":
+            lines.append("- batch_size: positive integer")
+        else:
+            lines.append(f"- {field}: value compatible with LevelConfig")
+    lines.append("Do not add extra fields; unknown fields are removed before scoring.")
+    return "\n".join(lines)
 
 
 # =========================================================================== #
@@ -176,8 +250,15 @@ def decode_cfg(text: str, base_cfg: "LevelConfig", fields: Tuple[str, ...]) -> "
                 raise ValueError(
                     f"Invalid value for {k}: expected {expected}, got {v!r}"
                 ) from exc
+            validate_config_field(k, parsed)
             setattr(cfg, k, parsed)
+    validate_level_config(cfg, fields)
     return cfg
+
+
+def canonicalize_cfg_text(text: str, base_cfg: "LevelConfig", fields: Tuple[str, ...]) -> str:
+    """Return validated config text containing only the supported trainable fields."""
+    return encode_cfg(decode_cfg(text, base_cfg, fields), fields)
 
 
 @trace.model
@@ -211,7 +292,12 @@ class MetaLevel(Module):
         self._fields = trainable_fields
         self._base_cfg = cfg
         # ONE node holds the whole (sub-)config as text -> low-dimensional search.
-        self._cfg_node = node(self._encode(cfg), trainable=True, name="level_config")
+        self._cfg_node = node(
+            self._encode(cfg),
+            trainable=True,
+            name="level_config",
+            description=describe_config_fields(self._fields),
+        )
         self._inner_runner = inner_runner
         self._memory = memory  # MemoryLite for active knowledge building
 
@@ -221,10 +307,24 @@ class MetaLevel(Module):
     def _decode(self, text: str) -> LevelConfig:
         return decode_cfg(text, self._base_cfg, self._fields)
 
-    @trace.bundle()
+    def canonicalize(self) -> None:
+        """Normalize generated config text to the validated field subset."""
+        self._cfg_node._data = canonicalize_cfg_text(
+            self._cfg_node.data,
+            self._base_cfg,
+            self._fields,
+        )
+
+    @trace.bundle(allow_external_dependencies=True)
     def _run_inner(self, cfg_text: str, family: Any):
         """Decode the config, run the inner optimization, and record the result."""
-        cfg = self._decode(cfg_text)
+        try:
+            cfg = self._decode(cfg_text)
+        except ValueError as exc:
+            return {
+                "score": INVALID_CONFIG_SCORE,
+                "feedback": f"invalid generated config: {exc}",
+            }
         score, feedback = self._inner_runner(cfg, family)
         if self._memory is not None:
             self._memory.record(
@@ -237,6 +337,10 @@ class MetaLevel(Module):
         return {"score": float(score), "feedback": str(feedback)}
 
     def forward(self, family: Any):
+        try:
+            self.canonicalize()
+        except ValueError:
+            pass
         return self._run_inner(self._cfg_node, family)
 
     # convenience for the offline driver in the examples
@@ -307,9 +411,28 @@ class FamilyPolicyLevel(Module):
             out[fam] = decode_cfg(kv_lines, self._base, self._fields)
         return out
 
-    @trace.bundle()
+    def canonicalize(self) -> None:
+        """Normalize generated family policy text to known families and fields."""
+        policy = self._decode_policy(self._policy_node.data)
+        lines = []
+        for fam in self._families:
+            cfg = policy.get(fam, self._base)
+            body = ", ".join(
+                f"{field}={getattr(cfg, field)}" for field in self._fields
+            )
+            lines.append(f"{fam} => {body}")
+        self._policy_node._data = "\n".join(lines)
+
+    @trace.bundle(allow_external_dependencies=True)
     def _run_policy(self, policy_text: str):
-        policy = self._decode_policy(policy_text)
+        try:
+            policy = self._decode_policy(policy_text)
+        except ValueError as exc:
+            return {
+                "score": INVALID_CONFIG_SCORE,
+                "feedback": f"invalid generated family policy: {exc}",
+                "per_family": {},
+            }
         per_family = {}
         for fam, tasks in self._families.items():
             cfg = policy.get(fam, self._base)
@@ -327,6 +450,10 @@ class FamilyPolicyLevel(Module):
         return {"score": float(score), "feedback": fb, "per_family": per_family}
 
     def forward(self, _: Any = None):
+        try:
+            self.canonicalize()
+        except ValueError:
+            pass
         return self._run_policy(self._policy_node)
 
     def propose(self, policy_text: str):
@@ -362,9 +489,16 @@ class PriorInductionLevel(Module):
         self._memory = memory
         self._prior_node = node(encode_cfg(self._base, fields), trainable=True, name="transfer_prior")
 
-    @trace.bundle()
+    @trace.bundle(allow_external_dependencies=True)
     def _run_prior(self, prior_text: str):
-        cfg = decode_cfg(prior_text, self._base, self._fields)
+        try:
+            cfg = decode_cfg(prior_text, self._base, self._fields)
+        except ValueError as exc:
+            return {
+                "score": INVALID_CONFIG_SCORE,
+                "feedback": f"invalid generated transfer prior: {exc}",
+                "per_family": {},
+            }
         per_family = {
             fam: _mean(self._run_task(cfg, t)[0] for t in tasks)
             for fam, tasks in self._holdout.items()
@@ -382,6 +516,10 @@ class PriorInductionLevel(Module):
         return {"score": float(transfer), "feedback": fb, "per_family": per_family}
 
     def forward(self, _: Any = None):
+        try:
+            self.canonicalize()
+        except ValueError:
+            pass
         return self._run_prior(self._prior_node)
 
     def propose(self, **field_values):
@@ -389,6 +527,14 @@ class PriorInductionLevel(Module):
         for k, v in field_values.items():
             setattr(cfg, k, v)
         self._prior_node._data = encode_cfg(cfg, self._fields)
+
+    def canonicalize(self) -> None:
+        """Normalize generated transfer-prior text to the validated field subset."""
+        self._prior_node._data = canonicalize_cfg_text(
+            self._prior_node.data,
+            self._base,
+            self._fields,
+        )
 
 
 # =========================================================================== #
@@ -569,4 +715,5 @@ class RecursiveGuide(Guide):
 
 def best_config_from(level: MetaLevel) -> str:
     """Current optimized config text of a MetaLevel."""
+    level.canonicalize()
     return level._cfg_node.data

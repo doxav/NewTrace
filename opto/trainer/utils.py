@@ -68,16 +68,19 @@ def async_run(runs, args_list = None, kwargs_list = None, max_workers = None, de
                 else:
                     return await tqdm_asyncio.gather(*tasks)
 
-        # Handle Jupyter notebook
+        # Jupyter/IPython already owns the current thread's event loop. Calling
+        # asyncio.run(_run()) there creates a coroutine before raising
+        # RuntimeError, which leaks a "coroutine was never awaited" warning.
+        # Detect the running loop first, then run the coroutine in a worker
+        # thread with its own loop. Plain scripts keep the fast asyncio.run path.
         try:
-            return asyncio.run(_run())
+            asyncio.get_running_loop()
         except RuntimeError:
-            loop = asyncio.get_running_loop()
-            # We're in a loop (like Jupyter), so we need to run in a new thread
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, _run())
-                return future.result()
+            return asyncio.run(_run())
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(asyncio.run, _run())
+            return future.result()
 
 
 def batch_run(max_workers=None, description=None):

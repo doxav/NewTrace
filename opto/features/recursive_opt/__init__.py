@@ -23,6 +23,10 @@ from .levels import (
     best_config_from,
     encode_cfg,
     decode_cfg,
+    canonicalize_cfg_text,
+    register_config_values,
+    validate_config_field,
+    validate_level_config,
 )
 from .memory import MemoryLite, EpisodeTrace, FamilyPrior, ArtifactRecord
 from .capabilities import (
@@ -33,6 +37,18 @@ from .capabilities import (
     auto_allow,
 )
 from . import traces, tracebench
+from .optimize import (
+    optimize,
+    resolve_trainer,
+    current_trainer,
+    current_optimizer,
+    current_iterations,
+    current_num_candidates,
+    TRAINER,
+    OPTIMIZER,
+    ITERATIONS,
+    NUM_CANDIDATES,
+)
 
 __all__ = [
     "LevelConfig",
@@ -46,6 +62,10 @@ __all__ = [
     "best_config_from",
     "encode_cfg",
     "decode_cfg",
+    "canonicalize_cfg_text",
+    "register_config_values",
+    "validate_config_field",
+    "validate_level_config",
     "MemoryLite",
     "EpisodeTrace",
     "FamilyPrior",
@@ -57,4 +77,14 @@ __all__ = [
     "auto_allow",
     "traces",
     "tracebench",
+    "optimize",
+    "resolve_trainer",
+    "current_trainer",
+    "current_optimizer",
+    "current_iterations",
+    "current_num_candidates",
+    "TRAINER",
+    "OPTIMIZER",
+    "ITERATIONS",
+    "NUM_CANDIDATES",
 ]

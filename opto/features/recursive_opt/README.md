@@ -71,10 +71,10 @@ REPORT.md          # the 3-approach comparison, conformity tables, convergence
 
 | Example | Question it answers | Surface | Elements | Trace-Bench problems |
 |---|---|---|---|---|
-| **A** `recursive_opt_example_A_learn_setup.py` | What is the best *setup* for a family? | selection/config | A.2 batch, A.4 memory, A.7 trainer | `llm4ad:online_bin_packing_local`, `llm4ad:circle_packing` |
-| **B** `recursive_opt_example_B_improve_component.py` | Can we *rewrite a component's code* to a better one? | code/implementation | B.2 trainer sampling, B.5 trace repr | `llm4ad:online_bin_packing_local`, `hf:BBEH` |
-| **C** `recursive_opt_example_C_learn_capability.py` | Can we *learn a new capability* from a spec under multiple objectives? | artifact + multi-objective | C.1 + C.2 + C.4 (C.3 stub) | `hf:GSM8K`, `internal:multiobjective_bbeh` |
-| **D** `recursive_opt_example_D_cross_family.py` | Do the best choices *transfer across families*? | full stack O0→O3 | A/B/C combined | `{online_bin_packing_local, circle_packing}`, `{hf:GSM8K, internal:multiobjective_bbeh}` |
+| **A** `recursive_opt_example_A_learn_setup.py` | What is the best *setup* for a family? | selection/config | A.2 batch, A.4 memory, A.7 trainer | offline: `llm4ad:online_bin_packing_local`, `internal:multi_param`; live: `internal:multi_param` |
+| **B** `recursive_opt_example_B_improve_component.py` | Can we *rewrite a component's code* to a better one? | code/implementation | B.2 trainer sampling, B.5 trace repr | `llm4ad:online_bin_packing_local`, `internal:code_param` |
+| **C** `recursive_opt_example_C_learn_capability.py` | Can we *learn a new capability* from a spec under multiple objectives? | prompt artifact + multi-objective | C.1 + C.2 + C.4 (C.3 stub) | `internal:multiobjective_gsm8k` |
+| **D** `recursive_opt_example_D_cross_family.py` | Do the best choices *transfer across families*? | full stack O0→O3 | A/B/C combined | `{online_bin_packing_local, circle_packing}`, `{internal:multiobjective_gsm8k, internal:multi_param}` |
 
 Each example runs **offline in a deterministic stub** (no API key, no GPU) so the
 recursion machinery is testable before the full stack is installed. The stub
@@ -108,9 +108,10 @@ pip install opentelemetry-api opentelemetry-sdk            # graph/OTEL backends
 git clone https://github.com/AgentOpt/Trace-Bench && cd Trace-Bench
 pip install -e ".[hf]"        # HotpotQA / BBEH / GSM8K ; add ".[dspy]" etc. as needed
 ```
-With Trace-Bench installed, `tracebench.py` automatically uses the real task
-evaluators instead of the stub; with PR #73 installed, `traces.py` emits real
-OTEL/Sysmon spans merged into TGJ.
+With Trace-Bench installed, live mode registers the default bundle adapter and
+uses real task evaluators instead of the analytic stub. You can also register a
+custom adapter with `register_task_adapter(...)`. With PR #73 installed,
+`traces.py` emits real OTEL/Sysmon spans merged into TGJ.
 
 ### 4.3 Run with the real LLM optimizer
 ```bash
@@ -123,6 +124,10 @@ python examples/recursive_opt_example_C_learn_capability.py --live    # OptoPrim
 Live mode replaces the hand-driven loops with `opto.trainer.train` / `OptoPrime` /
 `OptoPrimeMulti`, so the LLM optimizer proposes configs, rewrites component code,
 and trades off objectives itself.
+
+On startup, live mode preflights the configured LiteLLM model and registers the
+Trace-Bench adapter. If the model is inaccessible or Trace-Bench cannot be
+initialized, the run fails early instead of silently reporting synthetic scores.
 
 ### 4.4 Notebook (Colab or local)
 Open `examples/recursive_opt_demo.ipynb`. The setup cell clones OpenTrace@pr73,

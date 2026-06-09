@@ -37,7 +37,7 @@ SELECTION/CONFIG surface (LevelConfig/MetaLevel) used in recursive_opt_example_A
 
 TRACE-BENCH PROBLEMS (2):
     llm4ad:online_bin_packing_local   (batching matters: many similar items)
-    hf:BBEH                            (trace summarisation matters: long traces)
+    internal:code_param                 (code-surface validator label; synthetic trace summary)
 
 HOW TO RUN
 ----------
@@ -55,9 +55,16 @@ from opto.features.recursive_opt import (
     MemoryLite,
 )
 from opto.features.recursive_opt.tracebench import make_code_evaluator
+from opto.features.recursive_opt import inspect_utils
 
 # Live mode is resolved loudly in __main__ (see bottom). Safe default for imports.
 _LIVE = False
+
+BATCH_DESIGN_GUIDANCE = (
+    "Validation uses a pool of n=12, k=4 where hard/failing items are exactly "
+    "indices divisible by 3: [0, 3, 6, 9]. A good sampler returns k unique valid "
+    "indices, selects hard/failing items first, then fills remaining slots diversely."
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -69,7 +76,8 @@ def batch_design_baseline(self, n, k):
     """Pick which task indices go in a training batch. BASELINE = first k.
 
     A good rewrite should oversample HARD/FAILING items and keep the batch
-    diverse, instead of blindly returning range(k)."""
+    diverse, instead of blindly returning range(k). In this demo validator,
+    hard/failing items are indices divisible by 3."""
     return list(range(k))
 
 
@@ -124,18 +132,25 @@ def improve_component(problem, name, baseline, improved, objective):
     print(f"           feedback: {base_fb}")
 
     if _LIVE:
-        # 2-LIVE) let the LLM optimizer REWRITE the function body from the feedback
-        from opto.optimizers import OptoPrime
+        # 2-LIVE) a Trainer (PrioritySearch / GEPA-Base) drives the loop and the
+        # configured optimizer (OptoPrimeV2) rewrites the function body. No
+        # hand-rolled backward()/step() here.
+        from opto.features.recursive_opt.optimize import optimize, current_iterations
+        from opto.features.recursive_opt.tracebench import make_dataset
 
-        opt = OptoPrime(level.parameters(), objective=objective)
-        for step in range(3):
-            out = level.forward(problem)
-            score, fb = guide(problem, out, None)
-            opt.zero_feedback()
-            opt.backward(level._last_node, fb)  # feedback -> the LLM rewrites the code
-            opt.step()
-        print(f"  [{name}] LIVE optimized score={score:.3f}")
-        print(f"  [{name}] optimized code:\n{level.current_code()}")
+        initial_code = level.current_code()
+        iterations = current_iterations()
+        optimize(
+            level,
+            make_dataset([problem], repeats=iterations),
+            guide=guide,
+            iterations=iterations,
+        )
+        out = level.forward(problem)
+        score, _ = guide(problem, out, None)
+        print(f"  [{name}] LIVE optimized score={score:.3f}  (Δ={score-base_score:+.3f})")
+        print(f"  [{name}] code diff (initial -> optimized):")
+        print(inspect_utils.code_diff(initial_code, level.current_code(), name=name))
         return base_score, score
     else:
         # 2-OFFLINE) install a hand-written improved body to show the score climbs
@@ -163,12 +178,15 @@ if __name__ == "__main__":
         "batch_design",
         batch_design_baseline,
         batch_design_improved,
-        objective="maximize held-out pass rate by sampling failing/hard items; keep batch diverse",
+        objective=(
+            "maximize held-out pass rate by sampling failing/hard items; keep batch "
+            f"diverse. {BATCH_DESIGN_GUIDANCE}"
+        ),
     )
 
-    print("\n-- component 2: trace_summarizer  (problem: hf:BBEH) --")
+    print("\n-- component 2: trace_summarizer  (problem: internal:code_param) --")
     improve_component(
-        "hf:BBEH",
+        "internal:code_param",
         "trace_summarizer",
         trace_summarizer_baseline,
         trace_summarizer_improved,

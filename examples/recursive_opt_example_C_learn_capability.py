@@ -31,9 +31,11 @@ SUPPORTING CAPABILITIES (composed, not the headline):
     C.3  Tinker                    : reward can instead come from Tinker rollouts
                                      (swap the evaluator; stub shown in example earlier)
 
-TRACE-BENCH PROBLEMS (2) the capability is tested on:
-    hf:GSM8K                       (reasoning accuracy)
-    internal:multiobjective_bbeh   (already exposes accuracy + cost objectives)
+TRACE-BENCH PROBLEM the capability is tested on:
+    internal:multiobjective_gsm8k  (real GSM8K learner prompt + token usage)
+    BBEH is intentionally not mixed into this prompt-capability run: the
+    Trace-Bench BBEH bundle is a PAL/code artifact task, so it belongs to the
+    code-artifact surface used by example B.
 
 OBJECTIVES:
     accuracy -> maximize
@@ -67,7 +69,7 @@ CAPABILITY_SPEC = (
     "answering. It must generalise across the given problems."
 )
 OBJECTIVES = {"accuracy": "max", "cost": "min"}
-PROBLEMS = ["hf:GSM8K", "internal:multiobjective_bbeh"]
+PROBLEMS = ["internal:multiobjective_gsm8k"]
 
 
 @trace.model
@@ -84,7 +86,7 @@ class CapabilityArtifact(Module):
         self._eval = evaluator
         self._memory = memory
 
-    @trace.bundle()
+    @trace.bundle(allow_external_dependencies=True)
     def _evaluate_impl(self, impl_text, family):
         # Taking the trainable ``self.impl`` node as an input keeps the returned
         # node CONNECTED to the capability parameter, so a live optimizer can
@@ -92,8 +94,9 @@ class CapabilityArtifact(Module):
         impl_text = impl_text.data if hasattr(impl_text, "data") else str(impl_text)
 
         def capability(task):
-            # In real mode this would drive the agent with `impl_text` as its
-            # procedure; the stub evaluator inspects the text directly.
+            # In real mode the evaluator applies impl_text to compatible
+            # Trace-Bench artifacts, e.g. as GSM8K's learner system prompt.
+            # In offline mode the stub evaluator inspects this text directly.
             return {"answer": impl_text, "task": task}
 
         score_dict, feedback, scalar = self._eval(capability, family)
@@ -140,29 +143,19 @@ def learn_capability():
     from opto.features.recursive_opt.runmode import resolve_live
 
     if resolve_live():  # raises if --live without a key (no silent fallback)
-        # ---- LIVE: optimizer rewrites the capability text under multi-objective ----
-        from opto.optimizers import OptoPrimeMulti
+        # ---- LIVE: a Trainer (PrioritySearch / GEPA-Base) + OptoPrimeV2 rewrite
+        # the capability text. The evaluator returns a scalarised objective
+        # (accuracy - 0.5*cost), so the single-objective Trainer path applies.
+        from opto.features.recursive_opt.optimize import optimize, current_iterations
+        from opto.features.recursive_opt.tracebench import make_dataset
 
-        art = CapabilityArtifact(
-            seed_impl="Answer the task.", evaluator=evaluator, memory=mem
+        art = CapabilityArtifact(seed_impl=CANDIDATE_IMPLS[-1], evaluator=evaluator, memory=mem)
+        iterations = current_iterations()
+        optimize(
+            art,
+            make_dataset([PROBLEMS[0]], repeats=iterations),
+            iterations=iterations,
         )
-        # C.2: agentic optimizer with a quick subset-eval tool to gather evidence
-        tools = default_optimizer_tools(
-            memory=mem, run_subset=lambda: art.forward(PROBLEMS[0]).data["score"]
-        )
-        opt = AgenticOptimizer(
-            art.parameters(),
-            tools=tools,
-            base_optimizer_cls=OptoPrimeMulti,
-            objective=str(OBJECTIVES),
-        )
-        guide = RecursiveGuide()
-        for step in range(4):
-            out = art.forward(PROBLEMS[0])
-            _, fb = guide(PROBLEMS[0], out, None)  # extract feedback from the node
-            opt.zero_feedback()
-            opt.backward(out, fb)  # multi-objective feedback -> rewrite (traced)
-            opt.step()
         final = art.forward(PROBLEMS[0])
         final_data = final.data if hasattr(final, "data") else final
         return art.impl.data, final_data["objectives"], mem, None

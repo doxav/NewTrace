@@ -19,13 +19,14 @@ WHY THE CONFIG LOOKS LIKE "starting_artifact / initial_knowledge / batch_size...
 ---------------------------------------------------------------------------------
 ``LevelConfig`` (see levels.py) is intentionally a flat, low-dimensional record:
 one knob per A-element. Low dimensionality is what makes the O1 search stable
-(the classic credit-assignment risk of meta-optimization). The fields are plain
-strings/ints, NOT enums, so you can register a NEW trainer or batch design just
-by adding its class and allowing its name here — no change to the recursion code.
+(the classic credit-assignment risk of meta-optimization). Enum-like string
+fields are validated through a shared registry, so generated values such as
+``non_random`` fail with actionable feedback; new trainers or batch designs can
+still be registered intentionally with ``register_config_values(...)``.
 
 TRACE-BENCH PROBLEMS (2):
-    llm4ad:online_bin_packing_local
-    llm4ad:circle_packing
+    offline : llm4ad:online_bin_packing_local, internal:multi_param
+    live    : internal:multi_param
 
 HOW TO RUN
 ----------
@@ -48,7 +49,8 @@ from opto.features.recursive_opt import (
 )
 from opto.features.recursive_opt.tracebench import make_inner_runner, make_dataset
 
-PROBLEMS = ["llm4ad:online_bin_packing_local", "llm4ad:circle_packing"]
+PROBLEMS = ["llm4ad:online_bin_packing_local", "internal:multi_param"]
+LIVE_PROBLEMS = ["internal:multi_param"]
 
 # The search space over the A elements we are learning. Each entry is a full
 # setting of the trainable fields; the optimizer (or, offline, this list) explores them.
@@ -71,6 +73,12 @@ CANDIDATES = [
         memory_policy="none",
         trainer="MinibatchAlgorithm",
     ),  # weak baseline
+    dict(
+        batch_size=4,
+        batch_design="diversity",
+        memory_policy="none",
+        trainer="PrioritySearch",
+    ),
 ]
 
 
@@ -125,25 +133,15 @@ def run_offline(problem):
 
 
 def run_live(problem):
-    """Real LLM-driven meta-optimization: the optimizer PROPOSES configs itself."""
-    from opto.trainer import train  # GitHub/PR#73 trainer facade
+    """Real LLM-driven meta-optimization: a Trainer drives the loop and the
+    configured optimizer proposes configs itself (no hand-rolled loop)."""
+    from opto.features.recursive_opt.optimize import optimize, current_iterations
 
     mem = MemoryLite(root=f"./mem_A_{problem.split(':')[-1]}")
     level = build_level(problem, mem)
-    train(
-        model=level,
-        train_dataset=make_dataset([problem], repeats=8),
-        algorithm="BeamsearchAlgorithm",  # A.7 outer search algorithm (exact class name)
-        optimizer="OptoPrime",  # A.5 LLM optimizer (needs a key)
-        guide=RecursiveGuide(),  # A.6 bridges level output -> (score,fb)
-        batch_size=_int_env("RECURSIVE_OPT_LIVE_BATCH_SIZE", 3),
-        num_epochs=_int_env("RECURSIVE_OPT_LIVE_NUM_EPOCHS", 4),
-        num_threads=_int_env("RECURSIVE_OPT_LIVE_NUM_THREADS", 4),
-        beam_width=_int_env("RECURSIVE_OPT_LIVE_BEAM_WIDTH", 3),
-        num_proposals=_int_env("RECURSIVE_OPT_LIVE_NUM_PROPOSALS", 4),
-        max_depth=_int_env("RECURSIVE_OPT_LIVE_MAX_DEPTH", 2),
-        validation_dataset_size=_int_env("RECURSIVE_OPT_LIVE_VALIDATION_SIZE", 5),
-    )
+    iterations = current_iterations()
+    # Trainer = PrioritySearch (or GEPA-Base), optimizer = OptoPrimeV2.
+    optimize(level, make_dataset([problem], repeats=iterations), iterations=iterations)
     return best_config_from(level), mem
 
 
@@ -151,7 +149,8 @@ if __name__ == "__main__":
     from opto.features.recursive_opt.runmode import resolve_live, mode_banner
     live = resolve_live()  # raises if --live without a key (no silent fallback)
     print(mode_banner(live))
-    for p in PROBLEMS:
+    problems = LIVE_PROBLEMS if live else PROBLEMS
+    for p in problems:
         print(
             f"\n=== A: learning best setup for {p} ({'LIVE' if live else 'OFFLINE STUB'}) ==="
         )
