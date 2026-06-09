@@ -24,6 +24,8 @@ import re
 import sys
 from typing import Any, Optional
 
+from .budget import BudgetResource, budget_status, budgeted_llm
+
 _PREFLIGHTED_MODELS: set[str] = set()
 
 
@@ -71,8 +73,13 @@ def make_live_llm(
     cache: bool = True,
     max_retries: int = 10,
     base_delay: float = 1.0,
+    budget_resource: Optional[BudgetResource] = "optimizer_llm_calls",
 ) -> Any:
-    """Create the LiteLLM backend used by recursive-opt live optimizers."""
+    """Create the LiteLLM backend used by recursive-opt live optimizers.
+
+    `budget_resource` defaults to optimizer proposal calls. Pass None for
+    preflight calls or other probes that should not consume recursive budget.
+    """
     from opto.utils.llm import LiteLLM
 
     model_name = (
@@ -88,8 +95,8 @@ def make_live_llm(
         base_delay=base_delay,
     )
     if uses_completion_token_param(model_name):
-        return CompletionTokenCompatLLM(llm, model_name)
-    return llm
+        llm = CompletionTokenCompatLLM(llm, model_name)
+    return budgeted_llm(llm, budget_resource)
 
 
 def preflight_model(model: Optional[str] = None) -> None:
@@ -108,6 +115,7 @@ def preflight_model(model: Optional[str] = None) -> None:
             cache=False,
             max_retries=1,
             base_delay=0.1,
+            budget_resource=None,
         )
         llm(
             messages=[{"role": "user", "content": "Return exactly: ok"}],
@@ -193,5 +201,6 @@ def mode_banner(live: bool) -> str:
         )
     return (
         f"{bar}\n{head}\n  Trace-Bench: {tracebench_mode()}\n"
-        f"  PR #73 graph/OTEL: {pr73_mode()}\n  {caveat}\n{bar}"
+        f"  PR #73 graph/OTEL: {pr73_mode()}\n"
+        f"  Global budget: {budget_status()}\n  {caveat}\n{bar}"
     )

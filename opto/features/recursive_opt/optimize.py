@@ -13,6 +13,14 @@ three knobs (overridable via env, so you set them "at the beginning"):
     RECURSIVE_OPT_ITERATIONS  number of search iterations (default 10)
     RECURSIVE_OPT_NUM_CANDIDATES  candidates per search step (default 4)
 
+Optional global safety budget (across recursive levels):
+
+    RECURSIVE_OPT_MAX_OPTIMIZER_LLM_CALLS  live proposal calls
+    RECURSIVE_OPT_MAX_EVAL_LLM_CALLS       known eval LLM calls
+    RECURSIVE_OPT_MAX_CANDIDATES           planned outer candidates
+    RECURSIVE_OPT_MAX_WALL_TIME_SECONDS    wall-clock limit
+    RECURSIVE_OPT_BUDGET_STOP_POLICY       "return_best" (default) or "raise"
+
 ``optimize(level, dataset)`` works for EVERY recursive level (MetaLevel,
 CodeArtifactLevel, CapabilityArtifact, FamilyPolicyLevel, PriorInductionLevel)
 because they are all ``trace.Module`` s. The trainer updates the level's
@@ -38,6 +46,7 @@ from opto.trainer.train import (
 )
 
 from .levels import RecursiveGuide
+from .budget import BudgetExceeded, current_budget
 from .runmode import make_live_llm
 
 # --- the three knobs, set once (env-overridable) --------------------------- #
@@ -144,6 +153,16 @@ def optimize(
         if num_candidates is None
         else _positive_int(num_candidates, "num_candidates")
     )
+    try:
+        resolved_iterations = _fit_candidate_budget(
+            iterations=resolved_iterations,
+            num_candidates=resolved_num_candidates,
+        )
+    except BudgetExceeded:
+        if current_budget().stop_policy == "return_best":
+            canonicalize_model(model)
+            return None
+        raise
 
     result = _train_returning_trainer(
         model=model,
@@ -240,12 +259,32 @@ def _train_returning_trainer(
         raise TypeError(f"Invalid logger instance: {logger_obj!r}")
 
     algo = trainer_class(model, optimizer_obj, logger=logger_obj)
-    result = algo.train(
-        guide=guide_obj,
-        train_dataset=train_dataset,
-        **trainer_kwargs,
-    )
+    try:
+        result = algo.train(
+            guide=guide_obj,
+            train_dataset=train_dataset,
+            **trainer_kwargs,
+        )
+    except BudgetExceeded:
+        if current_budget().stop_policy != "return_best":
+            raise
+        return algo
     return result if result is not None else algo
+
+
+def _fit_candidate_budget(*, iterations: int, num_candidates: int) -> int:
+    """Clamp outer search steps to the remaining global candidate budget."""
+    budget = current_budget()
+    remaining = budget.remaining("candidates")
+    if remaining is None:
+        budget.charge("candidates", iterations * num_candidates)
+        return iterations
+
+    allowed_iterations = min(iterations, remaining // num_candidates)
+    if allowed_iterations <= 0:
+        budget.charge("candidates", num_candidates)
+    budget.charge("candidates", allowed_iterations * num_candidates)
+    return allowed_iterations
 
 
 def restore_best_validated(trainer_result: Any) -> bool:

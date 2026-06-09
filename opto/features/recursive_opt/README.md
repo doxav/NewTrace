@@ -117,6 +117,7 @@ custom adapter with `register_task_adapter(...)`. With PR #73 installed,
 ```bash
 export OPENAI_API_KEY=...          # NEVER hard-code; read from env / a secret manager
 export TRACE_LITELLM_MODEL=gpt-5.4-nano  # optional backend choice
+export RECURSIVE_OPT_BUDGET_PRESET=demo  # optional global safety envelope
 python examples/recursive_opt_example_A_learn_setup.py --live
 python examples/recursive_opt_example_B_improve_component.py --live   # OptoPrime rewrites the code
 python examples/recursive_opt_example_C_learn_capability.py --live    # OptoPrimeMulti, multi-objective
@@ -124,6 +125,23 @@ python examples/recursive_opt_example_C_learn_capability.py --live    # OptoPrim
 Live mode replaces the hand-driven loops with `opto.trainer.train` / `OptoPrime` /
 `OptoPrimeMulti`, so the LLM optimizer proposes configs, rewrites component code,
 and trades off objectives itself.
+
+`RECURSIVE_OPT_ITERATIONS` and `RECURSIVE_OPT_NUM_CANDIDATES` are per-call
+recursive optimizer settings. The optional global budget is a separate safety
+envelope across levels:
+
+```bash
+export RECURSIVE_OPT_MAX_OPTIMIZER_LLM_CALLS=64   # proposal LLM calls
+export RECURSIVE_OPT_MAX_EVAL_LLM_CALLS=80        # known task-eval LLM calls
+export RECURSIVE_OPT_MAX_CANDIDATES=16            # planned outer candidates
+export RECURSIVE_OPT_MAX_WALL_TIME_SECONDS=300
+export RECURSIVE_OPT_BUDGET_STOP_POLICY=return_best  # or: raise
+```
+
+Unset, `none`, `null`, `unlimited`, `off`, or `-1` means no global limit for that
+resource. `0` is not unlimited: it allows zero units and is useful for verifying
+that live optimizer calls fail early. Local loop limits still prevent runaway
+runs when the global envelope is disabled.
 
 On startup, live mode preflights the configured LiteLLM model and registers the
 Trace-Bench adapter. If the model is inaccessible or Trace-Bench cannot be

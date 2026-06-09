@@ -36,6 +36,14 @@ from .capabilities import (
     HITLGate,
     auto_allow,
 )
+from .budget import (
+    BudgetExceeded,
+    RecursiveOptBudget,
+    budget_status,
+    configure_budget_from_env,
+    current_budget,
+    reset_budget,
+)
 from . import traces, tracebench
 from .optimize import (
     optimize,
@@ -75,6 +83,12 @@ __all__ = [
     "TinkerEnvAdapter",
     "HITLGate",
     "auto_allow",
+    "BudgetExceeded",
+    "RecursiveOptBudget",
+    "budget_status",
+    "configure_budget_from_env",
+    "current_budget",
+    "reset_budget",
     "traces",
     "tracebench",
     "optimize",

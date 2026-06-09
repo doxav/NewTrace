@@ -656,6 +656,77 @@ def test_optimize_budget_env_is_resolved_at_call_time(monkeypatch) -> None:
     assert captured["num_candidates"] == 1
 
 
+def test_optimize_global_candidate_budget_clamps_outer_steps(monkeypatch) -> None:
+    import importlib
+    from opto.features.recursive_opt.budget import configure_budget_from_env, current_budget, reset_budget
+
+    opt_mod = importlib.import_module("opto.features.recursive_opt.optimize")
+    captured = {}
+
+    def fake_train(**kwargs):
+        captured.update(kwargs)
+        return "trained"
+
+    monkeypatch.setattr(opt_mod, "_train_returning_trainer", fake_train)
+    monkeypatch.setenv("RECURSIVE_OPT_MAX_CANDIDATES", "3")
+    monkeypatch.setenv("RECURSIVE_OPT_BUDGET_STOP_POLICY", "raise")
+    configure_budget_from_env()
+    try:
+        level = MetaLevel(
+            LevelConfig(),
+            inner_runner=make_inner_runner("hf:GSM8K"),
+            trainable_fields=("batch_design",),
+        )
+        result = opt_mod.optimize(
+            level,
+            make_dataset(["hf:GSM8K"], repeats=5),
+            iterations=5,
+            num_candidates=2,
+        )
+
+        assert result == "trained"
+        assert captured["num_steps"] == 1
+        assert captured["num_candidates"] == 2
+        assert current_budget().used_candidates == 2
+    finally:
+        reset_budget()
+
+
+def test_optimize_global_candidate_budget_zero_returns_current_state(monkeypatch) -> None:
+    import importlib
+    from opto.features.recursive_opt.budget import configure_budget_from_env, reset_budget
+
+    opt_mod = importlib.import_module("opto.features.recursive_opt.optimize")
+    called = False
+
+    def fake_train(**kwargs):
+        nonlocal called
+        called = True
+        return "trained"
+
+    monkeypatch.setattr(opt_mod, "_train_returning_trainer", fake_train)
+    monkeypatch.setenv("RECURSIVE_OPT_MAX_CANDIDATES", "0")
+    monkeypatch.setenv("RECURSIVE_OPT_BUDGET_STOP_POLICY", "return_best")
+    configure_budget_from_env()
+    try:
+        level = MetaLevel(
+            LevelConfig(),
+            inner_runner=make_inner_runner("hf:GSM8K"),
+            trainable_fields=("batch_design",),
+        )
+        result = opt_mod.optimize(
+            level,
+            make_dataset(["hf:GSM8K"], repeats=1),
+            iterations=1,
+            num_candidates=1,
+        )
+
+        assert result is None
+        assert called is False
+    finally:
+        reset_budget()
+
+
 def test_optimize_runs_real_trainer_end_to_end(tmp_path: Path) -> None:
     level = MetaLevel(LevelConfig(), inner_runner=make_inner_runner("hf:GSM8K"),
                       trainable_fields=("batch_design",))
@@ -721,6 +792,67 @@ def test_live_model_preflight_redacts_provider_errors(monkeypatch) -> None:
     assert "proj_<redacted>" in message
     assert "sk-test-secret" not in message
     assert "proj_testsecret" not in message
+
+
+def test_preflight_does_not_consume_global_optimizer_budget(monkeypatch) -> None:
+    from opto.features.recursive_opt import runmode
+    from opto.features.recursive_opt.budget import configure_budget_from_env, current_budget, reset_budget
+    import opto.utils.llm as llm_mod
+
+    calls = []
+
+    class FakeLiteLLM:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __call__(self, *args, **kwargs):
+            calls.append(kwargs)
+            return object()
+
+    monkeypatch.setattr(llm_mod, "LiteLLM", FakeLiteLLM)
+    monkeypatch.setenv("RECURSIVE_OPT_MAX_OPTIMIZER_LLM_CALLS", "0")
+    configure_budget_from_env()
+    runmode._PREFLIGHTED_MODELS.discard("budget-preflight-model")
+    try:
+        runmode.preflight_model("budget-preflight-model")
+
+        assert calls
+        assert current_budget().used_optimizer_llm_calls == 0
+    finally:
+        reset_budget()
+        runmode._PREFLIGHTED_MODELS.discard("budget-preflight-model")
+
+
+def test_global_optimizer_llm_budget_zero_blocks_live_calls(monkeypatch) -> None:
+    from opto.features.recursive_opt import runmode
+    from opto.features.recursive_opt.budget import (
+        BudgetExceeded,
+        configure_budget_from_env,
+        reset_budget,
+    )
+    import opto.utils.llm as llm_mod
+
+    calls = []
+
+    class FakeLiteLLM:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __call__(self, *args, **kwargs):
+            calls.append(kwargs)
+            return object()
+
+    monkeypatch.setattr(llm_mod, "LiteLLM", FakeLiteLLM)
+    monkeypatch.setenv("RECURSIVE_OPT_MAX_OPTIMIZER_LLM_CALLS", "0")
+    configure_budget_from_env()
+    try:
+        llm = runmode.make_live_llm("gpt-5.4-nano")
+        with pytest.raises(BudgetExceeded):
+            llm(messages=[{"role": "user", "content": "ping"}], max_tokens=7)
+
+        assert calls == []
+    finally:
+        reset_budget()
 
 
 def test_gpt5_live_llm_maps_max_tokens(monkeypatch) -> None:

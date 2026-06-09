@@ -31,6 +31,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from opto.trace.nodes import ParameterNode
 
+from .budget import BudgetExceeded
 from .levels import INVALID_CONFIG_SCORE, LevelConfig, validate_level_config
 
 try:
@@ -678,6 +679,9 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4):
             try:
                 for i in range(limit):
                     if hasattr(param, "forward") and hasattr(param, "system_prompt"):
+                        from .budget import current_budget
+
+                        current_budget().charge("eval_llm_calls")
                         response = param.forward(inputs[i])
                     else:
                         response = capability_text
@@ -718,6 +722,8 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4):
         if _TASK_ADAPTER is not None:
             try:
                 return _evaluate_real(capability_callable, family)
+            except BudgetExceeded:
+                raise
             except Exception as exc:
                 return (
                     {"accuracy": 0.0, "cost": 1.0},
