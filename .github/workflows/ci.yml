@@ -95,7 +95,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest datasets numpy
+          pip install pytest datasets numpy opentelemetry-api opentelemetry-sdk
 
       - name: Configure LLM env
         run: |

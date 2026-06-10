@@ -9,6 +9,7 @@ authors = [
   {name = "Ching-An Cheng", email = "chinganc0@gmail.com"},
   {name = "Allen Nie", email = "aimingnie@gmail.com"},
   {name = "Adith Swaminathan", email = "adith387@gmail.com"},
+  {name = "Xavier Daull", email = "xavierdaull@gmail.com"},
 ]
 license="MIT"
 requires-python = ">= 3.10"
@@ -18,13 +19,18 @@ keywords = ["trace", "opto", "AutoDiff"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
 
 [project.optional-dependencies]
+telemetry = [
+    "opentelemetry-api>=1.38.0",
+    "opentelemetry-sdk>=1.38.0",
+    "langgraph>=1.0.7",
+]
 autogen = ["autogen-agentchat==0.2.40"]
 test = ["datasets==3.6.0"]
-
 
 [project.urls]
 Homepage = "https://agentopt.github.io/Trace/"
