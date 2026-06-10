@@ -423,7 +423,7 @@ def _normalize_proposals(raw: Any) -> List[Any]:
 
 
 def _default_proposer() -> Callable[..., Any]:
-    from opto.optimize_anything.trace_backend import TraceOptimizerBackend
+    from opto.features.optimize_anything.trace_backend import TraceOptimizerBackend
 
     return TraceOptimizerBackend()
 

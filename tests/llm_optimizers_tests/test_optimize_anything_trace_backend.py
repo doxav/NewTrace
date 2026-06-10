@@ -4,8 +4,8 @@ import pytest
 
 from opto.optimizers.optimizer import Optimizer
 from opto.trace import GRAPH
-from opto.optimize_anything import GEPAConfig, EngineConfig, ReflectionConfig, optimize_anything
-from opto.optimize_anything.trace_backend import TraceOptimizerBackend, resolve_optimizer_cls
+from opto.features.optimize_anything import GEPAConfig, EngineConfig, ReflectionConfig, optimize_anything
+from opto.features.optimize_anything.trace_backend import TraceOptimizerBackend, resolve_optimizer_cls
 
 
 @pytest.fixture(autouse=True)
@@ -139,26 +139,40 @@ def test_unknown_optimizer_name_has_clear_error():
         resolve_optimizer_cls("DefinitelyMissingOptimizer")
 
 
-requires_openai = pytest.mark.skipif(not os.environ.get("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not available")
+requires_live_llm = pytest.mark.skipif(
+    not (os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")),
+    reason="OPENAI_API_KEY or OPENROUTER_API_KEY is not available",
+)
 
 
-@requires_openai
-def test_live_gpt5_nano_litellm_helper_smoke():
-    pytest.importorskip("litellm")
+def _configure_live_litellm_env() -> str:
+    """Configure the low-budget LiteLLM model used by live smoke tests."""
     os.environ.setdefault("TRACE_DEFAULT_LLM_BACKEND", "LiteLLM")
-    os.environ.setdefault("TRACE_LITELLM_MODEL", "gpt-5-nano")
-    from opto.optimize_anything import make_litellm_lm
+    if os.environ.get("OPENROUTER_API_KEY"):
+        os.environ.setdefault("OPENAI_API_KEY", os.environ["OPENROUTER_API_KEY"])
+        os.environ.setdefault("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
+        os.environ.setdefault("OPENAI_API_BASE", os.environ["OPENAI_BASE_URL"])
+        os.environ.setdefault("TRACE_LITELLM_MODEL", os.getenv("OPENROUTER_MODEL", "openrouter/openai/gpt-4o-mini"))
+    else:
+        os.environ.setdefault("TRACE_LITELLM_MODEL", os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
+    return os.environ["TRACE_LITELLM_MODEL"]
 
-    lm = make_litellm_lm(model=os.environ.get("TRACE_LITELLM_MODEL", "gpt-5-nano"), max_retries=1)
+
+@requires_live_llm
+def test_live_litellm_helper_smoke():
+    pytest.importorskip("litellm")
+    model_name = _configure_live_litellm_env()
+    from opto.features.optimize_anything import make_litellm_lm
+
+    lm = make_litellm_lm(model=model_name, max_retries=1)
     assert callable(lm.model)
-    assert getattr(lm, "model_name", None) == os.environ.get("TRACE_LITELLM_MODEL", "gpt-5-nano")
+    assert getattr(lm, "model_name", None) == model_name
 
 
-@requires_openai
-def test_live_gpt5_nano_trace_backend_protocol_smoke():
+@requires_live_llm
+def test_live_trace_backend_protocol_smoke():
     pytest.importorskip("litellm")
-    os.environ.setdefault("TRACE_DEFAULT_LLM_BACKEND", "LiteLLM")
-    os.environ.setdefault("TRACE_LITELLM_MODEL", "gpt-5-nano")
+    _configure_live_litellm_env()
     backend = TraceOptimizerBackend(
         optimizer_cls="OPROv2",
         optimizer_kwargs={"max_tokens": 128, "temperature": 0.0, "llm": None},

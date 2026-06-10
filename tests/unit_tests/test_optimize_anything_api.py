@@ -4,7 +4,7 @@ from contextlib import redirect_stdout
 
 import pytest
 
-import opto.optimize_anything as oa
+import opto.features.optimize_anything as oa
 
 
 def test_public_api_exports_expected_symbols():

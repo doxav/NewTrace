@@ -1,6 +1,6 @@
 """GEPA optimize_anything-compatible API for Trace."""
 
-from opto.optimize_anything.api import (
+from opto.features.optimize_anything.api import (
     EngineConfig,
     EvaluationRecord,
     GEPAConfig,
@@ -17,7 +17,7 @@ from opto.optimize_anything.api import (
     reset_log_context,
     set_log_context,
 )
-from opto.optimize_anything.trace_backend import TraceOptimizerBackend, resolve_optimizer_cls
+from opto.features.optimize_anything.trace_backend import TraceOptimizerBackend, resolve_optimizer_cls
 
 __all__ = [
     "EngineConfig",
