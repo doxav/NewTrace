@@ -20,12 +20,13 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from opto.optimizers import OptoPrime
+from opto.optimizers.optimizer import Optimizer
 
 
 # --------------------------------------------------------------------------- #
 # C.2  Agentic LLM optimizer: optimizer that uses tools during optimization.
 # --------------------------------------------------------------------------- #
-class AgenticOptimizer:
+class AgenticOptimizer(Optimizer):
     """Wrap an opto optimizer; let it call tools before proposing an update.
 
     Tools are plain callables registered by name. Before each ``step`` the
@@ -37,13 +38,14 @@ class AgenticOptimizer:
 
     def __init__(
         self,
-        parameters,
+        parameters: list,
         *,
-        tools: Dict[str, Callable] = None,
+        tools: Optional[Dict[str, Callable]] = None,
         tool_budget: int = 3,
-        base_optimizer_cls=OptoPrime,
-        **kw,
-    ):
+        base_optimizer_cls: Callable = OptoPrime,
+        **kw: Any,
+    ) -> None:
+        super().__init__(parameters)
         self.opt = base_optimizer_cls(parameters, **kw)
         self.tools = tools or {}
         self.tool_budget = tool_budget
@@ -65,6 +67,11 @@ class AgenticOptimizer:
 
     def update(self, *a, **kw):
         return self.opt.update(*a, **kw)
+
+    def __getattr__(self, name):
+        # Transparent wrapper: delegate anything else (llm, log, parameters, ...)
+        # to the inner optimizer so any Trainer can drive this like the original.
+        return getattr(self.opt, name)
 
     # tool loop --------------------------------------------------------------
     def _run_tools(self, feedback: str) -> str:

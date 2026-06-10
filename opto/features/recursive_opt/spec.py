@@ -240,9 +240,13 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
         if oc:
             opt_kwargs["objective_config"] = _objective_config(oc)
 
+        level_optimizer = ls.get("optimizer")
+        agentic_factory = agentic_optimizer_factory(ls, memory, reused["tools"])
+        if agentic_factory is not None and optimizer is None:
+            level_optimizer = agentic_factory
         optimize(
             level, _dataset_for(ls, families, iterations),
-            optimizer=(optimizer if optimizer is not None else ls.get("optimizer")),
+            optimizer=(optimizer if optimizer is not None else level_optimizer),
             trainer=(trainer if trainer is not None else ls.get("trainer")),
             iterations=iterations, **opt_kwargs,
         )
@@ -325,6 +329,42 @@ def _final_eval(level, level_spec: dict, families: Dict[str, List[str]]):
     return score, data
 
 
+def agentic_optimizer_factory(level_spec: dict, memory: MemoryLite,
+                              reused_tools: Optional[List[str]] = None):
+    """Build an AgenticOptimizer factory wiring (declared + reused) tools.
+
+    Tool *names* select callables from ``default_optimizer_tools`` (memory-backed
+    trace_search etc.), so tools learned/saved for a family are re-armed on reuse.
+    Returns an optimizer class usable by Trace's existing ``load_optimizer`` API,
+    or None when the level is not agentic.
+    """
+    agentic = level_spec.get("agentic")
+    if not agentic:
+        return None
+    from .capabilities import AgenticOptimizer, default_optimizer_tools
+
+    cfg = agentic if isinstance(agentic, dict) else {}
+    family = level_spec.get("family")
+    available = default_optimizer_tools(
+        memory=memory, family=family if isinstance(family, str) and family != "*" else None,
+    )
+    names = list(dict.fromkeys((level_spec.get("tools") or []) + list(reused_tools or [])))
+    tools = {n: available[n] for n in names if n in available} or available
+    configured_kwargs = {"tools": tools, "tool_budget": int(cfg.get("tool_budget", 3))}
+    if cfg.get("base_optimizer_cls") is not None:
+        configured_kwargs["base_optimizer_cls"] = cfg["base_optimizer_cls"]
+
+    class ConfiguredAgenticOptimizer(AgenticOptimizer):
+        """Agentic optimizer class configured from a declarative level spec."""
+
+        keywords = configured_kwargs
+
+        def __init__(self, parameters: list, **optimizer_kwargs: Any) -> None:
+            super().__init__(parameters, **{**configured_kwargs, **optimizer_kwargs})
+
+    return ConfiguredAgenticOptimizer
+
+
 def _memory_from_spec(spec: dict) -> MemoryLite:
     """Create MemoryLite from spec-level prior-promotion controls."""
     promotion = spec.get("prior_promotion") or {}
@@ -332,6 +372,7 @@ def _memory_from_spec(spec: dict) -> MemoryLite:
         root=spec.get("memory_root", "./trace_memory"),
         promotion_min_support=int(promotion.get("min_support", 3)),
         promote_priors=bool(promotion.get("enabled", True)),
+        promotion_min_score=promotion.get("min_score"),
     )
 
 
@@ -450,6 +491,9 @@ def _validate_prior_promotion_config(config: dict) -> None:
     min_support = int(config.get("min_support", 3))
     if min_support <= 0:
         raise ValueError("prior_promotion.min_support must be positive")
+    min_score = config.get("min_score")
+    if min_score is not None and not isinstance(min_score, (int, float)):
+        raise TypeError("prior_promotion.min_score must be a number")
 
 
 def _configure_budget(spec: dict):

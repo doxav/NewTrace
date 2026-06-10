@@ -264,3 +264,53 @@ def test_save_priors_records_tagged_artifact(tmp_path: Path):
     rec = S.save_priors(mem, level, _config_level(tools=["note"]), score=0.7)
     assert rec.kind == "config" and rec.family == "combinatorial"
     assert mem.best_artifact(family="combinatorial", kind="tool") is not None
+
+
+# ----------------------- P2/P3 regression tests --------------------------- #
+def test_prior_promotion_score_gate(tmp_path: Path):
+    # below the gate: never promoted, regardless of episode count
+    gated = MemoryLite(root=str(tmp_path / "gated"), promotion_min_support=2,
+                       promotion_min_score=0.5)
+    for _ in range(4):
+        gated.record(level="O1", cfg={"batch_design": "random"}, family="flat",
+                     score=0.0, feedback="flat normalized run")
+    assert gated.family_prior("flat") is None      # limitation #3: junk priors blocked
+    # above the gate: promoted as before
+    for _ in range(2):
+        gated.record(level="O1", cfg={"batch_design": "curriculum"}, family="good",
+                     score=0.9, feedback="real gain")
+    assert gated.family_prior("good") is not None
+    # default behaviour unchanged (no gate)
+    legacy = MemoryLite(root=str(tmp_path / "legacy"), promotion_min_support=2)
+    for _ in range(2):
+        legacy.record(level="O1", cfg={}, family="flat", score=0.0, feedback="x")
+    assert legacy.family_prior("flat") is not None
+
+
+def test_prior_promotion_min_score_spec_validation():
+    with pytest.raises(TypeError):
+        S.validate_spec({"families": FAMILIES, "prior_promotion": {"min_score": "high"},
+                         "levels": [_config_level()]})
+    S.validate_spec({"families": FAMILIES, "prior_promotion": {"min_score": 0.2},
+                     "levels": [_config_level()]})  # numeric accepted
+
+
+def test_agentic_optimizer_factory_wires_reused_tools(tmp_path: Path):
+    mem = MemoryLite(root=str(tmp_path))
+    mem.record(level="O1", cfg={}, family="combinatorial", score=0.2,
+               feedback="timeout on large bins")
+    ls = _config_level(agentic=True, tools=["trace_search"])
+    factory = S.agentic_optimizer_factory(ls, mem, reused_tools=["trace_search"])
+    assert factory is not None
+    assert "trace_search" in factory.keywords["tools"]      # learned tool re-armed
+    assert S.agentic_optimizer_factory(_config_level(), mem) is None  # not agentic
+
+
+def test_run_spec_agentic_level_trains_with_tools(tmp_path: Path):
+    # End-to-end through the real Trainer with no LLM: AgenticOptimizer wraps the
+    # no-LLM base and the run completes, proving the trainer can drive the wrapper.
+    ls = _config_level(agentic={"base_optimizer_cls": _NoLLMOptimizer},
+                       tools=["trace_search"], iterations=2)
+    spec = {"families": FAMILIES, "memory_root": str(tmp_path), "levels": [ls]}
+    out = S.run_spec(spec)          # no optimizer override: agentic factory is used
+    assert out["results"][ls["id"]]["artifact"].strip()

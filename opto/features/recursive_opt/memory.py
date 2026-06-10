@@ -71,12 +71,16 @@ class MemoryLite:
         *,
         promotion_min_support: int = 3,
         promote_priors: bool = True,
+        promotion_min_score: Optional[float] = None,
     ) -> None:
         if promotion_min_support <= 0:
             raise ValueError("promotion_min_support must be positive")
         self.root = root
         self._promotion_min_support = promotion_min_support
         self._promote_priors = promote_priors
+        self._promotion_min_score = (
+            float(promotion_min_score) if promotion_min_score is not None else None
+        )
         os.makedirs(root, exist_ok=True)
         self._episodes: List[EpisodeTrace] = self._load("episodes.jsonl", EpisodeTrace)
         self._priors: Dict[str, FamilyPrior] = {
@@ -203,6 +207,8 @@ class MemoryLite:
         if len(eps) < self._promotion_min_support:
             return
         best = max(eps, key=lambda e: e.score)
+        if self._promotion_min_score is not None and best.score < self._promotion_min_score:
+            return  # score gate: never promote priors learned from flat/failed runs
         prior = FamilyPrior(
             family=family,
             best_cfg=best.cfg,

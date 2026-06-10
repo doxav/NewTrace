@@ -46,6 +46,7 @@ from .budget import (
 )
 from . import traces, tracebench
 from .spec import (
+    agentic_optimizer_factory,
     run_spec,
     compile_level,
     validate_spec,
@@ -110,6 +111,7 @@ __all__ = [
     "ITERATIONS",
     "NUM_CANDIDATES",
     "run_spec",
+    "agentic_optimizer_factory",
     "compile_level",
     "validate_spec",
     "reuse_priors",

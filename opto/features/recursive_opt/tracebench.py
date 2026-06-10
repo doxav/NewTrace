@@ -509,9 +509,17 @@ def configure_tracebench_adapter(config: Dict[str, Any], *, require: bool = True
     if config.get("enabled", True) is False:
         register_task_adapter(None)
         return False
-    if not HAVE_TB and require:
-        raise RuntimeError("Trace-Bench is not importable; cannot run real task scoring.")
-    register_task_adapter(TraceBenchTaskAdapter.from_config(config))
+    try:
+        adapter = TraceBenchTaskAdapter.from_config(config)
+    except Exception as exc:
+        if require:
+            raise RuntimeError(
+                "Trace-Bench adapter could not be constructed from spec['tracebench'] "
+                f"({type(exc).__name__}: {exc}). Install trace_bench or register an "
+                "adapter explicitly via register_task_adapter(...)."
+            ) from exc
+        return False
+    register_task_adapter(adapter)
     return True
 
 
