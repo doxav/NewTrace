@@ -1,4 +1,5 @@
 import copy
+import warnings
 from typing import Any, Dict, Optional, Tuple
 
 import pytest
@@ -100,10 +101,17 @@ def test_usage_tracking_estimates_missing_usage_when_allowed() -> None:
         estimate_missing=True,
     )
 
-    tracker(messages=[{"role": "user", "content": "one two three"}])
+    with pytest.warns(UserWarning, match="estimating token counts"):
+        tracker(messages=[{"role": "user", "content": "one two three"}])
 
     assert tracker.last_usage() == {"tokens_in": 3, "tokens_out": 2}
     assert tracker.last_usage_was_estimated() is True
+
+    with warnings.catch_warnings(record=True) as captured:
+        warnings.simplefilter("always")
+        tracker(messages=[{"role": "user", "content": "one two three"}])
+
+    assert captured == []
 
 
 def test_usage_tracking_strict_mode_rejects_missing_usage() -> None:

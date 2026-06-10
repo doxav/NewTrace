@@ -284,10 +284,10 @@ def pareto_rank(candidates: List[Dict[str, float]],
     return ranks
 
 
-def _prepare_score_dicts(
+def _prepare_score_dicts_for_objective_selection(
     candidates: List[Tuple[ScoreLike, Any]], config: ObjectiveConfig
 ) -> List[Dict[str, float]]:
-    """Convert, validate, and higher-is-better-normalize candidate scores."""
+    """Prepare candidate scores so objective selection can maximize all metrics."""
     score_dicts: List[Dict[str, float]] = []
     for score, _ in candidates:
         if config.required_metrics and not isinstance(score, dict):
@@ -322,7 +322,7 @@ def select_best(candidates: List[Tuple[ScoreLike, Any]],
         scores = [to_scalar_score(score, config) for score, _ in candidates]
         return int(np.argmax(scores))
 
-    score_dicts = _prepare_score_dicts(candidates, config)
+    score_dicts = _prepare_score_dicts_for_objective_selection(candidates, config)
 
     if config.mode == "weighted":
         weighted = [
@@ -383,7 +383,7 @@ def select_top_k(candidates: List[Tuple[ScoreLike, Any]],
         scores = [to_scalar_score(score, config) for score, _ in candidates]
         return list(np.argsort(scores)[::-1][:k])
 
-    score_dicts = _prepare_score_dicts(candidates, config)
+    score_dicts = _prepare_score_dicts_for_objective_selection(candidates, config)
 
     if config.mode == "weighted":
         weighted = [

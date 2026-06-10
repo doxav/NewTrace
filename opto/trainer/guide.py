@@ -5,6 +5,7 @@ import pickle
 import re
 import copy
 import os
+import warnings
 from opto.utils.llm import LLM, AbstractModel
 from opto.trainer.suggest import Suggest
 
@@ -107,10 +108,11 @@ class UsageTrackingLLM:
     Dict-shaped responses and ``input_tokens`` / ``output_tokens`` aliases are
     also supported.
 
-    If usage metadata is missing, the wrapper estimates token counts with a
-    simple whitespace split by default. Set ``estimate_missing=False`` to fail
-    fast instead. Streaming usage is only captured when the provider returns
-    usage on the response object passed back from the wrapped LLM.
+    If usage metadata is missing, the wrapper warns once and estimates token
+    counts with a simple whitespace split by default. Set
+    ``estimate_missing=False`` to fail fast instead. Streaming usage is only
+    captured when the provider returns usage on the response object passed back
+    from the wrapped LLM.
 
     The usage store is ``ContextVar``-backed, so concurrent evaluations do not
     overwrite each other. ``__deepcopy__`` returns ``self`` intentionally:
@@ -129,6 +131,7 @@ class UsageTrackingLLM:
         self._usage_estimated: contextvars.ContextVar[bool] = contextvars.ContextVar(
             "llm_token_usage_estimated", default=False
         )
+        self._warned_missing_usage = False
 
     def __deepcopy__(self, memo: Dict[int, Any]) -> "UsageTrackingLLM":
         memo[id(self)] = self
@@ -196,6 +199,9 @@ class UsageTrackingLLM:
         self._usage_estimated = contextvars.ContextVar(
             "llm_token_usage_estimated", default=False
         )
+        self._warned_missing_usage = bool(
+            getattr(self, "_warned_missing_usage", False)
+        )
 
     def _add_usage(self, *, tokens_in: int, tokens_out: int) -> None:
         previous = self._usage.get() or {"tokens_in": 0, "tokens_out": 0}
@@ -224,12 +230,28 @@ class UsageTrackingLLM:
                     "response.usage."
                 )
             estimated = True
+            self._warn_missing_usage_once()
             if prompt_tokens is None:
                 prompt_tokens = self._estimate_prompt_tokens(messages)
             if completion_tokens is None:
                 completion_tokens = self._estimate_completion_tokens(response)
 
         return int(prompt_tokens or 0), int(completion_tokens or 0), estimated
+
+    def _warn_missing_usage_once(self) -> None:
+        """Warn once when the wrapped backend cannot provide exact token usage."""
+        if self._warned_missing_usage:
+            return
+        warnings.warn(
+            "The wrapped LLM backend returned a response without complete token "
+            "usage; UsageTrackingLLM is estimating token counts with whitespace "
+            "splitting. For exact token-aware objectives, use a backend that "
+            "returns OpenAI-compatible response.usage or set "
+            "estimate_missing=False to fail fast.",
+            UserWarning,
+            stacklevel=3,
+        )
+        self._warned_missing_usage = True
 
     @classmethod
     def _extract_usage(cls, response: Any) -> Tuple[Optional[int], Optional[int]]:
@@ -322,7 +344,8 @@ class TokenUsageAugmentingGuide(Guide):
 
     The tracker must expose ``last_usage()``. ``UsageTrackingLLM`` is the default
     implementation, but custom LLM wrappers can be used if they follow the same
-    duck-typed interface.
+    duck-typed interface. This stays composition-based so existing guides can be
+    augmented without inheritance changes.
     """
 
     def __init__(
