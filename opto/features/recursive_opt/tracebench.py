@@ -16,9 +16,9 @@ Real Trace-Bench task ids (verified in the repo):
     hf:GSM8K  hf:BBEH  hf:HotpotQA
     veribench:<name>   kernelbench:<level/prob>
 
-Loading uses Trace-Bench's own registry when installed; otherwise a faithful
-STUB scores configs deterministically so the recursive machinery is testable
-offline (no API keys, no GPU).
+Loading uses Trace-Bench's own registry through an explicitly registered adapter.
+If no adapter is registered, task scoring raises; no synthetic benchmark fallback
+is provided.
 """
 
 from __future__ import annotations
@@ -44,9 +44,8 @@ except Exception:
 # Trace-Bench's PUBLIC surface is a CLI/UI/config benchmarking framework, NOT a
 # uniform ``load_task_module(task_id) -> {program, evaluate}`` API. So we do NOT
 # assume that shape. Instead, real integration goes through an explicitly
-# registered adapter; if none is registered we fall back to the deterministic
-# STUB (and runmode prints which mode is active). This removes the "optimistic
-# real-mode that silently breaks or silently stubs" trap.
+# registered adapter; if none is registered task scoring raises. This removes
+# the "optimistic real-mode that silently breaks or silently stubs" trap.
 _TASK_ADAPTER = None
 
 _TASK_ID_ALIASES = {
@@ -63,10 +62,15 @@ def register_task_adapter(adapter: Optional[object]) -> None:
     and optionally:
         adapter.agent_fn(task_id)      -> callable(artifact, x) -> output
     Once registered, ``make_inner_runner`` / ``make_task_runner`` / ``make_agent_fn``
-    use it instead of the stub. This is the supported path to real benchmarks.
+    use it for task scoring. This is the supported path to real benchmarks.
     """
     global _TASK_ADAPTER
     _TASK_ADAPTER = adapter
+
+
+def current_task_adapter() -> Optional[object]:
+    """Return the currently registered Trace-Bench adapter, if any."""
+    return _TASK_ADAPTER
 
 
 def using_real_tasks() -> bool:
@@ -126,6 +130,30 @@ def _csv_env(name: str) -> Optional[Tuple[str, ...]]:
     if not values:
         raise ValueError(f"{name} must contain at least one comma-separated value")
     return values
+
+
+def _positive_int_config(config: Dict[str, Any], key: str, default: int) -> int:
+    """Read a positive integer from a spec/config dict."""
+    raw = config.get(key, default)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"tracebench.{key} must be an integer, got {raw!r}") from exc
+    if value <= 0:
+        raise ValueError(f"tracebench.{key} must be positive, got {value}")
+    return value
+
+
+def _nonnegative_int_config(config: Dict[str, Any], key: str, default: int) -> int:
+    """Read a non-negative integer from a spec/config dict."""
+    raw = config.get(key, default)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"tracebench.{key} must be an integer, got {raw!r}") from exc
+    if value < 0:
+        raise ValueError(f"tracebench.{key} must be non-negative, got {value}")
+    return value
 
 
 def default_tasks_root() -> Path:
@@ -270,17 +298,20 @@ class TraceBenchTaskAdapter:
         eval_kwargs: Optional[Dict[str, Any]] = None,
         max_examples: int = 1,
         inner_steps: int = 0,
+        inner_candidates: int = 1,
         allowed_inner_trainers: Optional[Tuple[str, ...]] = None,
     ) -> None:
         self.tasks_root = Path(tasks_root) if tasks_root is not None else default_tasks_root()
         self.eval_kwargs = dict(eval_kwargs or {})
         self.max_examples = max_examples
         self.inner_steps = inner_steps
+        self.inner_candidates = inner_candidates
         self.allowed_inner_trainers = allowed_inner_trainers
         self._cache: Dict[str, Dict[str, Any]] = {}
         self.status = (
             f"Trace-Bench bundle adapter; tasks_root={self.tasks_root}; "
-            f"max_examples={self.max_examples}; inner_steps={self.inner_steps}"
+            f"max_examples={self.max_examples}; inner_steps={self.inner_steps}; "
+            f"inner_candidates={self.inner_candidates}"
         )
         if self.allowed_inner_trainers is not None:
             self.status += (
@@ -290,6 +321,8 @@ class TraceBenchTaskAdapter:
             raise ValueError("max_examples must be positive")
         if self.inner_steps < 0:
             raise ValueError("inner_steps must be non-negative")
+        if self.inner_candidates <= 0:
+            raise ValueError("inner_candidates must be positive")
 
     @classmethod
     def from_env(cls) -> "TraceBenchTaskAdapter":
@@ -305,7 +338,33 @@ class TraceBenchTaskAdapter:
             eval_kwargs=eval_kwargs,
             max_examples=max_examples,
             inner_steps=inner_steps,
+            inner_candidates=_int_env("RECURSIVE_OPT_TRACEBENCH_INNER_CANDIDATES", 1) or 1,
             allowed_inner_trainers=_csv_env("RECURSIVE_OPT_TRACEBENCH_INNER_TRAINERS"),
+        )
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> "TraceBenchTaskAdapter":
+        """Build an adapter from a declarative RecursiveSpec ``tracebench`` dict."""
+        if not isinstance(config, dict):
+            raise TypeError("tracebench config must be a dict")
+        eval_kwargs = dict(config.get("eval_kwargs") or {})
+        timeout = config.get("timeout_seconds")
+        if timeout is not None:
+            eval_kwargs.setdefault("timeout_seconds", int(timeout))
+        allowed = config.get("allowed_inner_trainers")
+        if allowed is not None:
+            if not isinstance(allowed, (list, tuple)):
+                raise TypeError("tracebench.allowed_inner_trainers must be a list")
+            allowed = tuple(str(value) for value in allowed if str(value).strip())
+            if not allowed:
+                raise ValueError("tracebench.allowed_inner_trainers cannot be empty")
+        return cls(
+            tasks_root=config.get("tasks_root"),
+            eval_kwargs=eval_kwargs,
+            max_examples=_positive_int_config(config, "max_examples", 10),
+            inner_steps=_nonnegative_int_config(config, "inner_steps", 1),
+            inner_candidates=_positive_int_config(config, "inner_candidates", 1),
+            allowed_inner_trainers=allowed,
         )
 
     def _trainer_budget_feedback(self, cfg: LevelConfig, task_id: str) -> Optional[Tuple[float, str]]:
@@ -385,7 +444,7 @@ class TraceBenchTaskAdapter:
             num_epochs=0,
             num_steps=self.inner_steps,
             batch_size=max(1, min(cfg.batch_size, len(inputs) or 1)),
-            num_candidates=_int_env("RECURSIVE_OPT_TRACEBENCH_INNER_CANDIDATES", 1),
+            num_candidates=self.inner_candidates,
             num_threads=max(1, cfg.num_threads),
         )
 
@@ -436,6 +495,24 @@ def ensure_default_task_adapter(*, require: bool = False) -> bool:
         if require:
             raise RuntimeError(f"Could not initialize Trace-Bench adapter: {exc}") from exc
         return False
+
+
+def configure_tracebench_adapter(config: Dict[str, Any], *, require: bool = True) -> bool:
+    """Register a Trace-Bench adapter from a declarative spec config.
+
+    This is the spec-level replacement for notebook/example environment hacks:
+    the benchmark bounds live beside the recursive optimization budget while
+    still using the same adapter contract as ``ensure_default_task_adapter``.
+    """
+    if not config:
+        return ensure_default_task_adapter(require=require)
+    if config.get("enabled", True) is False:
+        register_task_adapter(None)
+        return False
+    if not HAVE_TB and require:
+        raise RuntimeError("Trace-Bench is not importable; cannot run real task scoring.")
+    register_task_adapter(TraceBenchTaskAdapter.from_config(config))
+    return True
 
 
 def ensure_eval_only_task_adapter(
@@ -521,8 +598,8 @@ def make_task_runner() -> Callable:
 def make_inner_runner(task_id: str, n_tasks: int = 6) -> Callable:
     """O1 inner runner bound to one task: ``inner_runner(cfg, family) -> (score, fb)``.
 
-    Delegates to the shared task runner (adapter or stub), so real-mode is opt-in
-    via ``register_task_adapter`` and never silently assumes a wrong public API.
+    Delegates to the shared registered adapter, so real-mode is opt-in via
+    ``register_task_adapter`` and never silently assumes a wrong public API.
     """
     run = make_task_runner()
 
@@ -540,10 +617,9 @@ def make_dataset(families: List[str], repeats: int = 4) -> dict:
 
 # =========================================================================== #
 # Evaluators for the CODE-improvement and CAPABILITY-synthesis examples.
-# In real mode these call Trace-Bench's evaluator on the candidate; in stub
-# mode they score analytically so that *better implementations win on average*
-# (the property the optimizer must be able to climb). Stub keeps everything
-# runnable offline; swap in real eval by installing Trace-Bench.
+# These component-level evaluators are deterministic local validators. They do
+# not replace task scoring for A/C/D/E; they make code rewrites in example B
+# climbable without pretending to be a full benchmark adapter.
 # =========================================================================== #
 def validate_batch_design_indices(raw_indices: Any, *, n: int, k: int) -> Tuple[float, str, List[int]]:
     """Score a batch-design output against a transparent hard-item validation pool."""

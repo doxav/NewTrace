@@ -25,48 +25,66 @@ MEMORY (M2): every policy/prior is written to the artifact-lineage store, so you
 can reconstruct the initial->final chain with scores (printed at the end).
 
 TRACE-BENCH FAMILIES (2 families x 2 tasks):
-    combinatorial : llm4ad:online_bin_packing_local , llm4ad:circle_packing
-    reasoning_control : internal:multiobjective_gsm8k , internal:multi_param
+    optimization_control : online_bin_packing_local , optimization_admissible_set
+    reasoning_control    : internal:multi_param , internal:numeric_param
 
 HOW TO RUN
 ----------
     PYTHONPATH=/path/to/NewTrace python examples/recursive_opt_example_D_cross_family.py
     OPENAI_API_KEY=... PYTHONPATH=... python examples/...D....py --live
 """
-import os, sys
 
 from opto.features.recursive_opt import (
     FamilyPolicyLevel, PriorInductionLevel, RecursiveGuide, MemoryLite,
+    make_scored_task_runner,
 )
 from opto.features.recursive_opt.tracebench import (
-    ensure_eval_only_task_adapter,
-    make_task_runner,
+    configure_tracebench_adapter,
 )
 from opto.features.recursive_opt.runmode import resolve_live, mode_banner
 
 FAMILIES = {
-    "combinatorial": ["llm4ad:online_bin_packing_local", "llm4ad:circle_packing"],
-    "reasoning_control": ["internal:multiobjective_gsm8k", "internal:multi_param"],
+    "optimization_control": [
+        "llm4ad:online_bin_packing_local",
+        "llm4ad:optimization_admissible_set",
+    ],
+    "reasoning_control": ["internal:multi_param", "internal:numeric_param"],
+}
+
+TRACEBENCH = {
+    "max_examples": 2,
+    "inner_steps": 1,
+    "inner_candidates": 1,
+    "timeout_seconds": 5,
+    "allowed_inner_trainers": ["MinibatchAlgorithm"],
+    "eval_kwargs": {"n_train": 2, "n_val": 0},
+}
+
+SCORING = {
+    "mode": "relative_delta",
+    "baseline": "default_config",
+    "clip": [-1.0, 1.0],
+    "report_raw": True,
 }
 
 # Candidate per-family policies the OFFLINE driver tries (live: the LLM writes these).
 POLICY_CANDIDATES = [
     # uniform weak baseline
-    ("combinatorial => batch_design=random, memory_policy=none, trainer=MinibatchAlgorithm, trace_type=internal\n"
+    ("optimization_control => batch_design=random, memory_policy=none, trainer=MinibatchAlgorithm, trace_type=internal\n"
      "reasoning_control => batch_design=random, memory_policy=none, trainer=MinibatchAlgorithm, trace_type=internal"),
     # family-tuned (should win: each family gets its preferred setup)
-    ("combinatorial => batch_design=failure_balanced, memory_policy=typed, trainer=BeamsearchAlgorithm, trace_type=hybrid\n"
-     "reasoning_control => batch_design=curriculum, memory_policy=retrieval, trainer=UCBSearchAlgorithm, trace_type=otel"),
+    ("optimization_control => batch_design=failure_balanced, memory_policy=typed, trainer=MinibatchAlgorithm, trace_type=internal\n"
+     "reasoning_control => batch_design=curriculum, memory_policy=retrieval, trainer=MinibatchAlgorithm, trace_type=internal"),
 ]
 
 PRIOR_CANDIDATES = [
-    dict(batch_design="failure_balanced", memory_policy="typed", trainer="BeamsearchAlgorithm", trace_type="hybrid"),
-    dict(batch_design="curriculum", memory_policy="retrieval", trainer="UCBSearchAlgorithm", trace_type="otel"),
+    dict(batch_design="failure_balanced", memory_policy="typed", trainer="MinibatchAlgorithm", trace_type="internal"),
+    dict(batch_design="curriculum", memory_policy="retrieval", trainer="MinibatchAlgorithm", trace_type="internal"),
 ]
 
 
 def run_offline(mem):
-    run_task = make_task_runner()
+    run_task = make_scored_task_runner(SCORING)
     guide = RecursiveGuide()
 
     # ---- O2: trainable per-family policy ---------------------------------- #
@@ -85,7 +103,7 @@ def run_offline(mem):
 
     # ---- O3: trainable transferable prior, scored on HELD-OUT family ------ #
     print("O3  PriorInductionLevel — induce a prior, score it on a HELD-OUT family")
-    train_f = {"combinatorial": FAMILIES["combinatorial"]}
+    train_f = {"optimization_control": FAMILIES["optimization_control"]}
     holdout_f = {"reasoning_control": FAMILIES["reasoning_control"]}
     o3 = PriorInductionLevel(train_f, holdout_f, run_task=run_task, memory=mem)
     best3 = (float("-inf"), None)
@@ -96,7 +114,7 @@ def run_offline(mem):
         if t > best3[0]:
             best3 = (t, cand)
     print(f"    -> best transferable prior: {best3[1]} (held-out transfer={best3[0]:.3f})")
-    print("    (note: the combinatorial-tuned prior transfers POORLY to reasoning_control")
+    print("    (note: the optimization_control-tuned prior may transfer poorly to reasoning_control")
     print("     => the trainable O3 objective surfaces the no-universal-default result)\n")
 
 
@@ -104,7 +122,7 @@ def run_live(mem):
     from opto.features.recursive_opt.optimize import optimize, current_iterations
     from opto.features.recursive_opt import PriorInductionLevel
 
-    run_task = make_task_runner()
+    run_task = make_scored_task_runner(SCORING)
     iterations = current_iterations()
     fam_names = list(FAMILIES)
 
@@ -128,8 +146,8 @@ def run_live(mem):
 
 if __name__ == "__main__":
     live = resolve_live()
-    if not live:
-        ensure_eval_only_task_adapter(require=True)
+    adapter_cfg = TRACEBENCH if live else {**TRACEBENCH, "inner_steps": 0}
+    configure_tracebench_adapter(adapter_cfg, require=True)
     print(mode_banner(live))
     print("=== D: TRAINABLE O2/O3 recursion across families ===\n")
     mem = MemoryLite(root="./mem_D")

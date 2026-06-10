@@ -65,8 +65,18 @@ class FamilyPrior:  # M3
 class MemoryLite:
     """Typed, inspectable, ablatable tiered memory with a thin retrieval API."""
 
-    def __init__(self, root: str = "./trace_memory"):
+    def __init__(
+        self,
+        root: str = "./trace_memory",
+        *,
+        promotion_min_support: int = 3,
+        promote_priors: bool = True,
+    ) -> None:
+        if promotion_min_support <= 0:
+            raise ValueError("promotion_min_support must be positive")
         self.root = root
+        self._promotion_min_support = promotion_min_support
+        self._promote_priors = promote_priors
         os.makedirs(root, exist_ok=True)
         self._episodes: List[EpisodeTrace] = self._load("episodes.jsonl", EpisodeTrace)
         self._priors: Dict[str, FamilyPrior] = {
@@ -92,6 +102,12 @@ class MemoryLite:
     def _append(self, name, obj):
         with open(self._path(name), "a") as f:
             f.write(json.dumps(asdict(obj)) + "\n")
+
+    def _refresh(self) -> None:
+        """Reload persisted memory written by traced/copy-isolated module calls."""
+        self._episodes = self._load("episodes.jsonl", EpisodeTrace)
+        self._priors = {p.family: p for p in self._load("priors.jsonl", FamilyPrior)}
+        self._artifacts = self._load("artifacts.jsonl", ArtifactRecord)
 
     # ---- M1: record an episode (called by MetaLevel._run_inner) ---------- #
     def record(
@@ -164,6 +180,7 @@ class MemoryLite:
     def artifact_history(
         self, family: Optional[str] = None, kind: Optional[str] = None
     ) -> List[ArtifactRecord]:
+        self._artifacts = self._load("artifacts.jsonl", ArtifactRecord)
         out = [
             a
             for a in self._artifacts
@@ -179,9 +196,11 @@ class MemoryLite:
         return max(hist, key=lambda a: a.score) if hist else None
 
     # ---- M3: promotion (PromotionEngine, with a support gate) ------------ #
-    def _maybe_promote(self, family: str, min_support: int = 3):
-        eps = [e for e in self._episodes if e.family == family]
-        if len(eps) < min_support:
+    def _maybe_promote(self, family: str):
+        if not self._promote_priors:
+            return
+        eps = [e for e in self._load("episodes.jsonl", EpisodeTrace) if e.family == family]
+        if len(eps) < self._promotion_min_support:
             return
         best = max(eps, key=lambda e: e.score)
         prior = FamilyPrior(
@@ -219,9 +238,11 @@ class MemoryLite:
         return sorted(pool, key=lambda e: (e.score, e.ts))[:k]
 
     def family_prior(self, family: str) -> Optional[FamilyPrior]:
+        self._priors = {p.family: p for p in self._load("priors.jsonl", FamilyPrior)}
         return self._priors.get(family)
 
     def summary(self) -> Dict[str, Any]:
+        self._refresh()
         return {
             "episodes": len(self._episodes),
             "artifacts": len(self._artifacts),

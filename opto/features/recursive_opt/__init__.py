@@ -45,6 +45,14 @@ from .budget import (
     reset_budget,
 )
 from . import traces, tracebench
+from .spec import (
+    run_spec,
+    compile_level,
+    validate_spec,
+    reuse_priors,
+    save_priors,
+    make_scored_task_runner,
+)
 from .optimize import (
     optimize,
     resolve_trainer,
@@ -101,4 +109,10 @@ __all__ = [
     "OPTIMIZER",
     "ITERATIONS",
     "NUM_CANDIDATES",
+    "run_spec",
+    "compile_level",
+    "validate_spec",
+    "reuse_priors",
+    "save_priors",
+    "make_scored_task_runner",
 ]
