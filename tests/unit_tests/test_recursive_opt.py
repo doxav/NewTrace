@@ -585,6 +585,33 @@ def test_tracebench_adapter_rejects_inner_trainer_outside_live_budget() -> None:
     assert "PrioritySearch" in feedback
 
 
+def test_tracebench_adapter_declares_trace_type_as_plumbed() -> None:
+    assert "trace_type" in TraceBenchTaskAdapter.PLUMBED_FIELDS
+
+
+def test_tracebench_adapter_collects_trace_type_feedback(monkeypatch) -> None:
+    from opto.features.recursive_opt import traces
+
+    if not traces.HAVE_TRACE_IO:
+        pytest.skip("optional graph/telemetry backends are not importable")
+
+    adapter = TraceBenchTaskAdapter(max_examples=1, inner_steps=0)
+    monkeypatch.setattr(adapter, "_load_bundle", lambda task_id, fresh=False: {"param": object()})
+    monkeypatch.setattr(adapter, "_apply_starting_artifact", lambda bundle, cfg: False)
+    monkeypatch.setattr(adapter, "_train_bundle", lambda bundle, cfg: None)
+    monkeypatch.setattr(TB, "_score_bundle", lambda bundle, max_examples: (0.42, "scored"))
+
+    score, feedback = adapter.run_task(
+        LevelConfig(trace_type="hybrid"),
+        "internal:numeric_param",
+    )
+
+    assert score == pytest.approx(0.42)
+    assert "trace_type=hybrid" in feedback
+    assert "trace_sources=otel,sysmon,internal" in feedback
+    assert "task score remains the real benchmark score" in feedback
+
+
 def test_meta_level_allows_real_tracebench_external_dependencies() -> None:
     pytest.importorskip("trace_bench.registry")
 
@@ -620,6 +647,19 @@ def test_multitrace_session_normalizes_internal_graph() -> None:
     assert "internal" in tgj["sources"]
     assert len(tgj["nodes"]) > 0  # internal trace now contributes REAL nodes
     assert all(n["source"] == "internal" for n in tgj["nodes"])
+
+
+def test_multitrace_session_uses_available_trace_io_backends() -> None:
+    if not TR.HAVE_TRACE_IO:
+        pytest.skip("optional graph/telemetry backends are not importable")
+
+    with TR.MultiTraceSession(["otel", "sysmon"]) as sess:
+        sum([1, 2, 3])
+
+    tgj = sess.to_tgj()
+
+    assert {"internal", "otel", "sysmon"}.issubset(tgj["sources"])
+    assert isinstance(tgj["documents"], list)
 
 
 def test_encode_decode_cfg_roundtrip_is_shared_contract() -> None:

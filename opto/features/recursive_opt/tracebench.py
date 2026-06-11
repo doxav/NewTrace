@@ -422,8 +422,59 @@ class TraceBenchTaskAdapter:
 
     #: Config fields this adapter actually plumbs into the scored run. Anything
     #: else is a NO-OP for run_task — searching it yields a flat score surface.
+    #: ``trace_type`` changes the trace feedback collected around the real
+    #: benchmark run; it does not add a synthetic score bonus or penalty.
     PLUMBED_FIELDS = ("starting_artifact", "initial_knowledge", "trainer",
-                      "optimizer", "batch_size", "num_threads")
+                      "optimizer", "batch_size", "num_threads", "trace_type")
+
+    def _trace_types_for_config(self, cfg: LevelConfig) -> Tuple[str, ...]:
+        """Map the public LevelConfig trace label to concrete trace backends."""
+        trace_type = str(getattr(cfg, "trace_type", "internal") or "internal")
+        if trace_type == "internal":
+            return ("internal",)
+        if trace_type == "otel":
+            return ("otel",)
+        if trace_type == "sysmon":
+            return ("sysmon",)
+        if trace_type == "hybrid":
+            return ("otel", "sysmon")
+        raise ValueError(
+            f"Unsupported trace_type {trace_type!r}; expected internal, otel, "
+            "sysmon, or hybrid."
+        )
+
+    def _trace_backend_failure(self, cfg: LevelConfig) -> Optional[Tuple[float, str]]:
+        """Return a clear failure when a requested trace backend is unavailable."""
+        trace_types = self._trace_types_for_config(cfg)
+        needs_external_backend = any(t in {"otel", "sysmon"} for t in trace_types)
+        if not needs_external_backend:
+            return None
+        from . import traces
+
+        if traces.HAVE_TRACE_IO:
+            return None
+        return (
+            INVALID_CONFIG_SCORE,
+            "[real_trace_bench] trace_type="
+            f"{cfg.trace_type!r} requires graph/telemetry backends, but "
+            "opto.features.graph/opto.trace.io are not importable.",
+        )
+
+    def _trace_feedback_note(self, cfg: LevelConfig, session: Any) -> str:
+        """Summarize the collected trace feedback without changing task score."""
+        try:
+            tgj = session.to_tgj()
+        except Exception as exc:
+            return f"trace_type={cfg.trace_type}; trace feedback unavailable: {type(exc).__name__}: {exc}"
+        sources = ",".join(str(src) for src in tgj.get("sources", []))
+        documents = len(tgj.get("documents", []))
+        nodes = len(tgj.get("nodes", []))
+        edges = len(tgj.get("edges", []))
+        return (
+            f"trace_type={cfg.trace_type}; trace_sources={sources}; "
+            f"trace_documents={documents}; trace_nodes={nodes}; trace_edges={edges}; "
+            "task score remains the real benchmark score"
+        )
 
     def _apply_starting_artifact(self, bundle: Dict[str, Any], cfg: LevelConfig) -> bool:
         """Seed the bundle's trainable param from cfg before scoring.
@@ -490,10 +541,27 @@ class TraceBenchTaskAdapter:
         budget_failure = self._trainer_budget_feedback(cfg, normalized)
         if budget_failure is not None:
             return budget_failure
+        trace_failure = self._trace_backend_failure(cfg)
+        if trace_failure is not None:
+            return trace_failure
         bundle = self._load_bundle(normalized, fresh=True)
         seeded = self._apply_starting_artifact(bundle, cfg)
         self._train_bundle(bundle, cfg)
-        score, feedback = _score_bundle(bundle, self.max_examples)
+        from . import traces
+
+        trace_meta = {
+            "semantic_names": [
+                "_score_bundle",
+                "_extract_response",
+                "_scalarize_score_dict",
+            ]
+        }
+        with traces.collect_traces(
+            list(self._trace_types_for_config(cfg)),
+            meta=trace_meta,
+        ) as trace_session:
+            score, feedback = _score_bundle(bundle, self.max_examples)
+        trace_note = self._trace_feedback_note(cfg, trace_session)
         seed_note = "starting_artifact seeded; " if seeded else ""
         train_note = (
             f"{seed_note}inner_steps={self.inner_steps}; cfg applied through Trace trainer"
@@ -503,7 +571,7 @@ class TraceBenchTaskAdapter:
         )
         hint = self._trainer_hint(cfg)
         suffix = f" {hint}" if hint else ""
-        return score, f"[real_trace_bench:{normalized}] {train_note}. {feedback}{suffix}"
+        return score, f"[real_trace_bench:{normalized}] {train_note}. {trace_note}. {feedback}{suffix}"
 
     def agent_fn(self, task_id: str) -> Callable:
         """Return a simple O0 agent function backed by the Trace-Bench bundle param."""

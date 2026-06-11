@@ -9,7 +9,8 @@ is to remove the "it looked like it worked but it was a stub" trap:
     If ``--live`` is requested WITHOUT a key, it RAISES instead of silently
     falling back to a non-live run.
   * ``mode_banner()`` — one loud line stating LIVE vs OFFLINE-STUB and whether
-    Trace-Bench / PR #73 are actually in use, plus the efficacy caveat.
+    Trace-Bench / graph telemetry backends are actually in use, plus the
+    efficacy caveat.
 
 Read this once: non-live mode does not call an optimizer LLM. Task-scoring
 examples require an explicitly registered Trace-Bench adapter; otherwise they
@@ -173,13 +174,16 @@ def tracebench_mode() -> str:
         return "STUB (synthetic analytic scores — tests plumbing, NOT efficacy)"
 
 
-def pr73_mode() -> str:
+def trace_io_mode() -> str:
+    """Return whether optional graph/telemetry trace backends are importable."""
     try:
-        from .traces import HAVE_PR73
+        from .traces import HAVE_TRACE_IO
     except Exception:
-        HAVE_PR73 = False
+        HAVE_TRACE_IO = False
     return (
-        "AVAILABLE" if HAVE_PR73 else "ABSENT (graph/OTEL/Sysmon paths cannot run here)"
+        "AVAILABLE"
+        if HAVE_TRACE_IO
+        else "UNAVAILABLE (graph/OTEL/Sysmon backends are not importable)"
     )
 
 
@@ -218,6 +222,6 @@ def mode_banner(live: bool) -> str:
         )
     return (
         f"{bar}\n{head}\n  Trace-Bench: {tracebench_mode()}\n"
-        f"  PR #73 graph/OTEL: {pr73_mode()}\n"
+        f"  Graph/telemetry: {trace_io_mode()}\n"
         f"  Global budget: {budget_status()}\n  {caveat}\n{bar}"
     )

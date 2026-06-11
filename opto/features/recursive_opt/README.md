@@ -56,7 +56,7 @@ opto/features/recursive_opt/
   levels.py        # spine: LevelConfig, ArtifactLevel(O0), MetaLevel(O1+),
                    #        ComponentSpec + CodeArtifactLevel (code surface), RecursiveGuide
   memory.py        # MemoryLite tiers M0–M3 + thin retrieval (active knowledge building, C.1)
-  traces.py        # PR #73 wrappers: GraphAdapter (B.3), OTEL (B.4), multi-trace TGJ (B.5)
+  traces.py        # optional GraphAdapter (B.3), OTEL (B.4), multi-trace TGJ (B.5)
   capabilities.py  # AgenticOptimizer (C.2), TinkerEnvAdapter (C.3), HITLGate (C.4)
   tracebench.py    # turns real Trace-Bench task ids into inner_runner / code- and
                    #   multi-objective evaluators (section D)
@@ -88,7 +88,7 @@ tests source-code rewriting mechanics rather than external benchmark scoring.
 
 ### 4.1 Run the non-live demos
 ```bash
-# from a checkout of OpenTrace@pr73 with recursive_opt placed under opto/features/
+# from a checkout of OpenTrace with recursive_opt placed under opto/features/
 export PYTHONPATH=/path/to/OpenTrace
 python examples/recursive_opt_example_A_learn_setup.py
 python examples/recursive_opt_example_B_improve_component.py
@@ -96,21 +96,21 @@ python examples/recursive_opt_example_C_learn_capability.py
 python examples/recursive_opt_example_D_cross_family.py
 ```
 
-### 4.2 Install the full stack (PR #73 + Trace-Bench)
+### 4.2 Install the full stack (graph telemetry + Trace-Bench)
 ```bash
 git clone https://github.com/AgentOpt/OpenTrace && cd OpenTrace
-git fetch origin pull/73/head:pr73 && git checkout pr73
 pip install opentelemetry-api opentelemetry-sdk            # graph/OTEL backends
-# (the editable install of the PR branch may need a pyproject fix; PYTHONPATH works too)
-# place this package at opto/features/recursive_opt/ (it is part of your PR)
+# PYTHONPATH works for local development if you are not using an editable install.
+# place this package at opto/features/recursive_opt/
 
 git clone https://github.com/AgentOpt/Trace-Bench && cd Trace-Bench
 pip install -e ".[hf]"        # HotpotQA / BBEH / GSM8K ; add ".[dspy]" etc. as needed
 ```
 With Trace-Bench installed, non-live examples register a bounded eval-only
 adapter and live mode registers the default bundle adapter. You can also
-register a custom adapter with `register_task_adapter(...)`. With PR #73 installed,
-`traces.py` emits real OTEL/Sysmon spans merged into TGJ.
+register a custom adapter with `register_task_adapter(...)`. `traces.py` emits
+real OTEL/Sysmon spans merged into TGJ when the optional graph/telemetry modules
+are present.
 
 ### 4.3 Run with the real LLM optimizer
 ```bash
@@ -147,13 +147,13 @@ Trace-Bench adapter. If the model is inaccessible or Trace-Bench cannot be
 initialized, the run fails early instead of silently reporting synthetic scores.
 
 ### 4.4 Notebook (Colab or local)
-Open `examples/recursive_opt_demo.ipynb`. The setup cell clones OpenTrace@pr73,
+Open `examples/recursive_opt_demo.ipynb`. The setup cell clones OpenTrace,
 installs OpenTelemetry, ensures `recursive_opt` is under `opto/features/`, and
 runs A/B/C/D. A final cell reads `OPENAI_API_KEY` via `getpass` for the live pass.
 
 ---
 
-## 5. Verified API (OpenTrace PR #73)
+## 5. Verified API
 
 `opto.trace`: `node`, `bundle(trainable=True)` (function **source** = a trainable
 param), `model`, `Module`, `ParameterNode` · `opto.trainer.train(model=,

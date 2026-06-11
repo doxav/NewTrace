@@ -47,7 +47,7 @@ There are two *different kinds* of trainable parameter, and you choose per goal:
 You can mix them: an O1 ``MetaLevel`` can SELECT among existing trainers while a
 parallel ``CodeArtifactLevel`` REWRITES the chosen trainer's hot path.
 
-API verified against OpenTrace PR #73:
+Trace API used by this feature:
     opto.trace.model / node / bundle(trainable=True) / Module / ParameterNode
     opto.trainer.train(model=, train_dataset=, algorithm=, optimizer=, guide=)
     opto.optimizers.OptoPrime / OptoPrimeMulti
