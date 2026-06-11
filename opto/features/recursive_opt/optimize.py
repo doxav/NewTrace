@@ -183,7 +183,7 @@ def optimize(
         **trainer_kwargs,
     )
     if keep_best_validated:
-        restore_best_validated(result)
+        restore_best_validated(result, model)   # write-back to the CALLER's model
     canonicalize_model(model)
     return result
 
@@ -287,17 +287,45 @@ def _fit_candidate_budget(*, iterations: int, num_candidates: int) -> int:
     return allowed_iterations
 
 
-def restore_best_validated(trainer_result: Any) -> bool:
-    """Restore the best candidate known to PrioritySearch-like trainers."""
+def restore_best_validated(trainer_result: Any, model: Any = None) -> bool:
+    """Write the best *evaluated* candidate back into the CALLER's model.
+
+    Root cause of the "trained code lost after optimize()" bug (two defects):
+    1. The previous helper applied the candidate onto ``trainer.agent`` — but
+       PrioritySearch trains deep-copied candidates, so the caller's model (the
+       object users read via ``current_code()``/``best_config_from``) was never
+       updated; ``optimize()``'s in-place contract was silently broken.
+    2. It trusted ``exploit()``, whose ranking maps unevaluated candidates
+       (``mean_score() is None``) to 0 — on surfaces where evaluated means are
+       <= 0 (or when rollouts haven't attached yet) that returns a NEVER-SCORED
+       candidate, clobbering trained parameters with unvalidated ones.
+
+    Fix: scan trainer memory for candidates with ``num_rollouts > 0``, pick the
+    max ``mean_score()``, and ``apply_update(model)`` — ``set_module_parameters``
+    remaps by structure, so deep-copied node identities are safe. If nothing was
+    ever evaluated, leave the model untouched and return False (never clobber).
+    """
     if trainer_result is None:
         return False
+    target = model if model is not None else getattr(trainer_result, "agent", None)
+    if target is None:
+        return False
     try:
-        best_candidate = getattr(trainer_result, "_best_candidate", None)
-        if best_candidate is None:
-            if not hasattr(trainer_result, "exploit"):
-                return False
-            best_candidate, _priority, _info = trainer_result.exploit()
-        best_candidate.apply_update(getattr(trainer_result, "agent", None))
+        candidates = []
+        memory = getattr(trainer_result, "memory", None)
+        if memory is not None:
+            for item in list(getattr(memory, "memory", []) or []):
+                cand = item[1] if isinstance(item, tuple) and len(item) == 2 else item
+                if getattr(cand, "num_rollouts", 0) and cand.mean_score() is not None:
+                    candidates.append(cand)
+        if not candidates and hasattr(trainer_result, "exploit"):
+            cand, _priority, _info = trainer_result.exploit()
+            if getattr(cand, "num_rollouts", 0) and cand.mean_score() is not None:
+                candidates.append(cand)
+        if not candidates:
+            return False  # nothing validated: never overwrite trained state blindly
+        best = max(candidates, key=lambda c: c.mean_score())
+        best.apply_update(target)
         return True
     except Exception:
         return False

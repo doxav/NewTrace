@@ -34,11 +34,17 @@ class _FakeTaskAdapter:
 
 @pytest.fixture(autouse=True)
 def _adapter():
+    # Clean GLOBAL state per test: adapter and the global budget (a leftover
+    # budget from a prior test silently turns optimize() into a no-op via
+    # stop_policy=return_best — the exact mechanism behind the live P5 0.018s).
+    from opto.features.recursive_opt.budget import reset_budget
     TB.register_task_adapter(_FakeTaskAdapter())
+    reset_budget()
     try:
         yield
     finally:
         TB.register_task_adapter(None)
+        reset_budget()
 
 
 class _NoLLMOptimizer(Optimizer):
@@ -425,3 +431,82 @@ def test_empty_config_value_is_always_valid_control_arm():
             L.validate_config_field("starting_artifact", "rogue value")
     finally:
         L.CONFIG_ALLOWED_VALUES.clear(); L.CONFIG_ALLOWED_VALUES.update(snap)
+
+
+# ---------------- write-back regression (the "trained code lost" bug) ------- #
+_GOOD_CODE = '''def batch_design(self, n, k):
+    hard = [i for i in range(n) if i % 3 == 0]
+    picked = hard[:k]
+    for i in range(n):
+        if len(picked) >= k:
+            break
+        if i not in picked:
+            picked.append(i)
+    return picked'''
+
+
+class _ScriptedCodeOptimizer(Optimizer):
+    """Deterministically proposes _GOOD_CODE (no LLM)."""
+    def __init__(self, parameters, **kwargs):
+        super().__init__(parameters)
+
+    def _step(self, *a, **k):
+        return {self.parameters[0]: _GOOD_CODE}
+
+    def step(self, *a, **k):
+        update = self._step()
+        for p, v in update.items():
+            p._data = v
+        return update
+
+    def zero_feedback(self): pass
+    def backward(self, *a, **k): return None
+
+
+def _weak_baseline(self, n, k):
+    """Deliberately weak baseline (ignores hard items)."""
+    return list(range(k))
+
+
+def test_optimize_writes_best_validated_code_back_to_caller_model(tmp_path: Path):
+    """After optimize(), the CALLER's level must hold the best evaluated code.
+
+    Regression for the live P1 failure: trainer logs showed the agent reaching
+    score 1.0 internally while current_code() on the caller's level still held
+    the baseline (PrioritySearch trains deep copies; the old restore helper
+    wrote to trainer.agent and trusted exploit()'s unevaluated-None->0 ranking).
+    """
+    from opto.features.recursive_opt.optimize import optimize
+    from opto.features.recursive_opt.tracebench import make_code_evaluator
+
+    ev = make_code_evaluator("internal:batch_design", "batch_design")
+    level = S.compile_level({"id": "wb", "surface": "code",
+        "component": {"name": "batch_design", "baseline": _weak_baseline,
+                      "evaluate": ev, "objective": "max"}},
+        MemoryLite(root=str(tmp_path)), {})
+    optimize(level, {"inputs": [None] * 3, "infos": [None] * 3}, iterations=3,
+             trainer="PrioritySearch", optimizer=_ScriptedCodeOptimizer)
+
+    code = level.current_code()
+    assert "i % 3 == 0" in code, "trained code was lost on write-back"
+    # and it scores 1.0 through the real validator (baseline scores 0.8)
+    ns = {}
+    exec(code, ns, ns)
+    fn = ns["batch_design"]
+    score, _ = ev(lambda *a, **k: fn(None, *a, **k), "code")
+    assert score == 1.0
+
+
+def test_restore_best_validated_never_clobbers_without_evaluations(tmp_path: Path):
+    from opto.features.recursive_opt.optimize import restore_best_validated
+
+    class _EmptyTrainer:
+        memory = type("M", (), {"memory": []})()
+        agent = None
+    level = S.compile_level({"id": "nc", "surface": "code",
+        "component": {"name": "batch_design", "baseline": _weak_baseline,
+                      "evaluate": lambda c, f: (0.0, "x"), "objective": "max"}},
+        MemoryLite(root=str(tmp_path)), {})
+    before = level.current_code()
+    assert restore_best_validated(_EmptyTrainer(), level) is False
+    assert level.current_code() == before   # untouched

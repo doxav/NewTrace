@@ -886,11 +886,22 @@ def test_restore_best_validated_applies_candidate_module_state() -> None:
 
     class FakeTrainer:
         agent = level
+        memory = type("M", (), {"memory": []})()
 
         def exploit(self):
             return candidate, 1.0, {}
 
-    assert restore_best_validated(FakeTrainer()) is True
+    # NEW contract 1: an UNEVALUATED candidate (no rollouts) must never clobber
+    # the model — restore declines and the param stays at its current value.
+    assert restore_best_validated(FakeTrainer(), level) is False
+    assert param.data == original
+
+    # NEW contract 2: once the candidate is validated (rollouts attached), it is
+    # written back into the CALLER's model.
+    candidate.add_rollouts([{"module": None, "x": None, "info": None,
+                             "target": None, "score": 0.9, "feedback": "ok"}])
+    FakeTrainer.memory = type("M", (), {"memory": [(-0.9, candidate)]})()
+    assert restore_best_validated(FakeTrainer(), level) is True
     assert param.data == "batch_design: failure_balanced"
 
 
