@@ -65,7 +65,9 @@ SPEC = {
     "levels": [
         {
             "id": "o1_setup", "surface": "config", "family": "optimization_control",
-            "targets": ["batch_design", "batch_size", "memory_policy"],
+            "targets": ["starting_artifact", "batch_size", "trainer"],  # plumbed only
+            "constraints": {"starting_artifact": ["",  # bundle-default control arm
+                "Answer directly.", "Plan step by step, then answer.", "Plan step by step, then verify the answer before replying."]},
             "fixed": {
                 "optimizer": "OptoPrime",
                 "guide": "LLMJudge",
@@ -78,12 +80,12 @@ SPEC = {
         },
         {
             "id": "o2_policy", "surface": "family_policy", "family": "*",
-            "targets": ["batch_design", "memory_policy"],
-            "iterations": 3, "depends_on": ["o1_setup"],
+            "targets": ["starting_artifact", "trainer"],
+            "iterations": 3, "depends_on": ["o1_setup"], "allow_unplumbed": True,
         },
         {
             "id": "o3_prior", "surface": "prior", "family": "*",
-            "targets": ["batch_design", "memory_policy"],
+            "targets": ["starting_artifact", "trainer"],
             "iterations": 2, "depends_on": ["o2_policy"],
         },
     ],

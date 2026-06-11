@@ -114,7 +114,9 @@ def build_level(problem, mem):
         cfg=base,
         inner_runner=make_inner_runner(problem),  # runs the inner optimization
         # only these four fields are trainable -> tiny, stable search space:
-        trainable_fields=("batch_size", "batch_design", "memory_policy", "trainer"),
+        trainable_fields=("starting_artifact", "batch_size", "trainer"),  # plumbed fields only:
+        # starting_artifact reaches the benchmark even at inner_steps=0 (the score-moving knob);
+        # batch_design/memory_policy are NOT plumbed by the adapter and would search a flat surface.
         memory=mem,  # A.4 / C.1 active knowledge
     )
 

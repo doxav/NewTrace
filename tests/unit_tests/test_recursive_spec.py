@@ -314,3 +314,95 @@ def test_run_spec_agentic_level_trains_with_tools(tmp_path: Path):
     spec = {"families": FAMILIES, "memory_root": str(tmp_path), "levels": [ls]}
     out = S.run_spec(spec)          # no optimizer override: agentic factory is used
     assert out["results"][ls["id"]]["artifact"].strip()
+
+
+# ------------------- flat-surface root-cause regression tests ------------- #
+class _PlumbedAdapter(_FakeTaskAdapter):
+    """Adapter that declares plumbing and is sensitive to the artifact text."""
+    PLUMBED_FIELDS = ("starting_artifact", "trainer", "batch_size")
+
+    def run_task(self, cfg, task_id):
+        art = str(getattr(cfg, "starting_artifact", "") or "")
+        base = 0.4 + 0.1 * min(len(art), 100) / 100.0
+        if "verify" in art.lower():
+            base += 0.3
+        return min(1.0, base), f"[plumbed:{task_id}] artifact={art[:30]!r}"
+
+
+def test_validate_spec_rejects_unplumbed_targets():
+    TB.register_task_adapter(_PlumbedAdapter())
+    spec = {"families": FAMILIES,
+            "levels": [_config_level(targets=["batch_design", "batch_size"])]}
+    with pytest.raises(ValueError, match="not plumbed"):
+        S.validate_spec(spec)                      # batch_design is a no-op knob
+    spec["levels"][0]["allow_unplumbed"] = True
+    S.validate_spec(spec)                          # explicit override allowed
+    spec2 = {"families": FAMILIES,
+             "levels": [_config_level(targets=["starting_artifact", "batch_size"])]}
+    S.validate_spec(spec2)                         # plumbed targets pass
+
+
+def test_score_spread_detects_flat_and_nonflat_surfaces():
+    TB.register_task_adapter(_PlumbedAdapter())
+    live = S.score_spread("hf:GSM8K")
+    assert live["spread"] > 0 and not live["flat"]  # artifact path moves the score
+    assert live["failed_probes"] == 0
+
+    class _Constant(_FakeTaskAdapter):
+        def run_task(self, cfg, task_id):           # the bug we now detect
+            return 0.5, "constant"
+    TB.register_task_adapter(_Constant())
+    flat = S.score_spread("hf:GSM8K")
+    assert flat["flat"] and flat["spread"] == 0.0
+
+    class _RejectsPromptProbe(_FakeTaskAdapter):
+        def run_task(self, cfg, task_id):
+            if str(getattr(cfg, "starting_artifact", "") or ""):
+                raise ValueError("prompt artifact incompatible with numeric task")
+            return 0.5, "control arm ok"
+    TB.register_task_adapter(_RejectsPromptProbe())
+    gated = S.score_spread("internal:numeric_param")
+    assert gated["flat"] and gated["spread"] == 0.0
+    assert gated["failed_probes"] == 2
+    assert any("incompatible" in row.get("error", "") for row in gated["rows"])
+
+
+def test_adapter_seeds_starting_artifact_into_bundle_param():
+    from opto.features.recursive_opt.tracebench import TraceBenchTaskAdapter
+    from opto.features.recursive_opt.levels import LevelConfig
+
+    class _Param:
+        def __init__(self): self._data = "original"
+    adapter = TraceBenchTaskAdapter.__new__(TraceBenchTaskAdapter)  # no trace_bench needed
+    bundle = {"param": _Param()}
+    seeded = adapter._apply_starting_artifact(
+        bundle, LevelConfig(starting_artifact="Plan, then verify."))
+    assert seeded and bundle["param"]._data == "Plan, then verify."
+    assert not adapter._apply_starting_artifact(bundle, LevelConfig())  # empty -> no-op
+
+
+def test_compliance_objective_blocks_degenerate_terse_optimum():
+    from opto.features.recursive_opt.tracebench import _text_cost
+    # direct check of the compliance math used by make_multiobjective_evaluator
+    terms = ("plan", "verify")
+    def compliance(text):
+        low = text.lower()
+        return sum(1.0 for t in terms if t in low) / len(terms)
+    terse, compliant = "Answer directly.", "Plan briefly, then verify the answer."
+    s_terse = 1.0 - 0.5 * _text_cost(terse) + 0.5 * compliance(terse)
+    s_comp  = 1.0 - 0.5 * _text_cost(compliant) + 0.5 * compliance(compliant)
+    assert s_comp > s_terse        # the intended capability now wins the scalar
+
+
+def test_empty_config_value_is_always_valid_control_arm():
+    from opto.features.recursive_opt import levels as L
+    import copy
+    snap = copy.deepcopy(L.CONFIG_ALLOWED_VALUES)
+    try:
+        L.register_config_values("starting_artifact", ["Plan, then verify."])
+        L.validate_config_field("starting_artifact", "")        # default arm: OK
+        L.validate_config_field("starting_artifact", "Plan, then verify.")
+        with pytest.raises(ValueError):
+            L.validate_config_field("starting_artifact", "rogue value")
+    finally:
+        L.CONFIG_ALLOWED_VALUES.clear(); L.CONFIG_ALLOWED_VALUES.update(snap)

@@ -420,6 +420,38 @@ class TraceBenchTaskAdapter:
             self._cache[cache_key] = bundle
         return bundle
 
+    #: Config fields this adapter actually plumbs into the scored run. Anything
+    #: else is a NO-OP for run_task — searching it yields a flat score surface.
+    PLUMBED_FIELDS = ("starting_artifact", "initial_knowledge", "trainer",
+                      "optimizer", "batch_size", "num_threads")
+
+    def _apply_starting_artifact(self, bundle: Dict[str, Any], cfg: LevelConfig) -> bool:
+        """Seed the bundle's trainable param from cfg before scoring.
+
+        This is the config->score connection that exists even at inner_steps=0:
+        the artifact text itself is evaluated by the real benchmark.
+        """
+        text = str(getattr(cfg, "starting_artifact", "") or "").strip()
+        knowledge = str(getattr(cfg, "initial_knowledge", "") or "").strip()
+        if knowledge:
+            text = f"{text}\n{knowledge}".strip()
+        if not text:
+            return False
+        param = bundle.get("param")
+        if hasattr(param, "system_prompt"):
+            param.system_prompt._data = text
+            return True
+        params = getattr(param, "parameters", None)
+        if callable(params):
+            plist = params()
+            if plist:
+                plist[0]._data = text
+                return True
+        if hasattr(param, "_data"):
+            param._data = text
+            return True
+        return False
+
     def _train_bundle(self, bundle: Dict[str, Any], cfg: LevelConfig) -> None:
         if self.inner_steps <= 0:
             return
@@ -458,13 +490,16 @@ class TraceBenchTaskAdapter:
         budget_failure = self._trainer_budget_feedback(cfg, normalized)
         if budget_failure is not None:
             return budget_failure
-        bundle = self._load_bundle(normalized, fresh=self.inner_steps > 0)
+        bundle = self._load_bundle(normalized, fresh=True)
+        seeded = self._apply_starting_artifact(bundle, cfg)
         self._train_bundle(bundle, cfg)
         score, feedback = _score_bundle(bundle, self.max_examples)
+        seed_note = "starting_artifact seeded; " if seeded else ""
         train_note = (
-            f"inner_steps={self.inner_steps}; cfg applied through Trace trainer"
+            f"{seed_note}inner_steps={self.inner_steps}; cfg applied through Trace trainer"
             if self.inner_steps
-            else "inner_steps=0; real benchmark evaluation only, meta-config not inner-trained"
+            else f"{seed_note}inner_steps=0; only plumbed fields "
+                 f"{list(self.PLUMBED_FIELDS)} can affect this score"
         )
         hint = self._trainer_hint(cfg)
         suffix = f" {hint}" if hint else ""
@@ -710,7 +745,8 @@ def make_code_evaluator(task_id: str, component: str):
     return evaluate
 
 
-def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4):
+def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4,
+                                  required_terms: Optional[Tuple[str, ...]] = None):
     """Return evaluate(capability_callable, family) -> (score_dict, feedback)
     for learning a NEW CAPABILITY under multiple objectives (example_C).
 
@@ -782,7 +818,13 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4):
             # "minimize cost" actually penalises verbosity (benchmark score_dicts
             # do not carry a comparable compute cost). Consistent across objectives.
             cost = _text_cost(capability_text)
-            objective_rows.append({"accuracy": accuracy, "cost": cost})
+            row = {"accuracy": accuracy, "cost": cost}
+            if required_terms:
+                lowered = capability_text.lower()
+                row["compliance"] = sum(
+                    1.0 for t in required_terms if t.lower() in lowered
+                ) / len(required_terms)
+            objective_rows.append(row)
             notes.append(
                 f"{normalized}:{dataset_name} n={limit} "
                 f"mode={mode} accuracy={accuracy:.2f},cost={cost:.2f}; "
@@ -792,7 +834,15 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4):
             "accuracy": sum(row["accuracy"] for row in objective_rows) / len(objective_rows),
             "cost": sum(row["cost"] for row in objective_rows) / len(objective_rows),
         }
+        if required_terms:
+            score["compliance"] = sum(
+                row.get("compliance", 0.0) for row in objective_rows
+            ) / len(objective_rows)
         scalar = score["accuracy"] - 0.5 * score["cost"]
+        if required_terms:
+            # compliance guards the intended capability spec: a terse but
+            # non-compliant artifact ("Answer directly.") can no longer dominate.
+            scalar += 0.5 * score["compliance"]
         feedback = (
             "[real_trace_bench_multiobjective] "
             + "; ".join(notes)

@@ -47,6 +47,7 @@ from .budget import (
 from . import traces, tracebench
 from .spec import (
     agentic_optimizer_factory,
+    score_spread,
     run_spec,
     compile_level,
     validate_spec,
@@ -112,6 +113,7 @@ __all__ = [
     "NUM_CANDIDATES",
     "run_spec",
     "agentic_optimizer_factory",
+    "score_spread",
     "compile_level",
     "validate_spec",
     "reuse_priors",

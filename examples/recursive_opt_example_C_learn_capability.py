@@ -133,7 +133,8 @@ CANDIDATE_IMPLS = [
 
 
 def learn_capability():
-    evaluator = make_multiobjective_evaluator(PROBLEMS, OBJECTIVES)
+    evaluator = make_multiobjective_evaluator(PROBLEMS, OBJECTIVES,
+                                              required_terms=("plan", "verify"))  # spec-compliance objective: "Answer directly." can no longer win on cost alone
     mem = MemoryLite(root="./mem_C_capability")
 
     # multi-objective selection config: maximize accuracy, minimize cost (Pareto)

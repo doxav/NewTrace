@@ -160,6 +160,8 @@ def validate_config_field(field: str, value: Any) -> None:
     allowed = CONFIG_ALLOWED_VALUES.get(field)
     if allowed is None:
         return
+    if str(value).strip() == "":
+        return  # empty = unset/default (e.g. bundle-default starting_artifact): always a legal control arm
     if str(value) not in allowed:
         raise ValueError(
             f"Invalid value for {field}: expected one of {list(allowed)}, got {value!r}. "

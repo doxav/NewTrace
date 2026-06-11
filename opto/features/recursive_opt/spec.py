@@ -27,6 +27,7 @@ Minimal usage::
 from __future__ import annotations
 
 import json
+import math
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .levels import (
@@ -94,6 +95,8 @@ def validate_spec(spec: dict) -> dict:
             fields = tuple(ls.get("targets") or ()) + tuple(fixed.keys())
             validate_level_config(cfg, fields)
 
+        if surface in ("config", "family_policy", "prior"):
+            _check_plumbing(ls)
         if surface == "config" and ls.get("family") not in families and not ls.get("task"):
             raise ValueError(f"level {lid}: config needs a known 'family' or an explicit 'task'")
         if surface == "code" and not isinstance(ls.get("component"), dict):
@@ -327,6 +330,66 @@ def _final_eval(level, level_spec: dict, families: Dict[str, List[str]]):
     data = out.data if hasattr(out, "data") else out
     score = float(data.get("score", 0.0)) if isinstance(data, dict) else 0.0
     return score, data
+
+
+def _check_plumbing(level_spec: dict) -> None:
+    """Fail loud when targets include fields the registered adapter ignores.
+
+    Searching unplumbed fields produces an exactly-flat score surface (the root
+    cause of the 0.0 deltas): the optimizer explores knobs that never reach the
+    benchmark. Adapters opt in by exposing ``PLUMBED_FIELDS``; set
+    ``allow_unplumbed: true`` on the level to override deliberately.
+    """
+    adapter = TB._TASK_ADAPTER
+    plumbed = getattr(adapter, "PLUMBED_FIELDS", None)
+    if plumbed is None or level_spec.get("allow_unplumbed"):
+        return
+    dead = [t for t in (level_spec.get("targets") or []) if t not in plumbed]
+    if dead:
+        raise ValueError(
+            f"level {level_spec.get('id')}: targets {dead} are not plumbed by the "
+            f"registered adapter (plumbed: {list(plumbed)}). Searching them yields "
+            "a flat score surface. Use plumbed targets (e.g. 'starting_artifact') "
+            "or set allow_unplumbed: true to proceed anyway."
+        )
+
+
+def score_spread(task_id: str, probes: Optional[List[dict]] = None,
+                 scoring: Optional[dict] = None) -> dict:
+    """Pre-flight diagnostic: prove the config->score surface is non-flat.
+
+    Evaluates a few probe configs (defaults exercise the artifact path, the one
+    field guaranteed plumbed even at inner_steps=0) and reports the spread. Gate
+    experiments on ``spread > 0``: a flat result means optimization on this task
+    with these probes cannot show gains, whatever the budget.
+    """
+    probes = probes or [
+        {},  # adapter/bundle default artifact
+        {"starting_artifact": "Answer directly."},
+        {"starting_artifact": "Plan step by step, then verify the answer before replying."},
+    ]
+    runner = make_scored_task_runner(scoring)
+    rows = []
+    for p in probes:
+        try:
+            score, _ = runner(LevelConfig(**p), task_id)
+            value = float(score)
+            if not math.isfinite(value):
+                raise ValueError(f"non-finite score {value!r}")
+            rows.append({"probe": p, "score": value})
+        except Exception as exc:
+            # Some plumbed probes are only valid for prompt-like tasks. Keep the
+            # gate diagnostic alive and expose the incompatible arm explicitly.
+            rows.append({
+                "probe": p,
+                "score": None,
+                "error": f"{type(exc).__name__}: {str(exc).splitlines()[0]}",
+            })
+    scores = [float(r["score"]) for r in rows if r.get("score") is not None]
+    return {"task": task_id, "rows": rows,
+            "spread": max(scores) - min(scores) if scores else 0.0,
+            "flat": (max(scores) - min(scores) < 1e-9) if scores else True,
+            "failed_probes": sum(1 for r in rows if r.get("score") is None)}
 
 
 def agentic_optimizer_factory(level_spec: dict, memory: MemoryLite,
