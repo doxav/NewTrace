@@ -347,6 +347,9 @@ def test_score_spread_detects_flat_and_nonflat_surfaces():
     live = S.score_spread("hf:GSM8K")
     assert live["spread"] > 0 and not live["flat"]  # artifact path moves the score
     assert live["failed_probes"] == 0
+    assert live["valid_spread"] == live["spread"]
+    assert live["invalid_probes"] == 0
+    assert live["catastrophic"] is False
 
     class _Constant(_FakeTaskAdapter):
         def run_task(self, cfg, task_id):           # the bug we now detect
@@ -354,6 +357,9 @@ def test_score_spread_detects_flat_and_nonflat_surfaces():
     TB.register_task_adapter(_Constant())
     flat = S.score_spread("hf:GSM8K")
     assert flat["flat"] and flat["spread"] == 0.0
+    assert flat["valid_spread"] == 0.0
+    assert flat["invalid_probes"] == 0
+    assert flat["catastrophic"] is False
 
     class _RejectsPromptProbe(_FakeTaskAdapter):
         def run_task(self, cfg, task_id):
@@ -364,7 +370,20 @@ def test_score_spread_detects_flat_and_nonflat_surfaces():
     gated = S.score_spread("internal:numeric_param")
     assert gated["flat"] and gated["spread"] == 0.0
     assert gated["failed_probes"] == 2
+    assert gated["invalid_probes"] == 2
+    assert gated["catastrophic"] is True
     assert any("incompatible" in row.get("error", "") for row in gated["rows"])
+
+    class _SentinelProbe(_FakeTaskAdapter):
+        def run_task(self, cfg, task_id):
+            if str(getattr(cfg, "starting_artifact", "") or ""):
+                return -1_000_000.0, "invalid sentinel"
+            return 0.5, "control arm ok"
+    TB.register_task_adapter(_SentinelProbe())
+    sentinel = S.score_spread("internal:numeric_param")
+    assert sentinel["valid_spread"] == 0.0
+    assert sentinel["invalid_probes"] == 2
+    assert sentinel["catastrophic"] is True
 
 
 def test_adapter_seeds_starting_artifact_into_bundle_param():

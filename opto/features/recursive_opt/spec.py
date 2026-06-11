@@ -360,8 +360,10 @@ def score_spread(task_id: str, probes: Optional[List[dict]] = None,
 
     Evaluates a few probe configs (defaults exercise the artifact path, the one
     field guaranteed plumbed even at inner_steps=0) and reports the spread. Gate
-    experiments on ``spread > 0``: a flat result means optimization on this task
-    with these probes cannot show gains, whatever the budget.
+    experiments on ``valid_spread > 0`` and ``catastrophic is False``: a flat
+    result means optimization on this task with these probes cannot show gains,
+    while catastrophic invalid probes mean the probe set is incompatible with
+    the surface and should not be interpreted as signal.
     """
     probes = probes or [
         {},  # adapter/bundle default artifact
@@ -385,11 +387,30 @@ def score_spread(task_id: str, probes: Optional[List[dict]] = None,
                 "score": None,
                 "error": f"{type(exc).__name__}: {str(exc).splitlines()[0]}",
             })
-    scores = [float(r["score"]) for r in rows if r.get("score") is not None]
-    return {"task": task_id, "rows": rows,
-            "spread": max(scores) - min(scores) if scores else 0.0,
-            "flat": (max(scores) - min(scores) < 1e-9) if scores else True,
-            "failed_probes": sum(1 for r in rows if r.get("score") is None)}
+    def is_invalid_probe(row: dict) -> bool:
+        """Return whether a probe produced no usable score signal."""
+        if row.get("score") is None:
+            return True
+        score = float(row["score"])
+        return (not math.isfinite(score)) or score <= -999_999.0
+
+    valid_scores = [
+        float(row["score"])
+        for row in rows
+        if not is_invalid_probe(row)
+    ]
+    invalid_probes = sum(1 for row in rows if is_invalid_probe(row))
+    valid_spread = max(valid_scores) - min(valid_scores) if valid_scores else 0.0
+    return {
+        "task": task_id,
+        "rows": rows,
+        "spread": valid_spread,          # backward-compatible alias
+        "valid_spread": valid_spread,
+        "flat": valid_spread < 1e-9,
+        "failed_probes": invalid_probes, # backward-compatible alias
+        "invalid_probes": invalid_probes,
+        "catastrophic": invalid_probes > 0,
+    }
 
 
 def agentic_optimizer_factory(level_spec: dict, memory: MemoryLite,
