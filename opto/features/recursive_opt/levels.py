@@ -137,6 +137,17 @@ CONFIG_ALLOWED_VALUES: Dict[str, Tuple[str, ...]] = {
 INVALID_CONFIG_SCORE = -1_000_000_000.0
 
 
+def invalid_result(reason: str, floor: Optional[float] = None, **extra) -> dict:
+    """Standard payload for an undecodable candidate (DRY across all surfaces).
+
+    The penalty is the worst LEGAL score (the scoring clip floor) when known —
+    an astronomical internal sentinel must never leak into stats, normalization
+    baselines, or reported results (root cause of the -666,666,666 confirm runs).
+    """
+    return {"score": float(floor) if floor is not None else INVALID_CONFIG_SCORE,
+            "feedback": reason, **extra}
+
+
 def register_config_values(field: str, values: Iterable[str], *, replace: bool = False) -> None:
     """Register allowed enum-like values for a LevelConfig field.
 
@@ -289,10 +300,12 @@ class MetaLevel(Module):
             "trainer",
         ),
         memory: Optional[object] = None,
+        invalid_floor: Optional[float] = None,
     ):
         super().__init__()
         self._fields = trainable_fields
         self._base_cfg = cfg
+        self._invalid_floor = invalid_floor
         # ONE node holds the whole (sub-)config as text -> low-dimensional search.
         self._cfg_node = node(
             self._encode(cfg),
@@ -323,10 +336,7 @@ class MetaLevel(Module):
         try:
             cfg = self._decode(cfg_text)
         except ValueError as exc:
-            return {
-                "score": INVALID_CONFIG_SCORE,
-                "feedback": f"invalid generated config: {exc}",
-            }
+            return invalid_result(f"invalid generated config: {exc}", self._invalid_floor)
         score, feedback = self._inner_runner(cfg, family)
         if self._memory is not None:
             self._memory.record(
@@ -390,10 +400,12 @@ class FamilyPolicyLevel(Module):
         base_cfg: Optional[LevelConfig] = None,
         policy_fields: Tuple[str, ...] = ("batch_design", "memory_policy", "trainer", "trace_type"),
         memory: Optional[object] = None,
+        invalid_floor: Optional[float] = None,
     ):
         super().__init__()
         self._families = families
         self._run_task = run_task
+        self._invalid_floor = invalid_floor
         self._base = base_cfg or LevelConfig()
         self._fields = policy_fields
         self._memory = memory
@@ -430,11 +442,8 @@ class FamilyPolicyLevel(Module):
         try:
             policy = self._decode_policy(policy_text)
         except ValueError as exc:
-            return {
-                "score": INVALID_CONFIG_SCORE,
-                "feedback": f"invalid generated family policy: {exc}",
-                "per_family": {},
-            }
+            return invalid_result(f"invalid generated family policy: {exc}",
+                                  self._invalid_floor, per_family={})
         per_family = {}
         for fam, tasks in self._families.items():
             cfg = policy.get(fam, self._base)
@@ -481,8 +490,10 @@ class PriorInductionLevel(Module):
         base_cfg: Optional[LevelConfig] = None,
         fields: Tuple[str, ...] = ("batch_design", "memory_policy", "trainer", "trace_type"),
         memory: Optional[object] = None,
+        invalid_floor: Optional[float] = None,
     ):
         super().__init__()
+        self._invalid_floor = invalid_floor
         self._train = train_families
         self._holdout = holdout_families
         self._run_task = run_task
@@ -496,11 +507,8 @@ class PriorInductionLevel(Module):
         try:
             cfg = decode_cfg(prior_text, self._base, self._fields)
         except ValueError as exc:
-            return {
-                "score": INVALID_CONFIG_SCORE,
-                "feedback": f"invalid generated transfer prior: {exc}",
-                "per_family": {},
-            }
+            return invalid_result(f"invalid generated transfer prior: {exc}",
+                                  self._invalid_floor, per_family={})
         per_family = {
             fam: _mean(self._run_task(cfg, t)[0] for t in tasks)
             for fam, tasks in self._holdout.items()
@@ -747,3 +755,82 @@ def best_config_from(level: MetaLevel) -> str:
         return canonicalize_cfg_text(text, level._base_cfg, level._fields)
     except Exception:
         return text
+
+
+class TimedGuide(Guide):
+    """Wrap any Guide and expose evaluation wall-time as a Pareto objective.
+
+    Enables time-aware multi-objective training/tie-breaking, e.g.
+    ``ObjectiveConfig(mode="pareto", minimize={"wall_time"})`` — or declaratively
+    via the spec level keys ``"timed_guide": true`` +
+    ``"objective_config": {"mode": "pareto", "minimize": ["wall_time"]}``.
+    Thread-safe: elapsed time is tracked per thread (parallel rollouts).
+    """
+
+    def __init__(self, inner: Guide):
+        self._inner = inner
+        import threading
+        self._local = threading.local()
+
+    def get_feedback(self, query, response, info=None, **kwargs):
+        import time as _time
+        t0 = _time.perf_counter()
+        out = self._inner.get_feedback(query, response, info, **kwargs)
+        self._local.elapsed = _time.perf_counter() - t0
+        return out
+
+    def get_score_dict(self, query, response, info=None, **kwargs):
+        base = {}
+        if hasattr(self._inner, "get_score_dict"):
+            base = dict(self._inner.get_score_dict(query, response, info, **kwargs) or {})
+        base.setdefault("wall_time", float(getattr(self._local, "elapsed", 0.0)))
+        return base
+
+    def __getattr__(self, name):  # transparent for anything else trainers read
+        return getattr(self._inner, name)
+
+
+@trace.model
+class CapabilityArtifact(Module):
+    """Trainable capability implementation (a SKILL-style text/policy).
+
+    Promoted from example C: the artifact text is the trainable parameter;
+    ``forward`` evaluates it through a (multi-objective) evaluator returning
+    ``(score_dict, feedback, scalar)`` and yields a score DICT, so it works with
+    plain trainers (scalar) and Pareto ``ObjectiveConfig`` trainers (objectives).
+    Declarative form: spec surface ``"capability"`` with keys ``seed`` and
+    ``evaluator``.
+    """
+
+    def __init__(self, seed_impl: str, evaluator, memory=None):
+        super().__init__()
+        self.impl = node(seed_impl, trainable=True, name="capability")
+        self._eval = evaluator
+        self._memory = memory
+
+    @trace.bundle(allow_external_dependencies=True)
+    def _evaluate_impl(self, impl_text, family):
+        # Taking the trainable ``self.impl`` node as input keeps this output
+        # CONNECTED to the parameter so optimizers can backpropagate to it.
+        impl_text = impl_text.data if hasattr(impl_text, "data") else str(impl_text)
+
+        def capability(task):
+            return {"answer": impl_text, "task": task}
+
+        score_dict, feedback, scalar = self._eval(capability, family)
+        if self._memory is not None:
+            self._memory.record(
+                level="capability",
+                cfg={"len": len(impl_text)},
+                family=str(family),
+                score=scalar,
+                feedback=feedback,
+                metrics=score_dict,
+            )
+        return {"score": scalar, "feedback": feedback, "objectives": score_dict}
+
+    def forward(self, family):
+        return self._evaluate_impl(self.impl, family)
+
+    def current_text(self) -> str:
+        return str(self.parameters()[0].data)

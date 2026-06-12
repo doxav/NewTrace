@@ -510,3 +510,127 @@ def test_restore_best_validated_never_clobbers_without_evaluations(tmp_path: Pat
     before = level.current_code()
     assert restore_best_validated(_EmptyTrainer(), level) is False
     assert level.current_code() == before   # untouched
+
+
+# -------- sentinel-leak root fix (the -666,666,666 confirm explosion) ------- #
+def test_invalid_config_score_respects_scoring_clip_floor(tmp_path: Path):
+    """Invalid candidates must score the worst LEGAL value, never -1e9."""
+    spec_scoring = {"mode": "raw", "clip": [-1.0, 1.0]}
+    level = S.compile_level(
+        _config_level(targets=["batch_size"]), MemoryLite(root=str(tmp_path)),
+        FAMILIES, scoring=spec_scoring)
+    assert level._invalid_floor == -1.0          # derived from the clip floor
+    out = level._run_inner("batch_size: banana", "hf:GSM8K")
+    data = out.data if hasattr(out, "data") else out
+    assert data["score"] == -1.0                 # was -1_000_000_000.0
+    assert "invalid generated config" in data["feedback"]
+    # default behaviour unchanged without a clip (backward compatible)
+    bare = S.compile_level(_config_level(targets=["batch_size"]),
+                           MemoryLite(root=str(tmp_path / "b")), FAMILIES)
+    raw = bare._run_inner("batch_size: banana", "hf:GSM8K")
+    d2 = raw.data if hasattr(raw, "data") else raw
+    from opto.features.recursive_opt.levels import INVALID_CONFIG_SCORE
+    assert d2["score"] == INVALID_CONFIG_SCORE
+
+
+def test_run_spec_clamps_reported_scores_and_records_wall_s(tmp_path: Path):
+    """Belt: even a custom level emitting a raw sentinel cannot leak it into results."""
+    from opto.features.recursive_opt.levels import INVALID_CONFIG_SCORE
+
+    class _SentinelLevel(S.MetaLevel if False else object):
+        pass
+
+    def builder(ls, memory):
+        import opto.trace as trace
+        from opto.trace import node
+        from opto.trace import Module
+
+        @trace.model
+        class _Leaky(Module):
+            def __init__(self):
+                super().__init__()
+                self.p = node("x", trainable=True, name="leaky")
+
+            @trace.bundle(allow_external_dependencies=True)
+            def _run(self, p):
+                return {"score": INVALID_CONFIG_SCORE, "feedback": "boom"}
+
+            def forward(self, _):
+                return self._run(self.p)
+        return _Leaky()
+
+    spec = {"families": FAMILIES, "memory_root": str(tmp_path),
+            "scoring": {"mode": "raw", "clip": [-1.0, 1.0]},
+            "levels": [{"id": "leak", "surface": "custom", "builder": builder,
+                        "iterations": 1}]}
+    out = S.run_spec(spec, optimizer=_NoLLMOptimizer)
+    res = out["results"]["leak"]
+    assert res["score"] == -1.0                  # clamped, was -1e9 raw
+    assert isinstance(res["wall_s"], float)      # fix 3: wall time recorded per level
+
+
+# ------------------- wall-time objective (fix 3 root) ----------------------- #
+def test_timed_guide_exposes_wall_time_objective():
+    from opto.features.recursive_opt.levels import TimedGuide
+
+    class _Inner:
+        def get_feedback(self, q, r, info=None, **kw):
+            import time; time.sleep(0.01)
+            return 1.0, "ok"
+        def get_score_dict(self, q, r, info=None, **kw):
+            return {"score": 1.0}
+
+    g = TimedGuide(_Inner())
+    score, fb = g.get_feedback("q", {"score": 1.0}, None)
+    d = g.get_score_dict("q", {"score": 1.0}, None)
+    assert score == 1.0 and d["score"] == 1.0
+    assert d["wall_time"] >= 0.01                # measured, thread-local
+
+
+def test_spec_timed_guide_and_objective_config_validate():
+    ls = _config_level(targets=["batch_size"])
+    ls["timed_guide"] = True
+    ls["objective_config"] = {"mode": "pareto", "minimize": ["wall_time"]}
+    S.validate_spec({"families": FAMILIES, "levels": [ls]})
+
+
+# ------------------- capability surface (promoted from example C) ----------- #
+def test_capability_surface_compiles_and_runs(tmp_path: Path):
+    from opto.features.recursive_opt import CapabilityArtifact
+
+    def evaluator(capability, family):
+        text = capability("probe")["answer"]
+        acc = 1.0 if "verify" in text.lower() else 0.4
+        return {"accuracy": acc}, f"acc={acc}", acc
+
+    spec = {"families": FAMILIES, "memory_root": str(tmp_path),
+            "levels": [{"id": "cap", "surface": "capability",
+                        "seed": "Plan, then verify the answer.",
+                        "evaluator": evaluator, "iterations": 1}]}
+    S.validate_spec(spec)
+    out = S.run_spec(spec, optimizer=_NoLLMOptimizer)
+    res = out["results"]["cap"]
+    assert res["score"] == 1.0
+    level = out["levels"]["cap"]
+    assert isinstance(level, CapabilityArtifact)
+    assert "verify" in level.current_text().lower()
+    with pytest.raises(TypeError):               # evaluator is mandatory
+        S.validate_spec({"families": FAMILIES,
+                         "levels": [{"id": "bad", "surface": "capability"}]})
+
+
+# ------------------- budget no-op visibility (fix 2 root) ------------------- #
+def test_optimize_warns_when_global_budget_already_exhausted(tmp_path: Path, capsys):
+    from opto.features.recursive_opt.budget import RecursiveOptBudget, reset_budget
+    from opto.features.recursive_opt.optimize import optimize
+    level = S.compile_level(_config_level(targets=["batch_size"]),
+                            MemoryLite(root=str(tmp_path)), FAMILIES)
+    b = RecursiveOptBudget(max_candidates=1)
+    b.used_candidates = 1                       # simulate a prior run consuming it
+    reset_budget(b)
+    try:
+        optimize(level, {"inputs": [None], "infos": [None]}, iterations=1,
+                 optimizer=_NoLLMOptimizer)
+    finally:
+        reset_budget()
+    assert "ALREADY exhausted" in capsys.readouterr().out

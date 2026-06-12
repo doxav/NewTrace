@@ -28,9 +28,13 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .levels import (
+    CapabilityArtifact,
+    TimedGuide,
+    RecursiveGuide,
     LevelConfig,
     MetaLevel,
     FamilyPolicyLevel,
@@ -46,7 +50,7 @@ from .budget import RecursiveOptBudget, reset_budget
 from .optimize import optimize, current_iterations
 from . import tracebench as TB
 
-SURFACES = ("config", "code", "family_policy", "prior", "custom")
+SURFACES = ("config", "code", "family_policy", "prior", "capability", "custom")
 _DEFAULT_POLICY_FIELDS = ("batch_design", "memory_policy", "trainer", "trace_type")
 
 
@@ -101,6 +105,8 @@ def validate_spec(spec: dict) -> dict:
             raise ValueError(f"level {lid}: config needs a known 'family' or an explicit 'task'")
         if surface == "code" and not isinstance(ls.get("component"), dict):
             raise ValueError(f"level {lid}: code surface needs a 'component' dict")
+        if surface == "capability" and not callable(ls.get("evaluator")):
+            raise TypeError(f"level {ls.get('id')}: capability surface requires a callable 'evaluator'")
         if surface == "custom" and not callable(ls.get("builder")):
             raise ValueError(f"level {lid}: custom surface needs a callable 'builder'")
         if surface in ("family_policy", "prior"):
@@ -118,6 +124,8 @@ def compile_level(
     """Compile one level dict into the matching existing level object."""
     surface = level_spec["surface"]
     score_config = level_spec.get("scoring", scoring)
+    clip = _clip_bounds(score_config)
+    floor = clip[0] if clip else None   # invalid candidates score the worst LEGAL value
 
     if surface == "custom":
         return level_spec["builder"](level_spec, memory)
@@ -128,7 +136,8 @@ def compile_level(
         kwargs: Dict[str, Any] = {"memory": memory}
         if level_spec.get("targets"):
             kwargs["trainable_fields"] = tuple(level_spec["targets"])
-        return MetaLevel(cfg=cfg, inner_runner=_make_inner_runner(task, score_config), **kwargs)
+        return MetaLevel(cfg=cfg, inner_runner=_make_inner_runner(task, score_config),
+                         invalid_floor=floor, **kwargs)
 
     if surface == "code":
         c = level_spec["component"]
@@ -138,10 +147,14 @@ def compile_level(
         )
         return CodeArtifactLevel(comp, memory=memory)
 
+    if surface == "capability":
+        return CapabilityArtifact(level_spec.get("seed", ""),
+                                  evaluator=level_spec["evaluator"], memory=memory)
+
     if surface == "family_policy":
         fams = _resolve_families(level_spec, families)
         return FamilyPolicyLevel(
-            fams, run_task=make_scored_task_runner(score_config),
+            fams, run_task=make_scored_task_runner(score_config), invalid_floor=floor,
             policy_fields=tuple(level_spec.get("targets") or _DEFAULT_POLICY_FIELDS),
             memory=memory,
         )
@@ -152,7 +165,7 @@ def compile_level(
         train = {names[0]: fams[names[0]]}
         holdout = {n: fams[n] for n in names[1:]} or {names[0]: fams[names[0]]}
         return PriorInductionLevel(
-            train, holdout, run_task=make_scored_task_runner(score_config),
+            train, holdout, run_task=make_scored_task_runner(score_config), invalid_floor=floor,
             fields=tuple(level_spec.get("targets") or _DEFAULT_POLICY_FIELDS),
             memory=memory,
         )
@@ -247,19 +260,27 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
         agentic_factory = agentic_optimizer_factory(ls, memory, reused["tools"])
         if agentic_factory is not None and optimizer is None:
             level_optimizer = agentic_factory
+        if ls.get("timed_guide"):
+            # wall-time as a first-class objective: pair with
+            # "objective_config": {"mode": "pareto", "minimize": ["wall_time"]}
+            opt_kwargs["guide"] = TimedGuide(RecursiveGuide())
+        _t0 = time.time()
         optimize(
             level, _dataset_for(ls, families, iterations),
             optimizer=(optimizer if optimizer is not None else level_optimizer),
             trainer=(trainer if trainer is not None else ls.get("trainer")),
             iterations=iterations, **opt_kwargs,
         )
+        wall_s = round(time.time() - _t0, 3)
 
         score, data = _final_eval(level, ls, families)
+        score = _clamp(score, _clip_bounds(spec.get("scoring")))  # belt: sentinel can never leak raw
         rec = save_priors(memory, level, ls, score,
                           metrics=data if isinstance(data, dict) else None)
         results[lid] = {
             "surface": ls["surface"],
             "score": score,
+            "wall_s": wall_s,
             "artifact": _artifact_text(level, ls["surface"]),
             "reused_prior": reused["used_prior"],
             "tools": reused["tools"],
@@ -286,11 +307,13 @@ def _resolve_families(level_spec: dict, families: Dict[str, List[str]]) -> Dict[
 
 
 def _dataset_for(level_spec: dict, families: Dict[str, List[str]], iterations: int) -> dict:
-    if level_spec["surface"] in ("family_policy", "prior"):
+    fam = level_spec.get("family")
+    task = level_spec.get("task")
+    # family_policy/prior iterate internally; custom/capability levels may be
+    # label-free — all of these train on a None-input dataset.
+    if level_spec["surface"] in ("family_policy", "prior") or not (fam or task):
         return {"inputs": [None] * iterations, "infos": [None] * iterations}
-    task = level_spec.get("task") or families[level_spec["family"]][0]
-    family_label = level_spec.get("family") or task
-    return TB.make_dataset([family_label], repeats=iterations)
+    return TB.make_dataset([fam or task], repeats=iterations)
 
 
 def _artifact_text(level, surface: str) -> str:
@@ -298,6 +321,8 @@ def _artifact_text(level, surface: str) -> str:
         return best_config_from(level)
     if surface == "code":
         return level.current_code()
+    if surface == "capability":
+        return str(level.impl.data)
     if surface == "family_policy":
         return str(getattr(level, "_policy_node").data)
     if surface == "prior":
@@ -308,7 +333,9 @@ def _artifact_text(level, surface: str) -> str:
 
 
 def _seed_from_text(level, surface: str, text: str) -> None:
-    if surface == "family_policy":
+    if surface == "capability":
+        level.impl._data = text
+    elif surface == "family_policy":
         level.propose(text)
     elif surface == "prior":
         getattr(level, "_prior_node")._data = text
@@ -528,8 +555,18 @@ def _baseline_config(scoring: dict) -> LevelConfig:
     raise ValueError("scoring.baseline must be 'default_config' or a LevelConfig dict")
 
 
-def _clip_bounds(scoring: dict) -> Optional[Tuple[float, float]]:
+def _clamp(value: float, clip: Optional[Tuple[float, float]]) -> float:
+    """Bound a reported score to the configured clip range (no-op without one)."""
+    if clip is None:
+        return float(value)
+    lo, hi = clip
+    return float(min(hi, max(lo, value)))
+
+
+def _clip_bounds(scoring: Optional[dict]) -> Optional[Tuple[float, float]]:
     """Return optional score clipping bounds from a scoring config."""
+    if not scoring:
+        return None
     raw = scoring.get("clip")
     if raw is None and scoring.get("mode") == "clip":
         raw = [scoring.get("min", float("-inf")), scoring.get("max", float("inf"))]

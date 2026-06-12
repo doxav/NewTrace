@@ -275,6 +275,18 @@ def _train_returning_trainer(
 def _fit_candidate_budget(*, iterations: int, num_candidates: int) -> int:
     """Clamp outer search steps to the remaining global candidate budget."""
     budget = current_budget()
+    if budget is not None:
+        for _res in ("candidates", "optimizer_llm_calls", "eval_llm_calls"):
+            try:
+                _rem = budget.remaining(_res)
+            except Exception:
+                _rem = None
+            if _rem == 0:
+                print(f"[recursive_opt] WARNING: global budget '{_res}' is ALREADY exhausted at "
+                      f"optimize() entry — this run will no-op (stop_policy="
+                      f"{getattr(budget, 'stop_policy', '?')}). Call reset_budget() first for "
+                      "independent measurements (e.g. paired timing runs).")
+                break
     remaining = budget.remaining("candidates")
     if remaining is None:
         budget.charge("candidates", iterations * num_candidates)

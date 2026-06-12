@@ -75,50 +75,10 @@ OBJECTIVES = {"accuracy": "max", "cost": "min"}
 PROBLEMS = ["internal:multiobjective_gsm8k"]
 
 
-@trace.model
-class CapabilityArtifact(Module):
-    """Trainable capability implementation (a SKILL-style text/policy).
-
-    The artifact text is the trainable parameter. ``forward`` runs it on the
-    target tasks through a multi-objective evaluator and returns a score DICT.
-    """
-
-    def __init__(self, seed_impl, evaluator, memory=None):
-        super().__init__()
-        self.impl = node(seed_impl, trainable=True, name="capability")
-        self._eval = evaluator
-        self._memory = memory
-
-    @trace.bundle(allow_external_dependencies=True)
-    def _evaluate_impl(self, impl_text, family):
-        # Taking the trainable ``self.impl`` node as an input keeps the returned
-        # node CONNECTED to the capability parameter, so a live optimizer can
-        # backpropagate from this output to ``self.impl``.
-        impl_text = impl_text.data if hasattr(impl_text, "data") else str(impl_text)
-
-        def capability(task):
-            # In real mode the evaluator applies impl_text to compatible
-            # Trace-Bench artifacts, e.g. as GSM8K's learner system prompt.
-            # In non-live mode the eval-only adapter applies this text to a
-            # bounded real Trace-Bench bundle without an optimizer LLM.
-            return {"answer": impl_text, "task": task}
-
-        score_dict, feedback, scalar = self._eval(capability, family)
-        if self._memory is not None:
-            self._memory.record(
-                level="capability",
-                cfg={"len": len(impl_text)},
-                family=str(family),
-                score=scalar,
-                feedback=feedback,
-                metrics=score_dict,
-            )
-        return {"score": scalar, "feedback": feedback, "objectives": score_dict}
-
-    def forward(self, family):
-        # Keep the capability text on the traced path (see _evaluate_impl).
-        return self._evaluate_impl(self.impl, family)
-
+# CapabilityArtifact was promoted into the library (opto/features/recursive_opt/levels.py)
+# so it can be reused by any capability/skill experiment and by the declarative
+# spec surface "capability". This example now simply imports it.
+from opto.features.recursive_opt import CapabilityArtifact  # noqa: E402
 
 # Candidate capability implementations explored by the OFFLINE driver.
 # (In LIVE mode the LLM optimizer writes these from the spec + feedback.)

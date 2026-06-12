@@ -12,6 +12,9 @@ Everything is a ``trace.Module``, so ``opto.trainer.train`` + any
 """
 
 from .levels import (
+    CapabilityArtifact,
+    TimedGuide,
+    invalid_result,
     LevelConfig,
     ArtifactLevel,
     MetaLevel,
@@ -72,6 +75,9 @@ __all__ = [
     "LevelConfig",
     "ArtifactLevel",
     "MetaLevel",
+    "invalid_result",
+    "TimedGuide",
+    "CapabilityArtifact",
     "FamilyPolicyLevel",
     "PriorInductionLevel",
     "ComponentSpec",
