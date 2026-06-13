@@ -10,10 +10,15 @@ An O1 ``MetaLevel`` whose single trainable parameter is a small config (text)
 over existing components. The optimizer SELECTS + CONFIGURES; it does not change
 any component's code. (To change a component's *code*, see example_B.)
 
-This example covers >= 2 of the A elements:
-    A.2  batch size & design   (random | failure_balanced | curriculum)
-    A.4  memory                (none | typed | retrieval)
-    A.7  trainer               (MinibatchAlgorithm | Beamsearch | UCBSearch)
+This example trains the setup fields whose causal path is ACTIVE under the
+bounded Trace-Bench eval-only adapter (see adapter.field_effects()):
+    A.1  starting artifact     (artifact-plumbed: moves the score even at inner_steps=0)
+    A.2  batch size            (optimization-plumbed: active when inner_steps > 0)
+    A.7  trainer               (optimization-plumbed: active when inner_steps > 0)
+``batch_design`` and ``memory_policy`` remain conceptual LevelConfig fields with a
+DECLARED but currently inactive causal path (no sampler / retrieval wiring yet) —
+they are validated, not trained, until that wiring exists. The adapter's
+field_effects() contract is the single source of truth for this distinction.
 
 WHY THE CONFIG LOOKS LIKE "starting_artifact / initial_knowledge / batch_size..."
 ---------------------------------------------------------------------------------
@@ -50,6 +55,7 @@ from opto.features.recursive_opt import (
     best_config_from,
 )
 from opto.features.recursive_opt.tracebench import (
+    resolve_trainable_fields,
     ensure_eval_only_task_adapter,
     make_inner_runner,
     make_dataset,
@@ -110,13 +116,14 @@ def build_level(problem, mem):
         memory_policy="none",
         trainer="MinibatchAlgorithm",
     )
+    # Validated through the adapter's causal-effect contract: raises with the
+    # activating condition if any field has no active path in this run mode.
+    fields = resolve_trainable_fields(
+        ("starting_artifact", "batch_size", "trainer"), allow_inactive=True)
     return MetaLevel(
         cfg=base,
         inner_runner=make_inner_runner(problem),  # runs the inner optimization
-        # only these four fields are trainable -> tiny, stable search space:
-        trainable_fields=("starting_artifact", "batch_size", "trainer"),  # plumbed fields only:
-        # starting_artifact reaches the benchmark even at inner_steps=0 (the score-moving knob);
-        # batch_design/memory_policy are NOT plumbed by the adapter and would search a flat surface.
+        trainable_fields=fields,
         memory=mem,  # A.4 / C.1 active knowledge
     )
 

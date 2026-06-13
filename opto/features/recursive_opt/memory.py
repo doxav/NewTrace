@@ -203,23 +203,56 @@ class MemoryLite:
     def _maybe_promote(self, family: str):
         if not self._promote_priors:
             return
+        self.reconsolidate_family(family)
+
+    def reconsolidate_family(self, family: str) -> Optional[FamilyPrior]:
+        """Re-derive the family prior from ALL episodes (support + score gated).
+
+        Public so campaigns can re-consolidate after pruning, after new evidence,
+        or after changing promotion gates — promotion is no longer a one-shot
+        side effect of record(). Returns the promoted prior, or None when the
+        evidence does not clear the gates (insufficient support / flat scores).
+        """
         eps = [e for e in self._load("episodes.jsonl", EpisodeTrace) if e.family == family]
         if len(eps) < self._promotion_min_support:
-            return
+            return None
         best = max(eps, key=lambda e: e.score)
         if self._promotion_min_score is not None and best.score < self._promotion_min_score:
-            return  # score gate: never promote priors learned from flat/failed runs
+            return None  # score gate: never promote priors learned from flat/failed runs
         prior = FamilyPrior(
             family=family,
             best_cfg=best.cfg,
             best_score=best.score,
             support=len(eps),
-            notes=f"median={statistics.median(e.score for e in eps):.3f}",
+            notes=f"median={statistics.median(e.score for e in eps):.3f}; episodes={len(eps)}",
         )
         self._priors[family] = prior
         self._append("priors.jsonl", prior)
+        return prior
 
     # ---- thin retrieval API ---------------------------------------------- #
+    def retrieve(self, family: Optional[str] = None, *, level: Optional[str] = None,
+                 kind: Optional[str] = None, min_score: Optional[float] = None,
+                 topk: int = 5, sort: str = "best") -> Dict[str, Any]:
+        """Filtered retrieval over M1 episodes + M2 artifacts (+ the M3 prior).
+
+        ``sort``: "best" (score desc) or "recent" (timestamp desc). ``family``
+        None/"*" means all families (then ``prior`` is None — priors are
+        family-scoped by definition).
+        """
+        self._refresh()
+        fam = None if family in (None, "*") else family
+        def _keep(x, with_kind: bool) -> bool:
+            return ((fam is None or x.family == fam)
+                    and (level is None or x.level == level)
+                    and (not with_kind or kind is None or x.kind == kind)
+                    and (min_score is None or x.score >= min_score))
+        key = (lambda x: x.score) if sort == "best" else (lambda x: x.ts)
+        eps = sorted((e for e in self._episodes if _keep(e, False)), key=key, reverse=True)
+        arts = sorted((a for a in self._artifacts if _keep(a, True)), key=key, reverse=True)
+        return {"episodes": eps[:topk], "artifacts": arts[:topk],
+                "prior": self._priors.get(fam) if fam else None}
+
     def apply_priors(self, cfg, family: str):
         """Warm-start a config from the family prior (active knowledge building)."""
         prior = self._priors.get(family)

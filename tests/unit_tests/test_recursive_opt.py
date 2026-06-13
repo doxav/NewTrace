@@ -510,6 +510,87 @@ def test_tracebench_task_aliases_are_normalized() -> None:
     assert normalize_task_id("hf:BBEH") == "hf:bbeh/boolean_expressions"
 
 
+def test_score_bundle_prefers_trace_bench_public_evaluator(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    def fake_evaluate_bundle(
+        bundle: Dict[str, Any],
+        *,
+        max_examples: int,
+        strict_score_dict: bool,
+    ) -> tuple[float, list[Any]]:
+        assert max_examples == 2
+        assert strict_score_dict is True
+        return 0.1, [
+            SimpleNamespace(reward=0.1, feedback="first", score_dict={"accuracy": 0.25}),
+            SimpleNamespace(reward=0.2, feedback="second", score_dict={"accuracy": 0.75}),
+        ]
+
+    monkeypatch.setattr(TB, "_evaluate_trace_bench_bundle", fake_evaluate_bundle)
+    bundle = {"train_dataset": {"inputs": ["a", "b"], "infos": [{}, {}]}}
+
+    score, feedback = TB._score_bundle(bundle, max_examples=2)
+
+    assert score == pytest.approx(0.5)
+    assert "train_dataset: mean over 2 real example(s)" in feedback
+    assert "first | second" in feedback
+
+
+def test_score_bundle_rejects_missing_score_dict_from_vector_guide(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    class _Guide:
+        def get_score_dict(
+            self,
+            task_input: str,
+            response: str,
+            info: Any,
+        ) -> Dict[str, float]:
+            return {}
+
+    def fake_evaluate_bundle(
+        bundle: Dict[str, Any],
+        *,
+        max_examples: int,
+        strict_score_dict: bool,
+    ) -> tuple[float, list[Any]]:
+        return 0.1, [
+            SimpleNamespace(reward=0.1, feedback="missing", score_dict=None),
+        ]
+
+    monkeypatch.setattr(TB, "_evaluate_trace_bench_bundle", fake_evaluate_bundle)
+    bundle = {
+        "guide": _Guide(),
+        "train_dataset": {"inputs": ["a"], "infos": [{}]},
+    }
+
+    with pytest.raises(RuntimeError, match="get_score_dict returned None"):
+        TB._score_bundle(bundle, max_examples=1)
+
+
+def test_score_bundle_falls_back_without_trace_bench_public_evaluator(monkeypatch) -> None:
+    class _Guide:
+        def __call__(
+            self,
+            task_input: str,
+            response: str,
+            info: Any,
+        ) -> tuple[float, str]:
+            return (0.5 if response == task_input else 0.0), f"resp={response}"
+
+    monkeypatch.setattr(TB, "_evaluate_trace_bench_bundle", None)
+    bundle = {
+        "param": lambda task_input: task_input,
+        "guide": _Guide(),
+        "train_dataset": {"inputs": ["a", "b"], "infos": [{}, {}]},
+    }
+
+    score, feedback = TB._score_bundle(bundle, max_examples=2)
+
+    assert score == pytest.approx(0.5)
+    assert "train_dataset: mean over 2 real example(s)" in feedback
+
+
 def test_tracebench_adapter_scores_real_internal_task_when_available() -> None:
     pytest.importorskip("trace_bench.registry")
 

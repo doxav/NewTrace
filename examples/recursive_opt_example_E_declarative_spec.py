@@ -23,6 +23,7 @@ RUN
     python examples/recursive_opt_example_E_declarative_spec.py --live     # full optimized run (needs adapter + key)
 """
 from opto.features.recursive_opt import (
+    make_level_spec,
     MemoryLite, best_config_from, validate_spec, compile_level, reuse_priors, run_spec,
 )
 from opto.features.recursive_opt.tracebench import (
@@ -63,21 +64,25 @@ SPEC = {
     "memory_root": "./mem_E",
     "reuse_priors": True,
     "levels": [
-        {
-            "id": "o1_setup", "surface": "config", "family": "optimization_control",
-            "targets": ["starting_artifact", "batch_size", "trainer"],  # plumbed only
-            "constraints": {"starting_artifact": ["",  # bundle-default control arm
-                "Answer directly.", "Plan step by step, then answer.", "Plan step by step, then verify the answer before replying."]},
-            "fixed": {
-                "optimizer": "OptoPrime",
-                "guide": "LLMJudge",
-                "trace_type": "internal",
-                "trainer": "MinibatchAlgorithm",
+        # Built via make_level_spec: keyword args cannot be duplicated, so the
+        # duplicate-"constraints" bug (which silently DROPPED the
+        # starting_artifact menu) is impossible by construction.
+        make_level_spec(
+            id="o1_setup", surface="config", family="optimization_control",
+            targets=["starting_artifact", "batch_size", "trainer"],
+            fixed={"optimizer": "OptoPrime", "guide": "LLMJudge",
+                   "trace_type": "internal", "trainer": "MinibatchAlgorithm"},
+            constraints={
+                "starting_artifact": ["",  # bundle-default control arm
+                    "Answer directly.", "Plan step by step, then answer.",
+                    "Plan step by step, then verify the answer before replying."],
+                # batch_design is declared for VALIDATION of values; it is not a
+                # target (its causal path is inactive in the eval-only adapter).
+                "batch_design": ["random", "failure_balanced", "curriculum", "diversity"],
             },
-            "constraints": {"batch_design": ["random", "failure_balanced", "curriculum", "diversity"]},
-            "iterations": 4,
-            "tools": ["trace_search", "run_subset", "note"],
-        },
+            iterations=4,
+            tools=["trace_search", "run_subset", "note"],
+        ),
         {
             "id": "o2_policy", "surface": "family_policy", "family": "*",
             "targets": ["starting_artifact", "trainer"],

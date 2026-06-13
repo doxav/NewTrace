@@ -27,7 +27,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from opto.trace.nodes import ParameterNode
 
@@ -40,6 +40,11 @@ try:
     HAVE_TB = True
 except Exception:
     HAVE_TB = False
+
+try:
+    from trace_bench.integrations.opto import evaluate_bundle as _evaluate_trace_bench_bundle
+except Exception:
+    _evaluate_trace_bench_bundle = None
 
 # Trace-Bench's PUBLIC surface is a CLI/UI/config benchmarking framework, NOT a
 # uniform ``load_task_module(task_id) -> {program, evaluate}`` API. So we do NOT
@@ -205,7 +210,7 @@ def _extract_response(param: Any, task_input: Any) -> Any:
     return getattr(param, "data", param)
 
 
-def _score_bundle(bundle: Dict[str, Any], max_examples: int) -> Tuple[float, str]:
+def _score_bundle_local(bundle: Dict[str, Any], max_examples: int) -> Tuple[float, str]:
     dataset_name, dataset = _evaluation_dataset(bundle)
     inputs = list(dataset.get("inputs") or [])
     infos = _dataset_infos(dataset)
@@ -239,6 +244,48 @@ def _score_bundle(bundle: Dict[str, Any], max_examples: int) -> Tuple[float, str
         feedbacks.append(str(feedback))
     mean_score = sum(scores) / len(scores)
     return mean_score, f"{dataset_name}: mean over {len(scores)} real example(s). " + " | ".join(feedbacks[:3])
+
+
+def _score_bundle(bundle: Dict[str, Any], max_examples: int) -> Tuple[float, str]:
+    """Score a Trace-Bench bundle, preferring Trace-Bench's public evaluator."""
+    if _evaluate_trace_bench_bundle is None:
+        return _score_bundle_local(bundle, max_examples)
+
+    dataset_name, _ = _evaluation_dataset(bundle)
+    mean_reward, evals = _evaluate_trace_bench_bundle(
+        bundle,
+        max_examples=max_examples,
+        strict_score_dict=True,
+    )
+    if not evals:
+        return mean_reward, f"{dataset_name}: mean over 0 real example(s)."
+
+    objective_config = bundle.get("objective_config")
+    guide_has_score_dict = hasattr(bundle.get("guide"), "get_score_dict")
+    scores: List[float] = []
+    for i, ev in enumerate(evals):
+        score = float(ev.reward)
+        if ev.score_dict is not None:
+            try:
+                score = _scalarize_score_dict(ev.score_dict, objective_config)
+            except Exception as exc:
+                from .runmode import _redact_secrets
+
+                message = _redact_secrets(str(exc).splitlines()[0] or type(exc).__name__)
+                raise RuntimeError(
+                    "Trace-Bench multi-objective scoring failed for "
+                    f"{dataset_name}[{i}]: {type(exc).__name__}: {message}"
+                ) from exc
+        elif guide_has_score_dict:
+            raise RuntimeError(
+                "Trace-Bench multi-objective scoring failed for "
+                f"{dataset_name}[{i}]: get_score_dict returned None"
+            )
+        scores.append(score)
+
+    mean_score = sum(scores) / len(scores)
+    feedbacks = [str(ev.feedback) for ev in evals[:3]]
+    return mean_score, f"{dataset_name}: mean over {len(scores)} real example(s). " + " | ".join(feedbacks)
 
 
 def _score_dict_to_objectives(score_dict: Dict[str, Any], reward: float) -> Dict[str, float]:
@@ -421,9 +468,52 @@ class TraceBenchTaskAdapter:
         return bundle
 
     #: Config fields this adapter actually plumbs into the scored run. Anything
-    #: else is a NO-OP for run_task — searching it yields a flat score surface.
+    #: else is a NO-OP for run_task; searching it yields a flat score surface.
     #: ``trace_type`` changes the trace feedback collected around the real
     #: benchmark run; it does not add a synthetic score bonus or penalty.
+    def field_effects(self) -> Dict[str, Any]:
+        """Causal-effect contract for this adapter under its CURRENT run mode.
+
+        Conditional fields report active=False (with the activating condition)
+        instead of being hidden; "inactive" is information, not absence.
+        """
+        from .effects import Effect, FieldEffect
+        training = self.inner_steps > 0
+        return {
+            "starting_artifact": FieldEffect("starting_artifact",
+                (Effect.ARTIFACT, Effect.SCORE),
+                condition="bundle param must expose system_prompt/parameters()/_data",
+                probe_values=("", "Answer directly.",
+                              "Plan step by step, then verify the answer before replying.")),
+            "initial_knowledge": FieldEffect("initial_knowledge",
+                (Effect.ARTIFACT, Effect.SCORE),
+                condition="concatenated into the starting artifact"),
+            "trainer": FieldEffect("trainer",
+                (Effect.OPTIMIZATION, Effect.ARTIFACT, Effect.SCORE),
+                active=training, condition="active only when inner_steps > 0"),
+            "optimizer": FieldEffect("optimizer",
+                (Effect.OPTIMIZATION, Effect.ARTIFACT, Effect.SCORE),
+                active=training, condition="active only when inner_steps > 0"),
+            "batch_size": FieldEffect("batch_size", (Effect.OPTIMIZATION,),
+                active=training, probe_values=(1, 4, 8),
+                condition="active only when inner_steps > 0 (trainer samples batches)"),
+            "num_threads": FieldEffect("num_threads", (Effect.BUDGET, Effect.SEARCH),
+                active=training, condition="active only when inner training runs in parallel"),
+            "trace_type": FieldEffect("trace_type", (Effect.TRACE, Effect.FEEDBACK),
+                probe_values=("internal", "otel", "hybrid"),
+                condition="feedback-plumbed (changes optimizer-visible evidence), NOT score-plumbed",
+                notes="a score effect can only appear later, via better update proposals"),
+            "batch_design": FieldEffect("batch_design", (Effect.OPTIMIZATION,),
+                active=False,
+                condition="inactive until the inner trainer consumes a batch_design-controlled sampler"),
+            "memory_policy": FieldEffect("memory_policy",
+                (Effect.MEMORY, Effect.FEEDBACK, Effect.OPTIMIZATION), active=False,
+                condition="inactive until retrieval/promotion feeds optimizer input or warm-start"),
+            "credit_horizon": FieldEffect("credit_horizon", (Effect.FEEDBACK, Effect.TRACE),
+                active=False,
+                condition="inactive until the horizon controls trace-to-feedback summarization"),
+        }
+
     PLUMBED_FIELDS = ("starting_artifact", "initial_knowledge", "trainer",
                       "optimizer", "batch_size", "num_threads", "trace_type")
 
@@ -574,13 +664,49 @@ class TraceBenchTaskAdapter:
         return score, f"[real_trace_bench:{normalized}] {train_note}. {trace_note}. {feedback}{suffix}"
 
     def agent_fn(self, task_id: str) -> Callable:
-        """Return a simple O0 agent function backed by the Trace-Bench bundle param."""
-        bundle = self._load_bundle(task_id)
+        """Return an O0 agent function backed by the Trace-Bench bundle param.
 
-        def agent_fn(_artifact: Any, x: Any) -> Any:
+        The artifact is now genuinely INJECTED (DRY: same surface-aware path as
+        ``starting_artifact``). Previously it was ignored (`_artifact`), so O0
+        artifact optimization could look connected while training nothing.
+        """
+        normalized = normalize_task_id(task_id)
+
+        def agent_fn(artifact: Any, x: Any) -> Any:
+            bundle = self._load_bundle(normalized, fresh=True)
+            text = artifact.data if hasattr(artifact, "data") else str(artifact or "")
+            if text.strip():
+                applied = self._apply_starting_artifact(
+                    bundle, LevelConfig(starting_artifact=text))
+                if not applied:
+                    raise RuntimeError(
+                        f"O0 artifact is inactive for task {normalized!r}: it does not fit "
+                        "the task surface (prose on a code param?) or the bundle param "
+                        "exposes none of system_prompt/parameters()/_data."
+                    )
             return _extract_response(bundle["param"], x)
 
         return agent_fn
+
+
+def resolve_trainable_fields(
+    requested: Iterable[str],
+    adapter: Optional[Any] = None,
+    *,
+    allow_inactive: bool = False,
+    required_effects: Optional[Iterable[Any]] = None,
+) -> Tuple[str, ...]:
+    """Validate requested trainable fields against the registered adapter's
+    causal-effect contract and return them (DRY entry for examples/notebooks)."""
+    from .effects import check_field_effects
+    adapter = adapter if adapter is not None else _TASK_ADAPTER
+    report = check_field_effects(adapter, requested,
+                                 required_effects=required_effects,
+                                 allow_inactive=allow_inactive)
+    if allow_inactive and not report.ok():
+        print(f"[effects] proceeding with inactive fields: {report.inactive} "
+              f"undeclared: {report.undeclared}")
+    return tuple(requested)
 
 
 def ensure_default_task_adapter(*, require: bool = False) -> bool:
@@ -681,7 +807,7 @@ def _require_adapter(what: str):
         raise RuntimeError(
             f"{what} requires a registered Trace-Bench adapter; none is registered. "
             "Call register_task_adapter(<adapter>) first. No synthetic stub scoring "
-            "is provided — results must come from a real benchmark."
+            "is provided; results must come from a real benchmark."
         )
     return _TASK_ADAPTER
 

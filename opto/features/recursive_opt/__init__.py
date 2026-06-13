@@ -48,7 +48,9 @@ from .budget import (
     reset_budget,
 )
 from . import traces, tracebench
+from .effects import Effect, FieldEffect, EffectReport, InactiveFieldError, check_field_effects, effects_for
 from .spec import (
+    make_level_spec,
     agentic_optimizer_factory,
     score_spread,
     run_spec,
@@ -72,12 +74,12 @@ from .optimize import (
 )
 
 __all__ = [
+    "CapabilityArtifact",
+    "TimedGuide",
+    "invalid_result",
     "LevelConfig",
     "ArtifactLevel",
     "MetaLevel",
-    "invalid_result",
-    "TimedGuide",
-    "CapabilityArtifact",
     "FamilyPolicyLevel",
     "PriorInductionLevel",
     "ComponentSpec",
@@ -125,4 +127,11 @@ __all__ = [
     "reuse_priors",
     "save_priors",
     "make_scored_task_runner",
+    "make_level_spec",
+    "Effect",
+    "FieldEffect",
+    "EffectReport",
+    "InactiveFieldError",
+    "check_field_effects",
+    "effects_for",
 ]

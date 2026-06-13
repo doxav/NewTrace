@@ -51,6 +51,28 @@ from .optimize import optimize, current_iterations
 from . import tracebench as TB
 
 SURFACES = ("config", "code", "family_policy", "prior", "capability", "custom")
+
+
+def make_level_spec(*, id: str, surface: str, targets: Optional[List[str]] = None,
+                    fixed: Optional[Dict[str, Any]] = None,
+                    constraints: Optional[Dict[str, List[str]]] = None,
+                    **kwargs: Any) -> Dict[str, Any]:
+    """Safe level-spec builder (DRY for examples/notebooks).
+
+    Raw dict literals silently drop duplicate keys (Python keeps the last one);
+    that bug shipped in example E, losing the starting_artifact menu. Keyword
+    arguments cannot be duplicated, so building specs through this helper makes
+    that whole bug class impossible.
+    """
+    level: Dict[str, Any] = {"id": id, "surface": surface}
+    if targets:
+        level["targets"] = list(targets)
+    if fixed:
+        level["fixed"] = dict(fixed)
+    if constraints:
+        level["constraints"] = {k: list(v) for k, v in constraints.items()}
+    level.update(kwargs)
+    return level
 _DEFAULT_POLICY_FIELDS = ("batch_design", "memory_policy", "trainer", "trace_type")
 
 
@@ -101,6 +123,14 @@ def validate_spec(spec: dict) -> dict:
 
         if surface in ("config", "family_policy", "prior"):
             _check_plumbing(ls)
+        deps = ls.get("depends_on") or []
+        earlier = seen - {lid}
+        unknown = [d for d in deps if d not in earlier]
+        if unknown:
+            raise ValueError(
+                f"level {lid}: depends_on {unknown} must reference EARLIER level ids "
+                f"(seen so far: {sorted(earlier)}). depends_on is enforced, not decorative."
+            )
         if surface == "config" and ls.get("family") not in families and not ls.get("task"):
             raise ValueError(f"level {lid}: config needs a known 'family' or an explicit 'task'")
         if surface == "code" and not isinstance(ls.get("component"), dict):
@@ -231,7 +261,7 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
     """Compile and run every level in order (the ordering is the recursion depth).
 
     ``optimizer``/``trainer`` override the per-level choice (used for offline,
-    no-LLM testing). Returns ``{"results", "levels", "memory"}`` — the built level
+    no-LLM testing). Returns ``{"results", "levels", "memory"}``; the built level
     objects are returned so the compiler stays transparent and debuggable.
     """
     spec = validate_spec(spec)
@@ -284,7 +314,8 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
             "artifact": _artifact_text(level, ls["surface"]),
             "reused_prior": reused["used_prior"],
             "tools": reused["tools"],
-            "artifact_id": getattr(rec, "id", None),
+            "artifact_id": getattr(rec, "artifact_id", None),
+            "depends_on": list(ls.get("depends_on") or []),  # recorded dependency edges
         }
     return {"results": results, "levels": levels, "memory": memory}
 
@@ -310,7 +341,7 @@ def _dataset_for(level_spec: dict, families: Dict[str, List[str]], iterations: i
     fam = level_spec.get("family")
     task = level_spec.get("task")
     # family_policy/prior iterate internally; custom/capability levels may be
-    # label-free — all of these train on a None-input dataset.
+    # label-free; all of these train on a None-input dataset.
     if level_spec["surface"] in ("family_policy", "prior") or not (fam or task):
         return {"inputs": [None] * iterations, "infos": [None] * iterations}
     return TB.make_dataset([fam or task], repeats=iterations)
@@ -360,25 +391,30 @@ def _final_eval(level, level_spec: dict, families: Dict[str, List[str]]):
 
 
 def _check_plumbing(level_spec: dict) -> None:
-    """Fail loud when targets include fields the registered adapter ignores.
+    """Validate targets through the adapter's CAUSAL-EFFECT contract.
 
-    Searching unplumbed fields produces an exactly-flat score surface (the root
-    cause of the 0.0 deltas): the optimizer explores knobs that never reach the
-    benchmark. Adapters opt in by exposing ``PLUMBED_FIELDS``; set
-    ``allow_unplumbed: true`` on the level to override deliberately.
+    Not binary plumbed/unplumbed: a field is valid when it has an ACTIVE causal
+    path (artifact / optimization / feedback / trace / memory / budget / search /
+    score) under the adapter's current run mode. Configurable per level:
+      - ``allow_inactive: true`` (alias: legacy ``allow_unplumbed``) -> report,
+        don't raise (deliberate diagnostic search);
+      - ``effect_policy: {"required_effects": ["memory", ...]}`` -> only those
+        effect kinds count as relevant for this experiment.
+    Raises ``InactiveFieldError`` naming each dead field WITH its activating
+    condition, so the error is the documentation.
     """
+    from .effects import check_field_effects
     adapter = TB._TASK_ADAPTER
-    plumbed = getattr(adapter, "PLUMBED_FIELDS", None)
-    if plumbed is None or level_spec.get("allow_unplumbed"):
+    if adapter is None:
         return
-    dead = [t for t in (level_spec.get("targets") or []) if t not in plumbed]
-    if dead:
-        raise ValueError(
-            f"level {level_spec.get('id')}: targets {dead} are not plumbed by the "
-            f"registered adapter (plumbed: {list(plumbed)}). Searching them yields "
-            "a flat score surface. Use plumbed targets (e.g. 'starting_artifact') "
-            "or set allow_unplumbed: true to proceed anyway."
-        )
+    policy = level_spec.get("effect_policy") or {}
+    check_field_effects(
+        adapter, level_spec.get("targets") or [],
+        required_effects=policy.get("required_effects"),
+        allow_inactive=bool(level_spec.get("allow_inactive")
+                            or level_spec.get("allow_unplumbed")
+                            or policy.get("allow_inactive")),
+    )
 
 
 def score_spread(task_id: str, probes: Optional[List[dict]] = None,

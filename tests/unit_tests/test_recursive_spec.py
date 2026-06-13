@@ -339,7 +339,7 @@ def test_validate_spec_rejects_unplumbed_targets():
     TB.register_task_adapter(_PlumbedAdapter())
     spec = {"families": FAMILIES,
             "levels": [_config_level(targets=["batch_design", "batch_size"])]}
-    with pytest.raises(ValueError, match="not plumbed"):
+    with pytest.raises(ValueError, match="no ACTIVE causal path"):
         S.validate_spec(spec)                      # batch_design is a no-op knob
     spec["levels"][0]["allow_unplumbed"] = True
     S.validate_spec(spec)                          # explicit override allowed
@@ -404,6 +404,25 @@ def test_adapter_seeds_starting_artifact_into_bundle_param():
         bundle, LevelConfig(starting_artifact="Plan, then verify."))
     assert seeded and bundle["param"]._data == "Plan, then verify."
     assert not adapter._apply_starting_artifact(bundle, LevelConfig())  # empty -> no-op
+
+
+def test_tracebench_agent_fn_injects_artifact_before_response(monkeypatch) -> None:
+    from opto.features.recursive_opt.tracebench import TraceBenchTaskAdapter
+
+    class _Param:
+        def __init__(self) -> None:
+            self._data = ""
+
+        def __call__(self, task_input: str) -> str:
+            return f"{self._data}|{task_input}"
+
+    adapter = TraceBenchTaskAdapter.__new__(TraceBenchTaskAdapter)  # no trace_bench needed
+    monkeypatch.setattr(adapter, "_load_bundle", lambda task_id, fresh=False: {"param": _Param()})
+
+    fn = adapter.agent_fn("internal:numeric_param")
+
+    assert fn("ALPHA", "probe") == "ALPHA|probe"
+    assert fn("BETA", "probe") == "BETA|probe"
 
 
 def test_compliance_objective_blocks_degenerate_terse_optimum():
@@ -634,3 +653,141 @@ def test_optimize_warns_when_global_budget_already_exhausted(tmp_path: Path, cap
     finally:
         reset_budget()
     assert "ALREADY exhausted" in capsys.readouterr().out
+
+
+# ================== causal-effect contract (effects.py) ==================== #
+def test_effects_contract_conditional_activity_and_policy():
+    from opto.features.recursive_opt.effects import (
+        Effect, check_field_effects, effects_for, InactiveFieldError)
+    from opto.features.recursive_opt.tracebench import TraceBenchTaskAdapter
+
+    eval_only = TraceBenchTaskAdapter.__new__(TraceBenchTaskAdapter)
+    eval_only.inner_steps = 0
+    training = TraceBenchTaskAdapter.__new__(TraceBenchTaskAdapter)
+    training.inner_steps = 2
+
+    # trace_type is FEEDBACK/TRACE-plumbed (never claimed as score-plumbed)
+    fx = effects_for(eval_only)
+    assert set(fx["trace_type"].effects) == {Effect.TRACE, Effect.FEEDBACK}
+
+    # trainer: inactive at inner_steps=0 (with the activating condition named),
+    # active at inner_steps>0 — same field, mode-dependent verdict.
+    with pytest.raises(InactiveFieldError, match="inner_steps > 0"):
+        check_field_effects(eval_only, ["trainer"])
+    rep = check_field_effects(training, ["trainer"])
+    assert "trainer" in rep.active
+
+    # configurable policy: required_effects narrows what counts as relevant
+    with pytest.raises(InactiveFieldError, match="required"):
+        check_field_effects(training, ["trace_type"],
+                            required_effects=[Effect.MEMORY])
+    rep = check_field_effects(training, ["trace_type"],
+                              required_effects=[Effect.FEEDBACK])
+    assert rep.active["trace_type"] == (Effect.FEEDBACK,)
+
+    # allow_inactive: report instead of raise (diagnostic mode)
+    rep = check_field_effects(eval_only, ["batch_design"], allow_inactive=True)
+    assert "batch_design" in rep.inactive and "sampler" in rep.inactive["batch_design"]
+
+
+def test_effects_fallback_from_legacy_plumbed_fields():
+    from opto.features.recursive_opt.effects import Effect, effects_for
+
+    class _Legacy:
+        PLUMBED_FIELDS = ("starting_artifact",)
+    fx = effects_for(_Legacy())
+    assert fx["starting_artifact"].effects == (Effect.ARTIFACT, Effect.SCORE)
+    assert effects_for(None) == {}
+
+
+def test_spec_effect_policy_is_configurable(tmp_path: Path):
+    """Spec-level knobs: allow_inactive + effect_policy.required_effects."""
+    class _Contract(_FakeTaskAdapter):
+        def field_effects(self):
+            from opto.features.recursive_opt.effects import Effect, FieldEffect
+            return {"starting_artifact": FieldEffect(
+                        "starting_artifact", (Effect.ARTIFACT, Effect.SCORE)),
+                    "memory_policy": FieldEffect(
+                        "memory_policy", (Effect.MEMORY,), active=False,
+                        condition="inactive until retrieval wiring exists")}
+    TB.register_task_adapter(_Contract())
+    base = {"families": FAMILIES, "memory_root": str(tmp_path)}
+    dead = _config_level(targets=["memory_policy"])
+    with pytest.raises(ValueError, match="no ACTIVE causal path"):
+        S.validate_spec({**base, "levels": [dead]})
+    S.validate_spec({**base, "levels": [{**dead, "allow_inactive": True}]})
+    S.validate_spec({**base, "levels": [{**dead, "allow_unplumbed": True}]})  # legacy alias
+    ok = _config_level(targets=["starting_artifact"],
+                       effect_policy={"required_effects": ["artifact"]})
+    S.validate_spec({**base, "levels": [ok]})
+
+
+# ================== make_level_spec + example E regression ================= #
+def test_make_level_spec_preserves_multiple_constraints():
+    level = S.make_level_spec(
+        id="o1", surface="config",
+        constraints={"starting_artifact": ["a", "b"],
+                     "batch_design": ["random", "failure_balanced"]},
+        iterations=3, depends_on=["o0"])
+    assert set(level["constraints"]) == {"starting_artifact", "batch_design"}
+    assert level["iterations"] == 3 and level["depends_on"] == ["o0"]
+
+
+def test_example_e_spec_preserves_starting_artifact_constraints():
+    import importlib.util
+    spec_path = Path(__file__).resolve().parents[2] / "examples" / "recursive_opt_example_E_declarative_spec.py"
+    mod_spec = importlib.util.spec_from_file_location("exE_check", spec_path)
+    exE = importlib.util.module_from_spec(mod_spec)
+    mod_spec.loader.exec_module(exE)
+    constraints = exE.SPEC["levels"][0]["constraints"]
+    # regression: the duplicate-"constraints" dict key silently dropped this menu
+    assert "starting_artifact" in constraints and "batch_design" in constraints
+    assert "" in constraints["starting_artifact"]
+
+
+# ================== depends_on is enforced ================================= #
+def test_depends_on_validation(tmp_path: Path):
+    base = {"families": FAMILIES, "memory_root": str(tmp_path)}
+    with pytest.raises(ValueError, match="EARLIER level ids"):
+        S.validate_spec({**base, "levels": [
+            _config_level(id="a", depends_on=["ghost"])]})
+    with pytest.raises(ValueError, match="EARLIER level ids"):
+        S.validate_spec({**base, "levels": [          # forward reference
+            _config_level(id="a", depends_on=["b"]), _config_level(id="b")]})
+    S.validate_spec({**base, "levels": [
+        _config_level(id="a"), _config_level(id="b", depends_on=["a"])]})
+
+
+def test_run_spec_records_artifact_lineage_and_dependencies(tmp_path: Path):
+    spec = {"families": FAMILIES, "memory_root": str(tmp_path),
+            "levels": [_config_level(id="o1"),
+                       _config_level(id="o2", depends_on=["o1"])]}
+    out = S.run_spec(spec, optimizer=_NoLLMOptimizer)
+    r2 = out["results"]["o2"]
+    assert r2["depends_on"] == ["o1"]
+    assert r2["artifact_id"]            # regression: getattr(rec, "id") was always None
+
+
+# ================== memory retrieve + reconsolidation ===================== #
+def test_memorylite_retrieve_and_reconsolidate(tmp_path: Path):
+    mem = MemoryLite(root=str(tmp_path), promotion_min_support=2)
+    mem.record(level="O1", cfg={"trainer": "BeamsearchAlgorithm"}, family="f",
+               score=0.4, feedback="a")
+    mem.record(level="O1", cfg={"trainer": "UCBSearchAlgorithm"}, family="f",
+               score=0.9, feedback="b")
+    prior = mem.reconsolidate_family("f")
+    assert prior is not None and prior.best_cfg["trainer"] == "UCBSearchAlgorithm"
+    assert "episodes=2" in prior.notes
+
+    got = mem.retrieve("f", level="O1", topk=2)
+    assert [e.score for e in got["episodes"]] == [0.9, 0.4]      # best-first
+    assert got["prior"].best_score == pytest.approx(0.9)
+    assert mem.retrieve("*", topk=1)["prior"] is None            # priors are family-scoped
+    assert mem.retrieve("f", min_score=0.5, topk=5)["episodes"][0].score == 0.9
+    recent = mem.retrieve("f", sort="recent", topk=1)["episodes"][0]
+    assert recent.feedback == "b"
+
+    flat = MemoryLite(root=str(tmp_path / "flat"), promotion_min_support=1,
+                      promotion_min_score=0.5)
+    flat.record(level="O1", cfg={}, family="g", score=0.0, feedback="flat")
+    assert flat.reconsolidate_family("g") is None                # gates still apply
