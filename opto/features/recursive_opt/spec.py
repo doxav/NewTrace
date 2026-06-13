@@ -41,6 +41,7 @@ from .levels import (
     PriorInductionLevel,
     ComponentSpec,
     CodeArtifactLevel,
+    DEFAULT_INVALID_FLOOR,
     best_config_from,
     register_config_values,
     validate_level_config,
@@ -155,7 +156,12 @@ def compile_level(
     surface = level_spec["surface"]
     score_config = level_spec.get("scoring", scoring)
     clip = _clip_bounds(score_config)
-    floor = clip[0] if clip else None   # invalid candidates score the worst LEGAL value
+    # Invalid candidates score the worst LEGAL value. When an explicit clip is
+    # configured, use its floor; otherwise fall back to a BOUNDED default (-1.0)
+    # rather than the raw -1e9 sentinel. A single invalid config must sort last
+    # WITHOUT destroying reported means/normalisation baselines (root cause of
+    # the -1e9 / -333M leaks in the use-case tables when no scoring.clip is set).
+    floor = clip[0] if clip else DEFAULT_INVALID_FLOOR
 
     if surface == "custom":
         return level_spec["builder"](level_spec, memory)

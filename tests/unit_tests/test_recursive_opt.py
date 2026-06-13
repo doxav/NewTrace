@@ -16,7 +16,7 @@ from opto.features.recursive_opt import (
     MetaLevel,
     RecursiveGuide,
 )
-from opto.features.recursive_opt.levels import INVALID_CONFIG_SCORE
+from opto.features.recursive_opt.levels import INVALID_CONFIG_SCORE, DEFAULT_INVALID_FLOOR
 from opto.features.recursive_opt.tracebench import (
     TraceBenchTaskAdapter,
     _scalarize_score_dict,
@@ -214,18 +214,21 @@ def test_meta_level_rejects_invalid_enum_config() -> None:
 
     level.propose(batch_design="non_random")
     out = level.forward("hf:GSM8K")
-    assert out.data["score"] == pytest.approx(INVALID_CONFIG_SCORE)
+    # invalid configs now score the bounded default floor (-1.0), never -1e9, so
+    # a single invalid candidate cannot destroy reported means.
+    assert out.data["score"] == pytest.approx(DEFAULT_INVALID_FLOOR)
     assert "invalid generated config" in out.data["feedback"]
 
 
 def test_code_artifact_level_can_improve_batch_design(tmp_path: Path) -> None:
+    memory = MemoryLite(root=str(tmp_path))
     spec = ComponentSpec(
         name="batch_design",
         baseline=_batch_design_baseline,
         evaluate=make_code_evaluator("llm4ad:online_bin_packing_local", "batch_design"),
         objective="sample hard items while keeping batches diverse",
     )
-    level = CodeArtifactLevel(spec, memory=MemoryLite(root=str(tmp_path)))
+    level = CodeArtifactLevel(spec, memory=memory)
     guide = RecursiveGuide()
 
     baseline_score, _ = guide(
@@ -244,6 +247,10 @@ def test_code_artifact_level_can_improve_batch_design(tmp_path: Path) -> None:
     assert improved_score == 1.0
     assert improved_score > baseline_score
     assert level._last_node is not None
+    best_code = memory.best_artifact("llm4ad:online_bin_packing_local", "code")
+    assert best_code is not None
+    assert best_code.score == pytest.approx(1.0)
+    assert "i % 3 == 0" in best_code.content
 
 
 def test_batch_design_validator_names_missing_hard_items() -> None:
@@ -1011,6 +1018,55 @@ def test_restore_best_validated_applies_candidate_module_state() -> None:
     assert param.data == "batch_design: failure_balanced"
 
 
+def test_restore_best_validated_checks_active_priority_search_candidates() -> None:
+    """PrioritySearch may pop the best candidate out of heap memory for explore()."""
+    from opto.features.recursive_opt.optimize import restore_best_validated
+    from opto.trainer.algorithms.priority_search import ModuleCandidate
+
+    level = MetaLevel(
+        LevelConfig(batch_design="random"),
+        inner_runner=make_inner_runner("hf:GSM8K"),
+        trainable_fields=("batch_design",),
+    )
+    param = level.parameters()[0]
+    original = param.data
+    param._data = "batch_design: failure_balanced"
+    candidate = ModuleCandidate(level)
+    param._data = original
+    candidate.add_rollouts([{"module": None, "x": None, "info": None,
+                             "target": None, "score": 1.0, "feedback": "ok"}])
+
+    class FakeTrainer:
+        agent = level
+        memory = type("M", (), {"memory": []})()
+        long_term_memory = type("M", (), {"memory": []})()
+        short_term_memory = type("M", (), {"memory": []})()
+        _best_candidate = candidate
+        _exploration_candidates: list = []
+
+    assert restore_best_validated(FakeTrainer(), level) is True
+    assert param.data == "batch_design: failure_balanced"
+
+
+def test_meta_level_candidate_runtime_error_is_bounded() -> None:
+    """A generated config can fail inside the task; it must not abort run_spec."""
+
+    def exploding_runner(_cfg: LevelConfig, _family: str) -> tuple[float, str]:
+        raise ValueError("bad generated artifact")
+
+    level = MetaLevel(
+        LevelConfig(),
+        inner_runner=exploding_runner,
+        trainable_fields=("starting_artifact",),
+        invalid_floor=-1.0,
+    )
+    out = level.forward("family")
+    data = out.data if hasattr(out, "data") else out
+    assert data["score"] == -1.0
+    assert "candidate runtime error" in data["feedback"]
+    assert "bad generated artifact" in data["feedback"]
+
+
 def test_optimize_defaults_match_requested_config() -> None:
     # the three configurable knobs default as specified in the request
     assert TRAINER == "PrioritySearch"
@@ -1218,3 +1274,76 @@ def test_repeat_scores_reports_mean_and_std() -> None:
     assert stats["n"] == 3
     assert abs(stats["mean"] - 0.9) < 1e-9 and stats["std"] > 0
     assert "± " in inspect_utils.fmt_mean_std(stats)
+
+
+def test_code_artifact_level_forward_canonicalizes_mismatched_def_name(tmp_path: Path) -> None:
+    """forward() must score optimizer-emitted code even when its function name
+    differs from the baseline's __name__.
+
+    Root cause of the UC1/UC5 'write-back regression' in the use-case notebook:
+    the baseline was named e.g. _weak_batch while the optimizer emitted code
+    named batch_design (== spec.name). The trainable bundle resolves its callable
+    by the baseline's _fun_name, so the mismatched candidate raised ExecutionError
+    and forward() silently scored 0.0 — even though current_code() held the best
+    (correct) candidate. forward() now canonicalizes the def-line to _fun_name.
+    """
+    def _weak_named_differently(self, n, k):  # name != spec.name on purpose
+        return list(range(k))
+
+    spec = ComponentSpec(
+        name="batch_design",
+        baseline=_weak_named_differently,
+        evaluate=make_code_evaluator("llm4ad:online_bin_packing_local", "batch_design"),
+        objective="sample hard items",
+    )
+    level = CodeArtifactLevel(spec, memory=MemoryLite(root=str(tmp_path)))
+    guide = RecursiveGuide()
+
+    # Optimizer-style update: code named after spec.name, not the baseline.
+    level.parameters()[0]._data = (
+        "def batch_design(self, n, k):\n"
+        "    hard = [i for i in range(n) if i % 3 == 0]\n"
+        "    picked = hard[:k]\n"
+        "    for i in range(n):\n"
+        "        if len(picked) >= k:\n"
+        "            break\n"
+        "        if i not in picked:\n"
+        "            picked.append(i)\n"
+        "    return picked\n"
+    )
+    score, _ = guide(
+        "llm4ad:online_bin_packing_local",
+        level.forward("llm4ad:online_bin_packing_local"),
+        None,
+    )
+    assert score == 1.0           # was 0.0 before the canonicalization fix
+    assert level._last_node is not None
+
+
+def test_decode_cfg_canonicalizes_quoted_enum_values() -> None:
+    """LLM-generated configs often quote enum values; decode must accept them.
+
+    Root cause of UC2/UC6 '-1e9 + ExecutionError' in the use-case notebook: the
+    optimizer emitted `starting_artifact: "Plan step by step..."` (with quotes),
+    but the raw enum has none, so decode raised ValueError -> invalid_result.
+    decode_cfg now strips a single matching surrounding quote pair.
+    """
+    from opto.features.recursive_opt.levels import (
+        decode_cfg, LevelConfig, register_config_values,
+    )
+
+    register_config_values("starting_artifact", ["Plan step by step, then answer."])
+    base = LevelConfig()
+    fields = ("starting_artifact",)
+
+    for raw in ('starting_artifact: "Plan step by step, then answer."',
+                "starting_artifact: 'Plan step by step, then answer.'"):
+        cfg = decode_cfg(raw, base, fields)
+        assert cfg.starting_artifact == "Plan step by step, then answer."
+
+    # empty control arm still decodes to "" (unset/default)
+    assert decode_cfg("starting_artifact: ", base, fields).starting_artifact == ""
+    # a genuinely unknown value is still rejected (quoting is not a bypass)
+    import pytest as _pytest
+    with _pytest.raises(ValueError, match="Invalid value for starting_artifact"):
+        decode_cfg('starting_artifact: "totally unknown arm"', base, fields)

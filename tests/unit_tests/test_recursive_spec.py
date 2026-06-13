@@ -543,13 +543,16 @@ def test_invalid_config_score_respects_scoring_clip_floor(tmp_path: Path):
     data = out.data if hasattr(out, "data") else out
     assert data["score"] == -1.0                 # was -1_000_000_000.0
     assert "invalid generated config" in data["feedback"]
-    # default behaviour unchanged without a clip (backward compatible)
+    # without an explicit clip, invalid candidates now score the BOUNDED default
+    # floor (-1.0) instead of the raw -1e9 sentinel — so a single invalid config
+    # can no longer destroy reported means / normalisation baselines.
     bare = S.compile_level(_config_level(targets=["batch_size"]),
                            MemoryLite(root=str(tmp_path / "b")), FAMILIES)
     raw = bare._run_inner("batch_size: banana", "hf:GSM8K")
     d2 = raw.data if hasattr(raw, "data") else raw
-    from opto.features.recursive_opt.levels import INVALID_CONFIG_SCORE
-    assert d2["score"] == INVALID_CONFIG_SCORE
+    from opto.features.recursive_opt.levels import DEFAULT_INVALID_FLOOR
+    assert d2["score"] == DEFAULT_INVALID_FLOOR
+    assert d2["score"] == -1.0
 
 
 def test_run_spec_clamps_reported_scores_and_records_wall_s(tmp_path: Path):

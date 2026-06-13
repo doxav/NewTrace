@@ -56,6 +56,7 @@ Trace API used by this feature:
 from __future__ import annotations
 
 import copy
+import textwrap
 import dataclasses
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
@@ -63,6 +64,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 from opto import trace
 from opto.trace import node, Module
 from opto.trainer.guide import Guide
+from .budget import BudgetExceeded
 
 
 # =========================================================================== #
@@ -136,6 +138,11 @@ CONFIG_ALLOWED_VALUES: Dict[str, Tuple[str, ...]] = {
 
 INVALID_CONFIG_SCORE = -1_000_000_000.0
 
+# Bounded fallback penalty for an invalid candidate when no scoring.clip is
+# configured. Must sort BELOW any real score (real scores are typically in
+# [-1, 1] or [0, 1]) while NOT destroying reported means the way -1e9 would.
+DEFAULT_INVALID_FLOOR = -1.0
+
 
 def invalid_result(reason: str, floor: Optional[float] = None, **extra) -> dict:
     """Standard payload for an undecodable candidate (DRY across all surfaces).
@@ -146,6 +153,13 @@ def invalid_result(reason: str, floor: Optional[float] = None, **extra) -> dict:
     """
     return {"score": float(floor) if floor is not None else INVALID_CONFIG_SCORE,
             "feedback": reason, **extra}
+
+
+def exception_summary(exc: Exception, *, limit: int = 300) -> str:
+    """Return a compact candidate-runtime error without a full traceback."""
+    lines = [line.strip() for line in str(exc).splitlines() if line.strip()]
+    detail = lines[-1] if lines else repr(exc)
+    return f"{type(exc).__name__}: {detail[:limit]}"
 
 
 def register_config_values(field: str, values: Iterable[str], *, replace: bool = False) -> None:
@@ -249,6 +263,12 @@ def decode_cfg(text: str, base_cfg: "LevelConfig", fields: Tuple[str, ...]) -> "
         k, v = (s.strip() for s in line.split(":", 1))
         if k in fields and hasattr(cfg, k):
             cur = getattr(cfg, k)
+            # LLM-generated configs commonly wrap an enum/string value in quotes
+            # (e.g. starting_artifact: "Plan step by step"). The raw enum has no
+            # quotes, so strip a single matching surrounding pair before parsing —
+            # otherwise a perfectly valid choice is rejected as an unknown value.
+            if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'):
+                v = v[1:-1]
             try:
                 if isinstance(cur, tuple):
                     parsed = tuple(v.split(",")) if v else ()
@@ -305,7 +325,7 @@ class MetaLevel(Module):
         super().__init__()
         self._fields = trainable_fields
         self._base_cfg = cfg
-        self._invalid_floor = invalid_floor
+        self._invalid_floor = invalid_floor if invalid_floor is not None else DEFAULT_INVALID_FLOOR
         # ONE node holds the whole (sub-)config as text -> low-dimensional search.
         self._cfg_node = node(
             self._encode(cfg),
@@ -337,7 +357,15 @@ class MetaLevel(Module):
             cfg = self._decode(cfg_text)
         except ValueError as exc:
             return invalid_result(f"invalid generated config: {exc}", self._invalid_floor)
-        score, feedback = self._inner_runner(cfg, family)
+        try:
+            score, feedback = self._inner_runner(cfg, family)
+        except BudgetExceeded:
+            raise
+        except Exception as exc:
+            return invalid_result(
+                f"candidate runtime error: {exception_summary(exc)}",
+                self._invalid_floor,
+            )
         if self._memory is not None:
             self._memory.record(
                 level="O1",
@@ -405,7 +433,7 @@ class FamilyPolicyLevel(Module):
         super().__init__()
         self._families = families
         self._run_task = run_task
-        self._invalid_floor = invalid_floor
+        self._invalid_floor = invalid_floor if invalid_floor is not None else DEFAULT_INVALID_FLOOR
         self._base = base_cfg or LevelConfig()
         self._fields = policy_fields
         self._memory = memory
@@ -493,7 +521,7 @@ class PriorInductionLevel(Module):
         invalid_floor: Optional[float] = None,
     ):
         super().__init__()
-        self._invalid_floor = invalid_floor
+        self._invalid_floor = invalid_floor if invalid_floor is not None else DEFAULT_INVALID_FLOOR
         self._train = train_families
         self._holdout = holdout_families
         self._run_task = run_task
@@ -616,6 +644,28 @@ def _normalize_eval_result(result):
     return float(score), str(feedback), metrics
 
 
+def _canonicalize_def_name(source: str, expected_name: str) -> str:
+    """Rename the first top-level ``def <x>`` in ``source`` to ``expected_name``.
+
+    The trainable bundle resolves its recompiled callable by a fixed
+    ``_fun_name`` (the baseline's name). When an optimizer emits improved code
+    under a different function name (commonly ``spec.name``), the recompiled
+    namespace would not contain ``_fun_name`` and the candidate would be lost.
+    Aligning the def-line keeps the optimizer's code while making it resolvable.
+    Returns ``source`` unchanged when it already defines ``expected_name`` or has
+    no recognizable top-level def.
+    """
+    import re
+
+    if re.search(rf"^\s*def\s+{re.escape(expected_name)}\b", source, flags=re.MULTILINE):
+        return source
+    m = re.search(r"^\s*def\s+(\w+)", source, flags=re.MULTILINE)
+    if not m:
+        return source
+    return re.sub(r"^(\s*def\s+)\w+", r"\1" + expected_name, source, count=1,
+                  flags=re.MULTILINE)
+
+
 @trace.model
 class CodeArtifactLevel(Module):
     """Optimize the SOURCE CODE of a component (improve / invent a new one).
@@ -642,6 +692,13 @@ class CodeArtifactLevel(Module):
         self._memory = memory
         # The trainable code node. We wrap spec.baseline so its source is the param.
         self._impl = trace.bundle(trainable=True)(spec.baseline)
+        # The bundle resolves its recompiled callable by the baseline's __name__
+        # (_fun_name). An optimizer naturally emits improved code named after
+        # spec.name, so when baseline.__name__ != spec.name the recompiled
+        # namespace lacks _fun_name and forward() silently scores 0.0 even though
+        # current_code() holds the best candidate. We record the expected name so
+        # forward() can canonicalize the def-line of generated code to match.
+        self._fun_name = getattr(spec.baseline, "__name__", spec.name)
 
     @trace.bundle()
     def _attach_eval(self, anchor, payload: Dict[str, Any]):
@@ -660,6 +717,22 @@ class CodeArtifactLevel(Module):
         # We unwrap the bundle's Node output to the raw value so evaluators can
         # use it directly, while remembering the LAST output node so a live
         # optimizer can call ``backward`` on it (which reaches the code param).
+        #
+        # Canonicalize the generated code's def-line to the bundle's _fun_name so
+        # optimizer-emitted code named after spec.name still resolves (otherwise
+        # forward() silently scores 0.0 — see _canonicalize_def_name). Read the
+        # name from the LIVE bundle (it may have been swapped) rather than a cache.
+        params = self.parameters()
+        fun_name = None
+        try:
+            fun_name = self._impl.info.get("_fun_name")
+        except Exception:
+            fun_name = getattr(self, "_fun_name", None)
+        if params and fun_name:
+            current = str(params[0].data)
+            canonical = _canonicalize_def_name(current, fun_name)
+            if canonical != current:
+                params[0]._data = canonical
         self._calls = []
 
         def component(*args, **kwargs):
@@ -690,6 +763,17 @@ class CodeArtifactLevel(Module):
                 feedback=feedback,
                 metrics=metrics,
             )
+            if hasattr(self._memory, "record_artifact"):
+                artifact_metrics = dict(metrics or {})
+                artifact_metrics.setdefault("feedback", str(feedback))
+                self._memory.record_artifact(
+                    level="O1-code",
+                    family=str(family),
+                    kind="code",
+                    content=self.current_code(),
+                    score=score,
+                    metrics=artifact_metrics,
+                )
         payload: Dict[str, Any] = {"score": float(score), "feedback": str(feedback)}
         if metrics:
             payload["metrics"] = metrics
