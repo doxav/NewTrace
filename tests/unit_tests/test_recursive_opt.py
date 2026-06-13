@@ -670,6 +670,31 @@ def test_tracebench_adapter_declares_trace_type_as_plumbed() -> None:
     assert "trace_type" in TraceBenchTaskAdapter.PLUMBED_FIELDS
 
 
+def test_tracebench_adapter_declares_credit_horizon_as_feedback_effect() -> None:
+    from opto.features.recursive_opt.effects import Effect, effects_for
+
+    adapter = TraceBenchTaskAdapter.__new__(TraceBenchTaskAdapter)
+    adapter.inner_steps = 0
+
+    effect = effects_for(adapter)["credit_horizon"]
+
+    assert "credit_horizon" in TraceBenchTaskAdapter.PLUMBED_FIELDS
+    assert effect.active
+    assert Effect.FEEDBACK in effect.effects
+
+
+def test_tracebench_adapter_expands_hf_family_task_ids() -> None:
+    pytest.importorskip("trace_bench.registry")
+
+    adapter = TraceBenchTaskAdapter(max_examples=1, inner_steps=0)
+
+    task_ids = adapter._expanded_task_ids("hf:bbeh_horizon")
+
+    assert "hf:bbeh_horizon" not in task_ids
+    assert "hf:bbeh_horizon/multistep_arithmetic" in task_ids
+    assert "hf:bbeh_horizon/web_of_lies" in task_ids
+
+
 def test_tracebench_adapter_collects_trace_type_feedback(monkeypatch) -> None:
     from opto.features.recursive_opt import traces
 

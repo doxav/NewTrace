@@ -210,7 +210,44 @@ def _extract_response(param: Any, task_input: Any) -> Any:
     return getattr(param, "data", param)
 
 
-def _score_bundle_local(bundle: Dict[str, Any], max_examples: int) -> Tuple[float, str]:
+def _format_bundle_feedback(
+    dataset_name: str,
+    count: int,
+    feedbacks: List[str],
+    credit_horizon: str = "episode",
+) -> str:
+    """Format per-example guide feedback according to the credit horizon."""
+    horizon = str(credit_horizon or "episode")
+    if horizon == "full":
+        selected = list(enumerate(feedbacks))
+        label = "full feedback"
+    elif horizon == "step":
+        selected = list(enumerate(feedbacks[:5]))
+        label = "step feedback"
+    elif horizon == "truncated":
+        selected = list(enumerate(feedbacks[:1]))
+        label = "truncated feedback"
+    else:
+        selected = list(enumerate(feedbacks[:3]))
+        label = "episode feedback"
+
+    if horizon == "episode":
+        details = " | ".join(fb for _, fb in selected)
+    else:
+        details = " | ".join(f"example[{i}]: {fb}" for i, fb in selected)
+    if not details:
+        details = "no guide feedback returned"
+    return (
+        f"{dataset_name}: mean over {count} real example(s). "
+        f"credit_horizon={horizon}; {label}: {details}"
+    )
+
+
+def _score_bundle_local(
+    bundle: Dict[str, Any],
+    max_examples: int,
+    credit_horizon: str = "episode",
+) -> Tuple[float, str]:
     dataset_name, dataset = _evaluation_dataset(bundle)
     inputs = list(dataset.get("inputs") or [])
     infos = _dataset_infos(dataset)
@@ -243,13 +280,22 @@ def _score_bundle_local(bundle: Dict[str, Any], max_examples: int) -> Tuple[floa
         scores.append(score)
         feedbacks.append(str(feedback))
     mean_score = sum(scores) / len(scores)
-    return mean_score, f"{dataset_name}: mean over {len(scores)} real example(s). " + " | ".join(feedbacks[:3])
+    return mean_score, _format_bundle_feedback(
+        dataset_name,
+        len(scores),
+        feedbacks,
+        credit_horizon,
+    )
 
 
-def _score_bundle(bundle: Dict[str, Any], max_examples: int) -> Tuple[float, str]:
+def _score_bundle(
+    bundle: Dict[str, Any],
+    max_examples: int,
+    credit_horizon: str = "episode",
+) -> Tuple[float, str]:
     """Score a Trace-Bench bundle, preferring Trace-Bench's public evaluator."""
     if _evaluate_trace_bench_bundle is None:
-        return _score_bundle_local(bundle, max_examples)
+        return _score_bundle_local(bundle, max_examples, credit_horizon)
 
     dataset_name, _ = _evaluation_dataset(bundle)
     mean_reward, evals = _evaluate_trace_bench_bundle(
@@ -284,8 +330,13 @@ def _score_bundle(bundle: Dict[str, Any], max_examples: int) -> Tuple[float, str
         scores.append(score)
 
     mean_score = sum(scores) / len(scores)
-    feedbacks = [str(ev.feedback) for ev in evals[:3]]
-    return mean_score, f"{dataset_name}: mean over {len(scores)} real example(s). " + " | ".join(feedbacks)
+    feedbacks = [str(ev.feedback) for ev in evals]
+    return mean_score, _format_bundle_feedback(
+        dataset_name,
+        len(scores),
+        feedbacks,
+        credit_horizon,
+    )
 
 
 def _score_dict_to_objectives(score_dict: Dict[str, Any], reward: float) -> Dict[str, float]:
@@ -347,6 +398,7 @@ class TraceBenchTaskAdapter:
         inner_steps: int = 0,
         inner_candidates: int = 1,
         allowed_inner_trainers: Optional[Tuple[str, ...]] = None,
+        mode: str = "real",
     ) -> None:
         self.tasks_root = Path(tasks_root) if tasks_root is not None else default_tasks_root()
         self.eval_kwargs = dict(eval_kwargs or {})
@@ -354,11 +406,12 @@ class TraceBenchTaskAdapter:
         self.inner_steps = inner_steps
         self.inner_candidates = inner_candidates
         self.allowed_inner_trainers = allowed_inner_trainers
+        self.mode = str(mode or "real")
         self._cache: Dict[str, Dict[str, Any]] = {}
         self.status = (
             f"Trace-Bench bundle adapter; tasks_root={self.tasks_root}; "
             f"max_examples={self.max_examples}; inner_steps={self.inner_steps}; "
-            f"inner_candidates={self.inner_candidates}"
+            f"inner_candidates={self.inner_candidates}; mode={self.mode}"
         )
         if self.allowed_inner_trainers is not None:
             self.status += (
@@ -370,6 +423,8 @@ class TraceBenchTaskAdapter:
             raise ValueError("inner_steps must be non-negative")
         if self.inner_candidates <= 0:
             raise ValueError("inner_candidates must be positive")
+        if self.mode not in {"real", "stub"}:
+            raise ValueError("mode must be either 'real' or 'stub'")
 
     @classmethod
     def from_env(cls) -> "TraceBenchTaskAdapter":
@@ -387,6 +442,7 @@ class TraceBenchTaskAdapter:
             inner_steps=inner_steps,
             inner_candidates=_int_env("RECURSIVE_OPT_TRACEBENCH_INNER_CANDIDATES", 1) or 1,
             allowed_inner_trainers=_csv_env("RECURSIVE_OPT_TRACEBENCH_INNER_TRAINERS"),
+            mode=os.environ.get("RECURSIVE_OPT_TRACEBENCH_MODE", "real"),
         )
 
     @classmethod
@@ -412,6 +468,7 @@ class TraceBenchTaskAdapter:
             inner_steps=_nonnegative_int_config(config, "inner_steps", 1),
             inner_candidates=_positive_int_config(config, "inner_candidates", 1),
             allowed_inner_trainers=allowed,
+            mode=str(config.get("mode", "real")),
         )
 
     def _trainer_budget_feedback(self, cfg: LevelConfig, task_id: str) -> Optional[Tuple[float, str]]:
@@ -450,6 +507,29 @@ class TraceBenchTaskAdapter:
             eval_kwargs.setdefault("model", model_name)
         return eval_kwargs
 
+    def _expanded_task_ids(self, normalized_task_id: str) -> Tuple[str, ...]:
+        """Expand runner-style family task ids for direct adapter scoring."""
+        try:
+            from trace_bench.config import TaskConfig
+            from trace_bench.registry import expand_special_tasks
+
+            expanded = expand_special_tasks(
+                [TaskConfig(id=normalized_task_id, eval_kwargs=self.eval_kwargs)],
+                self.tasks_root,
+            )
+        except Exception:
+            return (normalized_task_id,)
+        ids = tuple(task.id for task in expanded)
+        return ids or (normalized_task_id,)
+
+    def _apply_runtime_mode(self, bundle: Dict[str, Any]) -> None:
+        """Apply adapter runtime mode to a freshly loaded bundle."""
+        if self.mode != "stub":
+            return
+        from trace_bench.runner import _stub_bundle
+
+        _stub_bundle(bundle, "stub")
+
     def _load_bundle(self, task_id: str, *, fresh: bool = False) -> Dict[str, Any]:
         from trace_bench.registry import load_task_bundle
 
@@ -463,6 +543,7 @@ class TraceBenchTaskAdapter:
         if not fresh and cache_key in self._cache:
             return self._cache[cache_key]
         bundle = load_task_bundle(normalized, self.tasks_root, eval_kwargs=eval_kwargs)
+        self._apply_runtime_mode(bundle)
         if not fresh:
             self._cache[cache_key] = bundle
         return bundle
@@ -510,12 +591,13 @@ class TraceBenchTaskAdapter:
                 (Effect.MEMORY, Effect.FEEDBACK, Effect.OPTIMIZATION), active=False,
                 condition="inactive until retrieval/promotion feeds optimizer input or warm-start"),
             "credit_horizon": FieldEffect("credit_horizon", (Effect.FEEDBACK, Effect.TRACE),
-                active=False,
-                condition="inactive until the horizon controls trace-to-feedback summarization"),
+                condition="controls how per-example guide feedback is summarized for the meta optimizer",
+                probe_values=("step", "episode", "truncated", "full")),
         }
 
     PLUMBED_FIELDS = ("starting_artifact", "initial_knowledge", "trainer",
-                      "optimizer", "batch_size", "num_threads", "trace_type")
+                      "optimizer", "batch_size", "num_threads", "trace_type",
+                      "credit_horizon")
 
     def _trace_types_for_config(self, cfg: LevelConfig) -> Tuple[str, ...]:
         """Map the public LevelConfig trace label to concrete trace backends."""
@@ -621,13 +703,8 @@ class TraceBenchTaskAdapter:
             num_threads=max(1, cfg.num_threads),
         )
 
-    def run_task(self, cfg: LevelConfig, task_id: str) -> Tuple[float, str]:
-        """Evaluate a recursive-opt config on a real Trace-Bench task bundle."""
-        validate_level_config(
-            cfg,
-            ("batch_size", "batch_design", "trace_type", "memory_policy", "optimizer", "guide", "trainer"),
-        )
-        normalized = normalize_task_id(task_id)
+    def _run_single_task(self, cfg: LevelConfig, normalized: str) -> Tuple[float, str]:
+        """Evaluate one concrete Trace-Bench task id."""
         budget_failure = self._trainer_budget_feedback(cfg, normalized)
         if budget_failure is not None:
             return budget_failure
@@ -644,13 +721,23 @@ class TraceBenchTaskAdapter:
                 "_score_bundle",
                 "_extract_response",
                 "_scalarize_score_dict",
+                "_format_bundle_feedback",
             ]
         }
         with traces.collect_traces(
             list(self._trace_types_for_config(cfg)),
             meta=trace_meta,
         ) as trace_session:
-            score, feedback = _score_bundle(bundle, self.max_examples)
+            import inspect
+
+            if "credit_horizon" in inspect.signature(_score_bundle).parameters:
+                score, feedback = _score_bundle(
+                    bundle,
+                    self.max_examples,
+                    credit_horizon=cfg.credit_horizon,
+                )
+            else:
+                score, feedback = _score_bundle(bundle, self.max_examples)
         trace_note = self._trace_feedback_note(cfg, trace_session)
         seed_note = "starting_artifact seeded; " if seeded else ""
         train_note = (
@@ -662,6 +749,45 @@ class TraceBenchTaskAdapter:
         hint = self._trainer_hint(cfg)
         suffix = f" {hint}" if hint else ""
         return score, f"[real_trace_bench:{normalized}] {train_note}. {trace_note}. {feedback}{suffix}"
+
+    def run_task(self, cfg: LevelConfig, task_id: str) -> Tuple[float, str]:
+        """Evaluate a recursive-opt config on a real Trace-Bench task bundle."""
+        validate_level_config(
+            cfg,
+            (
+                "batch_size",
+                "batch_design",
+                "trace_type",
+                "memory_policy",
+                "optimizer",
+                "guide",
+                "trainer",
+                "credit_horizon",
+            ),
+        )
+        normalized = normalize_task_id(task_id)
+        task_ids = self._expanded_task_ids(normalized)
+        if len(task_ids) == 1:
+            return self._run_single_task(cfg, task_ids[0])
+
+        scores: List[float] = []
+        feedbacks: List[str] = []
+        for subtask_id in task_ids:
+            score, feedback = self._run_single_task(cfg, subtask_id)
+            scores.append(score)
+            feedbacks.append(f"{subtask_id}: {feedback}")
+        mean_score = sum(scores) / len(scores)
+        family_feedback = _format_bundle_feedback(
+            normalized,
+            len(scores),
+            feedbacks,
+            cfg.credit_horizon,
+        )
+        return (
+            mean_score,
+            f"[real_trace_bench:{normalized}] expanded into "
+            f"{len(task_ids)} concrete task(s). {family_feedback}",
+        )
 
     def agent_fn(self, task_id: str) -> Callable:
         """Return an O0 agent function backed by the Trace-Bench bundle param.
