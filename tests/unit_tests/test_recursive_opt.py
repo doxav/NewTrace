@@ -304,6 +304,43 @@ def test_multiobjective_evaluator_rewards_verified_capability() -> None:
     assert "verify/check" in feedback
 
 
+def test_multiobjective_evaluator_respects_n_tasks_limit() -> None:
+    class _Guide:
+        def __call__(self, query, response, info):
+            return 1.0, f"scored {query}"
+
+        def get_score_dict(self, query, response, info):
+            return {"accuracy": 1.0}
+
+    class _Adapter:
+        max_examples = 5
+
+        def _load_bundle(self, task_id):
+            return {
+                "param": trace.node("unused", trainable=True),
+                "guide": _Guide(),
+                "train_dataset": {
+                    "inputs": [f"q{i}" for i in range(5)],
+                    "infos": [{"answer": str(i)} for i in range(5)],
+                },
+            }
+
+    _TB.register_task_adapter(_Adapter())
+    evaluator = make_multiobjective_evaluator(
+        ["internal:multiobjective_gsm8k"],
+        {"accuracy": "max", "cost": "min"},
+        n_tasks=2,
+    )
+
+    score, feedback, scalar = evaluator(lambda **_: "plan verify", "reasoning_control")
+
+    assert score["accuracy"] == pytest.approx(1.0)
+    assert "n=2" in feedback
+    assert scalar > 0.0
+    with pytest.raises(ValueError, match="n_tasks must be positive"):
+        make_multiobjective_evaluator(["task"], {"accuracy": "max"}, n_tasks=0)
+
+
 def test_text_cost_penalizes_verbosity() -> None:
     from opto.features.recursive_opt.tracebench import _text_cost
 
@@ -317,7 +354,12 @@ def test_text_cost_penalizes_verbosity() -> None:
 # Tests added for the two-agent review fixes (traced code surface, global
 # memory retrieval, family-sensitive stub, and the live-path connection).
 # --------------------------------------------------------------------------- #
-from opto.features.recursive_opt import AgenticOptimizer, default_optimizer_tools
+from opto.features.recursive_opt import (
+    AgenticOptimizer,
+    default_optimizer_tools,
+    parse_optimizer_tool_policy,
+    select_optimizer_tools,
+)
 from opto.features.recursive_opt import inspect_utils
 
 
@@ -391,6 +433,39 @@ def test_default_optimizer_tools_searches_global_failures(tmp_path: Path) -> Non
     assert len(hits) == 2
     assert any("failure-a" in h for h in hits)
     assert any("failure-b" in h for h in hits)
+
+
+def test_optimizer_tool_policy_parses_text_json_and_filters_unknowns() -> None:
+    available = {"trace_search": lambda fb: fb, "run_subset": lambda fb: fb, "note": lambda fb: fb}
+
+    assert parse_optimizer_tool_policy(
+        "tools: trace_search, run_subset, unknown",
+        available,
+    ) == ["trace_search", "run_subset"]
+    assert parse_optimizer_tool_policy(
+        '{"tools": ["note", "trace_search"]}',
+        available,
+    ) == ["note", "trace_search"]
+    assert parse_optimizer_tool_policy(
+        "",
+        available,
+        default_tools=["note"],
+    ) == ["note"]
+    assert parse_optimizer_tool_policy(
+        ["trace_search", "note"],
+        available,
+        max_tools=1,
+    ) == ["trace_search"]
+    with pytest.raises(ValueError, match="unknown optimizer tool"):
+        parse_optimizer_tool_policy("tools: missing", available, strict=True)
+
+
+def test_select_optimizer_tools_preserves_policy_order() -> None:
+    available = {"trace_search": lambda fb: "search", "run_subset": lambda fb: "subset"}
+
+    selected = select_optimizer_tools(available, "tools: run_subset trace_search")
+
+    assert list(selected) == ["run_subset", "trace_search"]
 
 
 def test_make_task_runner_requires_registered_adapter() -> None:
@@ -1117,7 +1192,8 @@ def test_optimize_runs_real_trainer_end_to_end(tmp_path: Path) -> None:
     opt = _NoLLMOptimizer(level.parameters())
     # real PrioritySearch loop, no LLM, no manual backward()/step(): must complete
     result = optimize(level, make_dataset(["hf:GSM8K"], repeats=20),
-                      optimizer=opt, iterations=3, num_candidates=2)
+                      optimizer=opt, iterations=3, num_candidates=2,
+                      num_threads=1)
     assert len(level.parameters()) == 1  # level intact and still trainable after training
     assert hasattr(result, "exploit")
 
@@ -1353,6 +1429,50 @@ def test_gpt5_live_llm_maps_max_tokens(monkeypatch) -> None:
     assert "max_tokens" not in calls[0]
 
 
+def test_live_llm_provider_qualifies_bare_openai_model(monkeypatch) -> None:
+    from opto.features.recursive_opt import runmode
+    import opto.utils.llm as llm_mod
+
+    models = []
+
+    class FakeLiteLLM:
+        def __init__(self, *args, **kwargs):
+            models.append(kwargs["model"])
+
+        def __call__(self, *args, **kwargs):
+            return object()
+
+    monkeypatch.setattr(llm_mod, "LiteLLM", FakeLiteLLM)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.delenv("RECURSIVE_OPT_LITELLM_PROVIDER", raising=False)
+
+    runmode.make_live_llm("gpt-5.4-nano")
+
+    assert models == ["openai/gpt-5.4-nano"]
+
+
+def test_live_llm_provider_override_for_bare_model(monkeypatch) -> None:
+    from opto.features.recursive_opt import runmode
+    import opto.utils.llm as llm_mod
+
+    models = []
+
+    class FakeLiteLLM:
+        def __init__(self, *args, **kwargs):
+            models.append(kwargs["model"])
+
+        def __call__(self, *args, **kwargs):
+            return object()
+
+    monkeypatch.setattr(llm_mod, "LiteLLM", FakeLiteLLM)
+    monkeypatch.setenv("RECURSIVE_OPT_LITELLM_PROVIDER", "openrouter")
+
+    runmode.make_live_llm("openai/gpt-5.4-nano")
+    runmode.make_live_llm("gpt-5.4-nano")
+
+    assert models == ["openai/gpt-5.4-nano", "openrouter/gpt-5.4-nano"]
+
+
 # --------------------------------------------------------------------------- #
 # P0/P1 regression tests: A read-back, Pareto get_score_dict, repeat helper.
 # --------------------------------------------------------------------------- #
@@ -1364,7 +1484,7 @@ def test_best_config_from_is_non_empty_and_decodable_after_optimize() -> None:
                       trainable_fields=("batch_design", "trainer"))
     opt = _NoLLMOptimizer(level.parameters())
     optimize(level, make_dataset(["hf:GSM8K"], repeats=8), optimizer=opt,
-             iterations=3, num_candidates=2)
+             iterations=3, num_candidates=2, num_threads=1)
     cfg_text = best_config_from(level)
     assert cfg_text.strip()                      # never empty (was empty in live A)
     decoded = decode_cfg(cfg_text, LevelConfig(), ("batch_design", "trainer"))
@@ -1403,7 +1523,10 @@ def test_pareto_path_runs_with_objective_config(tmp_path: Path) -> None:
     opt = _NoLLMOptimizer(art.parameters())
     optimize(art, make_dataset(["internal:multiobjective_gsm8k"], repeats=8),
              optimizer=opt, iterations=2, num_candidates=2,
-             objective_config=ObjectiveConfig(mode="pareto", minimize={"cost"}))
+             objective_config=ObjectiveConfig(mode="pareto", minimize={"cost"}),
+             # Keep this regression deterministic: the test is for the
+             # ObjectiveConfig/Pareto path, not trainer thread scheduling.
+             num_threads=1)
     assert len(art.parameters()) == 1
 
 

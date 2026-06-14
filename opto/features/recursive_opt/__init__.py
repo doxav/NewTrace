@@ -35,6 +35,8 @@ from .memory import MemoryLite, EpisodeTrace, FamilyPrior, ArtifactRecord
 from .capabilities import (
     AgenticOptimizer,
     default_optimizer_tools,
+    parse_optimizer_tool_policy,
+    select_optimizer_tools,
     TinkerEnvAdapter,
     HITLGate,
     auto_allow,
@@ -98,6 +100,8 @@ __all__ = [
     "ArtifactRecord",
     "AgenticOptimizer",
     "default_optimizer_tools",
+    "parse_optimizer_tool_policy",
+    "select_optimizer_tools",
     "TinkerEnvAdapter",
     "HITLGate",
     "auto_allow",

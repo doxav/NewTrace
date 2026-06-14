@@ -1237,6 +1237,10 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4,
     plus a scalarized score and a directional feedback string.
     """
 
+    task_limit = int(n_tasks)
+    if task_limit <= 0:
+        raise ValueError("n_tasks must be positive")
+
     def _evaluate_real(capability_callable: Callable, family: Any):
         adapter = _TASK_ADAPTER
         if adapter is None or not hasattr(adapter, "_load_bundle"):
@@ -1250,6 +1254,7 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4,
         max_examples = min(
             getattr(adapter, "max_examples", 1),
             _int_env("RECURSIVE_OPT_CAPABILITY_MAX_EXAMPLES", 3),
+            task_limit,
         )
         objective_rows: List[Dict[str, float]] = []
         notes: List[str] = []

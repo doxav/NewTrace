@@ -130,6 +130,35 @@ def test_suboptimizer_graph_oracle_beats_draft_route() -> None:
     assert scipy_score == pytest.approx(1.0)
 
 
+def test_conditional_suboptimizer_route_beats_always_tool_and_draft() -> None:
+    pytest.importorskip("langgraph")
+    from opto.features.graph import LangGraphAdapter
+
+    centers = [-3.5, -0.1, 0.0, 0.2, 1.75, 4.25]
+    adapter = LangGraphAdapter(
+        graph_factory=probe.build_conditional_suboptimizer_graph,
+        function_targets={
+            "subopt_draft_agent": probe.subopt_draft_agent,
+            "scipy_suboptimizer_agent": probe.scipy_suboptimizer_agent,
+            "conditional_subopt_merge_agent": probe.conditional_subopt_merge_agent,
+        },
+        graph_knobs={"route_policy": "draft"},
+        input_key="center",
+        output_key="result",
+        train_graph_agents_functions=False,
+    )
+    module = adapter.as_module()
+
+    draft_score = probe._score_conditional_suboptimizer_module(module, centers)
+    adapter.graph_knobs["route_policy"]._set("scipy")
+    always_tool_score = probe._score_conditional_suboptimizer_module(module, centers)
+    adapter.graph_knobs["route_policy"]._set("conditional")
+    conditional_score = probe._score_conditional_suboptimizer_module(module, centers)
+
+    assert draft_score < always_tool_score < conditional_score
+    assert conditional_score == pytest.approx(0.875)
+
+
 def test_suboptimizer_agent_unwraps_trace_nodes() -> None:
     from opto.trace import node
 

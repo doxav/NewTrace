@@ -47,7 +47,10 @@ def run_review_regression() -> List[Dict[str, Any]]:
         rows.append({"example": "A", "family": "internal:multi_param",
                      "artifact": str(best_cfg)[:120], "memory": mem_a.summary()})
 
-        impl_c, objs_c, mem_c, _ = exC.learn_capability()
+        impl_c, objs_c, mem_c, _ = exC.learn_capability(
+            n_tasks=1,
+            candidate_impls=[exC.CANDIDATE_IMPLS[0], exC.CANDIDATE_IMPLS[2]],
+        )
         rows.append({"example": "C", "family": "internal:multiobjective_gsm8k",
                      "score": objs_c.get("accuracy", 0.0) - 0.5 * objs_c.get("cost", 0.0),
                      "artifact": str(impl_c)[:120], "memory": mem_c.summary()})

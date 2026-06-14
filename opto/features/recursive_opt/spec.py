@@ -132,8 +132,12 @@ def validate_spec(spec: dict) -> dict:
                 f"level {lid}: depends_on {unknown} must reference EARLIER level ids "
                 f"(seen so far: {sorted(earlier)}). depends_on is enforced, not decorative."
             )
-        if surface == "config" and ls.get("family") not in families and not ls.get("task"):
-            raise ValueError(f"level {lid}: config needs a known 'family' or an explicit 'task'")
+        tasks = ls.get("tasks")
+        if tasks is not None:
+            if not isinstance(tasks, list) or not tasks or not all(str(t).strip() for t in tasks):
+                raise ValueError(f"level {lid}: tasks must be a non-empty list of task ids")
+        if surface == "config" and ls.get("family") not in families and not ls.get("task") and not tasks:
+            raise ValueError(f"level {lid}: config needs a known 'family', explicit 'task', or non-empty 'tasks'")
         if surface == "code" and not isinstance(ls.get("component"), dict):
             raise ValueError(f"level {lid}: code surface needs a 'component' dict")
         if surface == "capability" and not callable(ls.get("evaluator")):
@@ -167,12 +171,17 @@ def compile_level(
         return level_spec["builder"](level_spec, memory)
 
     if surface == "config":
-        task = level_spec.get("task") or families[level_spec["family"]][0]
+        task_ids = _config_task_ids(level_spec, families)
         cfg = LevelConfig(**(level_spec.get("fixed") or {}))
         kwargs: Dict[str, Any] = {"memory": memory}
         if level_spec.get("targets"):
             kwargs["trainable_fields"] = tuple(level_spec["targets"])
-        return MetaLevel(cfg=cfg, inner_runner=_make_inner_runner(task, score_config),
+        inner_runner = (
+            _make_inner_runner(task_ids[0], score_config)
+            if len(task_ids) == 1
+            else _make_task_set_inner_runner(task_ids, score_config)
+        )
+        return MetaLevel(cfg=cfg, inner_runner=inner_runner,
                          invalid_floor=floor, **kwargs)
 
     if surface == "code":
@@ -287,7 +296,11 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
         reused = reuse_priors(memory, level, ls) if do_reuse else {"used_prior": False, "tools": []}
 
         iterations = int(ls.get("iterations") or current_iterations())
-        opt_kwargs: Dict[str, Any] = {}
+        # Generic trainer controls (e.g. {"num_threads": 1} for deterministic
+        # unit tests) can live at spec or level scope without adding another
+        # bespoke argument to run_spec.
+        opt_kwargs: Dict[str, Any] = dict(spec.get("trainer_kwargs") or {})
+        opt_kwargs.update(ls.get("trainer_kwargs") or {})
         oc = ls.get("objective_config")
         if oc:
             opt_kwargs["objective_config"] = _objective_config(oc)
@@ -343,13 +356,27 @@ def _resolve_families(level_spec: dict, families: Dict[str, List[str]]) -> Dict[
     return dict(families)
 
 
+def _config_task_ids(level_spec: dict, families: Dict[str, List[str]]) -> List[str]:
+    """Return concrete task ids for a config level."""
+    tasks = level_spec.get("tasks")
+    if tasks is not None:
+        return [str(task) for task in tasks]
+    task = level_spec.get("task")
+    if task:
+        return [str(task)]
+    return [str(families[level_spec["family"]][0])]
+
+
 def _dataset_for(level_spec: dict, families: Dict[str, List[str]], iterations: int) -> dict:
     fam = level_spec.get("family")
     task = level_spec.get("task")
+    tasks = level_spec.get("tasks")
     # family_policy/prior iterate internally; custom/capability levels may be
     # label-free; all of these train on a None-input dataset.
-    if level_spec["surface"] in ("family_policy", "prior") or not (fam or task):
+    if level_spec["surface"] in ("family_policy", "prior") or not (fam or task or tasks):
         return {"inputs": [None] * iterations, "infos": [None] * iterations}
+    if tasks:
+        return TB.make_dataset([f"task_set:{level_spec.get('id', 'config')}"], repeats=iterations)
     return TB.make_dataset([fam or task], repeats=iterations)
 
 
@@ -383,7 +410,11 @@ def _seed_from_text(level, surface: str, text: str) -> None:
 def _final_eval(level, level_spec: dict, families: Dict[str, List[str]]):
     surface = level_spec["surface"]
     if surface == "config":
-        label = level_spec.get("family") or level_spec.get("task") or families[level_spec["family"]][0]
+        label = level_spec.get("family") or level_spec.get("task")
+        if label is None and level_spec.get("tasks"):
+            label = f"task_set:{level_spec.get('id', 'config')}"
+        if label is None:
+            label = families[level_spec["family"]][0]
         out = level.forward(label)
     elif surface == "code":
         fam = level_spec.get("family")
@@ -494,15 +525,28 @@ def agentic_optimizer_factory(level_spec: dict, memory: MemoryLite,
     agentic = level_spec.get("agentic")
     if not agentic:
         return None
-    from .capabilities import AgenticOptimizer, default_optimizer_tools
+    from .capabilities import (
+        AgenticOptimizer,
+        default_optimizer_tools,
+        select_optimizer_tools,
+    )
 
     cfg = agentic if isinstance(agentic, dict) else {}
     family = level_spec.get("family")
     available = default_optimizer_tools(
         memory=memory, family=family if isinstance(family, str) and family != "*" else None,
     )
-    names = list(dict.fromkeys((level_spec.get("tools") or []) + list(reused_tools or [])))
-    tools = {n: available[n] for n in names if n in available} or available
+    default_names = list(dict.fromkeys((level_spec.get("tools") or []) + list(reused_tools or [])))
+    policy = cfg.get("tool_policy", level_spec.get("tool_policy"))
+    if policy is None:
+        tools = {n: available[n] for n in default_names if n in available} or available
+    else:
+        tools = select_optimizer_tools(
+            available,
+            policy,
+            default_tools=default_names,
+            max_tools=int(cfg.get("tool_budget", 3)),
+        ) or ({n: available[n] for n in default_names if n in available} or available)
     configured_kwargs = {"tools": tools, "tool_budget": int(cfg.get("tool_budget", 3))}
     if cfg.get("base_optimizer_cls") is not None:
         configured_kwargs["base_optimizer_cls"] = cfg["base_optimizer_cls"]
@@ -583,6 +627,33 @@ def _make_inner_runner(
 
     def inner_runner(cfg: LevelConfig, _family: Any) -> Tuple[float, str]:
         return run_task(cfg, task_id)
+
+    return inner_runner
+
+
+def _make_task_set_inner_runner(
+    task_ids: List[str],
+    scoring: Optional[dict],
+) -> Callable[[LevelConfig, Any], Tuple[float, str]]:
+    """Bind a normalized task runner to a fixed multi-task evaluation set."""
+    if not task_ids:
+        raise ValueError("task_ids must be non-empty")
+    run_task = make_scored_task_runner(scoring)
+
+    def inner_runner(cfg: LevelConfig, _family: Any) -> Tuple[float, str]:
+        scores: List[float] = []
+        feedbacks: List[str] = []
+        for task_id in task_ids:
+            score, feedback = run_task(cfg, task_id)
+            scores.append(float(score))
+            feedbacks.append(f"{task_id}: {feedback}")
+        mean_score = sum(scores) / len(scores)
+        return (
+            mean_score,
+            "[task_set] mean="
+            f"{mean_score:.3f} over {len(task_ids)} task(s). "
+            + " || ".join(feedbacks),
+        )
 
     return inner_runner
 

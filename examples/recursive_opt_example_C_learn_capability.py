@@ -92,8 +92,13 @@ CANDIDATE_IMPLS = [
 ]
 
 
-def learn_capability():
+def learn_capability(*, n_tasks: int = 4, candidate_impls=None):
+    """Learn/evaluate a capability, optionally with a compact candidate set."""
+    impls = list(candidate_impls or CANDIDATE_IMPLS)
+    if not impls:
+        raise ValueError("candidate_impls must contain at least one implementation")
     evaluator = make_multiobjective_evaluator(PROBLEMS, OBJECTIVES,
+                                              n_tasks=n_tasks,
                                               required_terms=("plan", "verify"))  # spec-compliance objective: "Answer directly." can no longer win on cost alone
     mem = MemoryLite(root="./mem_C_capability")
 
@@ -114,7 +119,7 @@ def learn_capability():
         from opto.features.recursive_opt.optimize import optimize, current_iterations
         from opto.features.recursive_opt.tracebench import make_dataset
 
-        art = CapabilityArtifact(seed_impl=CANDIDATE_IMPLS[-1], evaluator=evaluator, memory=mem)
+        art = CapabilityArtifact(seed_impl=impls[-1], evaluator=evaluator, memory=mem)
         iterations = current_iterations()
         # Keep the Pareto path: RecursiveGuide.get_score_dict exposes {accuracy,cost}
         # and the trainer ranks candidates on the Pareto front (minimize cost).
@@ -136,7 +141,7 @@ def learn_capability():
 
     # ---- OFFLINE: evaluate candidate capabilities, pick the Pareto-best ----
     scored = []  # list of (score_dict, payload)
-    for impl in CANDIDATE_IMPLS:
+    for impl in impls:
         art = CapabilityArtifact(seed_impl=impl, evaluator=evaluator, memory=mem)
         # average objectives across the 2 target problems
         agg = {"accuracy": 0.0, "cost": 0.0}

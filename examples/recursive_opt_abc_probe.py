@@ -101,6 +101,29 @@ def _score_suboptimizer_module(module: Any, centers: List[float], tolerance: flo
     return _mean(scores)
 
 
+def _score_conditional_suboptimizer_module(
+    module: Any,
+    centers: List[float],
+    *,
+    tolerance: float = 0.25,
+    tool_cost: float = 0.25,
+) -> float:
+    """Score routing quality with an explicit penalty for unnecessary tool use."""
+    scores: List[float] = []
+    for center in centers:
+        out = module.forward({"center": center})
+        data = _raw_value(out)
+        if isinstance(data, dict):
+            x_value = _float_value(data.get("x"))
+            used_tool = bool(data.get("used_tool"))
+        else:
+            x_value = _float_value(data)
+            used_tool = False
+        accuracy = 1.0 if abs(x_value - center) <= tolerance else 0.0
+        scores.append(max(0.0, accuracy - (tool_cost if used_tool else 0.0)))
+    return _mean(scores)
+
+
 def weak_bbeh_direct_solver(self: Any, question: str) -> str:
     """Weak direct-answer baseline with real headroom on BBEH boolean examples."""
     return "True"
@@ -217,6 +240,30 @@ def subopt_merge_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     return {"x": _float_value(state.get("draft_x")), "method": state.get("draft_method", "draft")}
 
 
+def conditional_subopt_merge_agent(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Route to SciPy only when the cheap draft is unlikely to be accurate."""
+    policy = str(_raw_value(state.get("route_policy", "draft"))).strip().lower()
+    center = abs(_float_value(state.get("center", 0.0)))
+    use_tool = policy in {"scipy", "tool", "suboptimizer", "sub_optimizer"}
+    if policy in {"conditional", "threshold", "adaptive"}:
+        use_tool = center > 0.25
+    if use_tool:
+        return {
+            "result": {
+                "x": _float_value(state.get("tool_x")),
+                "method": _raw_value(state.get("tool_method", "tool")),
+                "used_tool": True,
+            }
+        }
+    return {
+        "result": {
+            "x": _float_value(state.get("draft_x")),
+            "method": _raw_value(state.get("draft_method", "draft")),
+            "used_tool": False,
+        }
+    }
+
+
 def build_suboptimizer_graph(
     subopt_draft_agent: Any = subopt_draft_agent,
     scipy_suboptimizer_agent: Any = scipy_suboptimizer_agent,
@@ -233,6 +280,25 @@ def build_suboptimizer_graph(
     graph.add_edge("subopt_draft_agent", "scipy_suboptimizer_agent")
     graph.add_edge("scipy_suboptimizer_agent", "subopt_merge_agent")
     graph.add_edge("subopt_merge_agent", END)
+    return graph
+
+
+def build_conditional_suboptimizer_graph(
+    subopt_draft_agent: Any = subopt_draft_agent,
+    scipy_suboptimizer_agent: Any = scipy_suboptimizer_agent,
+    conditional_subopt_merge_agent: Any = conditional_subopt_merge_agent,
+    route_policy: str = "draft",
+) -> Any:
+    """Build a graph for cost-aware conditional routing to a sub-optimizer."""
+    _ = route_policy
+    graph = StateGraph(dict)
+    graph.add_node("subopt_draft_agent", subopt_draft_agent)
+    graph.add_node("scipy_suboptimizer_agent", scipy_suboptimizer_agent)
+    graph.add_node("conditional_subopt_merge_agent", conditional_subopt_merge_agent)
+    graph.add_edge(START, "subopt_draft_agent")
+    graph.add_edge("subopt_draft_agent", "scipy_suboptimizer_agent")
+    graph.add_edge("scipy_suboptimizer_agent", "conditional_subopt_merge_agent")
+    graph.add_edge("conditional_subopt_merge_agent", END)
     return graph
 
 
@@ -534,6 +600,16 @@ def run_suboptimizer_graph(output_root: Path, args: argparse.Namespace) -> Dict[
     root = output_root / "mem_suboptimizer_graph"
     root.mkdir(parents=True, exist_ok=True)
     params = {binding: value.get() for binding, value in adapter.bindings.items()}
+    spec = {
+        "surface": "graph_suboptimizer_tool",
+        "task": "internal:convex_suboptimizer",
+        "centers": centers,
+        "tolerance": 1e-4,
+        "trainable": ["route_policy"],
+        "candidate_routes": ["draft", "scipy"],
+    }
+    spec_path = root / "graph_spec.json"
+    spec_path.write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n")
     artifact_path = root / "artifacts.jsonl"
     artifact_path.write_text(
         json.dumps(
@@ -563,6 +639,115 @@ def run_suboptimizer_graph(output_root: Path, args: argparse.Namespace) -> Dict[
         "delta": final - initial,
         "wall_s": round(time.time() - start, 3),
         "artifact_file": f"{artifact_path}#graph:suboptimizer:latest",
+        "spec_file": str(spec_path),
+        "params": params,
+        "score_history": result.score_history,
+        "best_score": result.best_score,
+        "best_iteration": result.best_iteration,
+    }
+
+
+def run_conditional_suboptimizer_graph(output_root: Path, args: argparse.Namespace) -> Dict[str, Any]:
+    """Run cost-aware graph routing that should prefer a conditional policy."""
+    centers = [-3.5, -0.1, 0.0, 0.2, 1.75, 4.25]
+    adapter = LangGraphAdapter(
+        graph_factory=build_conditional_suboptimizer_graph,
+        function_targets={
+            "subopt_draft_agent": subopt_draft_agent,
+            "scipy_suboptimizer_agent": scipy_suboptimizer_agent,
+            "conditional_subopt_merge_agent": conditional_subopt_merge_agent,
+        },
+        graph_knobs={"route_policy": "draft"},
+        input_key="center",
+        output_key="result",
+        train_graph_agents_functions=False,
+    )
+    module = adapter.as_module()
+    initial = _score_conditional_suboptimizer_module(module, centers)
+    adapter.graph_knobs["route_policy"]._set("scipy")
+    always_tool = _score_conditional_suboptimizer_module(module, centers)
+    adapter.graph_knobs["route_policy"]._set("conditional")
+    oracle_conditional = _score_conditional_suboptimizer_module(module, centers)
+    adapter.graph_knobs["route_policy"]._set("draft")
+    reset_budget()
+    start = time.time()
+    graph = adapter.instrument(backend="trace")
+
+    def eval_fn(payload: Dict[str, Any]) -> EvalResult:
+        query = payload["query"]
+        center = float(query["center"] if isinstance(query, dict) else query)
+        data = _raw_value(payload["answer"])
+        result_data = data if isinstance(data, dict) else {"x": data, "used_tool": False}
+        x_value = _float_value(result_data.get("x"))
+        used_tool = bool(result_data.get("used_tool"))
+        accuracy = 1.0 if abs(x_value - center) <= 0.25 else 0.0
+        score = max(0.0, accuracy - (0.25 if used_tool else 0.0))
+        return EvalResult(
+            score=score,
+            feedback=(
+                f"score={score:.2f}; center={center:.3f}; x={x_value:.6f}; "
+                f"used_tool={used_tool}. The dataset mixes near-zero easy cases "
+                "where draft is enough and far cases where SciPy is needed; set "
+                "route_policy to 'conditional' for the best accuracy/cost tradeoff."
+            ),
+        )
+
+    result = optimize_graph(
+        graph,
+        queries=[{"center": center} for center in centers],
+        iterations=args.iterations,
+        eval_fn=eval_fn,
+        optimizer_kwargs={"llm": make_live_llm(args.model)},
+        output_key="result",
+    )
+    final = _score_conditional_suboptimizer_module(module, centers)
+    root = output_root / "mem_conditional_suboptimizer_graph"
+    root.mkdir(parents=True, exist_ok=True)
+    params = {binding: value.get() for binding, value in adapter.bindings.items()}
+    spec = {
+        "surface": "graph_conditional_suboptimizer_tool",
+        "task": "internal:cost_aware_convex_suboptimizer",
+        "centers": centers,
+        "tool_cost": 0.25,
+        "tolerance": 0.25,
+        "trainable": ["route_policy"],
+        "candidate_routes": ["draft", "scipy", "conditional"],
+    }
+    (root / "graph_spec.json").write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n")
+    artifact_path = root / "artifacts.jsonl"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "artifact_id": "graph:conditional_suboptimizer:latest",
+                "kind": "graph",
+                "family": "internal:cost_aware_convex_suboptimizer",
+                "score": final,
+                "content": params,
+                "metrics": {
+                    "score_history": result.score_history,
+                    "best_score": result.best_score,
+                    "best_iteration": result.best_iteration,
+                    "initial": initial,
+                    "always_tool_score": always_tool,
+                    "oracle_conditional_score": oracle_conditional,
+                    "centers": centers,
+                },
+            },
+            default=str,
+        )
+        + "\n"
+    )
+    return {
+        "surface": "graph_conditional_suboptimizer_tool",
+        "task": "internal:cost_aware_convex_suboptimizer",
+        "initial": initial,
+        "always_tool_score": always_tool,
+        "oracle_tool_score": oracle_conditional,
+        "final": final,
+        "delta": final - initial,
+        "wall_s": round(time.time() - start, 3),
+        "artifact_file": f"{artifact_path}#graph:conditional_suboptimizer:latest",
+        "spec_file": str(root / "graph_spec.json"),
         "params": params,
         "score_history": result.score_history,
         "best_score": result.best_score,
@@ -625,8 +810,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skip-preflight", action="store_true")
     parser.add_argument(
         "--sections",
-        default="spread,code,graph,waste,subopt",
-        help="Comma-separated subset: spread,code,graph,waste,subopt",
+        default="spread,code,graph,waste,subopt,conditional_subopt",
+        help="Comma-separated subset: spread,code,graph,waste,subopt,conditional_subopt",
     )
     return parser.parse_args()
 
@@ -635,8 +820,12 @@ def main() -> None:
     """Run selected probes and save a machine-readable summary."""
     args = parse_args()
     sections = {section.strip() for section in args.sections.split(",") if section.strip()}
-    if not args.live and {"code", "graph", "waste", "subopt"} & sections:
-        raise SystemExit("Sections code/graph/waste/subopt require --live; use --sections spread for eval-only probing.")
+    live_sections = {"code", "graph", "waste", "subopt", "conditional_subopt"}
+    if not args.live and live_sections & sections:
+        raise SystemExit(
+            "Sections code/graph/waste/subopt/conditional_subopt require --live; "
+            "use --sections spread for eval-only probing."
+        )
     configure_live(args)
     output_root = DEFAULT_OUTPUT_ROOT / args.run_id
     output_root.mkdir(parents=True, exist_ok=True)
@@ -670,6 +859,8 @@ def main() -> None:
         summary["results"]["waste"] = run_waste_code(output_root, args)
     if "subopt" in sections:
         summary["results"]["subopt"] = run_suboptimizer_graph(output_root, args)
+    if "conditional_subopt" in sections:
+        summary["results"]["conditional_subopt"] = run_conditional_suboptimizer_graph(output_root, args)
 
     summary_path = output_root / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, default=str) + "\n")

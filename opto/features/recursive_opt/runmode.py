@@ -53,6 +53,28 @@ def uses_completion_token_param(model_name: str) -> bool:
     return "gpt-5" in str(model_name).lower()
 
 
+def resolve_litellm_model_name(model_name: str) -> str:
+    """Return the provider-qualified model name expected by LiteLLM.
+
+    Recursive-opt examples keep the user-facing default as ``gpt-5.4-nano``.
+    Current LiteLLM versions do not infer the OpenAI provider from that bare name,
+    so we qualify bare names only when the process is configured for OpenAI.
+    Already-qualified names such as ``openrouter/openai/gpt-5.4-nano`` are left
+    untouched.
+    """
+    name = str(model_name or "").strip()
+    if not name:
+        raise ValueError("model_name must be a non-empty string")
+    if "/" in name:
+        return name
+    provider = os.environ.get("RECURSIVE_OPT_LITELLM_PROVIDER", "").strip().strip("/")
+    if provider:
+        return f"{provider}/{name}"
+    if os.environ.get("OPENAI_API_KEY"):
+        return f"openai/{name}"
+    return name
+
+
 class CompletionTokenCompatLLM:
     """Translate Trace optimizer token kwargs for GPT-5-style LiteLLM calls."""
 
@@ -90,7 +112,7 @@ def make_live_llm(
         or "gpt-5.4-nano"
     )
     llm = LiteLLM(
-        model=model_name,
+        model=resolve_litellm_model_name(model_name),
         cache=cache,
         max_retries=max_retries,
         base_delay=base_delay,

@@ -17,6 +17,7 @@ These wrap the real optimizer/guide contracts so they drop into
 
 from __future__ import annotations
 
+import json
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from opto.optimizers import OptoPrime
@@ -110,6 +111,99 @@ def default_optimizer_tools(
         tools["pytest"] = lambda fb: pytest_fn()
     tools["note"] = lambda fb: f"observed: {fb[:80]}"
     return tools
+
+
+def parse_optimizer_tool_policy(
+    policy: Any,
+    available_tools: Tuple[str, ...] | List[str] | Dict[str, Callable],
+    *,
+    default_tools: Optional[Tuple[str, ...] | List[str]] = None,
+    max_tools: Optional[int] = None,
+    strict: bool = False,
+) -> List[str]:
+    """Parse a generated optimizer-tool policy into known tool names.
+
+    The policy may be a list/tuple, a JSON object with a ``tools`` key, a JSON
+    list, or compact text such as ``"tools: trace_search, run_subset"``. Unknown
+    names are ignored by default so generated policies degrade safely; set
+    ``strict=True`` for validation tests.
+    """
+    known = tuple(available_tools.keys()) if isinstance(available_tools, dict) else tuple(available_tools)
+    if max_tools is not None and int(max_tools) < 0:
+        raise ValueError("max_tools must be non-negative")
+
+    def flatten(value: Any) -> List[str]:
+        """Return candidate names from nested JSON/list/text policy values."""
+        if value is None:
+            return []
+        if isinstance(value, dict):
+            for key in ("tools", "tool_policy", "order", "use"):
+                if key in value:
+                    return flatten(value[key])
+            return []
+        if isinstance(value, (list, tuple)):
+            out: List[str] = []
+            for item in value:
+                out.extend(flatten(item))
+            return out
+        text = str(value).strip()
+        if not text:
+            return []
+        try:
+            loaded = json.loads(text)
+        except Exception:
+            loaded = None
+        if loaded is not None and loaded is not value:
+            parsed = flatten(loaded)
+            if parsed:
+                return parsed
+        tokens: List[str] = []
+        for line in text.replace(",", "\n").splitlines():
+            line = line.strip().strip("-* ")
+            if not line:
+                continue
+            if ":" in line:
+                key, rest = line.split(":", 1)
+                if key.strip().lower() in {"tools", "tool_policy", "order", "use"}:
+                    line = rest.strip()
+            tokens.extend(part.strip().strip("'\"`") for part in line.split() if part.strip())
+        return tokens
+
+    candidates = flatten(policy)
+    if not candidates and default_tools:
+        candidates = list(default_tools)
+
+    selected: List[str] = []
+    unknown: List[str] = []
+    for name in candidates:
+        if name in known and name not in selected:
+            selected.append(name)
+            if max_tools is not None and len(selected) >= int(max_tools):
+                break
+        elif name not in known:
+            unknown.append(name)
+    if strict and unknown:
+        raise ValueError(f"unknown optimizer tool(s): {unknown}; available={list(known)}")
+    return selected
+
+
+def select_optimizer_tools(
+    available_tools: Dict[str, Callable],
+    policy: Any,
+    *,
+    default_tools: Optional[Tuple[str, ...] | List[str]] = None,
+    max_tools: Optional[int] = None,
+    strict: bool = False,
+) -> Dict[str, Callable]:
+    """Return the ordered subset of optimizer tools selected by a policy."""
+    names = parse_optimizer_tool_policy(
+        policy,
+        available_tools,
+        default_tools=default_tools,
+        max_tools=max_tools,
+        strict=strict,
+    )
+    return {name: available_tools[name] for name in names}
 
 
 # --------------------------------------------------------------------------- #
