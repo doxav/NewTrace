@@ -5,6 +5,7 @@ point) + a no-LLM optimizer drive the real Trainer without any API key.
 """
 import copy
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -196,6 +197,68 @@ def test_run_spec_two_levels_populates_memory(tmp_path: Path):
     assert out["results"]["o2"]["surface"] == "family_policy"
     assert set(out["levels"]) == {"o1", "o2"}               # built objects returned (transparent)
     assert out["memory"].summary()["artifacts"] >= 2
+
+
+def test_run_spec_records_progress_events_summary_and_artifact_metadata(tmp_path: Path):
+    spec = {
+        "families": FAMILIES,
+        "budget": {"candidates": 50},
+        "memory_root": str(tmp_path),
+        "run_id": "unit-progress",
+        "levels": [_config_level(iterations=2)],
+    }
+    out = S.run_spec(_seq_spec(spec), optimizer=_NoLLMOptimizer)
+
+    progress = out["progress"]["levels"]["o1"]
+    assert progress["planned_steps"] == 2
+    assert progress["executed_steps"] == 2
+    assert progress["best_problem_at"]["level_step"] in {0, 1}
+    assert progress["best_objective_at"]["level_step"] in {0, 1}
+    assert progress["scores"]["problem_score"] == pytest.approx(out["results"]["o1"]["score"])
+
+    events = out["memory"].progress_events(level_id="o1")
+    assert [event.event for event in events][0] == "level_start"
+    assert any(event.event == "trainer_metric" and event.level_step == 0 for event in events)
+    assert events[-1].event == "level_end"
+
+    artifact = out["memory"].best_artifact("combinatorial", "config")
+    assert artifact is not None
+    assert artifact.metrics["progress"]["executed_steps"] == 2
+    assert artifact.metrics["scores"]["objective_score"] == pytest.approx(out["results"]["o1"]["score"])
+
+    summary = json.loads((tmp_path / "summary.json").read_text())
+    assert summary["run_id"] == "unit-progress"
+    assert summary["levels"]["o1"]["artifact_id"] == out["results"]["o1"]["artifact_id"]
+
+
+def test_memory_progress_events_filter_and_validate(tmp_path: Path):
+    mem = MemoryLite(root=str(tmp_path))
+
+    with pytest.raises(ValueError, match="run_id"):
+        mem.record_progress(run_id="", level_id="o1", level_index=0, event="level_start")
+    with pytest.raises(ValueError, match="level_index"):
+        mem.record_progress(run_id="r1", level_id="o1", level_index=-1, event="level_start")
+
+    mem.record_progress(run_id="r1", level_id="o1", level_index=0, event="level_start")
+    metric = mem.record_progress(
+        run_id="r1",
+        level_id="o1",
+        level_index=0,
+        event="trainer_metric",
+        level_step=1,
+        objective_score=0.7,
+    )
+
+    assert mem.progress_events(event="trainer_metric") == [metric]
+    assert mem.progress_events(level_id="missing") == []
+
+    mem.write_run_summary({"run_id": "r1"})
+    assert mem.load_run_summary() == {"run_id": "r1"}
+    with pytest.raises(TypeError, match="summary"):
+        mem.write_run_summary([])  # type: ignore[arg-type]
+    (tmp_path / "summary.json").write_text("[]")
+    with pytest.raises(ValueError, match="JSON object"):
+        mem.load_run_summary()
 
 
 def test_run_spec_uses_spec_tracebench_adapter_config(tmp_path: Path, monkeypatch):

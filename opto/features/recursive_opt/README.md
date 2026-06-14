@@ -56,6 +56,7 @@ opto/features/recursive_opt/
   levels.py        # spine: LevelConfig, ArtifactLevel(O0), MetaLevel(O1+),
                    #        ComponentSpec + CodeArtifactLevel (code surface), RecursiveGuide
   memory.py        # MemoryLite tiers M0–M3 + thin retrieval (active knowledge building, C.1)
+  progress.py      # per-level events.jsonl + summary.json progress tracking
   traces.py        # optional GraphAdapter (B.3), OTEL (B.4), multi-trace TGJ (B.5)
   capabilities.py  # AgenticOptimizer (C.2), TinkerEnvAdapter (C.3), HITLGate (C.4)
   tracebench.py    # turns real Trace-Bench task ids into inner_runner / code- and
@@ -141,6 +142,22 @@ Unset, `none`, `null`, `unlimited`, `off`, or `-1` means no global limit for tha
 resource. `0` is not unlimited: it allows zero units and is useful for verifying
 that live optimizer calls fail early. Local loop limits still prevent runaway
 runs when the global envelope is disabled.
+
+Every `run_spec(...)` run writes progress metadata into the memory root:
+
+* `events.jsonl` is an append-only per-level ledger (`level_start`,
+  `trainer_metric`, `level_end`) with `level_step`, `global_step`, budget usage,
+  task ids, and separate `problem_score` / `objective_score` fields.
+* `summary.json` is the compact report for notebooks: planned/executed steps,
+  where the best problem score and best configured objective appeared, and the
+  final artifact id.
+* `artifacts.jsonl` remains backward-compatible; new artifacts add the same
+  progress summary under `metrics["progress"]`.
+
+Use `artifact_version` for lineage and `best_*_at.level_step` for optimization
+progress. They are intentionally different: the best artifact version can be
+`0` even when a level ran multiple trainer steps but did not improve over the
+first persisted artifact.
 
 On startup, live mode preflights the configured LiteLLM model and registers the
 Trace-Bench adapter. If the model is inaccessible or Trace-Bench cannot be

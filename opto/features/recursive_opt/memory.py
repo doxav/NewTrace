@@ -35,7 +35,7 @@ class EpisodeTrace:  # M1
     cfg: Dict[str, Any]
     score: float
     feedback: str
-    metrics: Dict[str, float] = field(default_factory=dict)
+    metrics: Dict[str, Any] = field(default_factory=dict)
     ts: float = field(default_factory=time.time)
 
 
@@ -49,7 +49,28 @@ class ArtifactRecord:  # M2 — artifact / experiment lineage
     content: str
     score: float
     iteration: int
-    metrics: Dict[str, float] = field(default_factory=dict)
+    metrics: Dict[str, Any] = field(default_factory=dict)
+    ts: float = field(default_factory=time.time)
+
+
+@dataclass
+class ProgressEvent:
+    """Compact, append-only progress event for per-level optimization tracing."""
+
+    event_id: str
+    run_id: str
+    level_id: str
+    level_index: int
+    event: str
+    level_step: Optional[int] = None
+    global_step: Optional[int] = None
+    artifact_id: Optional[str] = None
+    problem_score: Optional[float] = None
+    objective_score: Optional[float] = None
+    metrics: Dict[str, Any] = field(default_factory=dict)
+    task_ids: List[str] = field(default_factory=list)
+    budget: Dict[str, Any] = field(default_factory=dict)
+    selected_by: str = "objective"
     ts: float = field(default_factory=time.time)
 
 
@@ -87,6 +108,7 @@ class MemoryLite:
             p.family: p for p in self._load("priors.jsonl", FamilyPrior)
         }
         self._artifacts: List[ArtifactRecord] = self._load("artifacts.jsonl", ArtifactRecord)
+        self._progress: List[ProgressEvent] = self._load("events.jsonl", ProgressEvent)
 
     # ---- persistence ----------------------------------------------------- #
     def _path(self, name):
@@ -112,6 +134,7 @@ class MemoryLite:
         self._episodes = self._load("episodes.jsonl", EpisodeTrace)
         self._priors = {p.family: p for p in self._load("priors.jsonl", FamilyPrior)}
         self._artifacts = self._load("artifacts.jsonl", ArtifactRecord)
+        self._progress = self._load("events.jsonl", ProgressEvent)
 
     # ---- M1: record an episode (called by MetaLevel._run_inner) ---------- #
     def record(
@@ -199,6 +222,87 @@ class MemoryLite:
         hist = self.artifact_history(family, kind)
         return max(hist, key=lambda a: a.score) if hist else None
 
+    # ---- progress ledger --------------------------------------------------- #
+    def record_progress(
+        self,
+        *,
+        run_id: str,
+        level_id: str,
+        level_index: int,
+        event: str,
+        level_step: Optional[int] = None,
+        global_step: Optional[int] = None,
+        artifact_id: Optional[str] = None,
+        problem_score: Optional[float] = None,
+        objective_score: Optional[float] = None,
+        metrics: Optional[Dict[str, Any]] = None,
+        task_ids: Optional[List[str]] = None,
+        budget: Optional[Dict[str, Any]] = None,
+        selected_by: str = "objective",
+    ) -> ProgressEvent:
+        """Append one optimization progress event to ``events.jsonl``."""
+        if not run_id:
+            raise ValueError("run_id must be non-empty")
+        if not level_id:
+            raise ValueError("level_id must be non-empty")
+        if level_index < 0:
+            raise ValueError("level_index must be non-negative")
+        if not event:
+            raise ValueError("event must be non-empty")
+        rec = ProgressEvent(
+            event_id=f"{run_id}:{level_id}:{event}:{len(self._progress)}",
+            run_id=str(run_id),
+            level_id=str(level_id),
+            level_index=int(level_index),
+            event=str(event),
+            level_step=level_step,
+            global_step=global_step,
+            artifact_id=artifact_id,
+            problem_score=problem_score,
+            objective_score=objective_score,
+            metrics=metrics or {},
+            task_ids=[str(task) for task in (task_ids or [])],
+            budget=budget or {},
+            selected_by=str(selected_by),
+        )
+        self._progress.append(rec)
+        self._append("events.jsonl", rec)
+        return rec
+
+    def progress_events(
+        self,
+        *,
+        level_id: Optional[str] = None,
+        event: Optional[str] = None,
+    ) -> List[ProgressEvent]:
+        """Return persisted progress events, optionally filtered by level/event."""
+        self._progress = self._load("events.jsonl", ProgressEvent)
+        return [
+            rec
+            for rec in self._progress
+            if (level_id is None or rec.level_id == level_id)
+            and (event is None or rec.event == event)
+        ]
+
+    def write_run_summary(self, summary: Dict[str, Any]) -> None:
+        """Persist the compact run summary used by notebooks and reports."""
+        if not isinstance(summary, dict):
+            raise TypeError("summary must be a dictionary")
+        with open(self._path("summary.json"), "w") as f:
+            json.dump(summary, f, indent=2, sort_keys=True)
+            f.write("\n")
+
+    def load_run_summary(self) -> Optional[Dict[str, Any]]:
+        """Return ``summary.json`` when present, otherwise ``None``."""
+        path = self._path("summary.json")
+        if not os.path.exists(path):
+            return None
+        with open(path) as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("summary.json must contain a JSON object")
+        return data
+
     # ---- M3: promotion (PromotionEngine, with a support gate) ------------ #
     def _maybe_promote(self, family: str):
         if not self._promote_priors:
@@ -285,6 +389,7 @@ class MemoryLite:
         return {
             "episodes": len(self._episodes),
             "artifacts": len(self._artifacts),
+            "progress_events": len(self._progress),
             "families": sorted({e.family for e in self._episodes}),
             "priors": {f: p.best_score for f, p in self._priors.items()},
         }

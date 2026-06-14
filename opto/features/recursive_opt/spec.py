@@ -49,6 +49,7 @@ from .levels import (
 from .memory import MemoryLite
 from .budget import RecursiveOptBudget, reset_budget
 from .optimize import optimize, current_iterations
+from .progress import RecursiveOptProgressLogger, budget_snapshot
 from . import tracebench as TB
 
 SURFACES = ("config", "code", "family_policy", "prior", "capability", "custom")
@@ -276,8 +277,9 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
     """Compile and run every level in order (the ordering is the recursion depth).
 
     ``optimizer``/``trainer`` override the per-level choice (used for offline,
-    no-LLM testing). Returns ``{"results", "levels", "memory"}``; the built level
-    objects are returned so the compiler stays transparent and debuggable.
+    no-LLM testing). Returns ``{"results", "levels", "memory", "progress"}``;
+    the built level objects are returned so the compiler stays transparent and
+    debuggable.
     """
     spec = validate_spec(spec)
     if "tracebench" in spec:
@@ -287,9 +289,12 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
     _configure_budget(spec)
     do_reuse = bool(spec.get("reuse_priors", False))
 
+    run_id = str(spec.get("run_id") or f"recursive_opt:{int(time.time() * 1000)}")
     results: Dict[str, Any] = {}
     levels: Dict[str, Any] = {}
-    for ls in spec["levels"]:
+    progress_summary: Dict[str, Any] = {"run_id": run_id, "levels": {}}
+    global_step = 0
+    for level_index, ls in enumerate(spec["levels"]):
         lid = ls["id"]
         level = compile_level(ls, memory, families, spec.get("scoring"))
         levels[lid] = level
@@ -313,8 +318,39 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
             # wall-time as a first-class objective: pair with
             # "objective_config": {"mode": "pareto", "minimize": ["wall_time"]}
             opt_kwargs["guide"] = TimedGuide(RecursiveGuide())
+        objective_mode = str((oc or {}).get("mode", "scalar"))
+        selected_by = "pareto" if objective_mode == "pareto" else "objective"
+        task_ids = _level_task_ids(ls, families)
+        progress_logger = RecursiveOptProgressLogger(
+            memory=memory,
+            run_id=run_id,
+            level_id=lid,
+            level_index=level_index,
+            task_ids=task_ids,
+            global_step_offset=global_step,
+            echo=True,
+        )
+        # Use a recursive-opt logger by default so progress is persisted without
+        # changing core trainer internals. It still mirrors the ConsoleLogger.
+        opt_kwargs["logger"] = progress_logger
+        memory.record_progress(
+            run_id=run_id,
+            level_id=lid,
+            level_index=level_index,
+            event="level_start",
+            level_step=0,
+            global_step=global_step,
+            metrics={
+                "planned_steps": iterations,
+                "surface": ls["surface"],
+                "objective_mode": objective_mode,
+            },
+            task_ids=task_ids,
+            budget=budget_snapshot(),
+            selected_by=selected_by,
+        )
         _t0 = time.time()
-        optimize(
+        trainer_result = optimize(
             level, _dataset_for(ls, families, iterations),
             optimizer=(optimizer if optimizer is not None else level_optimizer),
             trainer=(trainer if trainer is not None else ls.get("trainer")),
@@ -324,8 +360,39 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
 
         score, data = _final_eval(level, ls, families)
         score = _clamp(score, _clip_bounds(spec.get("scoring")))  # belt: sentinel can never leak raw
+        executed_steps = max(
+            progress_logger.executed_steps,
+            int(getattr(trainer_result, "n_iters", 0) or 0),
+        )
+        level_progress = progress_logger.build_summary(
+            planned_steps=iterations,
+            final_score=float(score),
+            selected_by=selected_by,
+            objective_mode=objective_mode,
+        )
+        level_progress["executed_steps"] = executed_steps
+        artifact_metrics = dict(data) if isinstance(data, dict) else {}
+        artifact_metrics["scores"] = dict(level_progress["scores"])
+        artifact_metrics["progress"] = dict(level_progress)
         rec = save_priors(memory, level, ls, score,
-                          metrics=data if isinstance(data, dict) else None)
+                          metrics=artifact_metrics)
+        level_progress["artifact_id"] = getattr(rec, "artifact_id", None)
+        progress_summary["levels"][lid] = level_progress
+        memory.record_progress(
+            run_id=run_id,
+            level_id=lid,
+            level_index=level_index,
+            event="level_end",
+            level_step=max(0, executed_steps - 1) if executed_steps else None,
+            global_step=global_step + executed_steps,
+            artifact_id=getattr(rec, "artifact_id", None),
+            problem_score=float(score),
+            objective_score=float(score),
+            metrics={"summary": level_progress, "wall_s": wall_s},
+            task_ids=task_ids,
+            budget=budget_snapshot(),
+            selected_by=selected_by,
+        )
         results[lid] = {
             "surface": ls["surface"],
             "score": score,
@@ -335,8 +402,12 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
             "tools": reused["tools"],
             "artifact_id": getattr(rec, "artifact_id", None),
             "depends_on": list(ls.get("depends_on") or []),  # recorded dependency edges
+            "progress": level_progress,
         }
-    return {"results": results, "levels": levels, "memory": memory}
+        global_step += executed_steps
+    memory.write_run_summary(progress_summary)
+    return {"results": results, "levels": levels, "memory": memory,
+            "progress": progress_summary}
 
 
 # --------------------------------------------------------------------------- #
@@ -365,6 +436,19 @@ def _config_task_ids(level_spec: dict, families: Dict[str, List[str]]) -> List[s
     if task:
         return [str(task)]
     return [str(families[level_spec["family"]][0])]
+
+
+def _level_task_ids(level_spec: dict, families: Dict[str, List[str]]) -> List[str]:
+    """Return task ids associated with any level for progress records."""
+    if level_spec.get("surface") == "config" and (
+        level_spec.get("tasks") or level_spec.get("task") or level_spec.get("family") in families
+    ):
+        return _config_task_ids(level_spec, families)
+    selected = _resolve_families(level_spec, families)
+    out: List[str] = []
+    for tasks in selected.values():
+        out.extend(str(task) for task in tasks)
+    return out
 
 
 def _dataset_for(level_spec: dict, families: Dict[str, List[str]], iterations: int) -> dict:

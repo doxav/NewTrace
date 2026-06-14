@@ -31,7 +31,8 @@ from .levels import (
     validate_config_field,
     validate_level_config,
 )
-from .memory import MemoryLite, EpisodeTrace, FamilyPrior, ArtifactRecord
+from .memory import MemoryLite, EpisodeTrace, FamilyPrior, ArtifactRecord, ProgressEvent
+from .progress import RecursiveOptProgressLogger
 from .capabilities import (
     AgenticOptimizer,
     default_optimizer_tools,
@@ -98,6 +99,8 @@ __all__ = [
     "EpisodeTrace",
     "FamilyPrior",
     "ArtifactRecord",
+    "ProgressEvent",
+    "RecursiveOptProgressLogger",
     "AgenticOptimizer",
     "default_optimizer_tools",
     "parse_optimizer_tool_policy",
