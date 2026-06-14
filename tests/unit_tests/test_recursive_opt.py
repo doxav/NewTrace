@@ -20,9 +20,13 @@ from opto.features.recursive_opt.levels import INVALID_CONFIG_SCORE, DEFAULT_INV
 from opto.features.recursive_opt.tracebench import (
     TraceBenchTaskAdapter,
     _scalarize_score_dict,
+    make_artifact_emitter_evaluator,
     make_code_evaluator,
     make_inner_runner,
     make_multiobjective_evaluator,
+    make_tracebench_artifact_evaluator,
+    make_tracebench_direct_answer_evaluator,
+    load_tracebench_direct_answer_examples,
     normalize_task_id,
     validate_batch_design_indices,
 )
@@ -117,6 +121,16 @@ def _batch_design_improved(self: Any, n: int, k: int) -> List[int]:
     hard = [i for i in range(n) if i % 3 == 0]
     rest = [i for i in range(n) if i % 3 != 0]
     return (hard + rest)[:k]
+
+
+def _artifact_emitter_good(self: Any) -> str:
+    """Return the artifact text expected by the fake bundle guide."""
+    return "GOOD"
+
+
+def _direct_answer_good(self: Any, question: str) -> str:
+    """Return the answer expected by the fake direct-answer evaluator."""
+    return "GOOD"
 
 
 def test_recursive_guide_satisfies_trainer_guide_contract() -> None:
@@ -596,6 +610,132 @@ def test_score_bundle_falls_back_without_trace_bench_public_evaluator(monkeypatc
 
     assert score == pytest.approx(0.5)
     assert "train_dataset: mean over 2 real example(s)" in feedback
+
+
+def test_tracebench_artifact_evaluator_applies_artifact_text(monkeypatch) -> None:
+    class _Guide:
+        def __call__(
+            self,
+            task_input: str,
+            response: str,
+            info: Any,
+        ) -> tuple[float, str]:
+            return (1.0 if response == info else 0.0), f"response={response}"
+
+    class _BundleAdapter(TraceBenchTaskAdapter):
+        def __init__(self) -> None:
+            super().__init__(max_examples=1, inner_steps=0)
+
+        def _load_bundle(self, task_id: str, *, fresh: bool = False) -> Dict[str, Any]:
+            return {
+                "param": trace.node("BAD", trainable=True),
+                "guide": _Guide(),
+                "train_dataset": {"inputs": ["q"], "infos": ["GOOD"]},
+            }
+
+    monkeypatch.setattr(TB, "_evaluate_trace_bench_bundle", None)
+    TB.register_task_adapter(_BundleAdapter())
+
+    score, feedback = make_tracebench_artifact_evaluator("internal:fake")("GOOD")
+
+    assert score == pytest.approx(1.0)
+    assert "mode=seeded" in feedback
+    assert "response=GOOD" in feedback
+
+
+def test_artifact_emitter_evaluator_invokes_trainable_callable(monkeypatch, tmp_path: Path) -> None:
+    class _Guide:
+        def __call__(
+            self,
+            task_input: str,
+            response: str,
+            info: Any,
+        ) -> tuple[float, str]:
+            return (1.0 if response == info else 0.0), f"response={response}"
+
+    class _BundleAdapter(TraceBenchTaskAdapter):
+        def __init__(self) -> None:
+            super().__init__(max_examples=1, inner_steps=0)
+
+        def _load_bundle(self, task_id: str, *, fresh: bool = False) -> Dict[str, Any]:
+            return {
+                "param": trace.node("BAD", trainable=True),
+                "guide": _Guide(),
+                "train_dataset": {"inputs": ["q"], "infos": ["GOOD"]},
+            }
+
+    monkeypatch.setattr(TB, "_evaluate_trace_bench_bundle", None)
+    TB.register_task_adapter(_BundleAdapter())
+    memory = MemoryLite(root=str(tmp_path))
+    level = CodeArtifactLevel(
+        ComponentSpec(
+            name="artifact_emitter",
+            baseline=_artifact_emitter_good,
+            evaluate=make_artifact_emitter_evaluator("internal:fake"),
+        ),
+        memory=memory,
+    )
+
+    score, feedback = RecursiveGuide()("internal:fake", level.forward("internal:fake"), None)
+
+    assert score == pytest.approx(1.0)
+    assert "artifact_emitter" in feedback
+    assert memory.best_artifact("internal:fake", "code") is not None
+
+
+def test_tracebench_direct_answer_evaluator_scores_dataset_infos(monkeypatch, tmp_path: Path) -> None:
+    class _BundleAdapter(TraceBenchTaskAdapter):
+        def __init__(self) -> None:
+            super().__init__(max_examples=2, inner_steps=0)
+
+        def _load_bundle(self, task_id: str, *, fresh: bool = False) -> Dict[str, Any]:
+            return {
+                "param": trace.node("unused", trainable=True),
+                "guide": object(),
+                "train_dataset": {
+                    "inputs": ["q1", "q2"],
+                    "infos": ["GOOD", "GOOD"],
+                },
+            }
+
+    TB.register_task_adapter(_BundleAdapter())
+    memory = MemoryLite(root=str(tmp_path))
+    level = CodeArtifactLevel(
+        ComponentSpec(
+            name="direct_answer",
+            baseline=_direct_answer_good,
+            evaluate=make_tracebench_direct_answer_evaluator("internal:fake"),
+        ),
+        memory=memory,
+    )
+
+    score, feedback = RecursiveGuide()("internal:fake", level.forward("internal:fake"), None)
+
+    assert score == pytest.approx(1.0)
+    assert "accuracy=1.000" in feedback
+    assert memory.best_artifact("internal:fake", "code") is not None
+
+
+def test_load_tracebench_direct_answer_examples_uses_registered_bundle(monkeypatch) -> None:
+    class _BundleAdapter(TraceBenchTaskAdapter):
+        def __init__(self) -> None:
+            super().__init__(max_examples=2, inner_steps=0)
+
+        def _load_bundle(self, task_id: str, *, fresh: bool = False) -> Dict[str, Any]:
+            return {
+                "param": trace.node("unused", trainable=True),
+                "guide": object(),
+                "train_dataset": {
+                    "inputs": ["q1", "q2", "q3"],
+                    "infos": [{"answer": "A1"}, {"target": "A2"}, {"answer": "A3"}],
+                },
+            }
+
+    TB.register_task_adapter(_BundleAdapter())
+
+    examples = load_tracebench_direct_answer_examples("internal:fake")
+
+    assert examples == [("q1", "A1"), ("q2", "A2")]
 
 
 def test_tracebench_adapter_scores_real_internal_task_when_available() -> None:

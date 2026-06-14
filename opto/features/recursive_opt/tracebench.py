@@ -1065,6 +1065,166 @@ def make_code_evaluator(task_id: str, component: str):
     return evaluate
 
 
+def make_tracebench_artifact_evaluator(
+    task_id: str,
+    *,
+    max_examples: Optional[int] = None,
+    credit_horizon: str = "episode",
+) -> Callable[[str, Any], Tuple[float, str]]:
+    """Score a raw artifact text through the registered Trace-Bench bundle.
+
+    This is the generic bridge for code/PAL prompt-like artifacts that are not
+    naturally represented as a Python callable. It reuses the same
+    ``TraceBenchTaskAdapter._apply_starting_artifact`` and ``_score_bundle`` path
+    as config/O0 scoring, so notebook experiments do not duplicate benchmark
+    scoring logic or accidentally evaluate a different surface.
+    """
+
+    def evaluate_artifact(artifact_text: str, family: Any = None) -> Tuple[float, str]:
+        adapter = _require_adapter("make_tracebench_artifact_evaluator")
+        if not hasattr(adapter, "_load_bundle") or not hasattr(adapter, "_apply_starting_artifact"):
+            raise RuntimeError(
+                "make_tracebench_artifact_evaluator requires a TraceBenchTaskAdapter-like "
+                "adapter with _load_bundle(...) and _apply_starting_artifact(...)."
+            )
+        target = normalize_task_id(str(family or task_id))
+        bundle = adapter._load_bundle(target, fresh=True)
+        text = str(artifact_text or "")
+        applied = adapter._apply_starting_artifact(bundle, LevelConfig(starting_artifact=text))
+        if text.strip() and not applied:
+            raise RuntimeError(
+                f"Artifact text is inactive for task {target!r}: the bundle param exposes "
+                "none of system_prompt/parameters()/_data."
+            )
+        limit = int(max_examples or getattr(adapter, "max_examples", 1))
+        score, feedback = _score_bundle(bundle, limit, credit_horizon=credit_horizon)
+        mode = "seeded" if text.strip() else "bundle-default"
+        return score, f"[artifact:{target}] mode={mode}; chars={len(text)}. {feedback}"
+
+    return evaluate_artifact
+
+
+def make_artifact_emitter_evaluator(
+    task_id: str,
+    *,
+    max_examples: Optional[int] = None,
+    credit_horizon: str = "episode",
+) -> Callable[[Callable, Any], Tuple[float, str]]:
+    """Adapt a code component that emits artifact text into a CodeArtifact evaluator.
+
+    ``CodeArtifactLevel`` requires the evaluator to invoke the trainable callable
+    so gradients/feedback reach the code parameter. The emitted string is then
+    scored by :func:`make_tracebench_artifact_evaluator`, which keeps the actual
+    Trace-Bench scoring path DRY.
+    """
+    evaluate_artifact = make_tracebench_artifact_evaluator(
+        task_id,
+        max_examples=max_examples,
+        credit_horizon=credit_horizon,
+    )
+
+    def evaluate(component_callable: Callable, family: Any) -> Tuple[float, str]:
+        try:
+            artifact_text = component_callable()
+        except TypeError:
+            artifact_text = component_callable(task_id=family or task_id)
+        score, feedback = evaluate_artifact(str(artifact_text), family or task_id)
+        return score, f"[artifact_emitter:{task_id}] {feedback}"
+
+    return evaluate
+
+
+def make_tracebench_direct_answer_evaluator(
+    task_id: str,
+    *,
+    max_examples: Optional[int] = None,
+    target_getter: Optional[Callable[[Any], Any]] = None,
+    normalizer: Optional[Callable[[Any], str]] = None,
+) -> Callable[[Callable, Any], Tuple[float, str]]:
+    """Score a code component that answers Trace-Bench examples directly.
+
+    Use this when the trainable surface is real agent code
+    ``candidate(question) -> answer`` and the bundle dataset's ``infos`` carry the
+    reference answers. The official bundle still supplies the examples; this helper
+    only replaces a task-specific guide that expects a different artifact shape
+    (for example PAL code instead of direct answers).
+    """
+    normalize = normalizer or (lambda value: str(value).strip().lower())
+
+    def evaluate(component_callable: Callable, family: Any) -> Tuple[float, str]:
+        target = normalize_task_id(str(family or task_id))
+        examples = load_tracebench_direct_answer_examples(
+            target,
+            max_examples=max_examples,
+            target_getter=target_getter,
+        )
+        scores: List[float] = []
+        feedbacks: List[str] = []
+        for i, (question, expected) in enumerate(examples):
+            try:
+                try:
+                    answer = component_callable(question=question)
+                except TypeError:
+                    answer = component_callable(question)
+            except Exception as exc:
+                scores.append(0.0)
+                feedbacks.append(f"example[{i}]: ERR {type(exc).__name__}: {exc}")
+                continue
+            ok = normalize(answer) == normalize(expected)
+            scores.append(1.0 if ok else 0.0)
+            if ok:
+                feedbacks.append(f"example[{i}]: CORRECT {answer!r}")
+            else:
+                feedbacks.append(
+                    f"example[{i}]: WRONG got {answer!r}; expected {expected!r}"
+                )
+        score = sum(scores) / len(scores)
+        return (
+            score,
+            f"[direct_answer:{target}] accuracy={score:.3f} "
+            f"over {len(scores)} real example(s). " + " | ".join(feedbacks[:5]),
+        )
+
+    return evaluate
+
+
+def load_tracebench_direct_answer_examples(
+    task_id: str,
+    *,
+    max_examples: Optional[int] = None,
+    target_getter: Optional[Callable[[Any], Any]] = None,
+) -> List[Tuple[Any, Any]]:
+    """Load ``(question, expected_answer)`` pairs from a registered Trace-Bench bundle.
+
+    This helper is intentionally narrow: it supports direct-answer code/graph
+    experiments that use Trace-Bench datasets but do not use a task's default
+    artifact runner. Keeping dataset extraction here avoids each experiment
+    reaching into adapter internals differently.
+    """
+    adapter = _require_adapter("load_tracebench_direct_answer_examples")
+    if not hasattr(adapter, "_load_bundle"):
+        raise RuntimeError(
+            "load_tracebench_direct_answer_examples requires a TraceBenchTaskAdapter-like "
+            "adapter with _load_bundle(...)."
+        )
+    get_target = target_getter or (
+        lambda info: info.get("answer", info.get("target")) if isinstance(info, dict) else info
+    )
+    target = normalize_task_id(task_id)
+    bundle = adapter._load_bundle(target, fresh=True)
+    dataset_name, dataset = _evaluation_dataset(bundle)
+    inputs = list(dataset.get("inputs") or [])
+    infos = _dataset_infos(dataset)
+    limit = min(
+        len(inputs),
+        len(infos),
+        int(max_examples or getattr(adapter, "max_examples", 1)),
+    )
+    if limit <= 0:
+        raise ValueError(f"{dataset_name} is empty")
+    return [(question, get_target(info)) for question, info in zip(inputs[:limit], infos[:limit])]
+
+
 def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4,
                                   required_terms: Optional[Tuple[str, ...]] = None):
     """Return evaluate(capability_callable, family) -> (score_dict, feedback)
