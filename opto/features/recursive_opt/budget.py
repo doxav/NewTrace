@@ -338,3 +338,66 @@ def _float_limit_env(name: str, default: Optional[float | int]) -> Optional[floa
     if value < 0:
         raise ValueError(f"{name} must be non-negative, got {value}")
     return value
+
+
+# ---------------------------------------------------------------------------
+# Public spec-dict <-> budget conversion (promoted from the notebook glue).
+#
+# The spec dict uses short, user-facing keys; the dataclass uses max_* fields.
+# ``make_budget`` is the ONE canonical mapping so spec.py, optimize(), and any
+# example/notebook all build budgets the same way (DRY). ``to_spec_dict`` is the
+# lossless inverse, so a budget can be round-tripped back into a spec.
+# ---------------------------------------------------------------------------
+
+# spec-dict key  ->  RecursiveOptBudget constructor kwarg
+_BUDGET_SPEC_KEYS = {
+    "optimizer_llm_calls": "max_optimizer_llm_calls",
+    "eval_llm_calls": "max_eval_llm_calls",
+    "candidates": "max_candidates",
+    "wall_time_s": "max_wall_time_s",
+    "on_exceed": "stop_policy",
+}
+
+
+def make_budget(budget: "RecursiveOptBudget | dict | None") -> Optional["RecursiveOptBudget"]:
+    """Return a ``RecursiveOptBudget`` from a spec-style dict (or pass through).
+
+    Accepts the public spec keys (``optimizer_llm_calls``, ``eval_llm_calls``,
+    ``candidates``, ``wall_time_s``, ``on_exceed``). Returns ``None`` for an
+    empty/None input (i.e. "no budget"), an existing budget unchanged, and a new
+    budget for a dict. Unknown keys raise so typos surface immediately.
+    """
+    if budget is None:
+        return None
+    if isinstance(budget, RecursiveOptBudget):
+        return budget
+    if not isinstance(budget, dict):
+        raise TypeError(f"budget must be a dict, RecursiveOptBudget, or None; got {type(budget)!r}")
+    if not budget:
+        return None
+    unknown = set(budget) - set(_BUDGET_SPEC_KEYS)
+    if unknown:
+        raise ValueError(
+            f"unknown budget keys {sorted(unknown)}; valid keys are {sorted(_BUDGET_SPEC_KEYS)}"
+        )
+    kwargs = {_BUDGET_SPEC_KEYS[k]: v for k, v in budget.items()}
+    kwargs.setdefault("stop_policy", "return_best")
+    return RecursiveOptBudget(**kwargs)
+
+
+def budget_to_spec_dict(budget: Optional["RecursiveOptBudget"]) -> dict:
+    """Lossless inverse of :func:`make_budget` (only set limits are emitted)."""
+    if budget is None:
+        return {}
+    out: dict = {}
+    for spec_key, attr in _BUDGET_SPEC_KEYS.items():
+        value = getattr(budget, attr)
+        if attr == "stop_policy":
+            if value and value != "return_best":
+                out[spec_key] = value
+        elif value is not None:
+            out[spec_key] = value
+    return out
+
+
+RecursiveOptBudget.to_spec_dict = lambda self: budget_to_spec_dict(self)

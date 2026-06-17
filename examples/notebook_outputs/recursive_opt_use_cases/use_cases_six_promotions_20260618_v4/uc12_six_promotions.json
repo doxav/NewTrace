@@ -1,0 +1,114 @@
+[
+  {
+    "artifact": null,
+    "item": "Item 4 budget",
+    "metric": 1.0,
+    "notes": "Dict, object, and method forms share one mapping.",
+    "status": "pass",
+    "variant": "lossless make_budget/to_spec_dict"
+  },
+  {
+    "artifact": "*:capability:0:86721",
+    "item": "Item 4 budget",
+    "metric": 7,
+    "notes": "Override applies to the run and leaves spec['budget'] unmutated.",
+    "status": "pass",
+    "variant": "run_spec budget override isolation"
+  },
+  {
+    "artifact": null,
+    "item": "Item 3 seeds",
+    "metric": 1.0,
+    "notes": "random sequence=[0.052364, 0.087187, 0.407242]",
+    "status": "pass",
+    "variant": "seed_everything controls RNG"
+  },
+  {
+    "artifact": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_six_promotions_20260618_v4/mem_uc12_seeded_seed0",
+    "item": "Item 3 seeds",
+    "metric": 1.0,
+    "notes": "n_valid=3, errors=0",
+    "status": "pass",
+    "variant": "run_spec(seeds=) returns RepeatedResult"
+  },
+  {
+    "artifact": null,
+    "item": "Item 1 active fields",
+    "metric": 1.0,
+    "notes": "batch_design=(<Effect.OPTIMIZATION: 'optimization'>,); credit_horizon=(<Effect.FEEDBACK: 'feedback'>, <Effect.TRACE: 'trace'>)",
+    "status": "pass",
+    "variant": "adapter effect contract"
+  },
+  {
+    "artifact": null,
+    "item": "Item 1 active fields",
+    "metric": 4,
+    "notes": "orders_by_input_length={'random': [28, 26, 25, 38, 19, 37], 'failure_balanced': [38, 37, 28, 26, 25, 19], 'curriculum': [19, 25, 26, 28, 37, 38], 'diversity': [19, 38, 25, 37, 26, 28]}; this proves the consumer path before score interpretation.",
+    "status": "pass",
+    "variant": "batch_design changes inner-training batch order"
+  },
+  {
+    "artifact": null,
+    "item": "Item 1 active fields",
+    "metric": 176,
+    "notes": "summary lengths={'truncated': 26, 'episode': 84, 'step': 202, 'full': 142}",
+    "status": "pass",
+    "variant": "credit_horizon changes optimizer-visible feedback"
+  },
+  {
+    "artifact": null,
+    "item": "Item 2 numeric routing",
+    "metric": 2,
+    "notes": "{'numeric_fields': ['batch_design', 'batch_size'], 'text_fields': ['starting_artifact'], 'numeric_optimizer': 'optuna', 'text_optimizer': 'OptoPrimeV2', 'order': 'numeric_then_text'}",
+    "status": "pass",
+    "variant": "mixed target routing"
+  },
+  {
+    "artifact": "{'batch_design': 'failure_balanced', 'batch_size': 8}",
+    "item": "Item 2 numeric routing",
+    "metric": 1.0,
+    "notes": "history_len=30; optuna is optional, fallback is deterministic.",
+    "status": "pass",
+    "variant": "OptunaOptimizer/fallback learns categorical+int optimum"
+  },
+  {
+    "artifact": null,
+    "item": "Item 2 numeric routing",
+    "metric": 8,
+    "notes": "Continuous solve rounded back into the integer field domain.",
+    "status": "pass",
+    "variant": "LeastSquaresOptimizer handles integer numeric field"
+  },
+  {
+    "artifact": null,
+    "item": "Item 5 priors",
+    "metric": 3,
+    "notes": "o2_fields=('starting_artifact', 'trace_type', 'batch_design'); o3_fields=('starting_artifact', 'trace_type', 'batch_design')",
+    "status": "pass",
+    "variant": "active default policy/prior fields"
+  },
+  {
+    "artifact": null,
+    "item": "Item 5 priors",
+    "metric": 1.0,
+    "notes": "Artifact text stays clean; family prior is in the trainable node description.",
+    "status": "pass",
+    "variant": "initial_knowledge reaches optimizer docs"
+  },
+  {
+    "artifact": null,
+    "item": "Item 6 search policy",
+    "metric": 19,
+    "notes": "recent='Lesson: arithmetic answers need final verification; parse fa'; diverse='Lesson: arithmetic answers need final verification; parse fa'",
+    "status": "pass",
+    "variant": "policy changes retrieved lesson"
+  },
+  {
+    "artifact": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_six_promotions_20260618_v4/mem_uc12_search_policy",
+    "item": "Item 6 search policy",
+    "metric": 0.4,
+    "notes": "search-policy lift=+0.400 (baseline=0.500 -> enriched=0.900); lesson='Avoid: parse failures disappear when examples include expect'",
+    "status": "pass",
+    "variant": "tool callable and evaluator lift"
+  }
+]

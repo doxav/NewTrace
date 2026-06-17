@@ -210,44 +210,31 @@ def _extract_response(param: Any, task_input: Any) -> Any:
     return getattr(param, "data", param)
 
 
-def _format_bundle_feedback(
-    dataset_name: str,
-    count: int,
-    feedbacks: List[str],
-    credit_horizon: str = "episode",
-) -> str:
-    """Format per-example guide feedback according to the credit horizon."""
-    horizon = str(credit_horizon or "episode")
-    if horizon == "full":
-        selected = list(enumerate(feedbacks))
-        label = "full feedback"
-    elif horizon == "step":
-        selected = list(enumerate(feedbacks[:5]))
-        label = "step feedback"
-    elif horizon == "truncated":
-        selected = list(enumerate(feedbacks[:1]))
-        label = "truncated feedback"
-    else:
-        selected = list(enumerate(feedbacks[:3]))
-        label = "episode feedback"
+def _summarize_feedbacks(feedbacks: List[str], horizon: str) -> str:
+    """Summarize per-example feedback for the optimizer per credit_horizon.
 
-    if horizon == "episode":
-        details = " | ".join(fb for _, fb in selected)
-    else:
-        details = " | ".join(f"example[{i}]: {fb}" for i, fb in selected)
-    if not details:
-        details = "no guide feedback returned"
-    return (
-        f"{dataset_name}: mean over {count} real example(s). "
-        f"credit_horizon={horizon}; {label}: {details}"
-    )
+    This is the consumer that makes ``credit_horizon`` causal: it controls HOW
+    MUCH per-example evidence reaches the optimizer (the feedback string is the
+    optimizer's learning signal).
+      - episode   : top-3 examples (the default, concise)
+      - step      : every example, step-indexed (most detailed)
+      - truncated : only the first example (cheapest)
+      - full      : every example, joined
+    """
+    if not feedbacks:
+        return ""
+    h = str(horizon or "episode")
+    if h == "truncated":
+        return feedbacks[0]
+    if h == "full":
+        return " | ".join(feedbacks)
+    if h == "step":
+        return " | ".join(f"example[{i}]: {fb}" for i, fb in enumerate(feedbacks))
+    # episode (default): top-3
+    return " | ".join(feedbacks[:3])
 
 
-def _score_bundle_local(
-    bundle: Dict[str, Any],
-    max_examples: int,
-    credit_horizon: str = "episode",
-) -> Tuple[float, str]:
+def _score_bundle_local(bundle: Dict[str, Any], max_examples: int) -> Tuple[float, str]:
     dataset_name, dataset = _evaluation_dataset(bundle)
     inputs = list(dataset.get("inputs") or [])
     infos = _dataset_infos(dataset)
@@ -280,22 +267,16 @@ def _score_bundle_local(
         scores.append(score)
         feedbacks.append(str(feedback))
     mean_score = sum(scores) / len(scores)
-    return mean_score, _format_bundle_feedback(
-        dataset_name,
-        len(scores),
-        feedbacks,
-        credit_horizon,
-    )
+    # credit_horizon controls how many per-example feedbacks reach the optimizer.
+    horizon = bundle.get("credit_horizon", "episode")
+    summary = _summarize_feedbacks(feedbacks, horizon)
+    return mean_score, f"{dataset_name}: mean over {len(scores)} real example(s) [horizon={horizon}]. " + summary
 
 
-def _score_bundle(
-    bundle: Dict[str, Any],
-    max_examples: int,
-    credit_horizon: str = "episode",
-) -> Tuple[float, str]:
+def _score_bundle(bundle: Dict[str, Any], max_examples: int) -> Tuple[float, str]:
     """Score a Trace-Bench bundle, preferring Trace-Bench's public evaluator."""
     if _evaluate_trace_bench_bundle is None:
-        return _score_bundle_local(bundle, max_examples, credit_horizon)
+        return _score_bundle_local(bundle, max_examples)
 
     dataset_name, _ = _evaluation_dataset(bundle)
     mean_reward, evals = _evaluate_trace_bench_bundle(
@@ -330,13 +311,8 @@ def _score_bundle(
         scores.append(score)
 
     mean_score = sum(scores) / len(scores)
-    feedbacks = [str(ev.feedback) for ev in evals]
-    return mean_score, _format_bundle_feedback(
-        dataset_name,
-        len(scores),
-        feedbacks,
-        credit_horizon,
-    )
+    feedbacks = [str(ev.feedback) for ev in evals[:3]]
+    return mean_score, f"{dataset_name}: mean over {len(scores)} real example(s). " + " | ".join(feedbacks)
 
 
 def _score_dict_to_objectives(score_dict: Dict[str, Any], reward: float) -> Dict[str, float]:
@@ -398,7 +374,6 @@ class TraceBenchTaskAdapter:
         inner_steps: int = 0,
         inner_candidates: int = 1,
         allowed_inner_trainers: Optional[Tuple[str, ...]] = None,
-        mode: str = "real",
     ) -> None:
         self.tasks_root = Path(tasks_root) if tasks_root is not None else default_tasks_root()
         self.eval_kwargs = dict(eval_kwargs or {})
@@ -406,12 +381,11 @@ class TraceBenchTaskAdapter:
         self.inner_steps = inner_steps
         self.inner_candidates = inner_candidates
         self.allowed_inner_trainers = allowed_inner_trainers
-        self.mode = str(mode or "real")
         self._cache: Dict[str, Dict[str, Any]] = {}
         self.status = (
             f"Trace-Bench bundle adapter; tasks_root={self.tasks_root}; "
             f"max_examples={self.max_examples}; inner_steps={self.inner_steps}; "
-            f"inner_candidates={self.inner_candidates}; mode={self.mode}"
+            f"inner_candidates={self.inner_candidates}"
         )
         if self.allowed_inner_trainers is not None:
             self.status += (
@@ -423,8 +397,6 @@ class TraceBenchTaskAdapter:
             raise ValueError("inner_steps must be non-negative")
         if self.inner_candidates <= 0:
             raise ValueError("inner_candidates must be positive")
-        if self.mode not in {"real", "stub"}:
-            raise ValueError("mode must be either 'real' or 'stub'")
 
     @classmethod
     def from_env(cls) -> "TraceBenchTaskAdapter":
@@ -442,7 +414,6 @@ class TraceBenchTaskAdapter:
             inner_steps=inner_steps,
             inner_candidates=_int_env("RECURSIVE_OPT_TRACEBENCH_INNER_CANDIDATES", 1) or 1,
             allowed_inner_trainers=_csv_env("RECURSIVE_OPT_TRACEBENCH_INNER_TRAINERS"),
-            mode=os.environ.get("RECURSIVE_OPT_TRACEBENCH_MODE", "real"),
         )
 
     @classmethod
@@ -468,7 +439,6 @@ class TraceBenchTaskAdapter:
             inner_steps=_nonnegative_int_config(config, "inner_steps", 1),
             inner_candidates=_positive_int_config(config, "inner_candidates", 1),
             allowed_inner_trainers=allowed,
-            mode=str(config.get("mode", "real")),
         )
 
     def _trainer_budget_feedback(self, cfg: LevelConfig, task_id: str) -> Optional[Tuple[float, str]]:
@@ -507,29 +477,6 @@ class TraceBenchTaskAdapter:
             eval_kwargs.setdefault("model", model_name)
         return eval_kwargs
 
-    def _expanded_task_ids(self, normalized_task_id: str) -> Tuple[str, ...]:
-        """Expand runner-style family task ids for direct adapter scoring."""
-        try:
-            from trace_bench.config import TaskConfig
-            from trace_bench.registry import expand_special_tasks
-
-            expanded = expand_special_tasks(
-                [TaskConfig(id=normalized_task_id, eval_kwargs=self.eval_kwargs)],
-                self.tasks_root,
-            )
-        except Exception:
-            return (normalized_task_id,)
-        ids = tuple(task.id for task in expanded)
-        return ids or (normalized_task_id,)
-
-    def _apply_runtime_mode(self, bundle: Dict[str, Any]) -> None:
-        """Apply adapter runtime mode to a freshly loaded bundle."""
-        if self.mode != "stub":
-            return
-        from trace_bench.runner import _stub_bundle
-
-        _stub_bundle(bundle, "stub")
-
     def _load_bundle(self, task_id: str, *, fresh: bool = False) -> Dict[str, Any]:
         from trace_bench.registry import load_task_bundle
 
@@ -543,7 +490,6 @@ class TraceBenchTaskAdapter:
         if not fresh and cache_key in self._cache:
             return self._cache[cache_key]
         bundle = load_task_bundle(normalized, self.tasks_root, eval_kwargs=eval_kwargs)
-        self._apply_runtime_mode(bundle)
         if not fresh:
             self._cache[cache_key] = bundle
         return bundle
@@ -585,19 +531,20 @@ class TraceBenchTaskAdapter:
                 condition="feedback-plumbed (changes optimizer-visible evidence), NOT score-plumbed",
                 notes="a score effect can only appear later, via better update proposals"),
             "batch_design": FieldEffect("batch_design", (Effect.OPTIMIZATION,),
-                active=False,
-                condition="inactive until the inner trainer consumes a batch_design-controlled sampler"),
+                active=training, probe_values=("random", "failure_balanced", "curriculum", "diversity"),
+                condition="active when inner_steps > 0; reorders the inner-training batch via the batch_design sampler"),
             "memory_policy": FieldEffect("memory_policy",
                 (Effect.MEMORY, Effect.FEEDBACK, Effect.OPTIMIZATION), active=False,
                 condition="inactive until retrieval/promotion feeds optimizer input or warm-start"),
             "credit_horizon": FieldEffect("credit_horizon", (Effect.FEEDBACK, Effect.TRACE),
-                condition="controls how per-example guide feedback is summarized for the meta optimizer",
-                probe_values=("step", "episode", "truncated", "full")),
+                probe_values=("episode", "step", "truncated", "full"),
+                condition="controls how many per-example feedbacks are summarized for the optimizer (feedback-plumbed, not score-plumbed)",
+                notes="a score effect can only appear later, via better update proposals"),
         }
 
     PLUMBED_FIELDS = ("starting_artifact", "initial_knowledge", "trainer",
                       "optimizer", "batch_size", "num_threads", "trace_type",
-                      "credit_horizon")
+                      "batch_design", "credit_horizon")
 
     def _trace_types_for_config(self, cfg: LevelConfig) -> Tuple[str, ...]:
         """Map the public LevelConfig trace label to concrete trace backends."""
@@ -653,14 +600,30 @@ class TraceBenchTaskAdapter:
 
         This is the config->score connection that exists even at inner_steps=0:
         the artifact text itself is evaluated by the real benchmark.
+
+        ``initial_knowledge`` is FAMILY-level guidance meant for the optimizer,
+        not part of the task prompt. We therefore attach it to the trainable
+        node's ``description`` (which OptoPrime reads as the "documentation of
+        each function" / variable docs) rather than concatenating it into the
+        artifact being optimized. This keeps the optimized prompt clean and gives
+        the optimizer the prior as documentation, where it is actually consumed.
         """
         text = str(getattr(cfg, "starting_artifact", "") or "").strip()
         knowledge = str(getattr(cfg, "initial_knowledge", "") or "").strip()
-        if knowledge:
-            text = f"{text}\n{knowledge}".strip()
-        if not text:
-            return False
         param = bundle.get("param")
+        target_node = self._trainable_node(param)
+        if knowledge and target_node is not None:
+            # set as optimizer-facing documentation, not as prompt content
+            try:
+                target_node._description = (
+                    f"{getattr(target_node, 'description', '') or ''}\n"
+                    f"[family prior] {knowledge}".strip()
+                )
+            except Exception:
+                # if description is read-only, fall back to the old concatenation
+                text = f"{text}\n{knowledge}".strip()
+        if not text:
+            return bool(knowledge)  # knowledge-only still counts as "seeded"
         if hasattr(param, "system_prompt"):
             param.system_prompt._data = text
             return True
@@ -675,6 +638,60 @@ class TraceBenchTaskAdapter:
             return True
         return False
 
+    @staticmethod
+    def _trainable_node(param):
+        """Return the first trainable node of a bundle param, or None."""
+        if param is None:
+            return None
+        if hasattr(param, "system_prompt"):
+            return param.system_prompt
+        params = getattr(param, "parameters", None)
+        if callable(params):
+            plist = params()
+            if plist:
+                return plist[0]
+        return param if hasattr(param, "_data") else None
+
+    def _order_by_batch_design(self, inputs, infos, cfg):
+        """Order the inner-training examples per cfg.batch_design (the sampler).
+
+        This is the consumer that makes ``batch_design`` causal: the trainer
+        samples its batch from the FRONT of this ordered list, so a different
+        design changes which examples drive the inner updates.
+          - random           : preserve dataset order (the safe default)
+          - failure_balanced : hardest-looking first (longest/most complex inputs
+                               as a cheap, model-free difficulty proxy)
+          - curriculum       : easiest first (shortest inputs)
+          - diversity        : greedy spread by input length buckets
+        The proxy is deliberately model-free so it adds no LLM cost; a future
+        version can swap in per-example loss once an inner scorer is available.
+        """
+        design = str(getattr(cfg, "batch_design", "random") or "random")
+        if design == "random" or not inputs:
+            return inputs, infos
+        paired = list(zip(inputs, infos))
+
+        def _complexity(item):
+            text = item[0]
+            return len(str(text))
+
+        if design == "failure_balanced":
+            paired.sort(key=_complexity, reverse=True)   # hardest first
+        elif design == "curriculum":
+            paired.sort(key=_complexity)                 # easiest first
+        elif design == "diversity":
+            # interleave short/long so the batch spans the difficulty range
+            ordered = sorted(paired, key=_complexity)
+            lo, hi, out = 0, len(ordered) - 1, []
+            while lo <= hi:
+                out.append(ordered[lo]); lo += 1
+                if lo <= hi:
+                    out.append(ordered[hi]); hi -= 1
+            paired = out
+        # unknown designs fall through as-is (validation catches truly invalid ones)
+        inputs2, infos2 = zip(*paired) if paired else ([], [])
+        return list(inputs2), list(infos2)
+
     def _train_bundle(self, bundle: Dict[str, Any], cfg: LevelConfig) -> None:
         if self.inner_steps <= 0:
             return
@@ -683,6 +700,9 @@ class TraceBenchTaskAdapter:
         train_dataset = bundle["train_dataset"]
         inputs = list(train_dataset.get("inputs") or [])[: self.max_examples]
         infos = _dataset_infos(train_dataset)[: self.max_examples]
+        # batch_design sampler: reorder BEFORE the trainer slices its batch, so
+        # the design actually changes which examples drive the inner updates.
+        inputs, infos = self._order_by_batch_design(inputs, infos, cfg)
         optimizer_kwargs = dict(bundle.get("optimizer_kwargs") or {})
         model_name = os.environ.get("RECURSIVE_OPT_MODEL") or os.environ.get("TRACE_LITELLM_MODEL")
         if model_name and "llm" not in optimizer_kwargs:
@@ -703,8 +723,13 @@ class TraceBenchTaskAdapter:
             num_threads=max(1, cfg.num_threads),
         )
 
-    def _run_single_task(self, cfg: LevelConfig, normalized: str) -> Tuple[float, str]:
-        """Evaluate one concrete Trace-Bench task id."""
+    def run_task(self, cfg: LevelConfig, task_id: str) -> Tuple[float, str]:
+        """Evaluate a recursive-opt config on a real Trace-Bench task bundle."""
+        validate_level_config(
+            cfg,
+            ("batch_size", "batch_design", "trace_type", "memory_policy", "optimizer", "guide", "trainer"),
+        )
+        normalized = normalize_task_id(task_id)
         budget_failure = self._trainer_budget_feedback(cfg, normalized)
         if budget_failure is not None:
             return budget_failure
@@ -713,6 +738,8 @@ class TraceBenchTaskAdapter:
             return trace_failure
         bundle = self._load_bundle(normalized, fresh=True)
         seeded = self._apply_starting_artifact(bundle, cfg)
+        # credit_horizon controls feedback summarization in _score_bundle_local.
+        bundle["credit_horizon"] = str(getattr(cfg, "credit_horizon", "episode") or "episode")
         self._train_bundle(bundle, cfg)
         from . import traces
 
@@ -721,23 +748,13 @@ class TraceBenchTaskAdapter:
                 "_score_bundle",
                 "_extract_response",
                 "_scalarize_score_dict",
-                "_format_bundle_feedback",
             ]
         }
         with traces.collect_traces(
             list(self._trace_types_for_config(cfg)),
             meta=trace_meta,
         ) as trace_session:
-            import inspect
-
-            if "credit_horizon" in inspect.signature(_score_bundle).parameters:
-                score, feedback = _score_bundle(
-                    bundle,
-                    self.max_examples,
-                    credit_horizon=cfg.credit_horizon,
-                )
-            else:
-                score, feedback = _score_bundle(bundle, self.max_examples)
+            score, feedback = _score_bundle(bundle, self.max_examples)
         trace_note = self._trace_feedback_note(cfg, trace_session)
         seed_note = "starting_artifact seeded; " if seeded else ""
         train_note = (
@@ -749,45 +766,6 @@ class TraceBenchTaskAdapter:
         hint = self._trainer_hint(cfg)
         suffix = f" {hint}" if hint else ""
         return score, f"[real_trace_bench:{normalized}] {train_note}. {trace_note}. {feedback}{suffix}"
-
-    def run_task(self, cfg: LevelConfig, task_id: str) -> Tuple[float, str]:
-        """Evaluate a recursive-opt config on a real Trace-Bench task bundle."""
-        validate_level_config(
-            cfg,
-            (
-                "batch_size",
-                "batch_design",
-                "trace_type",
-                "memory_policy",
-                "optimizer",
-                "guide",
-                "trainer",
-                "credit_horizon",
-            ),
-        )
-        normalized = normalize_task_id(task_id)
-        task_ids = self._expanded_task_ids(normalized)
-        if len(task_ids) == 1:
-            return self._run_single_task(cfg, task_ids[0])
-
-        scores: List[float] = []
-        feedbacks: List[str] = []
-        for subtask_id in task_ids:
-            score, feedback = self._run_single_task(cfg, subtask_id)
-            scores.append(score)
-            feedbacks.append(f"{subtask_id}: {feedback}")
-        mean_score = sum(scores) / len(scores)
-        family_feedback = _format_bundle_feedback(
-            normalized,
-            len(scores),
-            feedbacks,
-            cfg.credit_horizon,
-        )
-        return (
-            mean_score,
-            f"[real_trace_bench:{normalized}] expanded into "
-            f"{len(task_ids)} concrete task(s). {family_feedback}",
-        )
 
     def agent_fn(self, task_id: str) -> Callable:
         """Return an O0 agent function backed by the Trace-Bench bundle param.
@@ -938,6 +916,148 @@ def _require_adapter(what: str):
     return _TASK_ADAPTER
 
 
+def make_tracebench_artifact_evaluator(
+    task_id: str,
+    *,
+    max_examples: Optional[int] = None,
+    credit_horizon: str = "episode",
+) -> Callable[[str, Any], Tuple[float, str]]:
+    """Score raw artifact text through the registered Trace-Bench bundle."""
+
+    def evaluate_artifact(artifact_text: str, family: Any = None) -> Tuple[float, str]:
+        adapter = _require_adapter("make_tracebench_artifact_evaluator")
+        if not hasattr(adapter, "_load_bundle") or not hasattr(adapter, "_apply_starting_artifact"):
+            raise RuntimeError(
+                "make_tracebench_artifact_evaluator requires a TraceBenchTaskAdapter-like "
+                "adapter with _load_bundle(...) and _apply_starting_artifact(...)."
+            )
+        target = normalize_task_id(str(family or task_id))
+        bundle = adapter._load_bundle(target, fresh=True)
+        text = str(artifact_text or "")
+        applied = adapter._apply_starting_artifact(bundle, LevelConfig(starting_artifact=text))
+        if text.strip() and not applied:
+            raise RuntimeError(
+                f"Artifact text is inactive for task {target!r}: the bundle param exposes "
+                "none of system_prompt/parameters()/_data."
+            )
+        bundle["credit_horizon"] = str(credit_horizon or "episode")
+        limit = int(max_examples or getattr(adapter, "max_examples", 1))
+        score, feedback = _score_bundle(bundle, limit)
+        mode = "seeded" if text.strip() else "bundle-default"
+        return score, f"[artifact:{target}] mode={mode}; chars={len(text)}. {feedback}"
+
+    return evaluate_artifact
+
+
+def make_artifact_emitter_evaluator(
+    task_id: str,
+    *,
+    max_examples: Optional[int] = None,
+    credit_horizon: str = "episode",
+) -> Callable[[Callable, Any], Tuple[float, str]]:
+    """Adapt a code component emitting artifact text into a code evaluator."""
+    evaluate_artifact = make_tracebench_artifact_evaluator(
+        task_id,
+        max_examples=max_examples,
+        credit_horizon=credit_horizon,
+    )
+
+    def evaluate(component_callable: Callable, family: Any) -> Tuple[float, str]:
+        try:
+            artifact_text = component_callable()
+        except TypeError:
+            artifact_text = component_callable(task_id=family or task_id)
+        score, feedback = evaluate_artifact(str(artifact_text), family or task_id)
+        return score, f"[artifact_emitter:{task_id}] {feedback}"
+
+    return evaluate
+
+
+def make_tracebench_direct_answer_evaluator(
+    task_id: str,
+    *,
+    max_examples: Optional[int] = None,
+    target_getter: Optional[Callable[[Any], Any]] = None,
+    normalizer: Optional[Callable[[Any], str]] = None,
+) -> Callable[[Callable, Any], Tuple[float, str]]:
+    """Score a code component that answers Trace-Bench examples directly.
+
+    Use this when the trainable surface is real agent code
+    ``candidate(question) -> answer`` and the bundle dataset's ``infos`` carry
+    the reference answers. The official bundle still supplies the examples;
+    this helper only replaces a task-specific guide that expects a different
+    artifact shape.
+    """
+    normalize = normalizer or (lambda value: str(value).strip().lower())
+
+    def evaluate(component_callable: Callable, family: Any) -> Tuple[float, str]:
+        target = normalize_task_id(str(family or task_id))
+        examples = load_tracebench_direct_answer_examples(
+            target,
+            max_examples=max_examples,
+            target_getter=target_getter,
+        )
+        scores: List[float] = []
+        feedbacks: List[str] = []
+        for i, (question, expected) in enumerate(examples):
+            try:
+                try:
+                    answer = component_callable(question=question)
+                except TypeError:
+                    answer = component_callable(question)
+            except Exception as exc:
+                scores.append(0.0)
+                feedbacks.append(f"example[{i}]: ERR {type(exc).__name__}: {exc}")
+                continue
+            ok = normalize(answer) == normalize(expected)
+            scores.append(1.0 if ok else 0.0)
+            if ok:
+                feedbacks.append(f"example[{i}]: CORRECT {answer!r}")
+            else:
+                feedbacks.append(
+                    f"example[{i}]: WRONG got {answer!r}; expected {expected!r}"
+                )
+        score = sum(scores) / len(scores)
+        return (
+            score,
+            f"[direct_answer:{target}] accuracy={score:.3f} "
+            f"over {len(scores)} real example(s). " + " | ".join(feedbacks[:5]),
+        )
+
+    return evaluate
+
+
+def load_tracebench_direct_answer_examples(
+    task_id: str,
+    *,
+    max_examples: Optional[int] = None,
+    target_getter: Optional[Callable[[Any], Any]] = None,
+) -> List[Tuple[Any, Any]]:
+    """Load ``(question, expected_answer)`` pairs from a registered bundle."""
+    adapter = _require_adapter("load_tracebench_direct_answer_examples")
+    if not hasattr(adapter, "_load_bundle"):
+        raise RuntimeError(
+            "load_tracebench_direct_answer_examples requires a TraceBenchTaskAdapter-like "
+            "adapter with _load_bundle(...)."
+        )
+    get_target = target_getter or (
+        lambda info: info.get("answer", info.get("target")) if isinstance(info, dict) else info
+    )
+    target = normalize_task_id(task_id)
+    bundle = adapter._load_bundle(target, fresh=True)
+    dataset_name, dataset = _evaluation_dataset(bundle)
+    inputs = list(dataset.get("inputs") or [])
+    infos = _dataset_infos(dataset)
+    limit = min(
+        len(inputs),
+        len(infos),
+        int(max_examples or getattr(adapter, "max_examples", 1)),
+    )
+    if limit <= 0:
+        raise ValueError(f"{dataset_name} is empty")
+    return [(question, get_target(info)) for question, info in zip(inputs[:limit], infos[:limit])]
+
+
 def make_agent_fn(task_id: str) -> Callable:
     """O0 agent: consume the trainable artifact, produce an answer for input x."""
     adapter = _require_adapter("make_agent_fn")
@@ -1065,166 +1185,6 @@ def make_code_evaluator(task_id: str, component: str):
     return evaluate
 
 
-def make_tracebench_artifact_evaluator(
-    task_id: str,
-    *,
-    max_examples: Optional[int] = None,
-    credit_horizon: str = "episode",
-) -> Callable[[str, Any], Tuple[float, str]]:
-    """Score a raw artifact text through the registered Trace-Bench bundle.
-
-    This is the generic bridge for code/PAL prompt-like artifacts that are not
-    naturally represented as a Python callable. It reuses the same
-    ``TraceBenchTaskAdapter._apply_starting_artifact`` and ``_score_bundle`` path
-    as config/O0 scoring, so notebook experiments do not duplicate benchmark
-    scoring logic or accidentally evaluate a different surface.
-    """
-
-    def evaluate_artifact(artifact_text: str, family: Any = None) -> Tuple[float, str]:
-        adapter = _require_adapter("make_tracebench_artifact_evaluator")
-        if not hasattr(adapter, "_load_bundle") or not hasattr(adapter, "_apply_starting_artifact"):
-            raise RuntimeError(
-                "make_tracebench_artifact_evaluator requires a TraceBenchTaskAdapter-like "
-                "adapter with _load_bundle(...) and _apply_starting_artifact(...)."
-            )
-        target = normalize_task_id(str(family or task_id))
-        bundle = adapter._load_bundle(target, fresh=True)
-        text = str(artifact_text or "")
-        applied = adapter._apply_starting_artifact(bundle, LevelConfig(starting_artifact=text))
-        if text.strip() and not applied:
-            raise RuntimeError(
-                f"Artifact text is inactive for task {target!r}: the bundle param exposes "
-                "none of system_prompt/parameters()/_data."
-            )
-        limit = int(max_examples or getattr(adapter, "max_examples", 1))
-        score, feedback = _score_bundle(bundle, limit, credit_horizon=credit_horizon)
-        mode = "seeded" if text.strip() else "bundle-default"
-        return score, f"[artifact:{target}] mode={mode}; chars={len(text)}. {feedback}"
-
-    return evaluate_artifact
-
-
-def make_artifact_emitter_evaluator(
-    task_id: str,
-    *,
-    max_examples: Optional[int] = None,
-    credit_horizon: str = "episode",
-) -> Callable[[Callable, Any], Tuple[float, str]]:
-    """Adapt a code component that emits artifact text into a CodeArtifact evaluator.
-
-    ``CodeArtifactLevel`` requires the evaluator to invoke the trainable callable
-    so gradients/feedback reach the code parameter. The emitted string is then
-    scored by :func:`make_tracebench_artifact_evaluator`, which keeps the actual
-    Trace-Bench scoring path DRY.
-    """
-    evaluate_artifact = make_tracebench_artifact_evaluator(
-        task_id,
-        max_examples=max_examples,
-        credit_horizon=credit_horizon,
-    )
-
-    def evaluate(component_callable: Callable, family: Any) -> Tuple[float, str]:
-        try:
-            artifact_text = component_callable()
-        except TypeError:
-            artifact_text = component_callable(task_id=family or task_id)
-        score, feedback = evaluate_artifact(str(artifact_text), family or task_id)
-        return score, f"[artifact_emitter:{task_id}] {feedback}"
-
-    return evaluate
-
-
-def make_tracebench_direct_answer_evaluator(
-    task_id: str,
-    *,
-    max_examples: Optional[int] = None,
-    target_getter: Optional[Callable[[Any], Any]] = None,
-    normalizer: Optional[Callable[[Any], str]] = None,
-) -> Callable[[Callable, Any], Tuple[float, str]]:
-    """Score a code component that answers Trace-Bench examples directly.
-
-    Use this when the trainable surface is real agent code
-    ``candidate(question) -> answer`` and the bundle dataset's ``infos`` carry the
-    reference answers. The official bundle still supplies the examples; this helper
-    only replaces a task-specific guide that expects a different artifact shape
-    (for example PAL code instead of direct answers).
-    """
-    normalize = normalizer or (lambda value: str(value).strip().lower())
-
-    def evaluate(component_callable: Callable, family: Any) -> Tuple[float, str]:
-        target = normalize_task_id(str(family or task_id))
-        examples = load_tracebench_direct_answer_examples(
-            target,
-            max_examples=max_examples,
-            target_getter=target_getter,
-        )
-        scores: List[float] = []
-        feedbacks: List[str] = []
-        for i, (question, expected) in enumerate(examples):
-            try:
-                try:
-                    answer = component_callable(question=question)
-                except TypeError:
-                    answer = component_callable(question)
-            except Exception as exc:
-                scores.append(0.0)
-                feedbacks.append(f"example[{i}]: ERR {type(exc).__name__}: {exc}")
-                continue
-            ok = normalize(answer) == normalize(expected)
-            scores.append(1.0 if ok else 0.0)
-            if ok:
-                feedbacks.append(f"example[{i}]: CORRECT {answer!r}")
-            else:
-                feedbacks.append(
-                    f"example[{i}]: WRONG got {answer!r}; expected {expected!r}"
-                )
-        score = sum(scores) / len(scores)
-        return (
-            score,
-            f"[direct_answer:{target}] accuracy={score:.3f} "
-            f"over {len(scores)} real example(s). " + " | ".join(feedbacks[:5]),
-        )
-
-    return evaluate
-
-
-def load_tracebench_direct_answer_examples(
-    task_id: str,
-    *,
-    max_examples: Optional[int] = None,
-    target_getter: Optional[Callable[[Any], Any]] = None,
-) -> List[Tuple[Any, Any]]:
-    """Load ``(question, expected_answer)`` pairs from a registered Trace-Bench bundle.
-
-    This helper is intentionally narrow: it supports direct-answer code/graph
-    experiments that use Trace-Bench datasets but do not use a task's default
-    artifact runner. Keeping dataset extraction here avoids each experiment
-    reaching into adapter internals differently.
-    """
-    adapter = _require_adapter("load_tracebench_direct_answer_examples")
-    if not hasattr(adapter, "_load_bundle"):
-        raise RuntimeError(
-            "load_tracebench_direct_answer_examples requires a TraceBenchTaskAdapter-like "
-            "adapter with _load_bundle(...)."
-        )
-    get_target = target_getter or (
-        lambda info: info.get("answer", info.get("target")) if isinstance(info, dict) else info
-    )
-    target = normalize_task_id(task_id)
-    bundle = adapter._load_bundle(target, fresh=True)
-    dataset_name, dataset = _evaluation_dataset(bundle)
-    inputs = list(dataset.get("inputs") or [])
-    infos = _dataset_infos(dataset)
-    limit = min(
-        len(inputs),
-        len(infos),
-        int(max_examples or getattr(adapter, "max_examples", 1)),
-    )
-    if limit <= 0:
-        raise ValueError(f"{dataset_name} is empty")
-    return [(question, get_target(info)) for question, info in zip(inputs[:limit], infos[:limit])]
-
-
 def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4,
                                   required_terms: Optional[Tuple[str, ...]] = None):
     """Return evaluate(capability_callable, family) -> (score_dict, feedback)
@@ -1236,10 +1196,6 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4,
     per-objective score dict (consumed by opto.trainer.objectives / OptoPrimeMulti)
     plus a scalarized score and a directional feedback string.
     """
-
-    task_limit = int(n_tasks)
-    if task_limit <= 0:
-        raise ValueError("n_tasks must be positive")
 
     def _evaluate_real(capability_callable: Callable, family: Any):
         adapter = _TASK_ADAPTER
@@ -1254,7 +1210,6 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4,
         max_examples = min(
             getattr(adapter, "max_examples", 1),
             _int_env("RECURSIVE_OPT_CAPABILITY_MAX_EXAMPLES", 3),
-            task_limit,
         )
         objective_rows: List[Dict[str, float]] = []
         notes: List[str] = []

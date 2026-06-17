@@ -304,43 +304,6 @@ def test_multiobjective_evaluator_rewards_verified_capability() -> None:
     assert "verify/check" in feedback
 
 
-def test_multiobjective_evaluator_respects_n_tasks_limit() -> None:
-    class _Guide:
-        def __call__(self, query, response, info):
-            return 1.0, f"scored {query}"
-
-        def get_score_dict(self, query, response, info):
-            return {"accuracy": 1.0}
-
-    class _Adapter:
-        max_examples = 5
-
-        def _load_bundle(self, task_id):
-            return {
-                "param": trace.node("unused", trainable=True),
-                "guide": _Guide(),
-                "train_dataset": {
-                    "inputs": [f"q{i}" for i in range(5)],
-                    "infos": [{"answer": str(i)} for i in range(5)],
-                },
-            }
-
-    _TB.register_task_adapter(_Adapter())
-    evaluator = make_multiobjective_evaluator(
-        ["internal:multiobjective_gsm8k"],
-        {"accuracy": "max", "cost": "min"},
-        n_tasks=2,
-    )
-
-    score, feedback, scalar = evaluator(lambda **_: "plan verify", "reasoning_control")
-
-    assert score["accuracy"] == pytest.approx(1.0)
-    assert "n=2" in feedback
-    assert scalar > 0.0
-    with pytest.raises(ValueError, match="n_tasks must be positive"):
-        make_multiobjective_evaluator(["task"], {"accuracy": "max"}, n_tasks=0)
-
-
 def test_text_cost_penalizes_verbosity() -> None:
     from opto.features.recursive_opt.tracebench import _text_cost
 
@@ -436,7 +399,11 @@ def test_default_optimizer_tools_searches_global_failures(tmp_path: Path) -> Non
 
 
 def test_optimizer_tool_policy_parses_text_json_and_filters_unknowns() -> None:
-    available = {"trace_search": lambda fb: fb, "run_subset": lambda fb: fb, "note": lambda fb: fb}
+    available = {
+        "trace_search": lambda fb: fb,
+        "run_subset": lambda fb: fb,
+        "note": lambda fb: fb,
+    }
 
     assert parse_optimizer_tool_policy(
         "tools: trace_search, run_subset, unknown",
@@ -461,7 +428,10 @@ def test_optimizer_tool_policy_parses_text_json_and_filters_unknowns() -> None:
 
 
 def test_select_optimizer_tools_preserves_policy_order() -> None:
-    available = {"trace_search": lambda fb: "search", "run_subset": lambda fb: "subset"}
+    available = {
+        "trace_search": lambda fb: "search",
+        "run_subset": lambda fb: "subset",
+    }
 
     selected = select_optimizer_tools(available, "tools: run_subset trace_search")
 
@@ -758,7 +728,7 @@ def test_artifact_emitter_evaluator_invokes_trainable_callable(monkeypatch, tmp_
     assert memory.best_artifact("internal:fake", "code") is not None
 
 
-def test_tracebench_direct_answer_evaluator_scores_dataset_infos(monkeypatch, tmp_path: Path) -> None:
+def test_tracebench_direct_answer_evaluator_scores_dataset_infos(tmp_path: Path) -> None:
     class _BundleAdapter(TraceBenchTaskAdapter):
         def __init__(self) -> None:
             super().__init__(max_examples=2, inner_steps=0)
@@ -791,7 +761,7 @@ def test_tracebench_direct_answer_evaluator_scores_dataset_infos(monkeypatch, tm
     assert memory.best_artifact("internal:fake", "code") is not None
 
 
-def test_load_tracebench_direct_answer_examples_uses_registered_bundle(monkeypatch) -> None:
+def test_load_tracebench_direct_answer_examples_uses_registered_bundle() -> None:
     class _BundleAdapter(TraceBenchTaskAdapter):
         def __init__(self) -> None:
             super().__init__(max_examples=2, inner_steps=0)
@@ -890,31 +860,6 @@ def test_tracebench_adapter_rejects_inner_trainer_outside_live_budget() -> None:
 
 def test_tracebench_adapter_declares_trace_type_as_plumbed() -> None:
     assert "trace_type" in TraceBenchTaskAdapter.PLUMBED_FIELDS
-
-
-def test_tracebench_adapter_declares_credit_horizon_as_feedback_effect() -> None:
-    from opto.features.recursive_opt.effects import Effect, effects_for
-
-    adapter = TraceBenchTaskAdapter.__new__(TraceBenchTaskAdapter)
-    adapter.inner_steps = 0
-
-    effect = effects_for(adapter)["credit_horizon"]
-
-    assert "credit_horizon" in TraceBenchTaskAdapter.PLUMBED_FIELDS
-    assert effect.active
-    assert Effect.FEEDBACK in effect.effects
-
-
-def test_tracebench_adapter_expands_hf_family_task_ids() -> None:
-    pytest.importorskip("trace_bench.registry")
-
-    adapter = TraceBenchTaskAdapter(max_examples=1, inner_steps=0)
-
-    task_ids = adapter._expanded_task_ids("hf:bbeh_horizon")
-
-    assert "hf:bbeh_horizon" not in task_ids
-    assert "hf:bbeh_horizon/multistep_arithmetic" in task_ids
-    assert "hf:bbeh_horizon/web_of_lies" in task_ids
 
 
 def test_tracebench_adapter_collects_trace_type_feedback(monkeypatch) -> None:
@@ -1192,8 +1137,7 @@ def test_optimize_runs_real_trainer_end_to_end(tmp_path: Path) -> None:
     opt = _NoLLMOptimizer(level.parameters())
     # real PrioritySearch loop, no LLM, no manual backward()/step(): must complete
     result = optimize(level, make_dataset(["hf:GSM8K"], repeats=20),
-                      optimizer=opt, iterations=3, num_candidates=2,
-                      num_threads=1)
+                      optimizer=opt, iterations=3, num_candidates=2)
     assert len(level.parameters()) == 1  # level intact and still trainable after training
     assert hasattr(result, "exploit")
 
@@ -1232,55 +1176,6 @@ def test_restore_best_validated_applies_candidate_module_state() -> None:
     FakeTrainer.memory = type("M", (), {"memory": [(-0.9, candidate)]})()
     assert restore_best_validated(FakeTrainer(), level) is True
     assert param.data == "batch_design: failure_balanced"
-
-
-def test_restore_best_validated_checks_active_priority_search_candidates() -> None:
-    """PrioritySearch may pop the best candidate out of heap memory for explore()."""
-    from opto.features.recursive_opt.optimize import restore_best_validated
-    from opto.trainer.algorithms.priority_search import ModuleCandidate
-
-    level = MetaLevel(
-        LevelConfig(batch_design="random"),
-        inner_runner=make_inner_runner("hf:GSM8K"),
-        trainable_fields=("batch_design",),
-    )
-    param = level.parameters()[0]
-    original = param.data
-    param._data = "batch_design: failure_balanced"
-    candidate = ModuleCandidate(level)
-    param._data = original
-    candidate.add_rollouts([{"module": None, "x": None, "info": None,
-                             "target": None, "score": 1.0, "feedback": "ok"}])
-
-    class FakeTrainer:
-        agent = level
-        memory = type("M", (), {"memory": []})()
-        long_term_memory = type("M", (), {"memory": []})()
-        short_term_memory = type("M", (), {"memory": []})()
-        _best_candidate = candidate
-        _exploration_candidates: list = []
-
-    assert restore_best_validated(FakeTrainer(), level) is True
-    assert param.data == "batch_design: failure_balanced"
-
-
-def test_meta_level_candidate_runtime_error_is_bounded() -> None:
-    """A generated config can fail inside the task; it must not abort run_spec."""
-
-    def exploding_runner(_cfg: LevelConfig, _family: str) -> tuple[float, str]:
-        raise ValueError("bad generated artifact")
-
-    level = MetaLevel(
-        LevelConfig(),
-        inner_runner=exploding_runner,
-        trainable_fields=("starting_artifact",),
-        invalid_floor=-1.0,
-    )
-    out = level.forward("family")
-    data = out.data if hasattr(out, "data") else out
-    assert data["score"] == -1.0
-    assert "candidate runtime error" in data["feedback"]
-    assert "bad generated artifact" in data["feedback"]
 
 
 def test_optimize_defaults_match_requested_config() -> None:
@@ -1429,50 +1324,6 @@ def test_gpt5_live_llm_maps_max_tokens(monkeypatch) -> None:
     assert "max_tokens" not in calls[0]
 
 
-def test_live_llm_provider_qualifies_bare_openai_model(monkeypatch) -> None:
-    from opto.features.recursive_opt import runmode
-    import opto.utils.llm as llm_mod
-
-    models = []
-
-    class FakeLiteLLM:
-        def __init__(self, *args, **kwargs):
-            models.append(kwargs["model"])
-
-        def __call__(self, *args, **kwargs):
-            return object()
-
-    monkeypatch.setattr(llm_mod, "LiteLLM", FakeLiteLLM)
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    monkeypatch.delenv("RECURSIVE_OPT_LITELLM_PROVIDER", raising=False)
-
-    runmode.make_live_llm("gpt-5.4-nano")
-
-    assert models == ["openai/gpt-5.4-nano"]
-
-
-def test_live_llm_provider_override_for_bare_model(monkeypatch) -> None:
-    from opto.features.recursive_opt import runmode
-    import opto.utils.llm as llm_mod
-
-    models = []
-
-    class FakeLiteLLM:
-        def __init__(self, *args, **kwargs):
-            models.append(kwargs["model"])
-
-        def __call__(self, *args, **kwargs):
-            return object()
-
-    monkeypatch.setattr(llm_mod, "LiteLLM", FakeLiteLLM)
-    monkeypatch.setenv("RECURSIVE_OPT_LITELLM_PROVIDER", "openrouter")
-
-    runmode.make_live_llm("openai/gpt-5.4-nano")
-    runmode.make_live_llm("gpt-5.4-nano")
-
-    assert models == ["openai/gpt-5.4-nano", "openrouter/gpt-5.4-nano"]
-
-
 # --------------------------------------------------------------------------- #
 # P0/P1 regression tests: A read-back, Pareto get_score_dict, repeat helper.
 # --------------------------------------------------------------------------- #
@@ -1484,7 +1335,7 @@ def test_best_config_from_is_non_empty_and_decodable_after_optimize() -> None:
                       trainable_fields=("batch_design", "trainer"))
     opt = _NoLLMOptimizer(level.parameters())
     optimize(level, make_dataset(["hf:GSM8K"], repeats=8), optimizer=opt,
-             iterations=3, num_candidates=2, num_threads=1)
+             iterations=3, num_candidates=2)
     cfg_text = best_config_from(level)
     assert cfg_text.strip()                      # never empty (was empty in live A)
     decoded = decode_cfg(cfg_text, LevelConfig(), ("batch_design", "trainer"))
@@ -1523,10 +1374,7 @@ def test_pareto_path_runs_with_objective_config(tmp_path: Path) -> None:
     opt = _NoLLMOptimizer(art.parameters())
     optimize(art, make_dataset(["internal:multiobjective_gsm8k"], repeats=8),
              optimizer=opt, iterations=2, num_candidates=2,
-             objective_config=ObjectiveConfig(mode="pareto", minimize={"cost"}),
-             # Keep this regression deterministic: the test is for the
-             # ObjectiveConfig/Pareto path, not trainer thread scheduling.
-             num_threads=1)
+             objective_config=ObjectiveConfig(mode="pareto", minimize={"cost"}))
     assert len(art.parameters()) == 1
 
 

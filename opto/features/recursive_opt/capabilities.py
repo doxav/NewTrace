@@ -123,10 +123,9 @@ def parse_optimizer_tool_policy(
 ) -> List[str]:
     """Parse a generated optimizer-tool policy into known tool names.
 
-    The policy may be a list/tuple, a JSON object with a ``tools`` key, a JSON
-    list, or compact text such as ``"tools: trace_search, run_subset"``. Unknown
-    names are ignored by default so generated policies degrade safely; set
-    ``strict=True`` for validation tests.
+    Accepts lists, JSON objects/lists, and compact text such as
+    ``"tools: trace_search, run_subset"``. Unknown names are ignored by default
+    so generated policies degrade safely; use ``strict=True`` for validation.
     """
     known = tuple(available_tools.keys()) if isinstance(available_tools, dict) else tuple(available_tools)
     if max_tools is not None and int(max_tools) < 0:
@@ -204,6 +203,102 @@ def select_optimizer_tools(
         strict=strict,
     )
     return {name: available_tools[name] for name in names}
+
+
+# --------------------------------------------------------------------------- #
+# Item 6: a LEARNABLE active-search / lessons-learnt tool.
+#
+# The default ``trace_search`` is a fixed lambda (similar_failures, k=2). Here
+# the SEARCH POLICY is itself a trainable artifact: how many failures to pull,
+# whether to prefer recent vs diverse, and how to synthesize a "lesson" string.
+# The same object works two ways:
+#   1) as a PRE-OPTIMIZER tool: call it before the LLM optimizer to enrich the
+#      prior with a synthesized lesson (returned, or written as a family prior);
+#   2) as a FUNCTION-CALL tool: exposed in the optimizer toolset so the LLM can
+#      invoke it on demand.
+# Because the policy text is a plain trainable node, it can be optimized through
+# the ``code`` or ``capability`` surface — its evaluator scores how much the
+# synthesized lesson improves downstream performance.
+# --------------------------------------------------------------------------- #
+
+# Default search policy as a small, optimizable spec (k + strategy + template).
+DEFAULT_SEARCH_POLICY = {
+    "k": 3,                        # how many past failures to retrieve
+    "strategy": "recent",          # "recent" | "diverse" | "all"
+    "template": "Avoid these recurring failures: {lessons}",
+}
+
+_SEARCH_STRATEGIES = ("recent", "diverse", "all")
+
+
+def _select_failures(episodes, strategy: str, k: int):
+    """Pick k failures per strategy (model-free, so no LLM cost)."""
+    if not episodes:
+        return []
+    if strategy == "recent":
+        return episodes[-k:]
+    if strategy == "diverse":
+        # greedy spread by feedback length (cheap diversity proxy)
+        ordered = sorted(episodes, key=lambda e: len(str(getattr(e, "feedback", ""))))
+        lo, hi, out = 0, len(ordered) - 1, []
+        while lo <= hi and len(out) < k:
+            out.append(ordered[lo]); lo += 1
+            if lo <= hi and len(out) < k:
+                out.append(ordered[hi]); hi -= 1
+        return out
+    return episodes[:k]  # "all" (capped at k)
+
+
+def run_search_policy(policy: dict, memory, *, family: Optional[str] = None) -> str:
+    """Execute a (possibly learned) search policy -> a synthesized lesson string.
+
+    This is the consumer that makes the search tool causal/learnable: a different
+    policy changes which failures are retrieved and how the lesson reads.
+    """
+    if memory is None:
+        return ""
+    pol = {**DEFAULT_SEARCH_POLICY, **(policy or {})}
+    strategy = pol["strategy"] if pol["strategy"] in _SEARCH_STRATEGIES else "recent"
+    k = max(1, int(pol.get("k", 3)))
+    failures = _select_failures(list(memory.similar_failures(family=family, k=max(k, 8))),
+                                strategy, k)
+    lessons = "; ".join(str(getattr(e, "feedback", ""))[:80] for e in failures)
+    if not lessons:
+        return ""
+    return str(pol.get("template", "{lessons}")).format(lessons=lessons)
+
+
+def make_search_policy_tool(policy: dict, memory, *, family: Optional[str] = None) -> Callable:
+    """Return a callable tool (fb -> lesson) bound to a search policy + memory.
+
+    Usable both as a pre-optimizer enrichment call and as an optimizer
+    function-call tool (signature matches the other tools: takes feedback text).
+    """
+    def _tool(_fb: str = "", _policy=policy, _mem=memory, _fam=family) -> str:
+        return run_search_policy(_policy, _mem, family=_fam)
+    return _tool
+
+
+def make_search_policy_evaluator(memory, base_eval: Callable, *, family: Optional[str] = None):
+    """Score a search-policy artifact by how much its lesson improves base_eval.
+
+    ``base_eval(prior_text: str) -> float`` scores a config/artifact given an
+    injected prior. The evaluator runs base_eval WITHOUT the lesson and WITH it;
+    the policy's score is the improvement (so optimizing the policy maximizes the
+    lift its synthesized lesson provides). Lets the search tool be optimized via
+    the ``code``/``capability`` surface with a real, non-LLM-free signal.
+    """
+    def _evaluate(policy_impl, _family=family):
+        # policy_impl may be a dict (decoded) or a text spec; tolerate both
+        policy = policy_impl if isinstance(policy_impl, dict) else DEFAULT_SEARCH_POLICY
+        baseline = float(base_eval(""))
+        lesson = run_search_policy(policy, memory, family=_family)
+        enriched = float(base_eval(lesson))
+        lift = enriched - baseline
+        fb = (f"search-policy lift={lift:+.3f} (baseline={baseline:.3f} -> "
+              f"enriched={enriched:.3f}); lesson='{lesson[:60]}'")
+        return lift, fb
+    return _evaluate
 
 
 # --------------------------------------------------------------------------- #

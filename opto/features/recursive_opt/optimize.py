@@ -29,7 +29,6 @@ parameters in place; the helper returns the trainer result.
 from __future__ import annotations
 
 import os
-import math
 from typing import Any, Optional, Union
 
 from opto import trace
@@ -129,6 +128,7 @@ def optimize(
     num_candidates: Optional[int] = None,
     batch_size: int = 1,
     keep_best_validated: bool = True,
+    budget: "Any" = None,
     **trainer_kwargs,
 ) -> Any:
     """Optimize a recursive level with a Trainer (no hand-rolled loop).
@@ -145,7 +145,14 @@ def optimize(
         The three configurable knobs (see module docstring / env vars).
     num_candidates, batch_size, **trainer_kwargs
         Passed through to the Trainer (sane, cheap defaults for demos).
+    budget
+        Optional dict (spec budget keys) or RecursiveOptBudget to install for
+        this call. A dict is converted via ``make_budget``; ``None`` leaves the
+        currently-installed global budget untouched (backward compatible).
     """
+    if budget is not None:
+        from .budget import make_budget, reset_budget
+        reset_budget(make_budget(budget))
     resolved_iterations = (
         current_iterations() if iterations is None else _positive_int(iterations, "iterations")
     )
@@ -324,74 +331,24 @@ def restore_best_validated(trainer_result: Any, model: Any = None) -> bool:
     if target is None:
         return False
     try:
-        candidates = _validated_candidates(trainer_result)
+        candidates = []
+        memory = getattr(trainer_result, "memory", None)
+        if memory is not None:
+            for item in list(getattr(memory, "memory", []) or []):
+                cand = item[1] if isinstance(item, tuple) and len(item) == 2 else item
+                if getattr(cand, "num_rollouts", 0) and cand.mean_score() is not None:
+                    candidates.append(cand)
         if not candidates and hasattr(trainer_result, "exploit"):
             cand, _priority, _info = trainer_result.exploit()
-            if _candidate_score(cand) is not None:
+            if getattr(cand, "num_rollouts", 0) and cand.mean_score() is not None:
                 candidates.append(cand)
         if not candidates:
             return False  # nothing validated: never overwrite trained state blindly
-        best = max(candidates, key=lambda c: _candidate_score(c) or float("-inf"))
+        best = max(candidates, key=lambda c: c.mean_score())
         best.apply_update(target)
         return True
     except Exception:
         return False
-
-
-def _validated_candidates(trainer_result: Any) -> list[Any]:
-    """Return evaluated candidates reachable from common Trainer memory slots."""
-    candidates: list[Any] = []
-    seen: set[int] = set()
-    for candidate in _candidate_pool(trainer_result):
-        score = _candidate_score(candidate)
-        if score is None:
-            continue
-        ident = id(candidate)
-        if ident in seen:
-            continue
-        seen.add(ident)
-        candidates.append(candidate)
-    return candidates
-
-
-def _candidate_pool(trainer_result: Any) -> list[Any]:
-    """Collect candidates from heaps plus active slots popped out for exploration."""
-    pool: list[Any] = []
-    for name in ("_best_candidate",):
-        candidate = getattr(trainer_result, name, None)
-        if candidate is not None:
-            pool.append(candidate)
-    for name in ("_exploration_candidates",):
-        for candidate in getattr(trainer_result, name, None) or []:
-            if candidate is not None:
-                pool.append(candidate)
-    for name in ("memory", "long_term_memory", "short_term_memory"):
-        memory = getattr(trainer_result, name, None)
-        if memory is None:
-            continue
-        items = getattr(memory, "memory", None)
-        if items is None:
-            try:
-                items = list(memory)
-            except TypeError:
-                items = []
-        for item in list(items or []):
-            pool.append(item[1] if isinstance(item, tuple) and len(item) >= 2 else item)
-    return pool
-
-
-def _candidate_score(candidate: Any) -> Optional[float]:
-    """Return a finite validated candidate score, or None for unevaluated ones."""
-    if not getattr(candidate, "num_rollouts", 0):
-        return None
-    mean_score = getattr(candidate, "mean_score", None)
-    if not callable(mean_score):
-        return None
-    score = mean_score()
-    if score is None:
-        return None
-    value = float(score)
-    return value if math.isfinite(value) else None
 
 
 def canonicalize_model(model: Any) -> bool:

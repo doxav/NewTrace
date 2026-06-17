@@ -1,0 +1,168 @@
+"""Higher-level experiment orchestration for recursive_opt.
+
+This module sits ABOVE :func:`run_spec`/`optimize`: a multi-seed run re-executes
+the whole spec N times with a different RNG seed and an isolated memory root,
+then aggregates. It is deliberately NOT a Trainer (a Trainer trains one agent
+from a dataset; it cannot re-seed and re-run itself) and NOT an Optimizer — it
+adds no optimization logic, only seeding + memory isolation + aggregation, and
+REUSES the existing Trace trainer through ``run_spec``.
+
+The one substantive responsibility is **real RNG seeding**: before this module,
+a "multi-seed" loop only varied the ``memory_root`` suffix, so it reported
+memory-isolation variance mislabeled as seed variance. ``run_spec_repeated``
+seeds python/``random``, numpy, and torch (when present) per run, so reported
+std is genuine seed variance.
+"""
+from __future__ import annotations
+
+import statistics
+from dataclasses import dataclass, field
+from typing import Any, Dict, Iterable, List, Optional
+
+# Scores at or below this are treated as invalid candidates and excluded from
+# means (kept in sync with levels.DEFAULT_INVALID_FLOOR).
+_INVALID_FLOOR = -1.0
+
+
+def seed_everything(seed: int) -> None:
+    """Seed python, numpy, and torch RNGs (best-effort; missing libs ignored)."""
+    import random as _random
+
+    _random.seed(seed)
+    try:
+        import numpy as _np
+
+        _np.random.seed(seed)
+    except Exception:
+        pass
+    try:
+        import torch as _torch
+
+        _torch.manual_seed(seed)
+        if _torch.cuda.is_available():
+            _torch.cuda.manual_seed_all(seed)
+    except Exception:
+        pass
+
+
+@dataclass
+class RepeatedResult:
+    """Aggregate of one spec level evaluated across several seeds.
+
+    ``scores`` keeps every seed's score (including invalid ones); the statistics
+    methods exclude invalid candidates (``<= _INVALID_FLOOR``) so a single failed
+    seed cannot destroy the reported mean.
+    """
+
+    level_id: str
+    scores: List[float] = field(default_factory=list)
+    wall_s: Optional[float] = None
+    artifact: Any = None
+    artifact_id: Any = None
+    errors: List[str] = field(default_factory=list)
+    seeds: List[int] = field(default_factory=list)
+
+    def valid_scores(self) -> List[float]:
+        return [s for s in self.scores if s > _INVALID_FLOOR]
+
+    def mean(self) -> Optional[float]:
+        v = self.valid_scores()
+        return statistics.mean(v) if v else None
+
+    def std(self) -> Optional[float]:
+        v = self.valid_scores()
+        return statistics.pstdev(v) if len(v) > 1 else None
+
+    def best(self) -> Optional[float]:
+        v = self.valid_scores()
+        return max(v) if v else None
+
+    def n_valid(self) -> int:
+        return len(self.valid_scores())
+
+    def n_invalid(self) -> int:
+        return len(self.scores) - len(self.valid_scores())
+
+    def to_rows(self) -> List[Dict[str, Any]]:
+        """One flat dict (handy for a DataFrame or a table writer)."""
+        return [{
+            "level_id": self.level_id,
+            "mean": self.mean(),
+            "std": self.std(),
+            "best": self.best(),
+            "n_valid": self.n_valid(),
+            "n_invalid": self.n_invalid(),
+            "wall_s": self.wall_s,
+            "errors": len(self.errors),
+        }]
+
+    def to_markdown(self) -> str:
+        m = "-" if self.mean() is None else f"{self.mean():.3f}"
+        sd = "-" if self.std() is None else f"{self.std():.3f}"
+        bst = "-" if self.best() is None else f"{self.best():.3f}"
+        note = f"{self.n_invalid()} invalid excluded" if self.n_invalid() else ""
+        head = "| level | mean | std | best | n | wall_s | notes |\n|---|---|---|---|---|---|---|"
+        return f"{head}\n| {self.level_id} | {m} | {sd} | {bst} | {self.n_valid()} | {self.wall_s} | {note} |"
+
+
+def run_spec_repeated(
+    spec: dict,
+    seeds: Iterable[int] = (0, 1, 2),
+    *,
+    level_id: Optional[str] = None,
+    set_seed: bool = True,
+    reset_budget_each: bool = True,
+    optimizer: Any = None,
+    trainer: Optional[str] = None,
+    budget: Any = None,
+) -> Dict[str, RepeatedResult]:
+    """Run ``spec`` once per seed and aggregate per level.
+
+    Returns ``{level_id: RepeatedResult}`` for EVERY level in the spec (so
+    multi-level pipelines aggregate at each depth). When ``level_id`` is given,
+    only that level is returned. Each seed runs in an isolated memory root
+    (``<memory_root>_seed<seed>``) and, when ``reset_budget_each`` is set, with a
+    fresh budget so a leftover budget cannot silently no-op the next run.
+    """
+    # Imported lazily to avoid a circular import with spec.py.
+    from .spec import run_spec as _run_spec_once
+    from .budget import make_budget, reset_budget
+
+    seeds = list(seeds)
+    base_root = spec.get("memory_root", "./mem")
+    agg: Dict[str, RepeatedResult] = {}
+
+    for seed in seeds:
+        if set_seed:
+            seed_everything(seed)
+        if reset_budget_each:
+            reset_budget(make_budget(budget if budget is not None else spec.get("budget")))
+        seed_spec = {**spec, "memory_root": f"{base_root}_seed{seed}"}
+        try:
+            out = _run_spec_once(seed_spec, optimizer=optimizer, trainer=trainer,
+                                 budget=budget)
+        except Exception as exc:  # a bad seed must not abort the sweep
+            # record the failure against every requested level we know about
+            target_ids = [level_id] if level_id else [l["id"] for l in spec["levels"]]
+            for lid in target_ids:
+                agg.setdefault(lid, RepeatedResult(level_id=lid))
+                agg[lid].errors.append(f"seed {seed}: {type(exc).__name__}: {exc}".strip())
+                agg[lid].seeds.append(seed)
+            continue
+
+        for lid, rec in out["results"].items():
+            if level_id and lid != level_id:
+                continue
+            rr = agg.setdefault(lid, RepeatedResult(level_id=lid))
+            rr.scores.append(rec["score"])
+            rr.artifact = rec.get("artifact")
+            rr.artifact_id = rec.get("artifact_id")
+            rr.seeds.append(seed)
+
+    # fill wall_s as the mean across successful seeds (best-effort)
+    for rr in agg.values():
+        if rr.scores:
+            rr.wall_s = None  # per-seed wall not aggregated here; left to caller if needed
+    if level_id:
+        return {level_id: agg.get(level_id, RepeatedResult(level_id=level_id))}
+    return agg

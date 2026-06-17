@@ -80,7 +80,7 @@ def _config_level(**over):
 
 
 def _seq_spec(spec: dict) -> dict:
-    """Return a copy whose Trainer runs sequentially for deterministic unit tests."""
+    """Return a copy whose Trainer runs sequentially for deterministic tests."""
     out = copy.deepcopy(spec)
     out.setdefault("trainer_kwargs", {})["num_threads"] = 1
     return out
@@ -277,7 +277,7 @@ def test_run_spec_uses_spec_tracebench_adapter_config(tmp_path: Path, monkeypatc
         "memory_root": str(tmp_path),
         "levels": [_config_level(iterations=1)],
     }
-    out = S.run_spec(_seq_spec(spec), optimizer=_NoLLMOptimizer)
+    out = S.run_spec(spec, optimizer=_NoLLMOptimizer)
     assert seen == {"max_examples": 2, "inner_steps": 0}
     assert out["results"]["o1"]["score"] > 0.0
 
@@ -285,7 +285,7 @@ def test_run_spec_uses_spec_tracebench_adapter_config(tmp_path: Path, monkeypatc
 def test_run_spec_depth_is_level_order(tmp_path: Path):
     spec = {"families": FAMILIES, "memory_root": str(tmp_path),
             "levels": [_config_level(id="a"), _config_level(id="b")]}
-    out = S.run_spec(_seq_spec(spec), optimizer=_NoLLMOptimizer)
+    out = S.run_spec(spec, optimizer=_NoLLMOptimizer)
     assert list(out["results"].keys()) == ["a", "b"]        # ordered == depth
 
 
@@ -331,7 +331,7 @@ def test_prior_promotion_min_support_from_spec_uses_family_key(tmp_path: Path):
         "prior_promotion": {"min_support": 2},
         "levels": [_config_level(iterations=2)],
     }
-    out = S.run_spec(_seq_spec(spec), optimizer=_NoLLMOptimizer)
+    out = S.run_spec(spec, optimizer=_NoLLMOptimizer)
     assert out["memory"].family_prior("combinatorial") is not None
 
 
@@ -342,7 +342,7 @@ def test_prior_promotion_can_be_disabled_from_spec(tmp_path: Path):
         "prior_promotion": {"enabled": False, "min_support": 1},
         "levels": [_config_level(iterations=2)],
     }
-    out = S.run_spec(_seq_spec(spec), optimizer=_NoLLMOptimizer)
+    out = S.run_spec(spec, optimizer=_NoLLMOptimizer)
     assert out["memory"].family_prior("combinatorial") is None
 
 
@@ -422,7 +422,7 @@ def test_run_spec_agentic_level_trains_with_tools(tmp_path: Path):
     ls = _config_level(agentic={"base_optimizer_cls": _NoLLMOptimizer},
                        tools=["trace_search"], iterations=2)
     spec = {"families": FAMILIES, "memory_root": str(tmp_path), "levels": [ls]}
-    out = S.run_spec(_seq_spec(spec))          # no optimizer override: agentic factory is used
+    out = S.run_spec(spec)          # no optimizer override: agentic factory is used
     assert out["results"][ls["id"]]["artifact"].strip()
 
 
@@ -608,8 +608,7 @@ def test_optimize_writes_best_validated_code_back_to_caller_model(tmp_path: Path
                       "evaluate": ev, "objective": "max"}},
         MemoryLite(root=str(tmp_path)), {})
     optimize(level, {"inputs": [None] * 3, "infos": [None] * 3}, iterations=3,
-             trainer="PrioritySearch", optimizer=_ScriptedCodeOptimizer,
-             num_threads=1)
+             trainer="PrioritySearch", optimizer=_ScriptedCodeOptimizer)
 
     code = level.current_code()
     assert "i % 3 == 0" in code, "trained code was lost on write-back"
@@ -690,7 +689,7 @@ def test_run_spec_clamps_reported_scores_and_records_wall_s(tmp_path: Path):
             "scoring": {"mode": "raw", "clip": [-1.0, 1.0]},
             "levels": [{"id": "leak", "surface": "custom", "builder": builder,
                         "iterations": 1}]}
-    out = S.run_spec(_seq_spec(spec), optimizer=_NoLLMOptimizer)
+    out = S.run_spec(spec, optimizer=_NoLLMOptimizer)
     res = out["results"]["leak"]
     assert res["score"] == -1.0                  # clamped, was -1e9 raw
     assert isinstance(res["wall_s"], float)      # fix 3: wall time recorded per level
@@ -735,7 +734,7 @@ def test_capability_surface_compiles_and_runs(tmp_path: Path):
                         "seed": "Plan, then verify the answer.",
                         "evaluator": evaluator, "iterations": 1}]}
     S.validate_spec(spec)
-    out = S.run_spec(_seq_spec(spec), optimizer=_NoLLMOptimizer)
+    out = S.run_spec(spec, optimizer=_NoLLMOptimizer)
     res = out["results"]["cap"]
     assert res["score"] == 1.0
     level = out["levels"]["cap"]
@@ -870,7 +869,7 @@ def test_run_spec_records_artifact_lineage_and_dependencies(tmp_path: Path):
     spec = {"families": FAMILIES, "memory_root": str(tmp_path),
             "levels": [_config_level(id="o1"),
                        _config_level(id="o2", depends_on=["o1"])]}
-    out = S.run_spec(_seq_spec(spec), optimizer=_NoLLMOptimizer)
+    out = S.run_spec(spec, optimizer=_NoLLMOptimizer)
     r2 = out["results"]["o2"]
     assert r2["depends_on"] == ["o1"]
     assert r2["artifact_id"]            # regression: getattr(rec, "id") was always None

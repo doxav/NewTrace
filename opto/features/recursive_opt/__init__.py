@@ -31,8 +31,7 @@ from .levels import (
     validate_config_field,
     validate_level_config,
 )
-from .memory import MemoryLite, EpisodeTrace, FamilyPrior, ArtifactRecord, ProgressEvent
-from .progress import RecursiveOptProgressLogger
+from .memory import MemoryLite, EpisodeTrace, FamilyPrior, ArtifactRecord
 from .capabilities import (
     AgenticOptimizer,
     default_optimizer_tools,
@@ -41,6 +40,7 @@ from .capabilities import (
     TinkerEnvAdapter,
     HITLGate,
     auto_allow,
+    run_search_policy, make_search_policy_tool, make_search_policy_evaluator,
 )
 from .budget import (
     BudgetExceeded,
@@ -49,6 +49,8 @@ from .budget import (
     configure_budget_from_env,
     current_budget,
     reset_budget,
+    make_budget,
+    budget_to_spec_dict,
 )
 from . import traces, tracebench
 from .effects import Effect, FieldEffect, EffectReport, InactiveFieldError, check_field_effects, effects_for
@@ -77,6 +79,16 @@ from .optimize import (
 )
 
 __all__ = [
+    "route_optimizers",
+    "field_search_space",
+    "is_numeric_field",
+    "LeastSquaresOptimizer",
+    "OptunaOptimizer",
+    "seed_everything",
+    "RepeatedResult",
+    "run_spec_repeated",
+    "budget_to_spec_dict",
+    "make_budget",
     "CapabilityArtifact",
     "TimedGuide",
     "invalid_result",
@@ -99,12 +111,13 @@ __all__ = [
     "EpisodeTrace",
     "FamilyPrior",
     "ArtifactRecord",
-    "ProgressEvent",
-    "RecursiveOptProgressLogger",
     "AgenticOptimizer",
     "default_optimizer_tools",
     "parse_optimizer_tool_policy",
     "select_optimizer_tools",
+    "run_search_policy",
+    "make_search_policy_tool",
+    "make_search_policy_evaluator",
     "TinkerEnvAdapter",
     "HITLGate",
     "auto_allow",
@@ -142,3 +155,7 @@ __all__ = [
     "check_field_effects",
     "effects_for",
 ]
+
+from .experiments import run_spec_repeated, RepeatedResult, seed_everything
+
+from .numeric_optimizers import (OptunaOptimizer, LeastSquaresOptimizer, route_optimizers, field_search_space, is_numeric_field)

@@ -29,7 +29,7 @@ from __future__ import annotations
 import json
 import math
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from .levels import (
     CapabilityArtifact,
@@ -47,7 +47,7 @@ from .levels import (
     validate_level_config,
 )
 from .memory import MemoryLite
-from .budget import RecursiveOptBudget, reset_budget
+from .budget import RecursiveOptBudget, reset_budget, make_budget
 from .optimize import optimize, current_iterations
 from .progress import RecursiveOptProgressLogger, budget_snapshot
 from . import tracebench as TB
@@ -75,7 +75,13 @@ def make_level_spec(*, id: str, surface: str, targets: Optional[List[str]] = Non
         level["constraints"] = {k: list(v) for k, v in constraints.items()}
     level.update(kwargs)
     return level
-_DEFAULT_POLICY_FIELDS = ("batch_design", "memory_policy", "trainer", "trace_type")
+# Default trainable fields for the family_policy (O2) and prior (O3) surfaces.
+# These MUST be causally active or the surface "optimizes" fields the adapter
+# ignores (the root cause of the prior surface underperforming). starting_artifact
+# is always active; trace_type is feedback-active; batch_design is active when
+# inner_steps>0. memory_policy was removed from the default because it has no
+# consumer yet (it would be optimizing nothing). Override per level via `targets`.
+_DEFAULT_POLICY_FIELDS = ("starting_artifact", "trace_type", "batch_design")
 
 
 # --------------------------------------------------------------------------- #
@@ -273,20 +279,29 @@ def save_priors(memory: MemoryLite, level, level_spec: dict, score: float,
     return rec
 
 
-def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> dict:
+def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None,
+             budget: "RecursiveOptBudget | dict | None" = None,
+             seeds: Optional[Iterable[int]] = None) -> dict:
     """Compile and run every level in order (the ordering is the recursion depth).
 
     ``optimizer``/``trainer`` override the per-level choice (used for offline,
-    no-LLM testing). Returns ``{"results", "levels", "memory", "progress"}``;
-    the built level objects are returned so the compiler stays transparent and
-    debuggable.
+    no-LLM testing). ``budget`` (dict or RecursiveOptBudget) overrides
+    ``spec["budget"]`` without mutating the spec. ``seeds`` (an iterable) switches
+    to repeated multi-seed execution and returns a ``RepeatedResult`` per level
+    instead of a single result (see :func:`run_spec_repeated`). Returns
+    ``{"results", "levels", "memory", "progress"}``; the built level objects are
+    returned so the compiler stays transparent and debuggable.
     """
+    if seeds is not None:
+        from .experiments import run_spec_repeated
+        return run_spec_repeated(spec, seeds=seeds, optimizer=optimizer,
+                                 trainer=trainer, budget=budget)
     spec = validate_spec(spec)
     if "tracebench" in spec:
         TB.configure_tracebench_adapter(spec.get("tracebench") or {}, require=True)
     families = spec.get("families", {})
     memory = _memory_from_spec(spec)
-    _configure_budget(spec)
+    _configure_budget(spec, override=budget)
     do_reuse = bool(spec.get("reuse_priors", False))
 
     run_id = str(spec.get("run_id") or f"recursive_opt:{int(time.time() * 1000)}")
@@ -330,8 +345,7 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None) -> di
             global_step_offset=global_step,
             echo=True,
         )
-        # Use a recursive-opt logger by default so progress is persisted without
-        # changing core trainer internals. It still mirrors the ConsoleLogger.
+        # Keep progress persistence in recursive_opt, not in Trace core.
         opt_kwargs["logger"] = progress_logger
         memory.record_progress(
             run_id=run_id,
@@ -814,17 +828,18 @@ def _validate_prior_promotion_config(config: dict) -> None:
         raise TypeError("prior_promotion.min_score must be a number")
 
 
-def _configure_budget(spec: dict):
-    b = spec.get("budget") or {}
-    if not b:
+def _configure_budget(spec: dict, override: "RecursiveOptBudget | dict | None" = None):
+    """Install the global budget from the spec dict (or an explicit override).
+
+    Delegates the dict->budget mapping to the canonical ``make_budget`` so there
+    is exactly one place that knows the spec budget keys. ``override`` (a dict or
+    a RecursiveOptBudget) takes precedence over ``spec["budget"]`` without
+    mutating the spec — handy for sweeps that reuse one spec at several budgets.
+    """
+    source = override if override is not None else spec.get("budget")
+    budget = make_budget(source)
+    if budget is None:
         return None
-    budget = RecursiveOptBudget(
-        max_optimizer_llm_calls=b.get("optimizer_llm_calls"),
-        max_eval_llm_calls=b.get("eval_llm_calls"),
-        max_candidates=b.get("candidates"),
-        max_wall_time_s=b.get("wall_time_s"),
-        stop_policy=b.get("on_exceed", "return_best"),
-    )
     reset_budget(budget)
     return budget
 

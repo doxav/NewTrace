@@ -64,7 +64,6 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 from opto import trace
 from opto.trace import node, Module
 from opto.trainer.guide import Guide
-from .budget import BudgetExceeded
 
 
 # =========================================================================== #
@@ -153,13 +152,6 @@ def invalid_result(reason: str, floor: Optional[float] = None, **extra) -> dict:
     """
     return {"score": float(floor) if floor is not None else INVALID_CONFIG_SCORE,
             "feedback": reason, **extra}
-
-
-def exception_summary(exc: Exception, *, limit: int = 300) -> str:
-    """Return a compact candidate-runtime error without a full traceback."""
-    lines = [line.strip() for line in str(exc).splitlines() if line.strip()]
-    detail = lines[-1] if lines else repr(exc)
-    return f"{type(exc).__name__}: {detail[:limit]}"
 
 
 def register_config_values(field: str, values: Iterable[str], *, replace: bool = False) -> None:
@@ -357,15 +349,7 @@ class MetaLevel(Module):
             cfg = self._decode(cfg_text)
         except ValueError as exc:
             return invalid_result(f"invalid generated config: {exc}", self._invalid_floor)
-        try:
-            score, feedback = self._inner_runner(cfg, family)
-        except BudgetExceeded:
-            raise
-        except Exception as exc:
-            return invalid_result(
-                f"candidate runtime error: {exception_summary(exc)}",
-                self._invalid_floor,
-            )
+        score, feedback = self._inner_runner(cfg, family)
         if self._memory is not None:
             self._memory.record(
                 level="O1",
@@ -426,7 +410,7 @@ class FamilyPolicyLevel(Module):
         families: Dict[str, List[str]],
         run_task: Callable[[LevelConfig, str], Tuple[float, str]],
         base_cfg: Optional[LevelConfig] = None,
-        policy_fields: Tuple[str, ...] = ("batch_design", "memory_policy", "trainer", "trace_type"),
+        policy_fields: Tuple[str, ...] = ("starting_artifact", "trace_type", "batch_design"),
         memory: Optional[object] = None,
         invalid_floor: Optional[float] = None,
     ):
@@ -516,7 +500,7 @@ class PriorInductionLevel(Module):
         holdout_families: Dict[str, List[str]],
         run_task: Callable[[LevelConfig, str], Tuple[float, str]],
         base_cfg: Optional[LevelConfig] = None,
-        fields: Tuple[str, ...] = ("batch_design", "memory_policy", "trainer", "trace_type"),
+        fields: Tuple[str, ...] = ("starting_artifact", "trace_type", "batch_design"),
         memory: Optional[object] = None,
         invalid_floor: Optional[float] = None,
     ):
