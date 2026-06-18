@@ -1,0 +1,10 @@
+{
+  "baseline": "_baseline_agentic_trace_policy",
+  "component": "agentic_trace_policy",
+  "iterations": 2,
+  "max_examples": 8,
+  "num_candidates": 2,
+  "objective": "Rewrite a compact policy function. Given a signal string, return tools: ... and hint: ... . Select only useful optimizer-side tools. Avoid expensive tools on saturated controls; use trace_search/run_subset for noisy transfer; use artifact_linter for code/syntax reuse.",
+  "surface": "code",
+  "task_id": "internal:agentic_trace_policy"
+}

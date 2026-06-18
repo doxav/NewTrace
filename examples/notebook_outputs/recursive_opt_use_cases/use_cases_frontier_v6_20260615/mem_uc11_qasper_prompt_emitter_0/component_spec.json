@@ -1,0 +1,10 @@
+{
+  "baseline": "_qasper_prompt_emitter",
+  "component": "qasper_prompt_emitter",
+  "iterations": 2,
+  "max_examples": 8,
+  "num_candidates": 2,
+  "objective": "Rewrite the function so it returns a concise QASPER starting_artifact prompt. The prompt should improve evidence-grounded QA: read the passage, identify supporting evidence, answer briefly, and avoid hallucinating when evidence is missing. Return only the prompt string; do not call the model or dataset inside this function.",
+  "surface": "code",
+  "task_id": "hf:qasper"
+}

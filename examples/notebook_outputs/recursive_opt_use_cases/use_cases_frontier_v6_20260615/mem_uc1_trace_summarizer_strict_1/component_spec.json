@@ -1,0 +1,10 @@
+{
+  "baseline": "_trunc_summary",
+  "component": "trace_summarizer",
+  "iterations": 2,
+  "max_examples": 8,
+  "num_candidates": 2,
+  "objective": "Keep ALL error evidence, drop everything else, target <60 chars.",
+  "surface": "code",
+  "task_id": "internal:code_param"
+}

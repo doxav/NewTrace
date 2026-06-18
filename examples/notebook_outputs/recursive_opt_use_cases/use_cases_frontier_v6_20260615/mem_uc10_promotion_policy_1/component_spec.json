@@ -1,0 +1,10 @@
+{
+  "baseline": "_baseline_promotion_policy",
+  "component": "promotion_policy",
+  "iterations": 4,
+  "max_examples": 8,
+  "num_candidates": 2,
+  "objective": "Rewrite a compact artifact gate. Given an artifact_report dict, return action and reason. Promote only validated code with real gain; archive saturated controls; retest single-seed/noisy config artifacts; reject or repair syntax failures; rollback warm-prior regressions. Mention the artifact kind and evidence in the reason.",
+  "surface": "code",
+  "task_id": "internal:artifact_promotion_policy"
+}

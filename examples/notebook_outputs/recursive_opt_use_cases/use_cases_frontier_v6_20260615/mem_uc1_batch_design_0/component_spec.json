@@ -1,0 +1,10 @@
+{
+  "baseline": "_weak_batch",
+  "component": "batch_design",
+  "iterations": 2,
+  "max_examples": 8,
+  "num_candidates": 2,
+  "objective": "Select the hard/failing items before easy ones; maximize validator score.",
+  "surface": "code",
+  "task_id": "internal:batch_design"
+}

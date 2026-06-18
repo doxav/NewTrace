@@ -1,0 +1,30 @@
+{
+  "levels": {
+    "o1_setup": {
+      "artifact_id": "mixed_reasoning:config:0:94746",
+      "best_objective_at": {
+        "level_step": 1,
+        "score": 0.011217320261437916
+      },
+      "best_problem_at": {
+        "level_step": 0,
+        "score": -0.013144199074283824
+      },
+      "executed_steps": 2,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 2,
+      "scores": {
+        "objective_score": 0.005785973711518497,
+        "problem_score": 0.005785973711518497
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "internal:multiobjective_gsm8k",
+        "hf:qasper"
+      ],
+      "validated_candidates": 4
+    }
+  },
+  "run_id": "recursive_opt:1781502010880"
+}

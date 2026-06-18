@@ -1,0 +1,10 @@
+{
+  "baseline": "_baseline_tool_policy",
+  "component": "optimizer_tool_policy",
+  "iterations": 2,
+  "max_examples": 8,
+  "num_candidates": 2,
+  "objective": "Return a compact tools: ... policy selecting only optimizer tools needed by the signal; avoid expensive tools on saturated controls.",
+  "surface": "code",
+  "task_id": "internal:optimizer_tool_policy"
+}

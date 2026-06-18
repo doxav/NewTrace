@@ -1,0 +1,123 @@
+[
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc1_bbeh_direct_solver_0/artifacts.jsonl#internal:multiobjective_bbeh:code:1:38017",
+    "experiment": "BBEH direct code solver (real hard examples)",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/01_uc1_component_code__bbeh_direct_code_solver_real_hard_examples.py",
+    "initial": 0.625,
+    "kind": "code",
+    "mean_score": 1.0,
+    "score": 1.0,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc1_bbeh_direct_solver_1/component_spec.json",
+    "use_case": "UC1 component code"
+  },
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc2_qasper_0/artifacts.jsonl#qasper:config:0:97926",
+    "experiment": "QASPER prompt artifact diagnostic",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/02_uc2_setup_config__qasper_prompt_artifact_diagnostic.txt",
+    "initial": 0.1956031382804838,
+    "kind": "config",
+    "mean_score": 0.20239152946049496,
+    "score": 0.20239152946049496,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc2_qasper_0/spec.json",
+    "use_case": "UC2 setup/config"
+  },
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_verify_0/artifacts.jsonl#reasoning:capability:0:64116",
+    "experiment": "seed: verify",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/03_uc3_capability__seed_verify.txt",
+    "initial": 1.4408333333333334,
+    "kind": "capability",
+    "mean_score": 1.4433333333333334,
+    "score": 1.4458333333333333,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_verify_0/spec.json",
+    "use_case": "UC3 capability"
+  },
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o3_cold_0/artifacts.jsonl#*:prior:0:10334",
+    "experiment": "O2->O3 cold diagnostic",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/04_uc4_family_transfer__o2-_o3_cold_diagnostic.txt",
+    "initial": 0.1738841064881237,
+    "kind": "prior",
+    "mean_score": 0.17981995008011437,
+    "score": 0.17981995008011437,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o3_cold_0/spec.json",
+    "use_case": "UC4 family/transfer"
+  },
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc5_code_take_last_0/artifacts.jsonl#internal:batch_design:code:1:38644",
+    "experiment": "code helper: take_last",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/05_uc5_optimizer_tool__code_helper_take_last.py",
+    "initial": 0.7,
+    "kind": "code",
+    "mean_score": 1.0,
+    "score": 1.0,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc5_code_take_last_1/component_spec.json",
+    "use_case": "UC5 optimizer/tool"
+  },
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc6_trace_hybrid_0/artifacts.jsonl#reasoning:config:0:79498",
+    "experiment": "trace_type=hybrid | credit_horizon=step",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/06_uc6_trace_feedback__trace_type_hybrid_credit_horizon_step.txt",
+    "initial": 0.15406635917274214,
+    "kind": "config",
+    "mean_score": 0.20683626003498962,
+    "score": 0.20683626003498962,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc6_trace_hybrid_0/spec.json",
+    "use_case": "UC6 trace feedback"
+  },
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_suboptimizer_graph/artifacts.jsonl#graph:suboptimizer:latest",
+    "experiment": "graph route: always-use SciPy suboptimizer",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/07_uc7_graph_suboptimizer__graph_route_always-use_scipy_suboptimizer.json",
+    "initial": 0.0,
+    "kind": "graph",
+    "mean_score": 1.0,
+    "score": 1.0,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_suboptimizer_graph/graph_spec.json",
+    "use_case": "UC7 graph/suboptimizer"
+  },
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc8_campaign_policy_0/artifacts.jsonl#internal:campaign_policy:code:1:98160",
+    "experiment": "adaptive dataset/stall controller (strict)",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/08_uc8_campaign_policy__adaptive_dataset_stall_controller_strict.py",
+    "initial": 0.36,
+    "kind": "code",
+    "mean_score": 0.5650000000000001,
+    "score": 0.68,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc8_campaign_policy_1/component_spec.json",
+    "use_case": "UC8 campaign policy"
+  },
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc9_agentic_trace_policy_0/artifacts.jsonl#internal:agentic_trace_policy:code:1:38842",
+    "experiment": "tool+hint policy with reverse controls",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/09_uc9_agentic_trace_policy__tool_hint_policy_with_reverse_controls.py",
+    "initial": 0.21,
+    "kind": "code",
+    "mean_score": 0.86,
+    "score": 0.86,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc9_agentic_trace_policy_1/component_spec.json",
+    "use_case": "UC9 agentic trace policy"
+  },
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc10_promotion_policy_1/artifacts.jsonl#internal:artifact_promotion_policy:code:1:74479",
+    "experiment": "artifact promotion/retest/reject controller",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/10_uc10_promotion_policy__artifact_promotion_retest_reject_controller.py",
+    "initial": 0.13,
+    "kind": "code",
+    "mean_score": 0.35,
+    "score": 0.5,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc10_promotion_policy_1/component_spec.json",
+    "use_case": "UC10 promotion policy"
+  },
+  {
+    "artifact_ref": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc11_qasper_prompt_emitter_0/artifacts.jsonl#hf:qasper:code:1:25618",
+    "experiment": "QASPER prompt-emitter code artifact",
+    "export_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/best_artifacts/11_uc11_prompt_emitter__qasper_prompt-emitter_code_artifact.py",
+    "initial": 0.12001947823865632,
+    "kind": "code",
+    "mean_score": 0.4874482282558674,
+    "score": 0.4874482282558674,
+    "spec_file": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc11_qasper_prompt_emitter_0/component_spec.json",
+    "use_case": "UC11 prompt emitter"
+  }
+]

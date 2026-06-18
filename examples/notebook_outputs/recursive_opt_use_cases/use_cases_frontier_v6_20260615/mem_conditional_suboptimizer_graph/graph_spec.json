@@ -1,0 +1,22 @@
+{
+  "candidate_routes": [
+    "draft",
+    "scipy",
+    "conditional"
+  ],
+  "centers": [
+    -3.5,
+    -0.1,
+    0.0,
+    0.2,
+    1.75,
+    4.25
+  ],
+  "surface": "graph_conditional_suboptimizer_tool",
+  "task": "internal:cost_aware_convex_suboptimizer",
+  "tolerance": 0.25,
+  "tool_cost": 0.25,
+  "trainable": [
+    "route_policy"
+  ]
+}

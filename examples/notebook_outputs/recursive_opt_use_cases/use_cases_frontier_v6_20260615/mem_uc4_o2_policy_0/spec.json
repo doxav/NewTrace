@@ -1,0 +1,60 @@
+{
+  "budget": {
+    "candidates": 8,
+    "eval_llm_calls": 48,
+    "on_exceed": "return_best",
+    "optimizer_llm_calls": 8,
+    "wall_time_s": 1800
+  },
+  "families": {
+    "gsm8k": [
+      "internal:multiobjective_gsm8k"
+    ],
+    "qasper": [
+      "hf:qasper"
+    ]
+  },
+  "levels": [
+    {
+      "constraints": {
+        "starting_artifact": [
+          "",
+          "Answer directly.",
+          "Plan step by step, then answer.",
+          "Plan step by step, then verify the answer before replying.",
+          "Use the provided context as evidence, reason briefly, then answer exactly."
+        ]
+      },
+      "families": [
+        "gsm8k",
+        "qasper"
+      ],
+      "family": "*",
+      "fixed": {
+        "credit_horizon": "step",
+        "optimizer": "OptoPrimeV2",
+        "trace_type": "internal",
+        "trainer": "PrioritySearch"
+      },
+      "id": "o2_policy",
+      "iterations": 2,
+      "surface": "family_policy",
+      "targets": [
+        "starting_artifact"
+      ]
+    }
+  ],
+  "memory_root": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o2_policy_0",
+  "reuse_priors": false,
+  "scoring": {
+    "clip": [
+      -1.0,
+      1.0
+    ]
+  },
+  "tracebench": {
+    "inner_steps": 0,
+    "max_examples": 4,
+    "timeout_seconds": 35
+  }
+}

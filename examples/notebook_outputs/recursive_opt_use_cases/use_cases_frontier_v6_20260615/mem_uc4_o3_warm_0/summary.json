@@ -1,0 +1,55 @@
+{
+  "levels": {
+    "o2_policy": {
+      "artifact_id": "*:family_policy:0:90222",
+      "best_objective_at": {
+        "level_step": 0,
+        "score": 0.004500745299541219
+      },
+      "best_problem_at": {
+        "level_step": 0,
+        "score": -0.006598961797844069
+      },
+      "executed_steps": 2,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 2,
+      "scores": {
+        "objective_score": 0.0012321874514497483,
+        "problem_score": 0.0012321874514497483
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "internal:multiobjective_gsm8k",
+        "hf:qasper"
+      ],
+      "validated_candidates": 4
+    },
+    "o3_prior": {
+      "artifact_id": "*:prior:0:34653",
+      "best_objective_at": {
+        "level_step": 1,
+        "score": 0.17490842490842493
+      },
+      "best_problem_at": {
+        "level_step": 1,
+        "score": 0.1744490463990372
+      },
+      "executed_steps": 2,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 2,
+      "scores": {
+        "objective_score": 0.15184294871794873,
+        "problem_score": 0.15184294871794873
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "internal:multiobjective_gsm8k",
+        "hf:qasper"
+      ],
+      "validated_candidates": 4
+    }
+  },
+  "run_id": "recursive_opt:1781502617712"
+}

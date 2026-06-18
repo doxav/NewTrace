@@ -1,0 +1,37 @@
+{
+  "budget": {
+    "candidates": 8,
+    "eval_llm_calls": 96,
+    "on_exceed": "return_best",
+    "optimizer_llm_calls": 8,
+    "wall_time_s": 1800
+  },
+  "families": {
+    "reasoning": [
+      "internal:multiobjective_gsm8k"
+    ]
+  },
+  "levels": [
+    {
+      "evaluator": "<function make_multiobjective_evaluator.<locals>.evaluate at 0x72c5c49e91c0>",
+      "family": "reasoning",
+      "id": "cap",
+      "iterations": 2,
+      "objective_config": {
+        "minimize": [
+          "cost"
+        ],
+        "mode": "pareto"
+      },
+      "seed": "Solve correctly using the fewest words.",
+      "surface": "capability",
+      "task": "internal:multiobjective_gsm8k"
+    }
+  ],
+  "memory_root": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_terse_1",
+  "tracebench": {
+    "inner_steps": 0,
+    "max_examples": 8,
+    "timeout_seconds": 35
+  }
+}

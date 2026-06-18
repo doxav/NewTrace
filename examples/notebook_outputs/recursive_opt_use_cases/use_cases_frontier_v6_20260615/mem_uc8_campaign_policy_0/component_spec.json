@@ -1,0 +1,10 @@
+{
+  "baseline": "_baseline_campaign_policy",
+  "component": "campaign_policy",
+  "iterations": 6,
+  "max_examples": 8,
+  "num_candidates": 2,
+  "objective": "Rewrite a compact if/elif campaign controller. Return action, task(s), max_examples, and reason. Strict requirements: saturated runs must stop/control with max_examples <=2 and avoid the saturated task; high-spread BBEH should exploit/train BBEH with 8-16 examples; QASPER should probe with 3-6 examples; low-spread stalled GSM8K should switch/restart toward QASPER or BBEH with 3-8 examples; mixed regressions should split/ablate into QASPER plus BBEH. Include reason words matching the decision.",
+  "surface": "code",
+  "task_id": "internal:campaign_policy"
+}
