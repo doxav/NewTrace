@@ -358,6 +358,15 @@ class MetaLevel(Module):
                 score=score,
                 feedback=feedback,
             )
+            if hasattr(self._memory, "record_artifact"):
+                self._memory.record_artifact(
+                    level="O1",
+                    family=str(family),
+                    kind="config_candidate",
+                    content=self._encode(cfg),
+                    score=float(score),
+                    metrics={"feedback": str(feedback), "cfg": cfg.to_dict()},
+                )
         return {"score": float(score), "feedback": str(feedback)}
 
     def forward(self, family: Any):

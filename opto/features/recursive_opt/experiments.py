@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 # Scores at or below this are treated as invalid candidates and excluded from
 # means (kept in sync with levels.DEFAULT_INVALID_FLOOR).
@@ -166,3 +166,55 @@ def run_spec_repeated(
     if level_id:
         return {level_id: agg.get(level_id, RepeatedResult(level_id=level_id))}
     return agg
+
+
+# --------------------------------------------------------------------------- #
+# Numeric-optimizer bridge to a real config level (the Item-2 head-to-head seam)
+# --------------------------------------------------------------------------- #
+def optimize_config_numeric(
+    level: Any,
+    task: str,
+    fields: Sequence[str],
+    *,
+    optimizer: str = "optuna",
+    max_trials: int = 24,
+    base_cfg: Optional["LevelConfig"] = None,
+) -> Tuple[Dict[str, Any], float, List[Tuple[Dict[str, Any], float]]]:
+    """Optimize numeric/categorical config fields through a real inner runner.
+
+    ``level`` is a compiled ``MetaLevel`` whose ``_inner_runner(cfg, task)``
+    returns ``(score, feedback)``. We build an ``evaluate(assignment)->score``
+    that sets the assigned fields on a base config and scores it through that
+    real inner runner — so this is the apples-to-apples numeric arm for the
+    weak-config-surface experiment. Returns ``(best_assignment, best_score,
+    history)`` where ``history`` is the per-trial learning curve.
+    """
+    import copy as _copy
+    from .numeric_optimizers import (OptunaOptimizer, LeastSquaresOptimizer,
+                                     field_search_space, is_numeric_field)
+    from .levels import LevelConfig
+
+    if max_trials <= 0:
+        raise ValueError(f"max_trials must be positive, got {max_trials!r}")
+    if optimizer not in {"optuna", "least_squares"}:
+        raise ValueError(f"unknown numeric optimizer {optimizer!r}")
+
+    numeric_fields = [f for f in fields if is_numeric_field(f)]
+    if not numeric_fields:
+        raise ValueError(f"no numeric/categorical fields to optimize in {fields!r}")
+    space = field_search_space(numeric_fields)
+    base = base_cfg if base_cfg is not None else LevelConfig()
+
+    def _evaluate(assignment: Dict[str, Any]) -> float:
+        cfg = _copy.deepcopy(base)
+        for k, v in assignment.items():
+            setattr(cfg, k, v)
+        score, _fb = level._inner_runner(cfg, task)
+        return float(score)
+
+    params = level.parameters() if hasattr(level, "parameters") else []
+    opt_cls = OptunaOptimizer if optimizer == "optuna" else LeastSquaresOptimizer
+    opt = opt_cls(params, evaluate=_evaluate, space=space, max_trials=max_trials)
+    best = opt.step()
+    best_score = max((s for _a, s in opt.history), default=float("-inf"))
+    return best, best_score, opt.history

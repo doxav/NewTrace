@@ -70,3 +70,35 @@ def test_routing_respects_custom_policy() -> None:
                          policy={"order": "text_then_numeric", "numeric_optimizer": "least_squares"})
     assert r["order"] == "text_then_numeric"
     assert r["numeric_optimizer"] == "least_squares"
+
+
+def test_optimize_config_numeric_drives_real_metalevel() -> None:
+    """The numeric bridge optimizes a real MetaLevel's fields via its inner runner."""
+    import tempfile
+    from opto.features.recursive_opt import optimize_config_numeric, MemoryLite
+    from opto.features.recursive_opt.levels import MetaLevel, LevelConfig
+
+    def runner(cfg, task):
+        s = 0.6 if cfg.batch_design == "failure_balanced" else 0.0
+        return s + 0.4 * (cfg.batch_size / 8.0), "fb"
+
+    lvl = MetaLevel(cfg=LevelConfig(), inner_runner=runner,
+                    trainable_fields=("batch_design", "batch_size"),
+                    memory=MemoryLite(root=tempfile.mkdtemp()))
+    best, score, history = optimize_config_numeric(
+        lvl, "internal:multi_param", ["batch_design", "batch_size"],
+        optimizer="optuna", max_trials=25)
+    assert best == {"batch_design": "failure_balanced", "batch_size": 8}
+    assert score == pytest.approx(1.0)
+    assert len(history) == 25                 # full learning curve for progress plots
+
+
+def test_optimize_config_numeric_rejects_text_only_fields() -> None:
+    import tempfile
+    from opto.features.recursive_opt import optimize_config_numeric, MemoryLite
+    from opto.features.recursive_opt.levels import MetaLevel, LevelConfig
+    lvl = MetaLevel(cfg=LevelConfig(), inner_runner=lambda c, t: (0.0, ""),
+                    trainable_fields=("starting_artifact",),
+                    memory=MemoryLite(root=tempfile.mkdtemp()))
+    with pytest.raises(ValueError, match="no numeric/categorical fields"):
+        optimize_config_numeric(lvl, "t", ["starting_artifact"])

@@ -296,8 +296,16 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None,
         from .experiments import run_spec_repeated
         return run_spec_repeated(spec, seeds=seeds, optimizer=optimizer,
                                  trainer=trainer, budget=budget)
+    configured_tracebench = False
+    if isinstance(spec, dict) and "tracebench" in spec and isinstance(spec.get("tracebench"), dict):
+        # The causal-effect validator depends on adapter run mode (notably
+        # inner_steps). Configure spec-local Trace-Bench bounds before
+        # validate_spec() checks active fields, otherwise validation can read a
+        # stale adapter from a previous run.
+        TB.configure_tracebench_adapter(spec.get("tracebench") or {}, require=True)
+        configured_tracebench = True
     spec = validate_spec(spec)
-    if "tracebench" in spec:
+    if "tracebench" in spec and not configured_tracebench:
         TB.configure_tracebench_adapter(spec.get("tracebench") or {}, require=True)
     families = spec.get("families", {})
     memory = _memory_from_spec(spec)
@@ -372,8 +380,32 @@ def run_spec(spec: dict, *, optimizer=None, trainer: Optional[str] = None,
         )
         wall_s = round(time.time() - _t0, 3)
 
-        score, data = _final_eval(level, ls, families)
-        score = _clamp(score, _clip_bounds(spec.get("scoring")))  # belt: sentinel can never leak raw
+        selected_candidate = None
+        try:
+            score, data = _final_eval(level, ls, families)
+            score = _clamp(score, _clip_bounds(spec.get("scoring")))  # belt: sentinel can never leak raw
+            selected_candidate = _select_best_saved_candidate(memory, ls, families, score)
+        except Exception as exc:
+            selected_candidate = _select_best_saved_candidate(
+                memory, ls, families, DEFAULT_INVALID_FLOOR
+            )
+            if selected_candidate is None:
+                raise
+            score = _clamp(float(selected_candidate.score), _clip_bounds(spec.get("scoring")))
+            data = {
+                "score": float(score),
+                "feedback": "final evaluation failed; selected best saved candidate",
+                "final_eval_error": f"{type(exc).__name__}: {exc}",
+            }
+        if selected_candidate is not None:
+            _seed_from_text(level, ls["surface"], selected_candidate.content)
+            score = _clamp(float(selected_candidate.score), _clip_bounds(spec.get("scoring")))
+            if isinstance(data, dict):
+                data = {
+                    **data,
+                    "selected_saved_candidate": selected_candidate.artifact_id,
+                    "selected_saved_candidate_score": float(selected_candidate.score),
+                }
         executed_steps = max(
             progress_logger.executed_steps,
             int(getattr(trainer_result, "n_iters", 0) or 0),
@@ -494,8 +526,64 @@ def _artifact_text(level, surface: str) -> str:
     return str(data)
 
 
+def _candidate_artifact_kind(surface: str) -> Optional[str]:
+    """Return the kind used for validated candidate artifacts, if any."""
+    return {
+        "config": "config_candidate",
+        "family_policy": "policy",
+        "prior": "prior",
+    }.get(surface)
+
+
+def _candidate_artifact_families(level_spec: dict, families: Dict[str, List[str]]) -> List[str]:
+    """Return candidate artifact family labels for one level spec."""
+    surface = level_spec["surface"]
+    if surface == "config":
+        task_ids = _config_task_ids(level_spec, families)
+        labels = []
+        if level_spec.get("tasks"):
+            labels.append(f"task_set:{level_spec.get('id', 'config')}")
+        for value in (level_spec.get("family"), level_spec.get("task")):
+            if value:
+                labels.append(str(value))
+        labels.extend(task_ids)
+        return list(dict.fromkeys(labels))
+    if surface == "family_policy":
+        return ["<multi>"]
+    if surface == "prior":
+        return ["<holdout>"]
+    return []
+
+
+def _select_best_saved_candidate(
+    memory: MemoryLite,
+    level_spec: dict,
+    families: Dict[str, List[str]],
+    final_score: float,
+):
+    """Return the best validated candidate when it beats the final state.
+
+    Some optimizers can validate a good candidate and then leave the live
+    trainable node in a worse or invalid state. Reporting the best saved
+    candidate preserves the "keep best validated" contract without touching
+    Trace core or making the notebook special-case a surface.
+    """
+    kind = _candidate_artifact_kind(level_spec["surface"])
+    if not kind:
+        return None
+    candidates = []
+    for family in _candidate_artifact_families(level_spec, families):
+        candidates.extend(memory.artifact_history(family=family, kind=kind))
+    if not candidates:
+        return None
+    best = max(candidates, key=lambda artifact: float(artifact.score))
+    return best if float(best.score) > float(final_score) else None
+
+
 def _seed_from_text(level, surface: str, text: str) -> None:
-    if surface == "capability":
+    if surface == "config":
+        getattr(level, "_cfg_node")._data = text
+    elif surface == "capability":
         level.impl._data = text
     elif surface == "family_policy":
         level.propose(text)

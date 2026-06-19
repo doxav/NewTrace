@@ -87,6 +87,7 @@ __all__ = [
     "seed_everything",
     "RepeatedResult",
     "run_spec_repeated",
+    "optimize_config_numeric",
     "budget_to_spec_dict",
     "make_budget",
     "CapabilityArtifact",
@@ -156,6 +157,6 @@ __all__ = [
     "effects_for",
 ]
 
-from .experiments import run_spec_repeated, RepeatedResult, seed_everything
+from .experiments import run_spec_repeated, RepeatedResult, seed_everything, optimize_config_numeric
 
 from .numeric_optimizers import (OptunaOptimizer, LeastSquaresOptimizer, route_optimizers, field_search_space, is_numeric_field)

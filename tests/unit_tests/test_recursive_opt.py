@@ -1137,7 +1137,7 @@ def test_optimize_runs_real_trainer_end_to_end(tmp_path: Path) -> None:
     opt = _NoLLMOptimizer(level.parameters())
     # real PrioritySearch loop, no LLM, no manual backward()/step(): must complete
     result = optimize(level, make_dataset(["hf:GSM8K"], repeats=20),
-                      optimizer=opt, iterations=3, num_candidates=2)
+                      optimizer=opt, iterations=3, num_candidates=2, num_threads=1)
     assert len(level.parameters()) == 1  # level intact and still trainable after training
     assert hasattr(result, "exploit")
 
@@ -1335,7 +1335,7 @@ def test_best_config_from_is_non_empty_and_decodable_after_optimize() -> None:
                       trainable_fields=("batch_design", "trainer"))
     opt = _NoLLMOptimizer(level.parameters())
     optimize(level, make_dataset(["hf:GSM8K"], repeats=8), optimizer=opt,
-             iterations=3, num_candidates=2)
+             iterations=3, num_candidates=2, num_threads=1)
     cfg_text = best_config_from(level)
     assert cfg_text.strip()                      # never empty (was empty in live A)
     decoded = decode_cfg(cfg_text, LevelConfig(), ("batch_design", "trainer"))
@@ -1374,7 +1374,8 @@ def test_pareto_path_runs_with_objective_config(tmp_path: Path) -> None:
     opt = _NoLLMOptimizer(art.parameters())
     optimize(art, make_dataset(["internal:multiobjective_gsm8k"], repeats=8),
              optimizer=opt, iterations=2, num_candidates=2,
-             objective_config=ObjectiveConfig(mode="pareto", minimize={"cost"}))
+             objective_config=ObjectiveConfig(mode="pareto", minimize={"cost"}),
+             num_threads=1)
     assert len(art.parameters()) == 1
 
 
