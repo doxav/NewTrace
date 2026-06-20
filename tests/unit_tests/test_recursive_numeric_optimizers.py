@@ -102,3 +102,38 @@ def test_optimize_config_numeric_rejects_text_only_fields() -> None:
                     memory=MemoryLite(root=tempfile.mkdtemp()))
     with pytest.raises(ValueError, match="no numeric/categorical fields"):
         optimize_config_numeric(lvl, "t", ["starting_artifact"])
+
+
+def test_optimize_config_numeric_respects_constrained_search_space() -> None:
+    """Spec constraints must narrow numeric search so invalid values are never scored."""
+    import tempfile
+    from opto.features.recursive_opt import optimize_config_numeric, MemoryLite
+    from opto.features.recursive_opt.levels import MetaLevel, LevelConfig
+
+    seen_sizes = []
+
+    def runner(cfg, task):
+        seen_sizes.append(cfg.batch_size)
+        if cfg.batch_size not in {2, 4, 8}:
+            raise AssertionError(f"invalid batch size reached runner: {cfg.batch_size}")
+        return float(cfg.batch_size), "fb"
+
+    lvl = MetaLevel(cfg=LevelConfig(), inner_runner=runner,
+                    trainable_fields=("batch_design", "batch_size"),
+                    memory=MemoryLite(root=tempfile.mkdtemp()))
+    best, score, history = optimize_config_numeric(
+        lvl,
+        "internal:multi_param",
+        ["batch_design", "batch_size"],
+        optimizer="optuna",
+        max_trials=8,
+        space={
+            "batch_design": ("cat", ("random", "failure_balanced")),
+            "batch_size": ("cat", (2, 4, 8)),
+        },
+    )
+
+    assert best["batch_size"] in {2, 4, 8}
+    assert score in {2.0, 4.0, 8.0}
+    assert seen_sizes and set(seen_sizes) <= {2, 4, 8}
+    assert len(history) == 8

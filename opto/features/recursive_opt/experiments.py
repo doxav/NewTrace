@@ -179,6 +179,7 @@ def optimize_config_numeric(
     optimizer: str = "optuna",
     max_trials: int = 24,
     base_cfg: Optional["LevelConfig"] = None,
+    space: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Dict[str, Any], float, List[Tuple[Dict[str, Any], float]]]:
     """Optimize numeric/categorical config fields through a real inner runner.
 
@@ -186,8 +187,10 @@ def optimize_config_numeric(
     returns ``(score, feedback)``. We build an ``evaluate(assignment)->score``
     that sets the assigned fields on a base config and scores it through that
     real inner runner — so this is the apples-to-apples numeric arm for the
-    weak-config-surface experiment. Returns ``(best_assignment, best_score,
-    history)`` where ``history`` is the per-trial learning curve.
+    weak-config-surface experiment. ``space`` may narrow the default field
+    domains to spec constraints, e.g. ``{"batch_size": ("cat", (2, 4, 8))}``.
+    Returns ``(best_assignment, best_score, history)`` where ``history`` is the
+    per-trial learning curve.
     """
     import copy as _copy
     from .numeric_optimizers import (OptunaOptimizer, LeastSquaresOptimizer,
@@ -202,7 +205,12 @@ def optimize_config_numeric(
     numeric_fields = [f for f in fields if is_numeric_field(f)]
     if not numeric_fields:
         raise ValueError(f"no numeric/categorical fields to optimize in {fields!r}")
-    space = field_search_space(numeric_fields)
+    default_space = field_search_space(numeric_fields)
+    search_space = {field: (space or default_space)[field] for field in numeric_fields
+                    if field in (space or default_space)}
+    missing = [field for field in numeric_fields if field not in search_space]
+    if missing:
+        raise ValueError(f"missing search-space entries for fields: {missing!r}")
     base = base_cfg if base_cfg is not None else LevelConfig()
 
     def _evaluate(assignment: Dict[str, Any]) -> float:
@@ -214,7 +222,7 @@ def optimize_config_numeric(
 
     params = level.parameters() if hasattr(level, "parameters") else []
     opt_cls = OptunaOptimizer if optimizer == "optuna" else LeastSquaresOptimizer
-    opt = opt_cls(params, evaluate=_evaluate, space=space, max_trials=max_trials)
+    opt = opt_cls(params, evaluate=_evaluate, space=search_space, max_trials=max_trials)
     best = opt.step()
     best_score = max((s for _a, s in opt.history), default=float("-inf"))
     return best, best_score, opt.history
