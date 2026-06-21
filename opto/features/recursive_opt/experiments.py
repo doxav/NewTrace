@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 # Scores at or below this are treated as invalid candidates and excluded from
 # means (kept in sync with levels.DEFAULT_INVALID_FLOOR).
@@ -171,6 +171,34 @@ def run_spec_repeated(
 # --------------------------------------------------------------------------- #
 # Numeric-optimizer bridge to a real config level (the Item-2 head-to-head seam)
 # --------------------------------------------------------------------------- #
+def resolve_numeric_search_space(
+    fields: Sequence[str],
+    space: Optional[Mapping[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Return a validated numeric/categorical search space for ``fields``.
+
+    ``space`` may narrow the default domains produced by
+    :func:`field_search_space`, but it must still cover every numeric/categorical
+    field requested by the caller. Free-text fields are ignored here because they
+    must be routed to a generative optimizer.
+    """
+    from .numeric_optimizers import field_search_space, is_numeric_field
+
+    numeric_fields = [field for field in fields if is_numeric_field(field)]
+    if not numeric_fields:
+        raise ValueError(f"no numeric/categorical fields to optimize in {fields!r}")
+    base_space = dict(space) if space is not None else field_search_space(list(numeric_fields))
+    search_space = {
+        field: base_space[field]
+        for field in numeric_fields
+        if field in base_space
+    }
+    missing = [field for field in numeric_fields if field not in search_space]
+    if missing:
+        raise ValueError(f"missing search-space entries for fields: {missing!r}")
+    return search_space
+
+
 def optimize_config_numeric(
     level: Any,
     task: str,
@@ -194,7 +222,7 @@ def optimize_config_numeric(
     """
     import copy as _copy
     from .numeric_optimizers import (OptunaOptimizer, LeastSquaresOptimizer,
-                                     field_search_space, is_numeric_field)
+                                     is_numeric_field)
     from .levels import LevelConfig
 
     if max_trials <= 0:
@@ -203,14 +231,7 @@ def optimize_config_numeric(
         raise ValueError(f"unknown numeric optimizer {optimizer!r}")
 
     numeric_fields = [f for f in fields if is_numeric_field(f)]
-    if not numeric_fields:
-        raise ValueError(f"no numeric/categorical fields to optimize in {fields!r}")
-    default_space = field_search_space(numeric_fields)
-    search_space = {field: (space or default_space)[field] for field in numeric_fields
-                    if field in (space or default_space)}
-    missing = [field for field in numeric_fields if field not in search_space]
-    if missing:
-        raise ValueError(f"missing search-space entries for fields: {missing!r}")
+    search_space = resolve_numeric_search_space(numeric_fields, space)
     base = base_cfg if base_cfg is not None else LevelConfig()
 
     def _evaluate(assignment: Dict[str, Any]) -> float:

@@ -137,3 +137,14 @@ def test_optimize_config_numeric_respects_constrained_search_space() -> None:
     assert score in {2.0, 4.0, 8.0}
     assert seen_sizes and set(seen_sizes) <= {2, 4, 8}
     assert len(history) == 8
+
+
+def test_resolve_numeric_search_space_rejects_missing_numeric_field() -> None:
+    """A partial override must fail before the inner runner sees invalid values."""
+    from opto.features.recursive_opt import resolve_numeric_search_space
+
+    with pytest.raises(ValueError, match="missing search-space entries"):
+        resolve_numeric_search_space(
+            ["batch_design", "batch_size"],
+            {"batch_design": ("cat", ("random",))},
+        )
