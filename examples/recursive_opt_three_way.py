@@ -377,7 +377,7 @@ def benchmark_uc(name: str, *, initial: Dict[str, Any], standard: Dict[str, Any]
                  total_candidates: int, num_candidates: int,
                  optimizer_llm_calls: int, eval_llm_calls: int, wall_time_s: int,
                  seeds: Sequence[int] = (0,),
-                 primary_level: Optional[str] = None,
+                 primary_level: Optional[Any] = None,
                  recursive_runner: Optional[Callable] = None,
                  standard_runner: Optional[Callable] = None,
                  initial_runner: Optional[Callable] = None,
@@ -386,6 +386,8 @@ def benchmark_uc(name: str, *, initial: Dict[str, Any], standard: Dict[str, Any]
     through run_spec by default. Override any arm's runner:
       * recursive_runner=run_numeric_arm  (UC13 numeric; its spec carries a 'numeric' block);
       * {initial,standard,recursive}_runner=make_code_arm(...)  (code-surface UCs).
+    `primary_level` may be a str (shared) or a dict {arm: level_id} when arms have different
+    level structures (e.g. UC4 o2 arms use 'o2_policy', the recursive arm uses 'o3_prior').
     Code arms read budget from the spec's _total_candidates/_num_candidates keys."""
     case_root = Path(output_root) / _safe(name)
     case_root.mkdir(parents=True, exist_ok=True)
@@ -412,7 +414,10 @@ def benchmark_uc(name: str, *, initial: Dict[str, Any], standard: Dict[str, Any]
 
     def _run(arm, spec, runner, seed):
         default_runner = run_initial_spec_arm if arm == "initial" else run_spec_arm
-        return (runner or default_runner)(arm, spec, seed, primary_level, caps, case_root)
+        # primary_level may be a single str (shared) or a dict {arm: level_id} when arms have
+        # different level structures (e.g. UC4: o2 arms -> 'o2_policy', recursive -> 'o3_prior').
+        pl = primary_level.get(arm) if isinstance(primary_level, dict) else primary_level
+        return (runner or default_runner)(arm, spec, seed, pl, caps, case_root)
 
     rows: List[ArmResult] = []
     for seed in seeds:
