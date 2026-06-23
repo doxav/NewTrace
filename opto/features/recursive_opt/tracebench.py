@@ -1283,6 +1283,7 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4,
             # compliance guards the intended capability spec: a terse but
             # non-compliant artifact ("Answer directly.") can no longer dominate.
             scalar += 0.5 * score["compliance"]
+        scalar = max(0.0, min(1.0, scalar))
         feedback = (
             "[real_trace_bench_multiobjective] "
             + "; ".join(notes)

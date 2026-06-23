@@ -304,6 +304,57 @@ def test_multiobjective_evaluator_rewards_verified_capability() -> None:
     assert "verify/check" in feedback
 
 
+def test_multiobjective_evaluator_caps_compliance_bonus(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The real UC3 evaluator must not emit scalar scores above one."""
+
+    class _Prompt:
+        def __init__(self) -> None:
+            self._data = ""
+
+        @property
+        def data(self) -> str:
+            return self._data
+
+    class _Param:
+        def __init__(self) -> None:
+            self.system_prompt = _Prompt()
+
+        def forward(self, task_input: str) -> str:
+            return f"{self.system_prompt.data}|{task_input}"
+
+    class _Guide:
+        def __call__(self, query: str, response: str, reference: str) -> tuple[float, str]:
+            return 1.0, "correct"
+
+        def get_score_dict(self, query: str, response: str, reference: str) -> Dict[str, float]:
+            return {"accuracy": 1.0}
+
+    class _Adapter:
+        def _load_bundle(self, task_id: str) -> Dict[str, Any]:
+            return {
+                "guide": _Guide(),
+                "param": _Param(),
+                "train_dataset": {"inputs": ["question"], "infos": ["answer"]},
+            }
+
+    monkeypatch.setenv("RECURSIVE_OPT_CAPABILITY_MAX_EXAMPLES", "1")
+    _TB.register_task_adapter(_Adapter())
+    evaluator = make_multiobjective_evaluator(
+        ["internal:multiobjective_gsm8k"],
+        {"accuracy": "max", "cost": "min"},
+        required_terms=("plan", "verify"),
+    )
+
+    def capability(task: str) -> Dict[str, str]:
+        return {"answer": f"{task}: plan, solve, verify."}
+
+    score, _feedback, scalar = evaluator(capability, "reasoning_control")
+
+    assert score["accuracy"] == pytest.approx(1.0)
+    assert 0.0 <= scalar <= 1.0
+    assert scalar == pytest.approx(1.0)
+
+
 def test_text_cost_penalizes_verbosity() -> None:
     from opto.features.recursive_opt.tracebench import _text_cost
 

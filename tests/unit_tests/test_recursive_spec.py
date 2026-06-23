@@ -650,8 +650,9 @@ def test_compliance_objective_blocks_degenerate_terse_optimum():
         return sum(1.0 for t in terms if t in low) / len(terms)
     terse, compliant = "Answer directly.", "Plan briefly, then verify the answer."
     s_terse = 1.0 - 0.5 * _text_cost(terse) + 0.5 * compliance(terse)
-    s_comp  = 1.0 - 0.5 * _text_cost(compliant) + 0.5 * compliance(compliant)
+    s_comp  = min(1.0, 1.0 - 0.5 * _text_cost(compliant) + 0.5 * compliance(compliant))
     assert s_comp > s_terse        # the intended capability now wins the scalar
+    assert s_comp <= 1.0           # normalized UC3 scores remain comparable
 
 
 def test_empty_config_value_is_always_valid_control_arm():
