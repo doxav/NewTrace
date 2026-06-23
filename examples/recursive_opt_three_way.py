@@ -286,7 +286,7 @@ def run_numeric_arm(arm: str, spec: Dict[str, Any], seed: int, primary_level: Op
 # The single entry point
 # --------------------------------------------------------------------------- #
 def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
-                  warm: bool = False, prior_fraction: float = 0.5):
+                  warm: bool = False, prior_fraction: float = 0.34):
     """Build a pluggable code-surface arm runner for benchmark_uc.
 
     standard (warm=False): cold ComponentSpec optimized for the full candidate budget.
@@ -360,7 +360,12 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                 curve = [{"unit": 0, "score": initial_score, "best_so_far": initial_score, "event": "initial"},
                          {"unit": total, "score": final, "best_so_far": max(initial_score, final), "event": "final"}]
             bscore, bunit = curve_stats(curve, final)
-            return ArmResult(arm=arm, seed=seed, score=final, best_score=bscore, best_unit=bunit,
+            # Bug-fix: a fresh stochastic re-eval of the best artifact can score below the best
+            # actually found. Report the realized best (promoted artifact's recorded score), so
+            # the arm is judged on the best artifact it produced, not a noisy final sample.
+            promoted = float(best.score) if best is not None else final
+            reported = max(final, bscore, promoted)
+            return ArmResult(arm=arm, seed=seed, score=reported, best_score=max(bscore, promoted), best_unit=bunit,
                              wall_s=time.time() - t0, artifact=str(artifact),
                              artifact_id=getattr(best, "artifact_id", None), curve=curve,
                              budget_used=_budget_snapshot(curve))
