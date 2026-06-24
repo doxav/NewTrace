@@ -370,8 +370,13 @@ def test_text_cost_penalizes_verbosity() -> None:
 # --------------------------------------------------------------------------- #
 from opto.features.recursive_opt import (
     AgenticOptimizer,
+    ConfidenceGate,
     default_optimizer_tools,
+    GuardedDecisionCase,
+    GuardedDecisionEvaluator,
     parse_optimizer_tool_policy,
+    parse_guarded_decision,
+    score_guarded_decision,
     select_optimizer_tools,
 )
 from opto.features.recursive_opt import inspect_utils
@@ -487,6 +492,93 @@ def test_select_optimizer_tools_preserves_policy_order() -> None:
     selected = select_optimizer_tools(available, "tools: run_subset trace_search")
 
     assert list(selected) == ["run_subset", "trace_search"]
+
+
+def test_guarded_decision_parser_accepts_json_and_key_value_text() -> None:
+    parsed = parse_guarded_decision(
+        '{"action": "retest", "target": "config", "tools": ["run_subset"], "confidence": 0.4}'
+    )
+
+    assert parsed.action == "retest"
+    assert parsed.target == "config"
+    assert parsed.tools == ("run_subset",)
+    assert parsed.confidence == pytest.approx(0.4)
+
+    text = parse_guarded_decision("action: reject\nreason: syntax invalid\nmax_examples: 0")
+    assert text.action == "reject"
+    assert text.reason == "syntax invalid"
+    assert text.values["max_examples"] == "0"
+
+
+def test_guarded_decision_hard_forbidden_blocks_promote() -> None:
+    result = score_guarded_decision(
+        "action: do_not_promote\nreason: syntax invalid reject",
+        allowed_actions=("reject", "repair", "do_not_promote"),
+        required_terms=("syntax", "reject"),
+        forbidden_terms=("promote",),
+        hard_forbidden=True,
+    )
+
+    assert result.score > 0.5
+    assert result.forbidden_hits == ()
+
+    bad = score_guarded_decision(
+        "action: promote\nreason: syntax_ok false but score positive",
+        allowed_actions=("reject", "repair", "do_not_promote"),
+        required_terms=("syntax", "reject"),
+        forbidden_terms=("promote",),
+        hard_forbidden=True,
+    )
+    assert bad.score == 0.0
+    assert bad.forbidden_hits == ("promote",)
+
+
+def test_guarded_decision_evaluator_and_confidence_gate() -> None:
+    gate = ConfidenceGate(min_support=2, z=1.0, min_gain=0.01)
+    noisy = {"kind": "config", "mean_score": 0.16, "initial": 0.13, "std": 0.08, "n": 1}
+    validated = {"kind": "code", "mean_score": 1.0, "initial": 0.625, "std": 0.0, "n": 3}
+
+    assert gate.needs_retest(noisy)
+    assert not gate.clears_promotion(noisy)
+    assert gate.clears_promotion(validated)
+
+    cases = (
+        GuardedDecisionCase(
+            name="noisy",
+            payload=noisy,
+            allowed_actions=("retest", "hold", "probe"),
+            required_terms=("config", "single", "retest"),
+            forbidden_terms=("promote",),
+            hard_forbidden=True,
+        ),
+        GuardedDecisionCase(
+            name="validated",
+            payload=validated,
+            allowed_actions=("promote",),
+            required_terms=("code", "validated", "gain"),
+            forbidden_terms=("reject", "control"),
+        ),
+    )
+    evaluator = GuardedDecisionEvaluator(cases)
+
+    def policy(report: Dict[str, Any]) -> str:
+        if gate.needs_retest(report):
+            return "action: retest\nreason: config single seed retest"
+        return "action: promote\nreason: code validated gain"
+
+    score, feedback = evaluator(policy, "unused")
+    assert score == pytest.approx(1.0)
+    assert "noisy" in feedback
+    assert "validated" in feedback
+
+
+def test_guarded_decision_rejects_invalid_gate_and_empty_evaluator() -> None:
+    with pytest.raises(ValueError, match="min_support"):
+        ConfidenceGate(min_support=0)
+
+    evaluator = GuardedDecisionEvaluator(())
+    with pytest.raises(ValueError, match="at least one case"):
+        evaluator(lambda: "action: hold")
 
 
 def test_make_task_runner_requires_registered_adapter() -> None:
