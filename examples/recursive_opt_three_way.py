@@ -342,13 +342,16 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                     return ArmResult(arm=arm, seed=seed, score=None, wall_s=time.time() - t0,
                                      error=(f"code warm arm needs total_candidates >= 2*num_candidates "
                                             f"({2*nc}) to split into prior+warm phases; got {total}"))
-                optimize(level, ds, guide=guide, iterations=max(1, p1 // nc), num_candidates=nc)
+                optimize(level, ds, guide=guide, iterations=max(1, p1 // nc),
+                         num_candidates=nc, keep_best_validated=True)
                 prior = mem.best_artifact(str(task_id), "code")
                 if prior is not None and level.parameters():
                     level.parameters()[0]._data = prior.content   # warm-start from learned prior
-                optimize(level, ds, guide=guide, iterations=max(1, p2 // nc), num_candidates=nc)
+                optimize(level, ds, guide=guide, iterations=max(1, p2 // nc),
+                         num_candidates=nc, keep_best_validated=True)
             else:
-                optimize(level, ds, guide=guide, iterations=max(1, total // nc), num_candidates=nc)
+                optimize(level, ds, guide=guide, iterations=max(1, total // nc),
+                         num_candidates=nc, keep_best_validated=True)
 
             best = mem.best_artifact(str(task_id), "code")
             if best is not None and level.parameters():
