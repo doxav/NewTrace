@@ -286,13 +286,19 @@ def run_numeric_arm(arm: str, spec: Dict[str, Any], seed: int, primary_level: Op
 # The single entry point
 # --------------------------------------------------------------------------- #
 def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
-                  warm: bool = False, prior_fraction: float = 0.34):
+                  warm: bool = False, prior_fraction: float = 0.34,
+                  transfer: bool = False, holdout_task_id: Optional[str] = None,
+                  holdout_evaluate: Optional[Callable] = None):
     """Build a pluggable code-surface arm runner for benchmark_uc.
 
     standard (warm=False): cold ComponentSpec optimized for the full candidate budget.
     recursive (warm=True): two-phase at the SAME total budget - a phase-1 'prior discovery'
-      run promotes its best artifact, then phase-2 warm-starts from it. This is the genuine
-      recursive contrast on the code surface (a learned prior feeding a second optimization).
+      run promotes its best artifact, then phase-2 warm-starts from it.
+
+    MOD 1 (structural fix): transfer=True gives the code surface UC4's WINNING objective —
+    optimize on `task_id`, but PROMOTE and SCORE on a HELD-OUT family (`holdout_task_id` /
+    `holdout_evaluate`). Recursion is then rewarded for producing a GENERALISING artifact, not
+    one that over-fits the training task (the warm-restart's weakness). Requires warm=True.
     Returns a callable with the (arm, spec, seed, primary_level, caps, case_root) signature.
     """
     def _runner(arm: str, spec: Dict[str, Any], seed: int, primary_level: Optional[str],
@@ -307,6 +313,9 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
         total = int(spec.get("_total_candidates") or 8)
         nc = int(spec.get("_num_candidates") or 2)
         root = str(case_root / f"{arm}_seed{seed}")
+        # transfer mode scores the deployed artifact on a HELD-OUT family (UC4's objective).
+        eval_task = holdout_task_id if (transfer and holdout_task_id) else task_id
+        eval_fn = holdout_evaluate if (transfer and holdout_evaluate) else evaluate
         t0 = time.time()
         try:
             seed_everything(seed)
@@ -317,7 +326,18 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                                  evaluate=evaluate, objective=objective)
             level = CodeArtifactLevel(comp, memory=mem)
             ds = make_dataset([task_id], repeats=int(spec.get("_max_examples", 8)))
-            initial_score = float(guide(task_id, level.forward(task_id), None)[0])
+            # held-out scoring helper: re-evaluate the current deployed code on the held-out task
+            def _holdout_score() -> float:
+                if not (transfer and eval_task):
+                    return float(guide(task_id, level.forward(task_id), None)[0])
+                comp_h = ComponentSpec(name=spec.get("_component", "component"), baseline=baseline,
+                                       evaluate=eval_fn, objective=objective)
+                lvl_h = CodeArtifactLevel(comp_h, memory=None)
+                if level.parameters() and lvl_h.parameters():
+                    lvl_h.parameters()[0]._data = level.parameters()[0].data
+                return float(guide(eval_task, lvl_h.forward(eval_task), None)[0])
+
+            initial_score = _holdout_score()
             initial_code = str(level.current_code())
 
             if arm == "initial":
@@ -356,7 +376,9 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
             best = mem.best_artifact(str(task_id), "code")
             if best is not None and level.parameters():
                 level.parameters()[0]._data = best.content
-            final = float(guide(task_id, level.forward(task_id), None)[0])
+            # MOD 1: in transfer mode the reported score is the HELD-OUT score of the deployed
+            # artifact (generalisation), not the training-task score.
+            final = _holdout_score()
             artifact = best.content if best is not None else str(level.current_code())
             curve = curve_from_memory(mem)
             if not curve:
@@ -366,9 +388,13 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
             # Bug-fix: a fresh stochastic re-eval of the best artifact can score below the best
             # actually found. Report the realized best (promoted artifact's recorded score), so
             # the arm is judged on the best artifact it produced, not a noisy final sample.
-            promoted = float(best.score) if best is not None else final
-            reported = max(final, bscore, promoted)
-            return ArmResult(arm=arm, seed=seed, score=reported, best_score=max(bscore, promoted), best_unit=bunit,
+            # In transfer mode, held-out final is authoritative (don't inflate with train-curve best).
+            if transfer and eval_task:
+                reported, reported_best = final, final
+            else:
+                promoted = float(best.score) if best is not None else final
+                reported, reported_best = max(final, bscore, promoted), max(bscore, promoted)
+            return ArmResult(arm=arm, seed=seed, score=reported, best_score=reported_best, best_unit=bunit,
                              wall_s=time.time() - t0, artifact=str(artifact),
                              artifact_id=getattr(best, "artifact_id", None), curve=curve,
                              budget_used=_budget_snapshot(curve))
@@ -435,6 +461,8 @@ def benchmark_uc(name: str, *, initial: Dict[str, Any], standard: Dict[str, Any]
 
     report = {"name": name, "notes": notes,
               "rows": [asdict(r) for r in rows], "summary": _summarize(rows)}
+    report["promotion"] = promotion_decision(report)
+    _write_json(case_root / "promotion_decision.json", report["promotion"])
     _write_json(case_root / "three_way_report.json", report)
     _write_diffs(case_root, rows)
     return report
@@ -443,6 +471,71 @@ def benchmark_uc(name: str, *, initial: Dict[str, Any], standard: Dict[str, Any]
 # --------------------------------------------------------------------------- #
 # Summary + verdict (credits higher final/best, speed, or optimizer-call savings)
 # --------------------------------------------------------------------------- #
+def benchmark_uc_budget_sweep(name: str, *, budget_points: Sequence[int], **kwargs) -> Dict[str, Any]:
+    """MOD 2: run a UC at >=2 budget points and only trust a verdict that AGREES across them.
+
+    UC10/UC11 flip with budget; a single point hides that. Returns {points, agreed, verdict,
+    reports}. `verdict` is the shared promotion action if all points agree, else 'budget_sensitive'.
+    kwargs are forwarded to benchmark_uc (minus total_candidates, set per point).
+    """
+    reports = {}
+    actions = []
+    for b in budget_points:
+        rep = benchmark_uc(f"{name}_b{b}", total_candidates=int(b), **kwargs)
+        reports[int(b)] = rep
+        actions.append((rep.get("promotion") or {}).get("action"))
+    agreed = len(set(actions)) == 1 and actions[0] is not None
+    verdict = actions[0] if agreed else "budget_sensitive"
+    return {"name": name, "budget_points": list(budget_points), "agreed": agreed,
+            "verdict": verdict, "actions": actions, "reports": reports}
+
+
+def promotion_decision(report: Dict[str, Any], *, min_support: int = 3,
+                       min_gain: float = 0.01, z: float = 1.0) -> Dict[str, Any]:
+    """Deterministic promote/hold/retest/reject gate over a three-way report.
+
+    Hard, auditable safety gate: recursive must beat standard by a one-sided lower
+    confidence bound (mean - z*std/sqrt(n)) before downstream cells reuse its artifact.
+    This is the thin-LCB-reader role (REC #3) — it does NOT re-evaluate or grow decisions.py;
+    robustness comes from Trace's keep_best_validated + multi-seed support here.
+    """
+    summary = report.get("summary") or {}
+    arms = summary.get("arms") or {}
+    std = arms.get("standard") or {}
+    rec = arms.get("recursive") or {}
+    name = report.get("name", "")
+    std_mean, rec_mean = _num(std.get("mean_final")), _num(rec.get("mean_final"))
+    rec_std = _num(rec.get("std_final")) or 0.0
+    rec_n, std_n = int(rec.get("n") or 0), int(std.get("n") or 0)
+
+    if std_mean is None or rec_mean is None:
+        return {"action": "retest", "name": name, "promote": False,
+                "reason": "standard or recursive arm has no valid mean_final",
+                "support": {"standard": std_n, "recursive": rec_n}}
+    if rec_n < min_support or std_n < min_support:
+        return {"action": "retest", "name": name, "promote": False,
+                "reason": f"support below min_support={min_support}",
+                "delta_mean": rec_mean - std_mean,
+                "support": {"standard": std_n, "recursive": rec_n}}
+
+    rec_lcb = rec_mean - float(z) * rec_std / math.sqrt(max(1, rec_n))
+    delta_mean, delta_lcb = rec_mean - std_mean, rec_lcb - std_mean
+    if delta_lcb >= float(min_gain):
+        action, reason = "promote", f"recursive LCB beats standard by {delta_lcb:+.4f} >= {min_gain}"
+    elif delta_mean < -float(min_gain):
+        action, reason = "reject", f"recursive mean below standard by {delta_mean:+.4f}"
+    elif delta_mean > 0:
+        action, reason = "hold", "recursive mean positive but LCB insufficient"
+    else:
+        action, reason = "hold", "recursive does not clear standard"
+    return {"action": action, "name": name, "promote": action == "promote",
+            "delta_mean": delta_mean, "delta_lcb": delta_lcb, "recursive_lcb": rec_lcb,
+            "standard_mean": std_mean, "recursive_mean": rec_mean, "recursive_std": rec_std,
+            "support": {"standard": std_n, "recursive": rec_n},
+            "min_support": min_support, "min_gain": min_gain, "z": z,
+            "verdict": summary.get("verdict"), "reason": reason}
+
+
 def _summarize(rows: Sequence[ArmResult]) -> Dict[str, Any]:
     by = {}
     for r in rows:
@@ -556,6 +649,7 @@ def _agg(rows: Sequence[ArmResult]) -> Dict[str, Any]:
     units = [float(r.best_unit) for r in ok if r.best_unit is not None]
     return {"n": len(ok), "errors": len(rows) - len(ok),
             "mean_final": statistics.mean(finals) if finals else None,
+            "std_final": statistics.pstdev(finals) if len(finals) > 1 else 0.0,
             "mean_best": statistics.mean(bests) if bests else None,
             "mean_best_unit": statistics.mean(units) if units else None}
 
@@ -633,6 +727,14 @@ def _clamp(value: float, clip: Optional[Tuple[float, float]]) -> float:
 
 def _sub(a, b):
     return None if a is None or b is None else a - b
+
+
+def _num(value: Any) -> Optional[float]:
+    try:
+        f = float(value)
+    except Exception:
+        return None
+    return f if math.isfinite(f) else None
 
 
 def _write_json(path: Path, payload: Dict[str, Any]) -> None:
