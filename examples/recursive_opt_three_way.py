@@ -285,6 +285,89 @@ def run_numeric_arm(arm: str, spec: Dict[str, Any], seed: int, primary_level: Op
 # --------------------------------------------------------------------------- #
 # The single entry point
 # --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# Tier 2/3 scaffolds: numeric landscape (T2.5), tool-call metric (T3.6),
+# multi-agent solver+critic (T3.7). Deterministic where possible so they can be
+# validated offline; the LLM-dependent parts are clearly marked.
+# --------------------------------------------------------------------------- #
+def numeric_landscape_evaluator(*, optimum: Dict[str, Any], weights: Optional[Dict[str, float]] = None):
+    """T2.5: an evaluator whose score genuinely MOVES with numeric/categorical config fields,
+    so numeric routing can show a SCORE win (not only a cost win, as in flat UC13).
+
+    score = 1 - normalized distance from a known optimum over the configured fields.
+    Deterministic (no LLM), so the numeric landscape is real and testable offline.
+    `optimum` maps field -> best value; numeric fields contribute squared relative error,
+    categorical fields contribute 0/1 mismatch. Returns (score, feedback).
+    """
+    w = weights or {}
+    def _evaluate(cfg_or_assignment, _task=None) -> Tuple[float, str]:
+        assign = cfg_or_assignment
+        if not isinstance(assign, dict):
+            assign = {k: getattr(assign, k, None) for k in optimum}
+        err, denom, misses = 0.0, 0.0, []
+        for field, best in optimum.items():
+            wt = float(w.get(field, 1.0)); denom += wt
+            val = assign.get(field)
+            if isinstance(best, (int, float)) and isinstance(val, (int, float)):
+                scale = abs(best) or 1.0
+                err += wt * ((float(val) - float(best)) / scale) ** 2
+            else:
+                if val != best:
+                    err += wt; misses.append(field)
+        score = max(0.0, 1.0 - (err / denom if denom else 0.0))
+        fb = f"numeric landscape score={score:.3f}" + (f"; mismatched: {misses}" if misses else "")
+        return float(score), fb
+    return _evaluate
+
+
+def count_tool_calls(memory_root: str | Path) -> int:
+    """T3.6: count how many times the optimizer LLM actually INVOKED a tool during a run.
+
+    Reads progress/trace records and counts events tagged as a tool call. The agentic gap
+    (tools were policy-as-text, never called) is measured here: tool_calls==0 means no real
+    tool use. Looks for 'tool_call'/'tool_use' markers in events.jsonl and any tool_calls.jsonl.
+    """
+    root = Path(memory_root)
+    n = 0
+    for fname in ("tool_calls.jsonl", "events.jsonl"):
+        f = root / fname
+        if not f.exists():
+            continue
+        try:
+            for line in f.read_text().splitlines():
+                if not line.strip():
+                    continue
+                rec = json.loads(line)
+                ev = str(rec.get("event", "")) + str(rec.get("type", ""))
+                if "tool_call" in ev or "tool_use" in ev or rec.get("tool"):
+                    n += 1
+        except Exception:
+            continue
+    return n
+
+
+
+def make_solver_critic_evaluator(*, solver_fn: Callable, base_evaluate: Callable):
+    """T3.7 (faithful + generic): turn a SINGLE-agent task into a solver+critic pipeline by
+    COMPOSITION, with no new arm. The trainable component is the CRITIC; it genuinely READS the
+    solver's draft and revises it, and the REVISED output is scored by the base task evaluator.
+
+    Use with the existing make_code_arm (critic as the optimized component), so:
+      * standard arm  = make_code_arm(evaluate=base_evaluate)              # single agent
+      * recursive arm = make_code_arm(evaluate=make_solver_critic_evaluator(...))  # solver+critic
+    This reuses all arm machinery (zero duplication) and the critic actually consumes solver output
+    (unlike a two-independent-component stub). solver_fn(task) -> draft; critic(draft) -> revised.
+    """
+    def _evaluate(critic_component, task):
+        draft = solver_fn(task)
+        try:
+            revised = critic_component(draft) if callable(critic_component) else draft
+        except Exception:
+            revised = draft
+        return base_evaluate(revised, task)
+    return _evaluate
+
+
 def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                   warm: bool = False, prior_fraction: float = 0.34,
                   transfer: bool = False, holdout_task_id: Optional[str] = None,
@@ -518,19 +601,41 @@ def promotion_decision(report: Dict[str, Any], *, min_support: int = 3,
                 "delta_mean": rec_mean - std_mean,
                 "support": {"standard": std_n, "recursive": rec_n}}
 
-    rec_lcb = rec_mean - float(z) * rec_std / math.sqrt(max(1, rec_n))
-    delta_mean, delta_lcb = rec_mean - std_mean, rec_lcb - std_mean
-    if delta_lcb >= float(min_gain):
-        action, reason = "promote", f"recursive LCB beats standard by {delta_lcb:+.4f} >= {min_gain}"
+    # FIX (from CURRENT_LIMITS review): use the PAIRED-delta std (per-seed rec-std) for the LCB
+    # when available. The previous gate used only the recursive arm's marginal std, which ignores
+    # standard-arm + paired uncertainty and is too optimistic (e.g. UC9 promoted on a true tie).
+    paired = summary.get("paired_delta") or {}
+    delta_mean = rec_mean - std_mean
+    paired_mean = _num(paired.get("mean"))
+    paired_std = _num(paired.get("std"))
+    paired_n = int(paired.get("n") or 0)
+    if paired_mean is not None and paired_std is not None and paired_n >= min_support:
+        basis = "paired"
+        eff_mean, eff_std, eff_n = paired_mean, paired_std, paired_n
+        delta_lcb = eff_mean - float(z) * eff_std / math.sqrt(max(1, eff_n))
+        # Reliability rule (from CURRENT_LIMITS): a paired win must also clear its own seed
+        # variance — if |mean delta| <= paired std, it is a tie regardless of the LCB.
+        reliability_tie = abs(eff_mean) <= eff_std
+    else:
+        basis = "recursive_only"
+        eff_std, eff_n = rec_std, rec_n
+        delta_lcb = (rec_mean - float(z) * rec_std / math.sqrt(max(1, rec_n))) - std_mean
+        reliability_tie = False
+
+    if reliability_tie and delta_mean > 0:
+        action, reason = "hold", f"{basis} mean {delta_mean:+.4f} within seed std {eff_std:.4f} (tie)"
+    elif delta_lcb >= float(min_gain) and not reliability_tie:
+        action, reason = "promote", f"{basis} LCB delta {delta_lcb:+.4f} >= {min_gain}, clears seed std"
     elif delta_mean < -float(min_gain):
         action, reason = "reject", f"recursive mean below standard by {delta_mean:+.4f}"
     elif delta_mean > 0:
-        action, reason = "hold", "recursive mean positive but LCB insufficient"
+        action, reason = "hold", f"recursive mean positive but {basis} LCB insufficient ({delta_lcb:+.4f})"
     else:
         action, reason = "hold", "recursive does not clear standard"
     return {"action": action, "name": name, "promote": action == "promote",
-            "delta_mean": delta_mean, "delta_lcb": delta_lcb, "recursive_lcb": rec_lcb,
-            "standard_mean": std_mean, "recursive_mean": rec_mean, "recursive_std": rec_std,
+            "delta_mean": delta_mean, "delta_lcb": delta_lcb,
+            "basis": basis, "paired_delta_std": paired_std, "recursive_std": rec_std,
+            "standard_mean": std_mean, "recursive_mean": rec_mean,
             "support": {"standard": std_n, "recursive": rec_n},
             "min_support": min_support, "min_gain": min_gain, "z": z,
             "verdict": summary.get("verdict"), "reason": reason}
@@ -553,11 +658,28 @@ def _summarize(rows: Sequence[ArmResult]) -> Dict[str, Any]:
                  "recursive_unit_to_standard_best": first_unit_reaching(rec_row.curve, std_best),
                  "recursive_unit_to_standard_final": first_unit_reaching(rec_row.curve, float(std_row.score))}
     verdict, why = _verdict(init, std, rec, std_b, rec_b, speed, rows)
+    paired = _paired_delta(by)
     return {"arms": arms,
             "recursive_minus_standard_final": _sub(rec, std),
             "recursive_minus_standard_best": _sub(rec_b, std_b),
             "standard_gain_final": _sub(std, init), "recursive_gain_final": _sub(rec, init),
+            "paired_delta": paired,
             "speed": speed, "verdict": verdict, "why": why}
+
+
+def _paired_delta(by: Dict[str, List[ArmResult]]) -> Dict[str, Any]:
+    """Per-seed recursive-minus-standard deltas + their mean/std. This is the correct
+    uncertainty for a paired comparison (it cancels per-seed common noise), and is what the
+    reliability gate should use instead of the recursive arm's marginal std alone."""
+    std_by_seed = {r.seed: float(r.score) for r in by.get("standard", []) if r.ok()}
+    rec_by_seed = {r.seed: float(r.score) for r in by.get("recursive", []) if r.ok()}
+    seeds = sorted(set(std_by_seed) & set(rec_by_seed))
+    deltas = [rec_by_seed[s] - std_by_seed[s] for s in seeds]
+    if not deltas:
+        return {"n": 0, "deltas": [], "mean": None, "std": None}
+    return {"n": len(deltas), "deltas": deltas,
+            "mean": statistics.mean(deltas),
+            "std": statistics.pstdev(deltas) if len(deltas) > 1 else 0.0}
 
 
 def _verdict(init, std, rec, std_b, rec_b, speed, rows) -> Tuple[str, str]:
