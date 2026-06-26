@@ -466,6 +466,10 @@ def test_optimizer_tool_policy_parses_text_json_and_filters_unknowns() -> None:
         available,
     ) == ["trace_search", "run_subset"]
     assert parse_optimizer_tool_policy(
+        "tools: trace_search; use: run_subset | note.",
+        available,
+    ) == ["trace_search", "run_subset", "note"]
+    assert parse_optimizer_tool_policy(
         '{"tools": ["note", "trace_search"]}',
         available,
     ) == ["note", "trace_search"]

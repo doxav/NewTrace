@@ -157,7 +157,10 @@ def parse_optimizer_tool_policy(
             if parsed:
                 return parsed
         tokens: List[str] = []
-        for line in text.replace(",", "\n").splitlines():
+        normalized = text
+        for separator in (",", ";", "|", "+"):
+            normalized = normalized.replace(separator, "\n")
+        for line in normalized.splitlines():
             line = line.strip().strip("-* ")
             if not line:
                 continue
@@ -165,7 +168,11 @@ def parse_optimizer_tool_policy(
                 key, rest = line.split(":", 1)
                 if key.strip().lower() in {"tools", "tool_policy", "order", "use"}:
                     line = rest.strip()
-            tokens.extend(part.strip().strip("'\"`") for part in line.split() if part.strip())
+            tokens.extend(
+                part.strip().strip("'\"`.,:;()[]{}")
+                for part in line.split()
+                if part.strip()
+            )
         return tokens
 
     candidates = flatten(policy)
