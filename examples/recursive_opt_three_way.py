@@ -386,7 +386,8 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                   warm: bool = False, prior_fraction: float = 0.34,
                   transfer: bool = False, holdout_task_id: Optional[str] = None,
                   holdout_evaluate: Optional[Callable] = None,
-                  transfer_phase2: bool = False):
+                  transfer_phase2: bool = False,
+                  train_task_ids: Optional[Sequence[str]] = None):
     """Build a pluggable code-surface arm runner for benchmark_uc.
 
     standard (warm=False): cold ComponentSpec optimized for the full candidate budget.
@@ -398,8 +399,14 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
     transfer_phase2=True, the warm arm uses phase 1 on `task_id`, then phase 2
     on `holdout_task_id`, testing whether the source prior improves target learning
     at the same total budget. Existing callers keep the old zero-shot transfer path.
+
+    MULTI-TASK PRIOR (UC14b zero-shot variant): pass `train_task_ids=[t1, t2, ...]` to induce the
+    code prior across SEVERAL train tasks (mirrors UC4's cross-family induction), so the artifact
+    captures shared structure instead of one task's specifics. Defaults to [task_id]. Combine with
+    transfer=True (no transfer_phase2) for a faithful ZERO-SHOT transfer test (no target training).
     Returns a callable with the (arm, spec, seed, primary_level, caps, case_root) signature.
     """
+    _train_ids = list(train_task_ids) if train_task_ids else [task_id]
     def _runner(arm: str, spec: Dict[str, Any], seed: int, primary_level: Optional[str],
                 caps: Dict[str, Any], case_root: Path) -> ArmResult:
         from opto.features.recursive_opt.budget import make_budget, reset_budget
@@ -429,7 +436,7 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                 return CodeArtifactLevel(comp, memory=memory)
 
             level = _build_level(evaluate, mem)
-            ds = make_dataset([task_id], repeats=int(spec.get("_max_examples", 8)))
+            ds = make_dataset(_train_ids, repeats=int(spec.get("_max_examples", 8)))
             # held-out scoring helper: re-evaluate the current deployed code on the held-out task
             def _holdout_score() -> float:
                 if not (transfer and eval_task):
