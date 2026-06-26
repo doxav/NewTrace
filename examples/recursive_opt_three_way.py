@@ -347,24 +347,38 @@ def count_tool_calls(memory_root: str | Path) -> int:
 
 
 
-def make_solver_critic_evaluator(*, solver_fn: Callable, base_evaluate: Callable):
-    """T3.7 (faithful + generic): turn a SINGLE-agent task into a solver+critic pipeline by
-    COMPOSITION, with no new arm. The trainable component is the CRITIC; it genuinely READS the
-    solver's draft and revises it, and the REVISED output is scored by the base task evaluator.
+def make_solver_critic_evaluator(
+    *,
+    solver_fn: Callable[[Any], Any],
+    base_evaluate: Callable[[Callable[..., Any], Any], Any],
+) -> Callable[[Callable[..., Any], Any], Any]:
+    """Return an evaluator that scores a traced solver->critic pipeline.
 
-    Use with the existing make_code_arm (critic as the optimized component), so:
-      * standard arm  = make_code_arm(evaluate=base_evaluate)              # single agent
-      * recursive arm = make_code_arm(evaluate=make_solver_critic_evaluator(...))  # solver+critic
-    This reuses all arm machinery (zero duplication) and the critic actually consumes solver output
-    (unlike a two-independent-component stub). solver_fn(task) -> draft; critic(draft) -> revised.
+    ``base_evaluate`` must keep its normal callable contract: it receives a
+    candidate callable and invokes it on each example. The wrapper candidate
+    first gets a solver draft for that same example, then calls the trainable
+    critic with both the question and draft. This keeps the critic call on the
+    trace path, so ``CodeArtifactLevel`` can optimize it.
     """
-    def _evaluate(critic_component, task):
-        draft = solver_fn(task)
-        try:
-            revised = critic_component(draft) if callable(critic_component) else draft
-        except Exception:
-            revised = draft
-        return base_evaluate(revised, task)
+    def _evaluate(critic_component: Callable[..., Any], task: Any) -> Any:
+        def _pipeline_component(*args: Any, **kwargs: Any) -> Any:
+            question = kwargs.get("question", args[0] if args else task)
+            try:
+                draft = solver_fn(question)
+            except Exception as exc:
+                draft = f"<solver_error:{type(exc).__name__}>"
+            critic_input = (
+                f"question: {question}\n"
+                f"solver_draft: {draft}\n"
+                "Return the final answer only."
+            )
+            try:
+                revised = critic_component(critic_input)
+            except Exception:
+                revised = draft
+            return draft if revised is None else revised
+
+        return base_evaluate(_pipeline_component, task)
     return _evaluate
 
 
