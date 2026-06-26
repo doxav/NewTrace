@@ -5,7 +5,7 @@ from typing import Any, Callable, List, Tuple
 
 import pytest
 
-from examples.recursive_opt_three_way import make_solver_critic_evaluator
+from examples.recursive_opt_three_way import make_code_arm, make_solver_critic_evaluator
 from opto.features.recursive_opt import CodeArtifactLevel, ComponentSpec, MemoryLite, RecursiveGuide
 
 
@@ -65,3 +65,62 @@ def test_solver_critic_evaluator_falls_back_to_solver_draft() -> None:
 
     assert answer == "draft:q2"
     assert feedback == "task"
+
+
+def _policy_seed(self: Any, signal: str) -> str:
+    """Tiny importable policy baseline for code-arm transfer tests."""
+    return f"seed:{signal}"
+
+
+def test_code_arm_transfer_phase2_optimizes_heldout_target(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    optimize_families: List[str] = []
+    train_families: List[str] = []
+    target_families: List[str] = []
+
+    def fake_optimize(level: CodeArtifactLevel, dataset: dict, **_kwargs: Any) -> None:
+        family = str(dataset["inputs"][0])
+        optimize_families.append(family)
+        level.forward(family)
+
+    monkeypatch.setattr("opto.features.recursive_opt.optimize", fake_optimize)
+
+    def train_eval(component: Callable[..., Any], family: Any) -> Tuple[float, str]:
+        train_families.append(str(family))
+        component("train")
+        return 0.2, "source score"
+
+    def target_eval(component: Callable[..., Any], family: Any) -> Tuple[float, str]:
+        target_families.append(str(family))
+        component("target")
+        return 0.9, "target score"
+
+    runner = make_code_arm(
+        baseline=_policy_seed,
+        evaluate=train_eval,
+        task_id="source_task",
+        objective="transfer source policy to target",
+        warm=True,
+        transfer=True,
+        transfer_phase2=True,
+        holdout_task_id="target_task",
+        holdout_evaluate=target_eval,
+    )
+
+    result = runner(
+        "recursive",
+        {"_component": "policy", "_total_candidates": 4, "_num_candidates": 2, "_max_examples": 1},
+        0,
+        None,
+        {"optimizer_llm_calls": 10, "eval_llm_calls": 10, "candidates": 10, "on_exceed": "return_best"},
+        tmp_path,
+    )
+
+    assert result.error is None
+    assert result.score == pytest.approx(0.9)
+    assert optimize_families == ["source_task", "target_task"]
+    assert train_families == ["source_task"]
+    assert target_families
+    assert target_families[-1] == "target_task"

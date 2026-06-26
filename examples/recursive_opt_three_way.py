@@ -385,17 +385,19 @@ def make_solver_critic_evaluator(
 def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                   warm: bool = False, prior_fraction: float = 0.34,
                   transfer: bool = False, holdout_task_id: Optional[str] = None,
-                  holdout_evaluate: Optional[Callable] = None):
+                  holdout_evaluate: Optional[Callable] = None,
+                  transfer_phase2: bool = False):
     """Build a pluggable code-surface arm runner for benchmark_uc.
 
     standard (warm=False): cold ComponentSpec optimized for the full candidate budget.
     recursive (warm=True): two-phase at the SAME total budget - a phase-1 'prior discovery'
       run promotes its best artifact, then phase-2 warm-starts from it.
 
-    MOD 1 (structural fix): transfer=True gives the code surface UC4's WINNING objective —
-    optimize on `task_id`, but PROMOTE and SCORE on a HELD-OUT family (`holdout_task_id` /
-    `holdout_evaluate`). Recursion is then rewarded for producing a GENERALISING artifact, not
-    one that over-fits the training task (the warm-restart's weakness). Requires warm=True.
+    MOD 1 (structural fix): transfer=True gives the code surface UC4's held-out objective.
+    By default it optimizes on `task_id` and scores on a held-out family. With
+    transfer_phase2=True, the warm arm uses phase 1 on `task_id`, then phase 2
+    on `holdout_task_id`, testing whether the source prior improves target learning
+    at the same total budget. Existing callers keep the old zero-shot transfer path.
     Returns a callable with the (arm, spec, seed, primary_level, caps, case_root) signature.
     """
     def _runner(arm: str, spec: Dict[str, Any], seed: int, primary_level: Optional[str],
@@ -419,9 +421,14 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
             reset_budget(make_budget(caps))
             mem = MemoryLite(root=root)
             guide = RecursiveGuide()
-            comp = ComponentSpec(name=spec.get("_component", "component"), baseline=baseline,
-                                 evaluate=evaluate, objective=objective)
-            level = CodeArtifactLevel(comp, memory=mem)
+            component_name = spec.get("_component", "component")
+
+            def _build_level(eval_callable: Callable, memory: Optional[Any] = mem) -> Any:
+                comp = ComponentSpec(name=component_name, baseline=baseline,
+                                     evaluate=eval_callable, objective=objective)
+                return CodeArtifactLevel(comp, memory=memory)
+
+            level = _build_level(evaluate, mem)
             ds = make_dataset([task_id], repeats=int(spec.get("_max_examples", 8)))
             # held-out scoring helper: re-evaluate the current deployed code on the held-out task
             def _holdout_score() -> float:
@@ -462,7 +469,15 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                 optimize(level, ds, guide=guide, iterations=max(1, p1 // nc),
                          num_candidates=nc, keep_best_validated=True)
                 prior = mem.best_artifact(str(task_id), "code")
-                if prior is not None and level.parameters():
+                if transfer_phase2 and transfer and eval_task and holdout_evaluate:
+                    target_level = _build_level(eval_fn, mem)
+                    if target_level.parameters():
+                        target_level.parameters()[0]._data = (
+                            prior.content if prior is not None else level.current_code()
+                        )
+                    level = target_level
+                    ds = make_dataset([eval_task], repeats=int(spec.get("_max_examples", 8)))
+                elif prior is not None and level.parameters():
                     level.parameters()[0]._data = prior.content   # warm-start from learned prior
                 optimize(level, ds, guide=guide, iterations=max(1, p2 // nc),
                          num_candidates=nc, keep_best_validated=True)
@@ -470,7 +485,8 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                 optimize(level, ds, guide=guide, iterations=max(1, total // nc),
                          num_candidates=nc, keep_best_validated=True)
 
-            best = mem.best_artifact(str(task_id), "code")
+            best_family = str(eval_task) if (transfer_phase2 and transfer and eval_task) else str(task_id)
+            best = mem.best_artifact(best_family, "code") or mem.best_artifact(str(task_id), "code")
             if best is not None and level.parameters():
                 level.parameters()[0]._data = best.content
             # MOD 1: in transfer mode the reported score is the HELD-OUT score of the deployed
