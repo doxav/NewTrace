@@ -382,12 +382,50 @@ def make_solver_critic_evaluator(
     return _evaluate
 
 
+def iters_to_peak(report: Dict[str, Any], arm: str = "standard", *, agg: str = "max",
+                  num_candidates: Optional[int] = None) -> int:
+    """Derive how many optimization ITERATIONS an arm needed to first reach its best score.
+
+    Answers "how many target iterations did the non-recursive arm use to reach its best
+    optimization?" so the recursive arm's `min_target_iters` can be set to MATCH it (a derived,
+    principled fairness floor) instead of a fixed guess. Reads the per-seed learning curves that
+    benchmark_uc already records (each curve entry has `unit`/`best_so_far`). For each seed it finds
+    the first unit whose best_so_far equals the seed's final best, converts units->iterations via
+    `num_candidates`, then aggregates across seeds (`max` = give recursion at least as many iters as
+    the *hardest* standard seed needed; `median` = the typical seed). Returns 0 if unavailable, so
+    callers can fall back to a fixed default.
+    """
+    try:
+        rows = [r for r in (report.get("rows") or [])
+                if (r.get("arm") if isinstance(r, dict) else getattr(r, "arm", None)) == arm]
+        nc = int(num_candidates or (report.get("summary", {}) or {}).get("num_candidates") or 2)
+        peaks = []
+        for r in rows:
+            curve = r.get("curve") if isinstance(r, dict) else getattr(r, "curve", None)
+            if not curve:
+                continue
+            best = max(float(p.get("best_so_far", p.get("score", 0.0))) for p in curve)
+            first_unit = next((int(p.get("unit", 0)) for p in curve
+                               if float(p.get("best_so_far", p.get("score", 0.0))) >= best - 1e-9), 0)
+            peaks.append(max(1, first_unit // max(1, nc)))
+        if not peaks:
+            return 0
+        peaks.sort()
+        if agg == "median":
+            return int(peaks[len(peaks) // 2])
+        return int(peaks[-1])  # max: at least as many iters as the hardest standard seed needed
+    except Exception:
+        return 0
+
+
 def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                   warm: bool = False, prior_fraction: float = 0.34,
                   transfer: bool = False, holdout_task_id: Optional[str] = None,
                   holdout_evaluate: Optional[Callable] = None,
                   transfer_phase2: bool = False,
-                  train_task_ids: Optional[Sequence[str]] = None):
+                  train_task_ids: Optional[Sequence[str]] = None,
+                  min_target_iters: int = 0,
+                  additive_prior: bool = False):
     """Build a pluggable code-surface arm runner for benchmark_uc.
 
     standard (warm=False): cold ComponentSpec optimized for the full candidate budget.
@@ -466,14 +504,22 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                                  curve=curve, budget_used=_budget_snapshot(curve))
 
             if warm:
+                # Phase split. With additive_prior=True the prior-discovery phase is EXTRA budget
+                # (a documented prior cost), so the target phase is NOT shortchanged vs standard;
+                # this answers "does a prior help?" fairly. With additive_prior=False the two phases
+                # share the total budget (strict equal-total, but the target phase gets fewer iters).
                 p1 = max(nc, round(total * prior_fraction))   # phase-1 candidates (>= one full step)
-                p2 = max(nc, total - p1)                       # phase-2 candidates (warm, >= one full step)
-                if total < 2 * nc:
-                    # too small to split into two real phases; warn via the result note
+                p2 = total if additive_prior else max(nc, total - p1)   # phase-2 (target) candidates
+                if (not additive_prior) and total < 2 * nc:
                     return ArmResult(arm=arm, seed=seed, score=None, wall_s=time.time() - t0,
                                      error=(f"code warm arm needs total_candidates >= 2*num_candidates "
                                             f"({2*nc}) to split into prior+warm phases; got {total}"))
-                optimize(level, ds, guide=guide, iterations=max(1, p1 // nc),
+                # Guarantee the L0 optimizer gets at least `min_target_iters` real optimization
+                # iterations on each phase (so it has a genuine chance to optimize, and the target
+                # phase is never starved relative to a non-recursive run).
+                p1_iters = max(1, p1 // nc, min_target_iters)
+                p2_iters = max(1, p2 // nc, min_target_iters)
+                optimize(level, ds, guide=guide, iterations=p1_iters,
                          num_candidates=nc, keep_best_validated=True)
                 prior = mem.best_artifact(str(task_id), "code")
                 if transfer_phase2 and transfer and eval_task and holdout_evaluate:
@@ -486,10 +532,12 @@ def make_code_arm(*, baseline, evaluate, task_id: str, objective: str,
                     ds = make_dataset([eval_task], repeats=int(spec.get("_max_examples", 8)))
                 elif prior is not None and level.parameters():
                     level.parameters()[0]._data = prior.content   # warm-start from learned prior
-                optimize(level, ds, guide=guide, iterations=max(1, p2 // nc),
+                optimize(level, ds, guide=guide, iterations=p2_iters,
                          num_candidates=nc, keep_best_validated=True)
             else:
-                optimize(level, ds, guide=guide, iterations=max(1, total // nc),
+                # Standard gets at least min_target_iters too, so both arms clear the same floor.
+                std_iters = max(1, total // nc, min_target_iters)
+                optimize(level, ds, guide=guide, iterations=std_iters,
                          num_candidates=nc, keep_best_validated=True)
 
             best_family = str(eval_task) if (transfer_phase2 and transfer and eval_task) else str(task_id)
