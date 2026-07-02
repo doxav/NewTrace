@@ -121,7 +121,7 @@ CONFIG_ALLOWED_VALUES: Dict[str, Tuple[str, ...]] = {
     "trace_type": ("internal", "otel", "sysmon", "hybrid"),
     "credit_horizon": ("step", "episode", "truncated", "full"),
     "memory_policy": ("none", "fifo", "typed", "retrieval"),
-    "optimizer": ("OptoPrime", "OptoPrimeMulti", "OptoPrimeV2", "OPRO", "TextGrad"),
+    "optimizer": ("OptoPrime", "OptoPrimeMulti", "OptoPrimeV2", "OptoPrimeMultiV2", "OPRO", "TextGrad"),
     "guide": ("LLMJudge", "ExactMatch", "ExactMatchGuide", "staged", "deterministic"),
     "trainer": (
         "MinibatchAlgorithm",
