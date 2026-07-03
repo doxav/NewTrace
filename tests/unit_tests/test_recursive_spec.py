@@ -132,12 +132,17 @@ def test_tracebench_adapter_can_be_built_from_spec_config():
         "timeout_seconds": 5,
         "allowed_inner_trainers": ["MinibatchAlgorithm"],
         "eval_kwargs": {"n_train": 2},
+        "optimizer_kwargs": {"num_responses": 4, "generation_technique": "multi_experts"},
     })
     assert adapter.max_examples == 2
     assert adapter.inner_steps == 1
     assert adapter.inner_candidates == 3
     assert adapter.eval_kwargs["timeout_seconds"] == 5
     assert adapter.allowed_inner_trainers == ("MinibatchAlgorithm",)
+    assert adapter.optimizer_kwargs == {"num_responses": 4, "generation_technique": "multi_experts"}
+
+    with pytest.raises(TypeError):
+        TB.TraceBenchTaskAdapter.from_config({"optimizer_kwargs": ["bad"]})
 
 
 # --------------------------- step 1: compilation -------------------------- #

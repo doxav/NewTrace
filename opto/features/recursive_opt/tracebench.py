@@ -374,9 +374,11 @@ class TraceBenchTaskAdapter:
         inner_steps: int = 0,
         inner_candidates: int = 1,
         allowed_inner_trainers: Optional[Tuple[str, ...]] = None,
+        optimizer_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.tasks_root = Path(tasks_root) if tasks_root is not None else default_tasks_root()
         self.eval_kwargs = dict(eval_kwargs or {})
+        self.optimizer_kwargs = dict(optimizer_kwargs or {})
         self.max_examples = max_examples
         self.inner_steps = inner_steps
         self.inner_candidates = inner_candidates
@@ -414,6 +416,7 @@ class TraceBenchTaskAdapter:
             inner_steps=inner_steps,
             inner_candidates=_int_env("RECURSIVE_OPT_TRACEBENCH_INNER_CANDIDATES", 1) or 1,
             allowed_inner_trainers=_csv_env("RECURSIVE_OPT_TRACEBENCH_INNER_TRAINERS"),
+            optimizer_kwargs=_json_env("RECURSIVE_OPT_TRACEBENCH_OPTIMIZER_KWARGS"),
         )
 
     @classmethod
@@ -432,6 +435,9 @@ class TraceBenchTaskAdapter:
             allowed = tuple(str(value) for value in allowed if str(value).strip())
             if not allowed:
                 raise ValueError("tracebench.allowed_inner_trainers cannot be empty")
+        optimizer_kwargs = config.get("optimizer_kwargs") or {}
+        if not isinstance(optimizer_kwargs, dict):
+            raise TypeError("tracebench.optimizer_kwargs must be a dict")
         return cls(
             tasks_root=config.get("tasks_root"),
             eval_kwargs=eval_kwargs,
@@ -439,6 +445,7 @@ class TraceBenchTaskAdapter:
             inner_steps=_nonnegative_int_config(config, "inner_steps", 1),
             inner_candidates=_positive_int_config(config, "inner_candidates", 1),
             allowed_inner_trainers=allowed,
+            optimizer_kwargs=optimizer_kwargs,
         )
 
     def _trainer_budget_feedback(self, cfg: LevelConfig, task_id: str) -> Optional[Tuple[float, str]]:
@@ -704,6 +711,7 @@ class TraceBenchTaskAdapter:
         # the design actually changes which examples drive the inner updates.
         inputs, infos = self._order_by_batch_design(inputs, infos, cfg)
         optimizer_kwargs = dict(bundle.get("optimizer_kwargs") or {})
+        optimizer_kwargs.update(self.optimizer_kwargs)
         model_name = os.environ.get("RECURSIVE_OPT_MODEL") or os.environ.get("TRACE_LITELLM_MODEL")
         if model_name and "llm" not in optimizer_kwargs:
             from .runmode import make_live_llm
