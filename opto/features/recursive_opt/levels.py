@@ -128,6 +128,7 @@ CONFIG_ALLOWED_VALUES: Dict[str, Tuple[str, ...]] = {
         "BeamsearchAlgorithm",
         "UCBSearchAlgorithm",
         "PrioritySearch",
+        "PrioritySearchMulti",
         "ParetobasedPS",
         "SequentialUpdate",
         "SequentialSearch",

@@ -48,6 +48,13 @@ class OptoPrimeMultiMixin:
         self._rolling_selection_index = 0
         self._preselected_candidate_index: Optional[int] = None
 
+    def on_search_event(self, event: str, **context: Any) -> None:
+        """Handle generic trainer search events without coupling trainers to this optimizer."""
+        del context
+        selection_key = (self.selection_technique or "").lower()
+        if event in {"search_stall", "search_regression"} and selection_key in {"random", "rolling", "round_robin"}:
+            self._preselected_candidate_index = None
+
     def _get_llm_for_profile(self, profile: Optional[str] = None):
         if profile is None:
             return self.llm

@@ -399,6 +399,36 @@ def test_optoprimemultiv2_rolling_preselection_can_reuse_previous_expert(monkeyp
     assert updates == ["from_a", "from_b", "from_b"]
 
 
+def test_optoprimemultiv2_search_stall_event_clears_reusable_preselection() -> None:
+    prompt = node("alpha", name="prompt", trainable=True, description="simple prompt")
+    optimizer = OptoPrimeMultiV2(
+        [prompt],
+        llm=DummyLLM(lambda *args, **kwargs: ""),
+        selection_technique="rolling",
+        max_tokens=256,
+    )
+    optimizer._preselected_candidate_index = 1
+
+    optimizer.on_search_event(event="search_stall")
+
+    assert optimizer._preselected_candidate_index is None
+
+
+def test_optoprimemultiv2_unrelated_search_event_keeps_preselection() -> None:
+    prompt = node("alpha", name="prompt", trainable=True, description="simple prompt")
+    optimizer = OptoPrimeMultiV2(
+        [prompt],
+        llm=DummyLLM(lambda *args, **kwargs: ""),
+        selection_technique="rolling",
+        max_tokens=256,
+    )
+    optimizer._preselected_candidate_index = 1
+
+    optimizer.on_search_event(event="search_progress")
+
+    assert optimizer._preselected_candidate_index == 1
+
+
 def test_optoprimemultiv2_invalid_preselected_candidate_falls_back_to_first_expert(monkeypatch):
     prompt = node("alpha", name="prompt", trainable=True, description="simple prompt")
     seen_experts = []

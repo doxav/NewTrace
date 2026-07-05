@@ -1179,6 +1179,113 @@ def test_optimize_delegates_to_trainer_with_requested_config(monkeypatch) -> Non
     assert captured["num_steps"] == 7 and captured["num_epochs"] == 0
 
 
+def test_optimize_merges_env_optimizer_and_trainer_kwargs(monkeypatch) -> None:
+    import importlib
+
+    opt_mod = importlib.import_module("opto.features.recursive_opt.optimize")
+    captured = {}
+
+    def fake_train(**kwargs: Any) -> str:
+        captured.update(kwargs)
+        return "trained"
+
+    monkeypatch.setattr(opt_mod, "_train_returning_trainer", fake_train)
+    monkeypatch.delenv("RECURSIVE_OPT_MODEL", raising=False)
+    monkeypatch.delenv("TRACE_LITELLM_MODEL", raising=False)
+    monkeypatch.setenv(
+        "RECURSIVE_OPT_OPTIMIZER_KWARGS",
+        '{"num_responses": 4, "selection_technique": "rolling"}',
+    )
+    monkeypatch.setenv(
+        "RECURSIVE_OPT_TRAINER_KWARGS",
+        '{"reuse_preselected_index": true, "num_threads": 1}',
+    )
+    level = MetaLevel(LevelConfig(), inner_runner=make_inner_runner("hf:GSM8K"),
+                      trainable_fields=("batch_design",))
+
+    result = opt_mod.optimize(
+        level,
+        make_dataset(["hf:GSM8K"], repeats=2),
+        iterations=1,
+        optimizer_kwargs={"selection_technique": "random"},
+        reuse_preselected_index=False,
+    )
+
+    assert result == "trained"
+    assert captured["optimizer_kwargs"]["num_responses"] == 4
+    assert captured["optimizer_kwargs"]["selection_technique"] == "random"
+    assert captured["reuse_preselected_index"] is False
+    assert captured["num_threads"] == 1
+
+
+def test_optimizer_kwargs_registers_env_llm_profiles(monkeypatch) -> None:
+    import importlib
+
+    opt_mod = importlib.import_module("opto.features.recursive_opt.optimize")
+    registered = {}
+
+    monkeypatch.delenv("RECURSIVE_OPT_MODEL", raising=False)
+    monkeypatch.delenv("TRACE_LITELLM_MODEL", raising=False)
+    monkeypatch.setattr(
+        opt_mod.LLMFactory,
+        "register_profile",
+        lambda name, backend, **params: registered.setdefault(name, {"backend": backend, **params}),
+    )
+    monkeypatch.setenv(
+        "RECURSIVE_OPT_LLM_PROFILES",
+        '{"openrouter_deepseek": {"backend": "LiteLLM", "model": "openrouter/deepseek/deepseek-v4-flash"}}',
+    )
+
+    kwargs = opt_mod._optimizer_kwargs({"llm_profiles": [None, "openrouter_deepseek"]})
+
+    assert kwargs["llm_profiles"] == [None, "openrouter_deepseek"]
+    assert registered["openrouter_deepseek"]["model"] == "openrouter/deepseek/deepseek-v4-flash"
+
+
+def test_tracebench_model_prefers_tracebench_specific_env(monkeypatch) -> None:
+    monkeypatch.setenv("RECURSIVE_OPT_MODEL", "outer-model")
+    monkeypatch.setenv("TRACE_LITELLM_MODEL", "trace-default")
+    monkeypatch.setenv("RECURSIVE_OPT_TRACEBENCH_MODEL", "inner-model")
+
+    assert _TB._tracebench_model_name() == "inner-model"
+
+
+def test_live_llm_wrapper_adds_timeout_and_gpt5_token_key() -> None:
+    from opto.features.recursive_opt.runmode import CompletionTokenCompatLLM
+
+    calls = []
+
+    def fake_llm(**kwargs: Any) -> dict:
+        calls.append(kwargs)
+        return {"choices": [{"message": {"content": "ok"}}]}
+
+    llm = CompletionTokenCompatLLM(fake_llm, "gpt-5.4-nano", request_timeout_s=12.5)
+    llm(messages=[], max_tokens=8)
+
+    assert calls == [{"messages": [], "timeout": 12.5, "max_completion_tokens": 8}]
+
+
+def test_live_llm_rejects_invalid_retry_env(monkeypatch) -> None:
+    from opto.features.recursive_opt.runmode import make_live_llm
+
+    monkeypatch.setenv("RECURSIVE_OPT_LLM_MAX_RETRIES", "0")
+
+    with pytest.raises(ValueError, match="RECURSIVE_OPT_LLM_MAX_RETRIES must be positive"):
+        make_live_llm("gpt-5.4-nano")
+
+
+def test_optimize_rejects_non_object_env_kwargs(monkeypatch) -> None:
+    import importlib
+
+    opt_mod = importlib.import_module("opto.features.recursive_opt.optimize")
+    monkeypatch.setenv("RECURSIVE_OPT_OPTIMIZER_KWARGS", "[]")
+    level = MetaLevel(LevelConfig(), inner_runner=make_inner_runner("hf:GSM8K"),
+                      trainable_fields=("batch_design",))
+
+    with pytest.raises(ValueError, match="RECURSIVE_OPT_OPTIMIZER_KWARGS must be a JSON object"):
+        opt_mod.optimize(level, make_dataset(["hf:GSM8K"], repeats=2), iterations=1)
+
+
 def test_optimize_budget_env_is_resolved_at_call_time(monkeypatch) -> None:
     import importlib
 

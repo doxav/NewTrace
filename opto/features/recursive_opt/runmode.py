@@ -56,16 +56,47 @@ def uses_completion_token_param(model_name: str) -> bool:
 class CompletionTokenCompatLLM:
     """Translate Trace optimizer token kwargs for GPT-5-style LiteLLM calls."""
 
-    def __init__(self, llm: Any, model_name: str) -> None:
+    def __init__(self, llm: Any, model_name: str, request_timeout_s: Optional[float] = None) -> None:
         self._llm = llm
         self.model_name = model_name
+        self.request_timeout_s = request_timeout_s
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        kwargs = dict(kwargs)
+        if self.request_timeout_s is not None:
+            kwargs.setdefault("timeout", self.request_timeout_s)
         if uses_completion_token_param(self.model_name):
-            kwargs = dict(kwargs)
             if "max_tokens" in kwargs and "max_completion_tokens" not in kwargs:
                 kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
         return self._llm(*args, **kwargs)
+
+
+def _positive_float_env(name: str) -> Optional[float]:
+    """Read an optional positive float environment variable."""
+    raw = os.environ.get(name)
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a positive number, got {raw!r}") from exc
+    if value <= 0:
+        raise ValueError(f"{name} must be positive, got {value}")
+    return value
+
+
+def _positive_int_env(name: str) -> Optional[int]:
+    """Read an optional positive integer environment variable."""
+    raw = os.environ.get(name)
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a positive integer, got {raw!r}") from exc
+    if value <= 0:
+        raise ValueError(f"{name} must be positive, got {value}")
+    return value
 
 
 def make_live_llm(
@@ -74,6 +105,7 @@ def make_live_llm(
     cache: bool = True,
     max_retries: int = 10,
     base_delay: float = 1.0,
+    request_timeout_s: Optional[float] = None,
     budget_resource: Optional[BudgetResource] = "optimizer_llm_calls",
 ) -> Any:
     """Create the LiteLLM backend used by recursive-opt live optimizers.
@@ -92,11 +124,12 @@ def make_live_llm(
     llm = LiteLLM(
         model=model_name,
         cache=cache,
-        max_retries=max_retries,
-        base_delay=base_delay,
+        max_retries=_positive_int_env("RECURSIVE_OPT_LLM_MAX_RETRIES") or max_retries,
+        base_delay=_positive_float_env("RECURSIVE_OPT_LLM_BASE_DELAY_S") or base_delay,
     )
-    if uses_completion_token_param(model_name):
-        llm = CompletionTokenCompatLLM(llm, model_name)
+    timeout_s = request_timeout_s if request_timeout_s is not None else _positive_float_env("RECURSIVE_OPT_LLM_TIMEOUT_S")
+    if uses_completion_token_param(model_name) or timeout_s is not None:
+        llm = CompletionTokenCompatLLM(llm, model_name, timeout_s)
     return budgeted_llm(llm, budget_resource)
 
 

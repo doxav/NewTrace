@@ -29,6 +29,7 @@ parameters in place; the helper returns the trainer result.
 from __future__ import annotations
 
 import os
+import json
 from typing import Any, Optional, Union
 
 from opto import trace
@@ -44,6 +45,7 @@ from opto.trainer.train import (
     load_optimizer,
     load_trainer_class,
 )
+from opto.utils.llm import LLMFactory
 
 from .levels import RecursiveGuide
 from .budget import BudgetExceeded, current_budget
@@ -188,7 +190,7 @@ def optimize(
         num_epochs=0,
         num_candidates=resolved_num_candidates,
         batch_size=batch_size,
-        **trainer_kwargs,
+        **_trainer_kwargs(trainer_kwargs),
     )
     if keep_best_validated:
         restore_best_validated(result, model)   # write-back to the CALLER's model
@@ -198,11 +200,42 @@ def optimize(
 
 def _optimizer_kwargs(user_kwargs: Optional[dict]) -> dict:
     """Return optimizer kwargs with a live-model LLM adapter when configured."""
-    kwargs = dict(user_kwargs or {})
+    kwargs = _json_env_dict("RECURSIVE_OPT_OPTIMIZER_KWARGS")
+    kwargs.update(user_kwargs or {})
     model_name = os.environ.get("RECURSIVE_OPT_MODEL") or os.environ.get("TRACE_LITELLM_MODEL")
     if model_name and "llm" not in kwargs:
         kwargs["llm"] = make_live_llm(model_name)
+
+    # handling multiple LLM profiles
+    for name, spec in _json_env_dict("RECURSIVE_OPT_LLM_PROFILES").items():
+        if not name or not isinstance(spec, dict):
+            raise ValueError("RECURSIVE_OPT_LLM_PROFILES must map profile names to JSON objects.")
+        backend = spec.get("backend", "LiteLLM")
+        if not isinstance(backend, str) or not backend:
+            raise ValueError(f"RECURSIVE_OPT_LLM_PROFILES[{name!r}].backend must be a string.")
+        LLMFactory.register_profile(name, backend, **{k: v for k, v in spec.items() if k != "backend"})
     return kwargs
+
+
+def _trainer_kwargs(user_kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Return trainer kwargs, with explicit kwargs overriding env defaults."""
+    kwargs = _json_env_dict("RECURSIVE_OPT_TRAINER_KWARGS")
+    kwargs.update(user_kwargs)
+    return kwargs
+
+
+def _json_env_dict(name: str) -> dict[str, Any]:
+    """Read a JSON object from an environment variable."""
+    raw_value = os.environ.get(name)
+    if not raw_value:
+        return {}
+    try:
+        value = json.loads(raw_value)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{name} must be a JSON object.") from exc
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be a JSON object.")
+    return value
 
 
 def _train_returning_trainer(

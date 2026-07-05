@@ -137,6 +137,15 @@ def _csv_env(name: str) -> Optional[Tuple[str, ...]]:
     return values
 
 
+def _tracebench_model_name() -> Optional[str]:
+    """Return the LLM model used inside Trace-Bench scoring/training."""
+    return (
+        os.environ.get("RECURSIVE_OPT_TRACEBENCH_MODEL")
+        or os.environ.get("TRACE_LITELLM_MODEL")
+        or os.environ.get("RECURSIVE_OPT_MODEL")
+    )
+
+
 def _positive_int_config(config: Dict[str, Any], key: str, default: int) -> int:
     """Read a positive integer from a spec/config dict."""
     raw = config.get(key, default)
@@ -479,7 +488,7 @@ class TraceBenchTaskAdapter:
     def _eval_kwargs_for_task(self, normalized_task_id: str) -> Dict[str, Any]:
         """Return task-specific eval kwargs without leaking unsupported kwargs."""
         eval_kwargs = dict(self.eval_kwargs)
-        model_name = os.environ.get("RECURSIVE_OPT_MODEL") or os.environ.get("TRACE_LITELLM_MODEL")
+        model_name = _tracebench_model_name()
         if model_name and normalized_task_id == "internal:multiobjective_gsm8k":
             eval_kwargs.setdefault("model", model_name)
         return eval_kwargs
@@ -712,7 +721,7 @@ class TraceBenchTaskAdapter:
         inputs, infos = self._order_by_batch_design(inputs, infos, cfg)
         optimizer_kwargs = dict(bundle.get("optimizer_kwargs") or {})
         optimizer_kwargs.update(self.optimizer_kwargs)
-        model_name = os.environ.get("RECURSIVE_OPT_MODEL") or os.environ.get("TRACE_LITELLM_MODEL")
+        model_name = _tracebench_model_name()
         if model_name and "llm" not in optimizer_kwargs:
             from .runmode import make_live_llm
 

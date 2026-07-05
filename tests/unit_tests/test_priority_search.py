@@ -3,11 +3,14 @@ from opto.trainer.loader import DataLoader
 from opto.trainer.sampler import Sampler
 from opto.trainer.algorithms.priority_search import PrioritySearch as _PrioritySearch
 from opto.trainer.algorithms.priority_search import ModuleCandidate
-from opto.optimizers import OptoPrimeV2
+from opto.trainer.algorithms.priority_search_multi import PrioritySearchMulti
+from opto.trainer.train import load_trainer_class
+from opto.optimizers import OptoPrimeMultiV2, OptoPrimeV2
 from opto.trainer.guide import Guide
 from opto.utils.llm import DummyLLM
 
 import re, os
+from typing import Any
 import numpy as np
 import copy
 import pickle
@@ -57,6 +60,17 @@ num_candidates = 5
 long_term_memory_size = 3
 memory_update_frequency = 2
 suggested_value = 5
+
+
+class EventRecordingOptoPrime(OptoPrimeV2):
+    """OptoPrimeV2 test double that records generic trainer search events."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.events: list[dict[str, Any]] = []
+
+    def on_search_event(self, event: str, **context: Any) -> None:
+        self.events.append({"event": event, "context": context})
 
 
 
@@ -176,6 +190,74 @@ def test_priority_search():
         num_epochs=num_epochs,
         verbose=False, #'output',
     )
+
+
+def test_priority_search_multi_is_loadable_by_name() -> None:
+    assert load_trainer_class("PrioritySearchMulti") is PrioritySearchMulti
+
+
+def test_priority_search_multi_emits_stall_event_to_generic_optimizer() -> None:
+    dummy_llm = DummyLLM(_llm_callable)
+    agent = Agent()
+    optimizer = EventRecordingOptoPrime(agent.parameters(), llm=dummy_llm)
+    algo = PrioritySearchMulti(agent, optimizer)
+    algo._initialize_search_parameters(
+        num_candidates=1,
+        num_proposals=1,
+        validate_exploration_candidates=True,
+        use_best_candidate_to_explore=True,
+        score_function="mean",
+        score_range=(0, 1),
+        ucb_exploration_constant=1.0,
+        long_term_memory_size=None,
+        short_term_memory_size=None,
+        memory_update_frequency=0,
+        decouple_optimizers=True,
+    )
+    candidate = ModuleCandidate(agent, optimizer=optimizer)
+    candidate.add_rollouts([{"module": agent, "x": 1, "info": 1, "target": 1, "score": 0.5, "feedback": "ok"}])
+    algo.long_term_memory.push(0.5, candidate)
+    algo._best_candidate_priority = 0.5
+
+    best, priority, _info = algo.exploit()
+
+    assert best.mean_score() == candidate.mean_score()
+    assert priority == 0.5
+    assert optimizer.events[0]["event"] == "search_stall"
+
+
+def test_priority_search_multi_stall_resets_optoprime_multi_preselection() -> None:
+    dummy_llm = DummyLLM(_llm_callable)
+    agent = Agent()
+    optimizer = OptoPrimeMultiV2(
+        agent.parameters(),
+        llm=dummy_llm,
+        selection_technique="rolling",
+        generation_technique="multi_experts",
+    )
+    optimizer._preselected_candidate_index = 1
+    algo = PrioritySearchMulti(agent, optimizer)
+    algo._initialize_search_parameters(
+        num_candidates=1,
+        num_proposals=1,
+        validate_exploration_candidates=True,
+        use_best_candidate_to_explore=True,
+        score_function="mean",
+        score_range=(0, 1),
+        ucb_exploration_constant=1.0,
+        long_term_memory_size=None,
+        short_term_memory_size=None,
+        memory_update_frequency=0,
+        decouple_optimizers=True,
+    )
+    candidate = ModuleCandidate(agent, optimizer=optimizer)
+    candidate.add_rollouts([{"module": agent, "x": 1, "info": 1, "target": 1, "score": 0.5, "feedback": "ok"}])
+    algo.long_term_memory.push(0.5, candidate)
+    algo._best_candidate_priority = 0.5
+
+    algo.exploit()
+
+    assert optimizer._preselected_candidate_index is None
 
 
 def test_resume():
