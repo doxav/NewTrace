@@ -163,6 +163,8 @@ def parse_guarded_decision(value: Any) -> GuardedDecision:
     ``values`` and free text remains searchable through ``raw``.  Strictness
     belongs in :func:`score_guarded_decision`, where use cases can define their
     own guards without forcing one schema on all policies.
+
+    #TODO: Impose a stricter schema for structured decisions, e.g. JSON or key-value text
     """
 
     raw = _raw_text(value)

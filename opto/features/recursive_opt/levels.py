@@ -6,25 +6,25 @@ The spine of recursive (meta) optimization on Trace.
 
 WHAT "RECURSIVE / META OPTIMIZATION" MEANS HERE
 -----------------------------------------------
-Normal Trace optimizes a *task artifact* (a prompt or a code block) so an agent
-solves a task better. Meta-optimization optimizes *the thing that does the
-optimizing*: the trainer, the batch design, the trace representation, the guide,
-the memory policy. Recursive optimization stacks these:
+Normal Trace optimizes a *task artifact* (a prompt or a code block) so an agent, functions,
+or multiple-agents solve a task better.
+Meta-optimization optimizes *the thing that does the optimizing*: the trainer, the batch design, the trace representation, the guide, the memory policy.
+
+Recursive optimization stack is:
 
     O0  optimize a task artifact                         (e.g. a solver prompt/code)
     O1  optimize HOW O0 is optimized                     (the A-list below)
     O2  optimize the O1 policy per problem family
     O3  induce transferable priors across families
 
-The trick that keeps this simple AND robust: **a recursion level is itself a
-``trace.Module``.** Its ``forward()`` runs the optimization of the level below
-and returns that level's held-out score; its trainable parameters are whatever
-defines the level below. Because every level is "just a Module", the *same*
-``opto.trainer.train`` + ``opto.optimizers`` optimizer + ``Guide`` optimize all
-of them. No new core machinery is needed — that is the whole point.
+The generic deign trick :
+**a recursion level is itself a ``trace.Module``.
+** Its ``forward()`` runs the optimization of the level below and returns that level's held-out score;
+its trainable parameters are whatever defines the level below.
+Because every level is "just a Module", the *same* ``opto.trainer.train`` + ``opto.optimizers`` optimizer + ``Guide`` optimize all of them.
+No new core machinery is needed — that is the whole point.
 
-TWO COMPLEMENTARY TRAINABLE SURFACES  (read this — it answers "can we optimize
-the actual Trainer/batch-design/Trace classes, and future ones?")
+TWO COMPLEMENTARY TRAINABLE SURFACES  (answers "can we optimize the actual Trainer/batch-design/Trace classes, and future ones?")
 -------------------------------------------------------------------------------
 There are two *different kinds* of trainable parameter, and you choose per goal:
 
@@ -32,20 +32,18 @@ There are two *different kinds* of trainable parameter, and you choose per goal:
    A small, low-dimensional set of choices over EXISTING components
    ("use BeamsearchAlgorithm, batch_size=8, failure_balanced, typed memory").
    The optimizer SELECTS and CONFIGURES. Cheap, stable, good first step.
-   This is what example_A demonstrates.
+   This is what examples_A demonstrates.
 
-2. CODE / IMPLEMENTATION surface  ->  ``CodeArtifactLevel`` (uses
-   ``@trace.bundle(trainable=True)``)
-   The trainable parameter is the *source code* of a component (a batch-design
-   function, a trace summarizer, a Trainer's ``update`` rule, ...). The optimizer
-   REWRITES THE CODE, so it can invent improved or entirely NEW components, not
-   only pick from an enum. This is how you optimize the actual classes involved
+2. CODE / IMPLEMENTATION surface  ->  ``CodeArtifactLevel`` (uses ``@trace.bundle(trainable=True)``)
+   The trainable parameter is the *source code* of a component (a batch-design function, a trace summarizer, a Trainer's ``update`` rule, ...).
+   The optimizer REWRITES THE CODE, so it can invent improved or entirely NEW components, not only pick from an enum.
+   This is how you optimize the actual classes involved
    in training/optimization AND future classes that don't exist yet — you give
    it a baseline implementation and a feedback signal, and it writes a better one.
-   This is what example_B demonstrates.
+   This is what examples_B demonstrates.
 
-You can mix them: an O1 ``MetaLevel`` can SELECT among existing trainers while a
-parallel ``CodeArtifactLevel`` REWRITES the chosen trainer's hot path.
+You can mix surfaces:
+an O1 ``MetaLevel`` can SELECT among existing trainers while a parallel ``CodeArtifactLevel`` REWRITES the chosen trainer's hot path.
 
 Trace API used by this feature:
     opto.trace.model / node / bundle(trainable=True) / Module / ParameterNode
@@ -73,42 +71,44 @@ from opto.trainer.guide import Guide
 class LevelConfig:
     """The *selection/config* surface for one optimization level.
 
-    Each field is a knob over an EXISTING component. The optimizer selects and
-    configures; it does not change any component's code. Keep the set small:
-    a low-dimensional config is what makes O1 search stable (the classic
-    credit-assignment objection to meta-optimization).
+    Each field is a knob over an EXISTING component.
+    The optimizer selects and configures; it does not change any component's code.
+    Keep the set small:
+    a low-dimensional config is what makes O1 search stable (the classic credit-assignment objection to meta-optimization).
 
-    NOTE ON EXTENSIBILITY: these fields are plain strings/ints, NOT enums, on
-    purpose. To register a brand-new Trainer or batch design, just (a) add the
-    class to ``opto.trainer.algorithms`` (or your own module) and (b) allow its
-    name as a value here — no change to the recursion machinery. To go further
-    and *invent* a new component, use ``CodeArtifactLevel`` instead (surface 2).
+    NOTE ON EXTENSIBILITY: these fields are plain strings/ints, NOT enums, on purpose.
+
+    To register a brand-new Trainer or batch design,
+    just (a) add the class to ``opto.trainer.algorithms`` (or your own module)
+    and (b) allow its name as a value here — no change to the recursion machinery.
+
+    To go further and *invent* a new component, use ``CodeArtifactLevel`` instead (surface 2).
     """
 
     # --- A.1 starting artifact + knowledge ---
     starting_artifact: str = ""  # initial prompt / code / SKILL.md / HARNESS.md
     initial_knowledge: str = ""  # constrained, task-FAMILY priors (no task leakage)
+
     # --- A.2 batch size & design ---
     batch_size: int = 4
-    batch_design: str = (
-        "random"  # random | failure_balanced | diversity | curriculum | <your_new_one>
-    )
+    batch_design: str = "random"  # random | failure_balanced | diversity | curriculum | <your_new_one>
+
     # --- A.3 trace type & horizon ---
     trace_type: str = "internal"  # internal | otel | sysmon | hybrid
     credit_horizon: str = "episode"  # step | episode | truncated | full
+
     # --- A.4 memory ---
     memory_policy: str = "typed"  # none | fifo | typed | retrieval
+
     # --- A.5 LLM optimizer agentic design + tools ---
-    optimizer: str = (
-        "OptoPrime"  # OptoPrime | OptoPrimeMulti | OPRO | TextGrad | <your_new_one>
-    )
+    optimizer: str = "OptoPrime" # OptoPrime | OptoPrimeMulti | OPRO | TextGrad | <your_new_one>
     optimizer_tools: Tuple[str, ...] = ()  # ("trace_search","pytest","note",...)
+
     # --- A.6 guide ---
     guide: str = "LLMJudge"  # LLMJudge | ExactMatch | staged | deterministic
+
     # --- A.7 trainer ---
-    trainer: str = (
-        "MinibatchAlgorithm"  # Minibatch | Beamsearch | UCBSearch | <your_new_one>
-    )
+    trainer: str = "MinibatchAlgorithm"  # Minibatch | Beamsearch | UCBSearch | <your_new_one>
     num_epochs: int = 1
     num_threads: int = 4  # >1 => async forward (the async-trainer behaviour)
 
@@ -216,9 +216,9 @@ def describe_config_fields(fields: Tuple[str, ...]) -> str:
 class ArtifactLevel(Module):
     """O0: a single trainable artifact (prompt/code/harness) used by a task.
 
-    ``parameters()`` exposes one trainable node (the artifact); any opto
-    optimizer rewrites it. ``forward`` is the agent USING the artifact, so the
-    artifact is on the traced path (a disconnected node cannot be optimized).
+    ``parameters()`` exposes one trainable node (the artifact); any opto optimizer rewrites it.
+    ``forward`` is the agent USING the artifact,
+    so the artifact is on the traced path (a disconnected node cannot be optimized).
     """
 
     def __init__(self, cfg: LevelConfig, agent_fn: Callable[[Any, Any], Any]):
@@ -291,8 +291,8 @@ def canonicalize_cfg_text(text: str, base_cfg: "LevelConfig", fields: Tuple[str,
 class MetaLevel(Module):
     """O1/O2 over the SELECTION surface.
 
-    forward(family) -> {"score","feedback"} of running the inner optimization
-    with the CURRENT (trainable) config on tasks from ``family``.
+    Given forward(family) -> {"score","feedback"}
+    Optimize the CURRENT (trainable) config on tasks from ``family``.
 
     Both the numeric score and the textual feedback flow back through the single
     trainable config node, so an LLM optimizer can read *why* a config
@@ -409,10 +409,11 @@ class FamilyPolicyLevel(Module):
         combinatorial => batch_design=failure_balanced, trainer=BeamsearchAlgorithm
         qa_reasoning  => batch_design=curriculum, trainer=UCBSearchAlgorithm
 
-    ``forward()`` decodes the policy, runs the inner optimization for every task
-    of every family, and returns the mean score plus a per-family breakdown that
-    names the worst family. An LLM optimizer reads that breakdown and rewrites the
-    policy — i.e. O2 is a genuine trainable level, not a Python ``max`` loop.
+    ``forward()``:
+    1. decodes the policy
+    2. runs the inner optimization for every task of every family
+    3. returns the mean score plus a per-family breakdown that names the worst family.
+    4. An LLM optimizer reads that breakdown and rewrites the policy — i.e. O2 is a genuine trainable level, not a Python ``max`` loop.
     """
 
     def __init__(
@@ -576,16 +577,16 @@ class ComponentSpec:
     """Describes a library component whose CODE we want to improve/invent.
 
     name       : human label ("batch_design", "trace_summarizer", "trainer.update")
-    baseline   : a Python function (the starting implementation; its SOURCE is the
-                 trainable parameter). MUST take ``self`` as first arg (Trace's
-                 trainable-bundle convention) so it works as a method.
-    evaluate   : (component_callable, family) -> (score, feedback); runs the
-                 candidate code on real (or stub) Trace-Bench inner problems and
-                 returns a rich signal. The optimizer reads ``feedback`` to know
+
+    baseline   : a Python function (the starting implementation; its SOURCE is the trainable parameter).
+                 MUST take ``self`` as first arg (Trace's trainable-bundle convention) so it works as a method.
+
+    evaluate   : (component_callable, family) -> (score, feedback);
+                 runs the candidate code on real (or stub) Trace-Bench inner problems and returns a rich signal.
+                 The optimizer reads ``feedback`` to know
                  HOW to rewrite the code.
-    objective  : optional natural-language objective passed to the optimizer
-                 (e.g. "maximize held-out pass rate while keeping the function
-                 O(n log n)").
+
+    objective  : optional natural-language objective passed to the optimizer (e.g. "maximize held-out pass rate while keeping the function O(n log n)").
     """
 
     def __init__(
@@ -604,9 +605,9 @@ class ComponentSpec:
 def _normalize_eval_result(result):
     """Normalize evaluator outputs to ``(score: float, feedback: str, metrics: dict)``.
 
-    Supported evaluator contracts (so one level handles single- AND multi-objective
-    evaluators: ``make_code_evaluator`` returns ``(score, feedback)`` while
-    ``make_multiobjective_evaluator`` returns ``(metrics_dict, feedback, scalar)``):
+    Supported evaluator contracts (so one level handles single- AND multi-objective evaluators:
+    ``make_code_evaluator`` returns ``(score, feedback)``
+     while ``make_multiobjective_evaluator`` returns ``(metrics_dict, feedback, scalar)``):
       1) ``(score, feedback)``
       2) ``(metrics_dict, feedback, scalar_score)``
       3) ``scalar_score`` (bare float)
@@ -664,11 +665,11 @@ def _canonicalize_def_name(source: str, expected_name: str) -> str:
 class CodeArtifactLevel(Module):
     """Optimize the SOURCE CODE of a component (improve / invent a new one).
 
-    The trainable parameter is the body of ``self._impl``, a
-    ``@trace.bundle(trainable=True)`` method seeded from ``spec.baseline``. The
-    LLM optimizer rewrites this code; ``forward(family)`` runs the current code
-    on Trace-Bench inner problems via ``spec.evaluate`` and returns
-    ``{"score","feedback"}``.
+    The trainable parameter is the body of ``self._impl``,
+    a ``@trace.bundle(trainable=True)`` method seeded from ``spec.baseline``.
+    The LLM optimizer rewrites this code;
+    ``forward(family)`` runs the current code on Trace-Bench inner problems
+    via ``spec.evaluate`` and returns ``{"score","feedback"}``.
 
     This is how recursive_opt PROPOSES IMPROVED VERSIONS of existing lib
     components (a Trainer's hot path, a batch sampler, a trace representation),

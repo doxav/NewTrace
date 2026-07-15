@@ -2,18 +2,16 @@
 recursive_opt.memory  —  MemoryLite + thin retrieval  (capability C.1)
 ======================================================================
 
-The PDF's converged "minimum missing viable base" is **EpisodeTrace +
-TieredMemoryLite + thin retrieval**. Markdown-only memory is explicitly
-rejected as too weak for promotion / rollback / cross-family comparison.
+Minimal memory implementation: **EpisodeTrace + TieredMemoryLite + thin retrieval**.
+Markdown-only memory is explicitly rejected as too weak for promotion / rollback / cross-family comparison.
 
-Tiers (M0->M3) — implemented: M1 (episodes), M2 (artifact/experiment lineage),
-M3 (family priors). M0 (in-episode scratch) is intentionally ephemeral/in-memory.
+Tiers (M0->M3) — implemented:
     M0  raw run scratch            (ephemeral, in-episode; not persisted)
     M1  EpisodeTrace store         (typed record of one optimization episode)
     M2  Artifact/Experiment store  (versioned configs/code/capabilities, lineage, scores)
     M3  Family-prior library       (promoted, transferable defaults per family)
 
-This is deliberately tiny (dataclasses + JSON files), enough to run O0..O3
+This is deliberately tiny (dataclasses + JSON files), enough for
 recursive experiments *robustly* with artifact lineage and rollback.
 """
 
@@ -313,7 +311,7 @@ class MemoryLite:
         """Re-derive the family prior from ALL episodes (support + score gated).
 
         Public so campaigns can re-consolidate after pruning, after new evidence,
-        or after changing promotion gates — promotion is no longer a one-shot
+        or after changing promotion gates — promotion is not a one-shot
         side effect of record(). Returns the promoted prior, or None when the
         evidence does not clear the gates (insufficient support / flat scores).
         """

@@ -1,11 +1,11 @@
 """Non-generative optimizers for recursive_opt levels (Item 2).
 
 Generative (LLM) optimizers are weak on low-dimensional numeric/categorical
-search (the verified-weak UC2/UC4/UC6 config families). SciPy least-squares
-(continuous) and Optuna/TPE (mixed categorical+int, sample-efficient) are
-purpose-built for exactly those fields. Both are injectable with NO core-Trace
-change: ``load_optimizer`` accepts an ``Optimizer`` instance, and ``run_spec``
-reads a per-level ``optimizer``.
+search (the verified-weak UC2/UC4/UC6 config families).
+SciPy least-squares (continuous) and Optuna/TPE (mixed categorical+int, sample-efficient) are
+purpose-built for exactly those fields.
+Both are injectable with NO core-Trace change:
+``load_optimizer`` accepts an ``Optimizer`` instance, and ``run_spec`` reads a per-level ``optimizer``.
 
 The friction these solve: a Trace trainer drives an optimizer via *graph
 feedback*, but a numeric optimizer needs *scores over a search space* (an
