@@ -1,6 +1,23 @@
 # Control plane v2 implementation evidence
 
-Baseline SHA: `6fc278a398709fe79a0fc9be22bae99bffd8cba6`
+Original implementation baseline: `6fc278a398709fe79a0fc9be22bae99bffd8cba6`
+
+Semantic-closure baseline: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
+
+## Corrective semantic-closure gate — 2026-08-22
+
+The phase log below is retained as historical implementation evidence. This section supersedes its execution-shape, GEPA holdout, migration-category, footprint, and final-test claims where they differ.
+
+- Canonical normalization now always produces top-level fully specified `levels`; flat v2 and legacy inputs migrate into that shape.
+- `run_spec` has one route: migrate → normalize → compile immutable execution units/level plans → ordered multilevel execution. The independent legacy orchestration loop was removed; migrated legacy levels execute inside the canonical runner.
+- Trace invokes the existing real `optimize` path over actual trainable `ParameterNode`s. Config, initial artifact, inputs, targets, evaluator/dataset refs, objective selection, role clients, knowledge, bindings, budgets, seeds, persistence, and resume are all causal.
+- Fit/proposal contexts contain no holdout data. GEPA 0.1.4 receives only train/validation and holdout is evaluated after best-candidate extraction.
+- The installed GEPA package contract was exercised without a provider: exact version/imports, config construction, keyword-only evaluator triple, batch evaluation, result construction, and best-candidate extraction.
+- Migration categories are now `execution_replayable=0`, `normalized_only=10`, `missing_dependency=23`, `historical_only=46`, `invalid=0`, and `local_nonportable=6`. Precise config/family-policy/prior missing dependencies are in `migration_report.json.representatives`.
+- The graph package is unchanged at the semantic-closure baseline; the imported files match the tracked minimal contract.
+- Current footprint is 8,730 recursive-opt runtime lines and 2,613 `spec.py` lines, respectively 73 and 75 below the `21a0ad3` baseline. Public package exports remain 114.
+- After synchronizing footprint evidence, the pre-commit network-blocked mandated regression passed: `277 passed, 3 skipped, 1 warning in 11.14s`. The complete unit suite passed: `457 passed, 4 skipped, 1 warning in 33.28s`. The authoritative post-commit reruns are recorded in `proof.md`.
+- No live provider or paid call was executed.
 
 ## Phase 0 — baseline and footprint
 

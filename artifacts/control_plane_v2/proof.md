@@ -1,52 +1,50 @@
-# recursive-opt v2alpha proof report
+# recursive-opt v2alpha semantic-closure proof
 
 - Branch: `recursive_opt`
-- Baseline/current HEAD: `6fc278a398709fe79a0fc9be22bae99bffd8cba6`
-- Environment: conda `humanllm`, Python `3.12.13`
-- Date: 2026-08-21
-- Live paid/provider calls executed: **none**
+- Baseline SHA: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
+- Corrective implementation SHA: `PENDING_CORRECTIVE_COMMIT`
+- Environment: conda `humanllm`, Python 3.12
+- Date: 2026-08-22 (Europe/Paris)
+- Live provider or paid calls: **none**
+- CI workflow: `.github/workflows/recursive-opt-v2.yml`, job `recursive-opt v2 offline (required)`; manual no-paid-call job `GEPA 0.1.4 contract (manual)`
+
+The implementation SHA and exact post-commit status/results are intentionally populated only after the commit exists. This avoids claiming a nonexistent or self-referential commit.
 
 ## Invariant matrix
 
-| invariant | test | command | result | artifact |
+| invariant | causal test | command | result | evidence |
 |---|---|---|---|---|
-| Exact version/kind, migration, defaults | normalization/migration tests | offline CI command below | pass | `control_plane_v2alpha.md` |
-| Strict unknown keys; namespaced extensions | normalization rejection test | offline CI | pass | golden specs |
-| JSON round-trip, immutability, stable SHA-256 | normalization/fingerprint tests | offline CI | pass | golden specs |
-| No callable, secret value, or arbitrary import ref | strict normalization tests | offline CI | pass | `evidence.md` |
-| Generic `trace.Module` build/snapshot/restore | module registry contract | offline CI | pass | v2alpha tests |
-| Multi-component modules | component artifact contract | offline CI | pass | v2alpha tests |
-| Deterministic seeds/arms/matrix `ExecutionPlan` | plan expansion test | offline CI | pass | `explain_spec` output |
-| Scalar, weighted vector, Pareto capability checks | objective compiler tests | offline CI | pass | `opto/trainer/objectives.py` |
-| Negative score valid; invalidity explicit | legacy evaluation adapter test | offline CI | pass | canonical `EvaluationResult` |
-| Hard constraints before selection; verbal feedback retained | objective selection tests | offline CI | pass | canonical `EvaluationResult` |
-| LLM profiles/roles/overrides and exact model preflight | role/profile test | offline CI | pass | normalized spec |
-| Runtime-owned usage by forward/optimizer/feedback/judge | role usage and budget tests | offline CI | pass | `RunResult.usage/budget` |
-| Promoted-only knowledge, scope, rollback | MemoryLite knowledge test | offline CI | pass | `KnowledgeCard` ledger |
-| Typed causal binding and counterfactual lineage | binding tests | offline CI | pass | `RunResult.lineage` |
-| Holdout denied during fit/proposal/induction/selection | capability + fault injection | offline CI | pass | canonical error result |
-| Fixed and Trace engine contract | same-spec engine test | offline CI | pass | `RunResult` |
-| GEPA OptimizeAnything projection and result conversion | GEPA fake contract | offline CI | pass | pinned `gepa==0.1.4` extra |
-| Identical spec across fixed/Trace/GEPA | three-arm contract test | targeted test | `1 passed` | v2alpha tests |
-| Fake graph executor and optional LangGraph | graph contracts + ABC probe | mandated regression | pass | minimal graph package |
-| Graph JSON config/state/artifact, codecs, capabilities | fake graph snapshot test | offline CI | pass | graph artifact v1 |
-| Budget accounting | role/candidate/evaluation/wall accounting test | offline CI | pass | `RunResult.budget` |
-| Resume idempotence | fingerprinted result-store test | offline CI | pass | `runtime.resume` |
-| Notebook strict AST audit | notebook AST test | offline CI | pass | spec-only notebook |
-| Notebook clean-kernel offline | nbclient execution test | offline CI | pass | spec-only notebook |
-| UC4 positive / UC14 negative controls | golden control test | offline CI | pass | `golden_specs/` |
-| Historical file classification and immutable sources | migration report test | offline CI | pass | `migration_report.json` |
-| Required offline CI has no external socket | pytest-socket invocation | exact local CI command | `168 passed` | workflow |
-| Footprint measured before/after | footprint JSON comparison | measurement command | `+103` exception | footprint reports + ADR |
+| canonical one/two-level schema and compatibility migration | 01–04 | mandated regression | pass | golden/migrated specs |
+| actual recursive execution and upstream counterfactual | 05–06 | mandated regression | pass | result lineage |
+| real Trace optimize path and engine config | 07–08 | mandated regression | pass | budget/metadata |
+| module artifact, inputs, targets, config validation | 09–10, 13b | mandated regression | pass | module artifact |
+| portable evaluator and dataset registries | 11–13 | mandated regression | pass | normalized refs/fingerprint |
+| exact role clients, preflight, fallbacks, usage | 14–16 | mandated regression | pass | selected models/usage |
+| weighted/Pareto objectives, constraints, rollback | 17–20 | mandated regression | pass | canonical evaluation/artifact |
+| structural holdout isolation | 21 | mandated regression | pass | phase-context fault injection |
+| GEPA holdout externalization and exact 0.1.4 public API | 22/22b | mandated regression | pass | no-provider contract |
+| in-run budgets and all policies | 23–24 | mandated regression | pass | budget report |
+| scoped deterministic seeds | 25 | mandated regression | pass | deterministic metrics |
+| atomic outputs and cross-process resume | 26–27 | mandated regression | pass | persisted run tree |
+| knowledge store and every-card binding/lineage | 28–29 | mandated regression | pass | artifact ids in lineage |
+| semantic migration classification | 30 | mandated regression | pass | migration reports |
+| fixed/Trace/GEPA same-spec result shape | 31 | mandated regression | pass | canonical `RunResult` |
+| spec-only notebook and clean offline kernel | 32–33 | mandated regression | pass | smoke notebook |
+| footprint limits | 34 | mandated regression | pass | footprint JSON |
+| exact corrective SHA | 35 | post-commit mandated regression | pending | readiness JSON |
 
-## Exact verification commands and results
+The 28 baseline diagnoses and their corrective dispositions are mapped individually in `readiness_audit.md`.
 
-Baseline and provenance commands/results, including `git status`, branch, SHA, log, Python, `pip freeze`, targeted baseline, complete-suite attempt, durations, and pristine-SHA reproductions are preserved verbatim in `baseline.md`.
+## Verification commands
 
-Final mandated recursive regression plus v2alpha and graph probes:
+Mandated recursive regression (network disabled; localhost allowed only for the notebook kernel):
 
 ```bash
-PYTHONPATH=. pytest -q \
+env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
+  -u GOOGLE_API_KEY -u TAVILY_API_KEY \
+  RECURSIVE_OPT_LIVE=0 PYTHONHASHSEED=0 PYTHONPATH=. \
+  python -m pytest -q --disable-socket \
+  --allow-hosts=127.0.0.1,localhost \
   tests/unit_tests/test_recursive_spec.py \
   tests/unit_tests/test_recursive_opt.py \
   tests/unit_tests/test_recursive_budget_experiments.py \
@@ -61,78 +59,50 @@ PYTHONPATH=. pytest -q \
   tests/unit_tests/test_recursive_opt_abc_probe.py
 ```
 
-Result: **273 passed, 2 skipped in 8.81s**.
+Pre-commit authoritative result after evidence synchronization: **277 passed, 3 skipped, 1 warning in 11.14s**. A repeat with `-rs` reported the same 277/3 result in 11.31s.
 
-Required network-blocked CI contract:
+Complete unit suite:
 
 ```bash
-RECURSIVE_OPT_LIVE=0 PYTHONHASHSEED=0 PYTHONPATH=. pytest -q \
-  --disable-socket --allow-hosts=127.0.0.1,localhost \
-  tests/unit_tests/test_recursive_control_plane_v2.py \
-  tests/unit_tests/test_recursive_spec.py \
-  tests/unit_tests/test_objectives.py \
-  tests/unit_tests/test_evaluators_vector.py \
-  tests/unit_tests/test_trainers_multiobjective.py
+env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
+  -u GOOGLE_API_KEY -u TAVILY_API_KEY \
+  RECURSIVE_OPT_LIVE=0 PYTHONHASHSEED=0 PYTHONPATH=. \
+  python -m pytest -q --disable-socket \
+  --allow-hosts=127.0.0.1,localhost tests/unit_tests
 ```
 
-Latest final rerun: **168 passed, 1 warning in 4.79s**.
+Pre-commit authoritative result after evidence synchronization: **457 passed, 4 skipped, 1 warning in 33.28s**.
 
-Complete unit suite, also with keys removed and external sockets blocked:
+Pre-commit skips: two tests require optional graph/telemetry backends; one is the deliberately post-commit final-SHA gate; the complete-unit-only fourth skip requires the Graphviz `dot` executable. GEPA 0.1.4 and LangGraph contract tests ran rather than skipping. The single warning is LangGraph's pending default change for serializer `allowed_objects`.
 
-```bash
-env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u OPENAI_ADMIN_KEY \
-  RECURSIVE_OPT_LIVE=0 PYTHONPATH=. pytest -q \
-  --disable-socket --allow-hosts=127.0.0.1,localhost tests/unit_tests
-```
-
-Result: **453 passed, 3 skipped in 29.87s**.
-
-Complete repository suite attempt used the same guards plus `--maxfail=30 tests`. Result: **30 failed, 22 passed, 132 skipped in 7.28s**. Failure families are outside recursive-opt and match baseline evidence: Flows mock type mismatch, BBH/optimizer tests requiring configured LLM behavior, and OPRO v2. They were not suppressed or repaired.
-
-Lint:
+Lint for every changed Python file and the retained graph contract:
 
 ```bash
-ruff check opto/features/graph opto/features/recursive_opt/__init__.py \
-  opto/features/recursive_opt/memory.py opto/features/recursive_opt/runmode.py \
-  opto/features/recursive_opt/spec.py opto/features/recursive_opt/traces.py \
-  opto/trainer/objectives.py examples/recursive_opt_abc_probe.py \
+ruff check opto/features/graph \
+  opto/features/recursive_opt/spec.py \
+  opto/features/recursive_opt/__init__.py \
   tests/unit_tests/test_recursive_control_plane_v2.py
 ```
 
-Result: **All checks passed**. All workflow YAML files also parsed successfully.
+Result: **All checks passed**. A broader unchanged recursive-opt directory scan reports nine baseline findings in untouched files (`capabilities.py`, `experiments.py`, `inspect_utils.py`, `levels.py`, and `tracebench.py`); they are not suppressed or mixed into this corrective patch.
 
-## Files and API surface
+Post-commit exact-SHA commands/results: `PENDING_CORRECTIVE_COMMIT`.
 
-Tracked runtime/client snapshot relative to HEAD: **12 files changed, 2,612 insertions, 2,420 deletions**. Files are:
+## Migration and footprint
 
-- `opto/features/recursive_opt/{__init__,memory,runmode,spec,traces}.py`
-- `opto/trainer/objectives.py`
-- `opto/features/graph/{__init__,adapter,module}.py`
-- `examples/recursive_opt_use_cases.ipynb`
-- `examples/recursive_opt_abc_probe.py`
-- `pyproject.toml`
+All 85 tracked historical files are classified: `execution_replayable=0`, `normalized_only=10`, `missing_dependency=23`, `historical_only=46`, `invalid=0`, `local_nonportable=6`. The representative config, family-policy, and prior specs normalize but cannot be replayed faithfully because exact dataset/evaluator/provider dependencies are absent; precise dependencies and paths are in `migration_report.json.representatives`. The deterministic UC4/UC14 notebook fixtures explicitly remain non-historical controls.
 
-New test/CI/evidence files total 2,789 physical lines before this proof file: the v2alpha test module, required workflow, ADR, baseline/evidence/footprint/migration reports, two notebook goldens, and 16 migrated normalized specs.
-
-Public APIs added under recursive-opt: `SCHEMA_VERSION`, `SPEC_KIND`, `CANONICAL_SPEC_BLOCKS`, `ExecutionPlan`, `RunResult`, `EvaluationResult`, `DatasetAccess`, `ModuleRegistryEntry`, `EngineRegistryEntry`, `KnowledgeCard`, normalization/migration/explanation, registry/build/snapshot/restore/plan execution, objective/binding/role/preflight/knowledge helpers, and canonical evaluation normalization. Graph adds `GraphExecutor`, `GraphAdapter`, `GraphModule`, optional `LangGraphAdapter`, and three artifact/codec constants.
-
-Removed paths: the notebook's 75 orchestration helpers; its direct level/optimizer/memory/private calls; manual seed/arm/budget loops; the redundant `graph_to_module` helper; and 4,639 lines of the 5,023-line experimental graph/Trace-IO import. No baseline exported recursive-opt API was removed.
-
-## Footprint
-
-| measure | before | after | delta |
+| measure | baseline | corrective worktree | delta |
 |---|---:|---:|---:|
-| recursive-opt runtime physical lines | 6,824 | 8,803 | +1,979 |
-| notebook code lines | 1,892 | 16 | -1,876 |
-| combined budget scope | 8,716 | 8,819 | **+103** |
-| notebook helpers | 75 / 764 lines | 0 / 0 lines | -75 / -764 |
-| public recursive-opt functions/classes | 132 | 154 | +22 |
-| experimental source retained | 5,023 imported | 384 graph | -4,639 |
+| recursive-opt runtime lines | 8,803 | 8,730 | -73 |
+| `spec.py` lines | 2,688 | 2,613 | -75 |
+| notebook code lines | 16 | 16 | 0 |
+| public package exports | 114 | 114 | 0 |
 
-The +103 default-budget miss is explicit. `control_plane_v2alpha.md` itemizes every physical-line delta by file and required invariant; tests/docs/graph/shared objectives are not used to hide it.
+The graph package is byte-clean against the baseline SHA and was not expanded.
 
-## Historical migration and live limits
+## Changed scope and limitations
 
-`migration_report.json` classifies all 85 tracked historical files: 46 replayable artifact ledgers, 16 migrated-replayable specs, 23 missing-dependency metadata specs, and zero in the remaining required categories. Original SHA-256 values are verified; migrated files are separate. The 4,291 untracked user-output candidates were left untouched.
+The intended corrective commit contains only the canonical runtime/export files, the control-plane test matrix, smoke notebook/goldens, migrated normalized specs, and control-plane evidence. Exact staged paths and post-commit `git status --short` are recorded after staging/commit.
 
-No live OpenRouter or paid LLM inference was executed. GEPA was exercised through an injected deterministic `optimize_anything` contract; the manual CI job installs and verifies exactly `gepa==0.1.4` but was not run locally. Historical UC4 and UC14 live runs are explicitly non-executable as faithful replays because the exact historical dependencies are not pinned; the notebook controls are not substituted historical claims.
+Limitations: no live OpenRouter run, no paid GEPA optimization, and no historical efficacy claim. The real installed GEPA API is checked only where it can run without a provider. Historical config/family-policy/prior behavior remains non-replayable without the precisely listed dependencies. This gate establishes readiness for Prompt 18; it does not begin that experiment.

@@ -1,8 +1,8 @@
 # ADR: recursive-opt control plane v2alpha
 
-- Status: accepted for implementation
-- Date: 2026-08-21
-- Baseline SHA: `6fc278a398709fe79a0fc9be22bae99bffd8cba6`
+- Status: accepted; semantic-closure correction ready for commit
+- Date: 2026-08-22
+- Baseline SHA: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
 - Public schema: `recursive-opt/v2alpha`
 - Public kind: `recursive_optimization`
 
@@ -25,7 +25,8 @@ raw mapping
 → resolve versioned refs
 → expand arms/seeds/matrix
 → immutable ExecutionPlan
-→ engine runner
+→ ordered immutable level plans inside each execution unit
+→ one canonical runner and selected engine adapters
 → canonical RunResult
 ```
 
@@ -34,7 +35,7 @@ There will be no public `RunSpec`/`ExperimentSpec` split and no Pydantic, Hydra,
 ## Invariants
 
 1. Every portable spec declares the exact schema version and kind.
-2. All canonical blocks are materialized: `surface`, `module`, `engine`, `runtime`, `objective`, `llm_profiles`, `llm_roles`, `datasets`, `knowledge`, `bindings`, `outputs`, `budget`, and `experiment`.
+2. Globals (`runtime`, `llm_profiles`, `knowledge`, `outputs`, `budget`, `experiment`) are materialized once. Every canonical item in top-level `levels` independently materializes `surface`, `module`, `engine`, `objective`, `llm_roles`, `datasets`, `bindings`, and `outputs`.
 3. Unknown structural keys fail. Vendor data is allowed only below a namespaced `extensions` entry.
 4. Normalized specs contain only JSON values, no callable, and no credential value. Credentials are referenced as `env:NAME`.
 5. Reproducible mode rejects moving `latest` model aliases and records every explicit fallback.
@@ -51,7 +52,7 @@ There will be no public `RunSpec`/`ExperimentSpec` split and no Pydantic, Hydra,
 
 ## Compatibility
 
-JSON-compatible legacy specs are migrated into the canonical shape. Legacy callables cannot become portable refs implicitly; a later `LocalObjectRegistry` compatibility path will mark such specs `portable=false` and `promotable=false`. No evaluator or module is invented when migration evidence is absent.
+JSON-compatible legacy specs and flat-v2 shorthand are migrated into the same canonical top-level `levels` shape. Legacy callables cannot become portable refs implicitly; explicit test adapters mark results `portable=false` and `promotable=false`. No evaluator, dataset, module, or provider response is invented when migration evidence is absent.
 
 ## Footprint decision
 
@@ -63,30 +64,31 @@ Phase 10 resolved this decision: 384 graph lines remain and the 4,004-line Trace
 
 Any positive final runtime-plus-notebook delta must be itemized against a required invariant in the final footprint report. A temporary positive delta is accepted only while a directly replaced notebook/legacy path is still scheduled for deletion; it is not sufficient for completion.
 
-### Final footprint exception
+### Corrective footprint result
 
-The measured budget scope is 8,819 lines versus 8,716 at baseline: **+103**. The neutral default was therefore missed by 103 lines. This is accepted as an explicit exception rather than hidden by counting tests, docs, graph, or shared objective code. Every changed line in the footprint scope is assigned below using physical before/after counts and the single added `spec.py` hunk:
+Against the semantic-closure baseline, recursive-opt runtime is **8,730** physical lines versus **8,803** (`-73`), and `spec.py` is **2,613** versus **2,688** (`-75`). Notebook code remains 16 lines, so runtime plus notebook is also `-73`. The public package export count remains 114: `register_evaluator` and `register_dataset` replace two obsolete exports. No footprint exception is required; `code_footprint_after.json` contains the per-file measurement.
 
-| scope | physical delta | required invariant |
-|---|---:|---|
-| `recursive_opt/__init__.py` | +52 | Export the one public façade, normalized plan/result, registries, bindings, roles, knowledge, and usage contracts. |
-| `recursive_opt/memory.py` | +138 | Knowledge-card schema, status/scope/supersession persistence, promoted-only retrieval, and rollback. |
-| `recursive_opt/runmode.py` | +68 | Runtime-owned per-role provider usage and call accounting. |
-| `recursive_opt/spec.py` lines 73–484 | +412 | Immutable registry entries, `ExecutionPlan`, `RunResult`, dataset capabilities, compilation, resume, and execution. |
-| `recursive_opt/spec.py` lines 485–704 | +220 | Typed causal bindings, objective compilation, role resolution/preflight, and runner-side knowledge retrieval. |
-| `recursive_opt/spec.py` lines 705–1049 | +345 | Budget accounting, fixed/Trace/GEPA runners, canonical projection/results, and registered evaluators. |
-| `recursive_opt/spec.py` lines 1050–1327 | +278 | Generic component/graph/legacy module snapshot adapters, deterministic expansion, and built-in registrations. |
-| `recursive_opt/spec.py` lines 1328–1778 | +451 | Strict migration, default materialization, fingerprinting, structural/semantic validation, and secret/callable rejection. |
-| `recursive_opt/spec.py` legacy integration glue | +42 | Route v2 through the existing `run_spec`, promoted retrieval, imports, and validation compatibility. |
-| `recursive_opt/traces.py` | -27 | Remove the redundant graph compiler path and narrow optional imports. |
-| notebook code cells | -1,876 | Delete 75 helpers, direct optimization, private APIs, and manual orchestration; retain only load/normalize/explain/run/display. |
-| **combined** | **+103** | Exact residual required control-plane implementation. |
+## Public-field classification
 
-The `spec.py` bands total its +1,748 physical-line delta; the recursive runtime totals +1,979 and the notebook removes 1,876 code lines. `code_footprint_after.json` contains the reproducible per-file measurements. Further compression would mainly trade maintainability for physical-line counting or remove baseline behavior, neither of which is justified.
+The classifications below are normative. “Active” includes fields consumed in canonical compilation/execution and legacy-only controls consumed by the migrated legacy module. Unsupported values fail validation rather than remaining fingerprint-only metadata.
+
+| block | active | validation-only / migrated shorthand | unsupported and rejected | extension-only |
+|---|---|---|---|---|
+| identity | `schema_version`, `kind` | caller-supplied `fingerprint` is verified | unknown top-level keys | `extensions.<namespace>` |
+| runtime | `reproducible`, `offline`, `resume`, `memory_root`, `reuse_priors`, `tracebench`, `scoring`, `prior_promotion`, `trainer_kwargs`, `run_id`, `seed`, `test_mode` | `strict_refs=true` is the invariant | `strict_refs=false`; hidden behavioral resources in portable mode | none |
+| level graph | `id`, `depends_on`, level `ordering_only` | none | binding `ordering_only=true`; decorative dependency edges | none |
+| surface/module | `surface.kind`, `surface.targets`, `module.ref/config/artifact/inputs` | registry config/artifact validators are mandatory | unknown targets/config/artifacts | none |
+| engine | `name`; validated Trace/GEPA configs and their supported knobs | fixed config must be empty | engine capabilities/objective modes and unknown knobs | none |
+| objective | evaluator ref, intent, metric descriptors, selection, hard constraints, aggregation default, feedback channels | metrics-list plus `directions` migrates to descriptors | descriptor-form `directions`; aggregation weights (selection weights are authoritative); unknown sources/modes | none |
+| LLM | profiles, role bindings/overrides, exact model, env key ref, ordered fallbacks, temperature, max tokens | resolved model is materialized | `latest` in reproducible mode, role/global `base_url`, malformed secret refs | none |
+| datasets/bindings | inline splits or exact ref/split/config; typed from/to/codec | none | arbitrary import refs, untyped/decorative bindings | none |
+| knowledge | store, retrieval, statuses, scope fields, top-k, injection codec | empty promotion/rollback maps reserve compatibility shape | nonempty promotion/rollback policies | future policy experiments must use namespaced extensions |
+| outputs | global directory, JSON format, artifact flag; per-level artifact flag | JSON is the sole format; per-level directory/format must inherit globals | other formats or per-level path/format overrides | none |
+| budget/experiment | every limit, `on_exceed`, seeds, arms, matrix | legacy `return_best` migrates to `return_best_valid` | unknown policies, negative limits, empty matrix axes | none |
 
 ## Consequences
 
 - Strict normalization turns silent typos and hidden behavior into compile-time errors.
 - Frozen normalized values use tuples for sequences; JSON round-trip restores lists without changing the fingerprint.
 - Old callable-heavy examples remain executable only through explicit local compatibility and cannot be promoted as portable artifacts.
-- Live provider checks are manual/secrets-protected; mandatory CI remains deterministic and offline.
+- Live provider checks are automatic for non-offline runs; live paid tests remain manual/secrets-protected while mandatory CI is deterministic and offline.

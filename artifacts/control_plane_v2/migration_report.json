@@ -1,12 +1,12 @@
 {
-  "baseline_sha": "6fc278a398709fe79a0fc9be22bae99bffd8cba6",
+  "baseline_sha": "21a0ad3d2f4f835ce2ffb1eef18c36a622265418",
   "classification_definitions": {
-    "historical_only": "Readable history lacks enough canonical replay semantics.",
+    "execution_replayable": "The canonical runner can execute the preserved spec with registered portable dependencies and equivalent semantics.",
+    "normalized_only": "The legacy spec normalizes canonically, but faithful execution is not claimed because its historical provider/task runtime is not pinned.",
+    "missing_dependency": "The source lacks a registered portable module, evaluator, dataset, or exact external runtime required for execution.",
+    "historical_only": "The record is readable historical evidence, not a complete executable specification.",
     "invalid": "The source cannot be parsed or validated as its declared format.",
-    "local_nonportable": "Execution depends on a local object that cannot be serialized or promoted.",
-    "migrated_replayable": "A legacy execution spec normalized successfully; its normalized copy is separate.",
-    "missing_dependency": "Metadata lacks a registered module or evaluator and cannot be promoted safely.",
-    "replayable": "Artifact data has the required immutable JSONL replay fields."
+    "local_nonportable": "Execution depends on a local callable or process object that cannot be serialized or promoted."
   },
   "historical_live_replay": {
     "UC4": {
@@ -22,32 +22,32 @@
   "entries": [
     {
       "bytes": 273,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "5003f5699394df24c1cda138b5a44961a02ef1762d719ca33eb81b94580e60f8",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/_initial_probes/mem_uc4_o2_policy/artifacts.jsonl"
     },
     {
       "bytes": 237,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "6c7e78d2f7484930414b5cc9d3e08f4315a8d22f9b6162749a1b7bd5299543d2",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/_initial_probes/mem_uc4_o3_cold/artifacts.jsonl"
     },
     {
       "bytes": 237,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "02d0a39f8050302d5e1becb1a637d942944fef927aa8168fe9e244e61229c343",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/_initial_probes/mem_uc4_o3_warm/artifacts.jsonl"
     },
     {
       "bytes": 403,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "13cf0c96032ce13e6f363dabd8de75d814583e45e3369c6dff74bddc73ddd385",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_conditional_suboptimizer_graph/artifacts.jsonl"
@@ -61,8 +61,8 @@
     },
     {
       "bytes": 279,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "3edc7ee204d1f60106402962d4e2a90fbc7c777493556179253f1a9d4e76df12",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_suboptimizer_graph/artifacts.jsonl"
@@ -76,8 +76,8 @@
     },
     {
       "bytes": 84002,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 46,
       "sha256": "af0eb836af0e75855033d7860162e1e611575dcda1aac52c2d86dbfd51756ec8",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc10_promotion_policy_0/artifacts.jsonl"
@@ -91,8 +91,8 @@
     },
     {
       "bytes": 95438,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 45,
       "sha256": "2eeee619f022655d13cb156b48872e3d5e373dcb23c1f6c1d75903ef3c6164be",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc10_promotion_policy_1/artifacts.jsonl"
@@ -106,8 +106,8 @@
     },
     {
       "bytes": 62563,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "bb3d0217c28464a6bd64176ea878b355d5ba95288509edaf8551b4fadf2e23d6",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc11_qasper_prompt_emitter_0/artifacts.jsonl"
@@ -121,8 +121,8 @@
     },
     {
       "bytes": 15649,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "1d9baa0dae2fff0d9ec8549cd17d71a957fc58e0e9d37b16482cb89adf2af63f",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc1_batch_design_0/artifacts.jsonl"
@@ -136,8 +136,8 @@
     },
     {
       "bytes": 15677,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "84a4e504d451bd641b9c20d88277faf5131d2c1bce2ff3051ad706274b3e02a6",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc1_batch_design_1/artifacts.jsonl"
@@ -151,8 +151,8 @@
     },
     {
       "bytes": 29946,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "9922bb8c78631656b952eb00c23be27dc25e141da5e125945c3c7741f0883c07",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc1_bbeh_direct_solver_0/artifacts.jsonl"
@@ -166,8 +166,8 @@
     },
     {
       "bytes": 25248,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "8faf7b80d843dcdd4fa33c5f040dd19e94b3cec574bd3dd380777167c2c13e39",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc1_bbeh_direct_solver_1/artifacts.jsonl"
@@ -181,8 +181,8 @@
     },
     {
       "bytes": 10994,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "5852ee40305e57e9e4c8db98e6bf6edae19986739a88877bff7aa1a74e3e7f80",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc1_trace_summarizer_default_0/artifacts.jsonl"
@@ -196,8 +196,8 @@
     },
     {
       "bytes": 13296,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "50f07efecb2512363f70e8cc13261253f6835250d59493f2def0a700eafc765f",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc1_trace_summarizer_default_1/artifacts.jsonl"
@@ -211,8 +211,8 @@
     },
     {
       "bytes": 21489,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "9919ccbc50aae416645b5b4af2d35a076f73f2e1eb05145e7efaf959bdc2c2ac",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc1_trace_summarizer_strict_0/artifacts.jsonl"
@@ -226,8 +226,8 @@
     },
     {
       "bytes": 13090,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "44bcdec50e6ec961ab200e67cbfd3a30f1a385d11dfbd41d0448a981998b65f1",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc1_trace_summarizer_strict_1/artifacts.jsonl"
@@ -241,229 +241,229 @@
     },
     {
       "bytes": 1255,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "069bdd3946f0a1a1c7e0ced658c986ba2e6b671b9521e9178f042ef37c63598d",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc2_drop_0/artifacts.jsonl"
     },
     {
       "bytes": 1143,
-      "classification": "migrated_replayable",
-      "fingerprint": "8c71cdefbf2265efa67e250502e70692ba518055d348916e09fcaae03f0288fd",
+      "classification": "normalized_only",
+      "fingerprint": "902133e827074423644ae3eb37317c3f24783c346b1e80fbe4edb9ff4b869745",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/01_mem_uc2_drop_0_b70c0279e4.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "The config spec normalizes through canonical LevelPlans, but hf:drop has no pinned dataset revision and the historical TraceBench evaluator/provider responses are absent; equivalent execution is therefore not claimed.",
       "sha256": "583b8a3b58a38456f9de4fa78b7a5d95b0fdb983ec5e5435e65734e35b30bd90",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc2_drop_0/spec.json"
     },
     {
       "bytes": 4224,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "9beb9843e6097ffe440f950aecbaf95bb7ca5330b217a06aadb93029679ea96c",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc2_mixed_gsm8k_qasper_0/artifacts.jsonl"
     },
     {
       "bytes": 1282,
-      "classification": "migrated_replayable",
-      "fingerprint": "9728ef949ce9bfd5fae62723e412bf3812db053ba62beaf460c7223196d35491",
+      "classification": "normalized_only",
+      "fingerprint": "b45e6fcab6f5d44c23aa071d1a75fd7d685325eb0f258c435bf0d32394bc810e",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/02_mem_uc2_mixed_gsm8k_qasper_0_76e8af083c.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec normalizes through canonical LevelPlans, but the exact historical provider/task runtime is not pinned, so execution replay is not claimed.",
       "sha256": "5651975b63a1b6b6093af87e348936d3679668fde7655dd82da43685762b1b9b",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc2_mixed_gsm8k_qasper_0/spec.json"
     },
     {
       "bytes": 3400,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "1d0cb596bc8f06c1476459f9a4b308ebb7a2ac0d99ae4208f636cf90582122e4",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc2_qasper_0/artifacts.jsonl"
     },
     {
       "bytes": 1153,
-      "classification": "migrated_replayable",
-      "fingerprint": "35d0bd239daf48ea91b21f59583908516b1abc54cc4a2acaec32ba5a77d95b2d",
+      "classification": "normalized_only",
+      "fingerprint": "853156a0ac890d787470f2ae537d4a2e115a129ea005c0f60db045a692b03753",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/03_mem_uc2_qasper_0_1d968cbf31.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec normalizes through canonical LevelPlans, but the exact historical provider/task runtime is not pinned, so execution replay is not claimed.",
       "sha256": "ed5c6069da7a3981aaa13e6da3d9aad5ae5776023e62b0956cef291b3316be08",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc2_qasper_0/spec.json"
     },
     {
       "bytes": 1367,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "7e969e6874ee12ebcf14b7cdcdd73bb98e74a1022466c6742ac85dcda77df6a1",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_decompose_0/artifacts.jsonl"
     },
     {
       "bytes": 935,
-      "classification": "migrated_replayable",
-      "fingerprint": "53b402a92f2cedaa7e9268e9e7df4ba7a7381f4633fa17b83f7187c9dcb3d87a",
+      "classification": "local_nonportable",
+      "fingerprint": "cf9a4b7834791ffeca6f5753d2f584267c7b38366ad9ed2c94dbbccd088f07c1",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/04_mem_uc3_decompose_0_5fbb9d313a.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec contains a process-local callable representation; normalization is preserved but portable execution is rejected.",
       "sha256": "796053a9f00a4c921785731a7cb2202921b5266fae1ed5fc8977c64a3ff3fe16",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_decompose_0/spec.json"
     },
     {
       "bytes": 1367,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "ab82840f94e852bc064b326d9d2dc737bfd37c6748c8305181419a0dc576390a",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_decompose_1/artifacts.jsonl"
     },
     {
       "bytes": 935,
-      "classification": "migrated_replayable",
-      "fingerprint": "4eacfc4beab40d80c5759261d82dc6fe6c7a92f5562d96d3202be405230415a3",
+      "classification": "local_nonportable",
+      "fingerprint": "34680997eac341d58a9a805ee7a08300dcb48819e298f45855f50208179bb6dc",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/05_mem_uc3_decompose_1_b4486c4692.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec contains a process-local callable representation; normalization is preserved but portable execution is rejected.",
       "sha256": "d239f05b77451fe184d1e322f5a890e88c72d5d46cc0e9cc25ffa0de7325cfc0",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_decompose_1/spec.json"
     },
     {
       "bytes": 1222,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "6522798ae8e96b19c3b561a3aed34871dac87c7f54efc24b770c65bee27d0e0b",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_terse_0/artifacts.jsonl"
     },
     {
       "bytes": 897,
-      "classification": "migrated_replayable",
-      "fingerprint": "1810dbdf6dabfcc7901e2517802a3cd327c5547acd07a9a9fefdca36ed29a74d",
+      "classification": "local_nonportable",
+      "fingerprint": "8d2446c0f1213141b1600b8bd06dcdc3013cff9dcf9402bb42980c6e73e15663",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/06_mem_uc3_terse_0_4e734e24f1.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec contains a process-local callable representation; normalization is preserved but portable execution is rejected.",
       "sha256": "5191dbc6b2c8c58d5b89976da54dca4196f8319f271fee68826182cd0e26b311",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_terse_0/spec.json"
     },
     {
       "bytes": 1366,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "b9a4cf3fd820297706e30bfc6c433068dbf07f52882ce77b54261308050cc409",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_terse_1/artifacts.jsonl"
     },
     {
       "bytes": 897,
-      "classification": "migrated_replayable",
-      "fingerprint": "99f8dd3fbbd6af3337081695a805dd7f1d3625b2b9d05c590a1a00ef6767f617",
+      "classification": "local_nonportable",
+      "fingerprint": "676540824b6e35ea8e3a836ea0015bbe83501cecf324230d46a8cc015b6b6720",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/07_mem_uc3_terse_1_e753320924.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec contains a process-local callable representation; normalization is preserved but portable execution is rejected.",
       "sha256": "35c19da716781061f487b80373c7bce0f382b4f5aecd9410ca1d025edc32781d",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_terse_1/spec.json"
     },
     {
       "bytes": 1370,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "8247c798591ddbbafefe2bce75f9a96f717e2e50250bfdccb524e7df1ffc15e5",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_verify_0/artifacts.jsonl"
     },
     {
       "bytes": 930,
-      "classification": "migrated_replayable",
-      "fingerprint": "56f606f89dd2f5f5a6dfc7ec59536de89fdcad99b5b24c28ddbdc19c8a6b9731",
+      "classification": "local_nonportable",
+      "fingerprint": "6a0a42d229bebea02ea7d5e230580794ad14c2e2991f0ac9df4a0df28d731518",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/08_mem_uc3_verify_0_171a7bffd2.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec contains a process-local callable representation; normalization is preserved but portable execution is rejected.",
       "sha256": "c74bf9ff456075f5e9fb2fd01d3d6ad97656aaf427c2fe2e6bbeae12e199f2ed",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_verify_0/spec.json"
     },
     {
       "bytes": 1364,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "d6e52a79d14c803d0ac578737c3006c49dcd2a26f307eaf39c81205ed147f37f",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_verify_1/artifacts.jsonl"
     },
     {
       "bytes": 930,
-      "classification": "migrated_replayable",
-      "fingerprint": "820f3a1615e75a8c1a7da920f5c95aecdb3eeaa06f1d138bc09b76e56d89714e",
+      "classification": "local_nonportable",
+      "fingerprint": "55f3fd8adf3cf21cc1010f3ffffc881e11cacb93b7dcc434c3be27c02bc3054e",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/09_mem_uc3_verify_1_a63fff9c8e.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec contains a process-local callable representation; normalization is preserved but portable execution is rejected.",
       "sha256": "88a4730012af690fd1e249b6d008b3391ec59b43ceefbf6443df5b64352f40e5",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc3_verify_1/spec.json"
     },
     {
       "bytes": 4075,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 12,
       "sha256": "a2f78bc4dc5ee1837a7bebfa89f9df48f1907e6687f1e22be13161a10c427ade",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o2_policy_0/artifacts.jsonl"
     },
     {
       "bytes": 1317,
-      "classification": "migrated_replayable",
-      "fingerprint": "21149d6c8abe7224f8c0354f97020a219b3c7188c73515c6816cd1eb947e958c",
+      "classification": "normalized_only",
+      "fingerprint": "c282f9d80a49842719f7dcca9000b2f0767bd896c0ac7205a01e6616795f5b96",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/10_mem_uc4_o2_policy_0_e2b831803e.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "The family_policy spec normalizes through canonical LevelPlans, but its internal:multiobjective_gsm8k and hf:qasper evaluator/provider responses are not pinned; equivalent cross-family selection cannot be replayed.",
       "sha256": "4b29542d4fc1b8fdaffc1821ccacaf0bd3065467658ddf98b91715c646afe38a",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o2_policy_0/spec.json"
     },
     {
       "bytes": 6815,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 21,
       "sha256": "2aa48f6356413d6c26bee15239a592f8d4f095c06fcbfcbf741513966b9a2a7a",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o3_cold_0/artifacts.jsonl"
     },
     {
       "bytes": 1991,
-      "classification": "migrated_replayable",
-      "fingerprint": "915d5e2f40af3edb4d69d419ee8949888aece074924cd28b676eaa28bbbc9519",
+      "classification": "normalized_only",
+      "fingerprint": "ff8d65db00e32215ab184a637e876df22b4897280682668e459320ee21eb36cc",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/11_mem_uc4_o3_cold_0_97c8311a2e.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "The prior spec normalizes through canonical LevelPlans, but its upstream family-policy execution plus hf:qasper evaluator/provider responses are not pinned; equivalent prior induction cannot be replayed.",
       "sha256": "debcbd8089e41f665905d816cdecb24d37ceed8815b6da418ecbeed5cdd4cbb1",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o3_cold_0/spec.json"
     },
     {
       "bytes": 6817,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 21,
       "sha256": "87520cc7844bec48383e3c0d9dd9b338dd2f229c749f7d1eefc4fd34d0da37b3",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o3_warm_0/artifacts.jsonl"
     },
     {
       "bytes": 1990,
-      "classification": "migrated_replayable",
-      "fingerprint": "98aea5fb13e78dceb387d642291320bc263dfde070d85e0033752d4e188d25e3",
+      "classification": "normalized_only",
+      "fingerprint": "0e7e790c95b1b879481025cc737b08452883ffc89574ea8ff72a2bf8a9c2843d",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/12_mem_uc4_o3_warm_0_75f38e402a.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec normalizes through canonical LevelPlans, but the exact historical provider/task runtime is not pinned, so execution replay is not claimed.",
       "sha256": "2266251af8d95f06db6c65e3070dbdbafa21988b63a527315b35c064fa34649b",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o3_warm_0/spec.json"
     },
     {
       "bytes": 1908,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 3,
       "sha256": "4845b1e4d488ce9a93d6601970bf5e2204901cfa24bc7d2d9e7dc2bbfbd210b7",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc5_agentic_trace_note_0/artifacts.jsonl"
     },
     {
       "bytes": 1342,
-      "classification": "migrated_replayable",
-      "fingerprint": "cb341906cb71168b4aafdd998a81e3916916895f3aab63f5908aab11b51e5f46",
+      "classification": "normalized_only",
+      "fingerprint": "3fcd51fe0c4b7c899249391bd9161fbfebfe4e3891b48aef4641e100d1bb8018",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/13_mem_uc5_agentic_trace_note_0_0279dfebfc.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec normalizes through canonical LevelPlans, but the exact historical provider/task runtime is not pinned, so execution replay is not claimed.",
       "sha256": "779cb1f9433de45a5eeebf12a7fb5b5d07baea6f2a3aabb0512a097beaecf5c3",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc5_agentic_trace_note_0/spec.json"
     },
     {
       "bytes": 11734,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 21,
       "sha256": "d4e4ef1b24fe65c025754fdb121f371954f47a0e979ec1d491e5c5d48b2a11fd",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc5_code_stride_0/artifacts.jsonl"
@@ -477,8 +477,8 @@
     },
     {
       "bytes": 11732,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 21,
       "sha256": "6ad7dd9e6b6cb88f7d48e273ff40e4be5a3af04d4273a834bdea156686bbd18d",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc5_code_stride_1/artifacts.jsonl"
@@ -492,8 +492,8 @@
     },
     {
       "bytes": 16402,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "9066f60c1dbebe8e7b479e727c09a49968b7420b3ae10deeafb2b723f21f2219",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc5_code_take_last_0/artifacts.jsonl"
@@ -507,8 +507,8 @@
     },
     {
       "bytes": 17044,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "fff0269cab8df01254870102a514e3c404ec7a1fa000dc20c0b86275419bd725",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc5_code_take_last_1/artifacts.jsonl"
@@ -522,8 +522,8 @@
     },
     {
       "bytes": 48075,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "84021297571abea14ac2c6b66db9ceed7019301a850ffbb9de76eeffe323df1f",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc5_tool_policy_0/artifacts.jsonl"
@@ -537,8 +537,8 @@
     },
     {
       "bytes": 46342,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "6869c0580c3c67db9d3388f5e1cad45c92f7c32d3348ea623cdf3792dbc5a4c9",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc5_tool_policy_1/artifacts.jsonl"
@@ -552,59 +552,59 @@
     },
     {
       "bytes": 3464,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "f6adfb83bf9bcf2fe8aa181ee60ad0ee77c34e737af965a49e4a21f29db74a11",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc6_trace_hybrid_0/artifacts.jsonl"
     },
     {
       "bytes": 1145,
-      "classification": "migrated_replayable",
-      "fingerprint": "2436bde3ced557ae98022e01b5302efce9aa265eae3ba28a02c44df916fa98ae",
+      "classification": "normalized_only",
+      "fingerprint": "487812dc7ac96e58463486fadeb32a643d06cb67a79a9f1242eef9cd8ef92c52",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/14_mem_uc6_trace_hybrid_0_3906e96962.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec normalizes through canonical LevelPlans, but the exact historical provider/task runtime is not pinned, so execution replay is not claimed.",
       "sha256": "8b151f5ea26e0b2196cf6f51793f889aa942774dae94addf25813c12cc800035",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc6_trace_hybrid_0/spec.json"
     },
     {
       "bytes": 3152,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "077063bb75e31961ba6ddafed8c65d1c41c50f3f7e00c127c73b5b451409b835",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc6_trace_internal_0/artifacts.jsonl"
     },
     {
       "bytes": 1151,
-      "classification": "migrated_replayable",
-      "fingerprint": "0ad27448d50f749d55f99e45defe47701e02648333d0395db0491ca2fdbbe3b1",
+      "classification": "normalized_only",
+      "fingerprint": "cfdb9224dee8a650af515475e048e23e6d5bf28afa37ff3cb6c3724d2e514451",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/15_mem_uc6_trace_internal_0_62745b7b2b.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec normalizes through canonical LevelPlans, but the exact historical provider/task runtime is not pinned, so execution replay is not claimed.",
       "sha256": "a4816ea2af96031488e634c593246d95da36a590ab6cdc4a8595921227dcf8f1",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc6_trace_internal_0/spec.json"
     },
     {
       "bytes": 3458,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "e477d509d55164a739aaff56b6dbf19e4668437cb66dc2acd5033676f435b42d",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc6_trace_otel_0/artifacts.jsonl"
     },
     {
       "bytes": 1139,
-      "classification": "migrated_replayable",
-      "fingerprint": "30eae6967cb248f0e928e47225160b283766896153ef46db1702a4ab9b78a87f",
+      "classification": "normalized_only",
+      "fingerprint": "f266cd86f6a65edc87d67f04cd2ef23d99930994b1ad04742d92770d49f9c481",
       "migrated_path": "artifacts/control_plane_v2/migrated_specs/16_mem_uc6_trace_otel_0_0e2da5ac75.normalized.json",
-      "reason": "Legacy execution spec normalized without inventing a module or evaluator.",
+      "reason": "Legacy spec normalizes through canonical LevelPlans, but the exact historical provider/task runtime is not pinned, so execution replay is not claimed.",
       "sha256": "8259b4c939adee26f489f842835f3ca7c7d44891aa5910fb2a12479cb1d3c5c7",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc6_trace_otel_0/spec.json"
     },
     {
       "bytes": 160642,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 48,
       "sha256": "11ba8534055effbb4b5b218a76745ff5b771d2dde652a283da478b59f850ab73",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc8_campaign_policy_0/artifacts.jsonl"
@@ -618,8 +618,8 @@
     },
     {
       "bytes": 170721,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 47,
       "sha256": "b320acf80b9ef7957d933bd4aee4332886963760e2f3574da3629d59e1f3a722",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc8_campaign_policy_1/artifacts.jsonl"
@@ -633,8 +633,8 @@
     },
     {
       "bytes": 61530,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "94795d65042b6c00c23006f7008238fa3b85178b63cbf4fcc2447c11bff805ae",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc9_agentic_trace_policy_0/artifacts.jsonl"
@@ -648,8 +648,8 @@
     },
     {
       "bytes": 63143,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 24,
       "sha256": "8e26b0596c21398eb1248863101ca75544df81a0771204f7adc84b9d73e8d842",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc9_agentic_trace_policy_1/artifacts.jsonl"
@@ -663,38 +663,38 @@
     },
     {
       "bytes": 697,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "3a3c0099d307d57e1ba5abfe163272c50681d1e166a8f4e1c836b12416134de5",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_six_promotions_20260618_v4/mem_uc12_budget_override/artifacts.jsonl"
     },
     {
       "bytes": 705,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "538ae0b327b3104c2afebebee4bde459af8e770fa13d44f6d730dda615a5b89e",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_six_promotions_20260618_v4/mem_uc12_seeded_seed0/artifacts.jsonl"
     },
     {
       "bytes": 704,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "e4b236f9dc079c0ac7619bfdc171084818dbca783019ffdc39c4167223df8471",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_six_promotions_20260618_v4/mem_uc12_seeded_seed1/artifacts.jsonl"
     },
     {
       "bytes": 705,
-      "classification": "replayable",
-      "reason": "Valid JSONL artifact ledger with artifact_id, content, and score on every record; data replayable without claiming live re-execution.",
+      "classification": "historical_only",
+      "reason": "Valid artifact ledger retained as historical evidence; it is not a complete semantic execution specification.",
       "record_count": 1,
       "sha256": "319511435c16a78bb8fc181589cd5d5c7dcdd424fb3ed518d6f5bd5f80badf36",
       "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_six_promotions_20260618_v4/mem_uc12_seeded_seed2/artifacts.jsonl"
     }
   ],
-  "generated_at": "2026-08-21",
+  "generated_at": "2026-08-22",
   "schema_version": "recursive-opt-migration-report/v1",
   "scope": {
     "excluded": "Untracked workspace outputs are user data outside the repository baseline and were not modified or classified.",
@@ -702,12 +702,29 @@
     "tracked_files": 85,
     "untracked_candidate_files_observed": 4291
   },
+  "representatives": {
+    "config": {
+      "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc2_drop_0/spec.json",
+      "classification": "normalized_only",
+      "missing_dependency": "Pinned hf:drop dataset revision and historical TraceBench evaluator/provider responses."
+    },
+    "family_policy": {
+      "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o2_policy_0/spec.json",
+      "classification": "normalized_only",
+      "missing_dependency": "Pinned internal:multiobjective_gsm8k and hf:qasper evaluator/provider responses."
+    },
+    "prior": {
+      "source": "examples/notebook_outputs/recursive_opt_use_cases/use_cases_frontier_v6_20260615/mem_uc4_o3_cold_0/spec.json",
+      "classification": "normalized_only",
+      "missing_dependency": "Faithful upstream family-policy run plus pinned hf:qasper evaluator/provider responses."
+    }
+  },
   "summary": {
-    "historical_only": 0,
-    "invalid": 0,
-    "local_nonportable": 0,
-    "migrated_replayable": 16,
+    "execution_replayable": 0,
+    "normalized_only": 10,
     "missing_dependency": 23,
-    "replayable": 46
+    "historical_only": 46,
+    "invalid": 0,
+    "local_nonportable": 6
   }
 }
