@@ -1,0 +1,96 @@
+{
+  "examples": {
+    "ast_omissions": [
+      {
+        "location": "examples/notebooks/multiobjective_bbeh_langgraph.ipynb#cell-2",
+        "reason": "IPython syntax"
+      },
+      {
+        "location": "examples/notebooks/multiobjective_quickstart.ipynb#cell-0",
+        "reason": "IPython syntax"
+      },
+      {
+        "location": "examples/notebooks/multiobjective_trainers.ipynb#cell-0",
+        "reason": "IPython syntax"
+      },
+      {
+        "location": "examples/textgrad_examples/notebooks/textgrad_test_time_loss_for_code_OptoPrimeMulti.ipynb#cell-0",
+        "reason": "IPython syntax"
+      }
+    ],
+    "direct_calls": {
+      "CodeArtifactLevel": 7,
+      "MemoryLite": 24,
+      "MetaLevel": 2,
+      "compile_level": 6,
+      "optimize": 12
+    },
+    "manual_seed_arm_budget_loops": {
+      "locations": [
+        "examples/recursive_opt_three_way.py:625",
+        "examples/recursive_opt_three_way.py:651",
+        "examples/recursive_opt_three_way.py:816",
+        "examples/recursive_opt_three_way.py:838"
+      ],
+      "total": 4
+    },
+    "private_api_calls": 230
+  },
+  "git_sha": "6fc278a398709fe79a0fc9be22bae99bffd8cba6",
+  "graph": {
+    "accepted_runtime_lines": 384,
+    "removed_from_user_import": 4639,
+    "user_import_source_lines": 5023
+  },
+  "measured_at": "2026-08-21T23:40:00+02:00",
+  "measurement_scope": {
+    "examples_calls": "AST Call nodes in git-tracked .py and .ipynb files below examples; classified by terminal call name.",
+    "notebook_orchestration_helpers": "Top-level function definitions in code cells of examples/recursive_opt_use_cases.ipynb; line counts use AST definition spans.",
+    "public_functions_classes": "Top-level function and class definitions whose name does not start with an underscore in recursive_opt runtime Python files.",
+    "runtime_lines": "Physical lines from Python files directly under opto/features/recursive_opt."
+  },
+  "notebook": {
+    "code_lines": 16,
+    "orchestration_helper_count": 0,
+    "orchestration_helper_lines": 0,
+    "path": "examples/recursive_opt_use_cases.ipynb"
+  },
+  "notebook_removed": {
+    "code_lines": 1876,
+    "helper_lines": 764,
+    "helpers": 75
+  },
+  "runtime": {
+    "by_file": {
+      "opto/features/recursive_opt/__init__.py": 243,
+      "opto/features/recursive_opt/budget.py": 403,
+      "opto/features/recursive_opt/capabilities.py": 404,
+      "opto/features/recursive_opt/decisions.py": 444,
+      "opto/features/recursive_opt/effects.py": 137,
+      "opto/features/recursive_opt/experiments.py": 249,
+      "opto/features/recursive_opt/inspect_utils.py": 116,
+      "opto/features/recursive_opt/levels.py": 915,
+      "opto/features/recursive_opt/memory.py": 531,
+      "opto/features/recursive_opt/numeric_optimizers.py": 243,
+      "opto/features/recursive_opt/optimize.py": 396,
+      "opto/features/recursive_opt/progress.py": 184,
+      "opto/features/recursive_opt/runmode.py": 328,
+      "opto/features/recursive_opt/spec.py": 2688,
+      "opto/features/recursive_opt/tracebench.py": 1327,
+      "opto/features/recursive_opt/traces.py": 195
+    },
+    "lines": 8803,
+    "public_top_level": {
+      "classes": 43,
+      "functions": 111,
+      "total": 154
+    }
+  },
+  "runtime_plus_notebook": {
+    "after": 8819,
+    "before": 8716,
+    "delta": 103
+  },
+  "schema_version": "control-plane-footprint/v1",
+  "worktree": "recursive_opt v2alpha implementation"
+}

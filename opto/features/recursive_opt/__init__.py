@@ -31,7 +31,7 @@ from .levels import (
     validate_config_field,
     validate_level_config,
 )
-from .memory import MemoryLite, EpisodeTrace, FamilyPrior, ArtifactRecord
+from .memory import KnowledgeCard, MemoryLite, EpisodeTrace, FamilyPrior, ArtifactRecord
 from .capabilities import (
     AgenticOptimizer,
     default_optimizer_tools,
@@ -67,7 +67,31 @@ from .budget import (
 from . import traces, tracebench
 from .effects import Effect, FieldEffect, EffectReport, InactiveFieldError, check_field_effects, effects_for
 from .spec import (
+    CANONICAL_SPEC_BLOCKS,
+    ExecutionPlan,
+    DatasetAccess,
+    EngineRegistryEntry,
+    ModuleRegistryEntry,
+    RunResult,
+    SCHEMA_VERSION,
+    SPEC_KIND,
     make_level_spec,
+    migrate_legacy_spec,
+    normalize_spec,
+    explain_spec,
+    register_module,
+    register_codec,
+    register_engine,
+    build_module,
+    snapshot_module,
+    restore_module,
+    compile_plan,
+    apply_bindings,
+    execute_plan,
+    compile_objective,
+    resolve_llm_roles,
+    preflight_llm_profiles,
+    retrieve_knowledge,
     agentic_optimizer_factory,
     score_spread,
     run_spec,
@@ -89,6 +113,7 @@ from .optimize import (
     ITERATIONS,
     NUM_CANDIDATES,
 )
+from opto.trainer.objectives import EvaluationResult, normalize_evaluation_result
 
 __all__ = [
     "route_optimizers",
@@ -122,6 +147,7 @@ __all__ = [
     "validate_config_field",
     "validate_level_config",
     "MemoryLite",
+    "KnowledgeCard",
     "EpisodeTrace",
     "FamilyPrior",
     "ArtifactRecord",
@@ -164,6 +190,30 @@ __all__ = [
     "ITERATIONS",
     "NUM_CANDIDATES",
     "run_spec",
+    "SCHEMA_VERSION",
+    "SPEC_KIND",
+    "CANONICAL_SPEC_BLOCKS",
+    "ExecutionPlan",
+    "DatasetAccess",
+    "EngineRegistryEntry",
+    "ModuleRegistryEntry",
+    "RunResult",
+    "migrate_legacy_spec",
+    "normalize_spec",
+    "explain_spec",
+    "register_module",
+    "register_codec",
+    "register_engine",
+    "build_module",
+    "snapshot_module",
+    "restore_module",
+    "compile_plan",
+    "apply_bindings",
+    "execute_plan",
+    "compile_objective",
+    "resolve_llm_roles",
+    "preflight_llm_profiles",
+    "retrieve_knowledge",
     "agentic_optimizer_factory",
     "score_spread",
     "compile_level",
@@ -178,6 +228,8 @@ __all__ = [
     "InactiveFieldError",
     "check_field_effects",
     "effects_for",
+    "EvaluationResult",
+    "normalize_evaluation_result",
 ]
 
 from .experiments import (

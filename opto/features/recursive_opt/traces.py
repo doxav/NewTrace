@@ -2,43 +2,30 @@
 recursive_opt.traces  —  multi-trace substrate  (B.3 / B.4 / B.5)
 =================================================================
 
-Thin, defensive wrappers around the optional graph/telemetry IO layer so the
+Thin, defensive wrappers around the optional telemetry IO layer so the
 recursive stack can consume *heterogeneous* trace sources uniformly:
 
-    B.3  Graph adapter            -> opto.features.graph.GraphAdapter / LangGraphAdapter
     B.4  OpenTelemetry            -> opto.trace.io.instrument_graph / TelemetrySession
     B.5  Trace / OTEL / Sysmon    -> observers + TGJ (Trace Graph JSON) merge
 
-An arbitrary graph with *named bindings* becomes a ``trace.Module``
-(``GraphAdapter.as_module()``), and OTEL/Sysmon spans can be lifted into Trace
-nodes via ``otlp_traces_to_trace_json`` / ``ingest_tgj``. That single fact lets
-recursion treat graph workflows exactly like prompts/code: one ``forward()``,
-one set of trainable parameters.
-
-All imports are guarded: if graph/telemetry modules are unavailable, internal
+All imports are guarded: if telemetry modules are unavailable, internal
 trace collection still works and feature-specific paths fail with a clear error.
 """
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
-# --- optional graph/telemetry imports -------------------------------------- #
+# --- optional telemetry imports ------------------------------------------- #
+_TRACE_IO_IMPORT_ERROR: Optional[ImportError] = None
 try:
-    from opto.trace.io import (
-        instrument_graph,
-        optimize_graph,
-        TelemetrySession,
-        Binding,
-        apply_updates,
-        make_dict_binding,
-    )
+    from opto.trace.io.telemetry_session import TelemetrySession
     from opto.trace.io.sysmonitoring import sysmon_profile_to_tgj
-    from opto.features.graph import GraphAdapter, LangGraphAdapter, GraphModule
 
     HAVE_TRACE_IO = True
-except Exception:  # pragma: no cover
+except ImportError as exc:  # pragma: no cover - optional integration
     HAVE_TRACE_IO = False
+    _TRACE_IO_IMPORT_ERROR = exc
 
 
 def require_trace_io(feature: str = "this feature") -> None:
@@ -48,28 +35,14 @@ def require_trace_io(feature: str = "this feature") -> None:
     absence is a LOUD failure rather than a silent no-op.
     """
     if not HAVE_TRACE_IO:
-        raise RuntimeError(
+        error = RuntimeError(
             f"{feature} requires graph/telemetry backends "
-            "(opto.features.graph + opto.trace.io), which are not importable "
+            "(opto.trace.io), which are not importable "
             "in this environment."
         )
-
-
-def graph_to_module(build_graph: Callable, bindings: Dict[str, Any]):
-    """B.3: turn any graph + named knobs into a trainable ``trace.Module``.
-
-    `bindings` maps param-key -> (getter, setter) via make_dict_binding. Returns
-    a GraphModule whose .parameters() are trainable.
-    """
-    if not HAVE_TRACE_IO:
-        raise RuntimeError(
-            "graph adapter backend is not importable; use ArtifactLevel / "
-            "native nesting instead."
-        )
-    adapter = LangGraphAdapter(
-        build_graph=build_graph, bindings=make_dict_binding(bindings)
-    )
-    return adapter.as_module()  # plugs straight into opto.trainer.train
+        if _TRACE_IO_IMPORT_ERROR is not None:
+            raise error from _TRACE_IO_IMPORT_ERROR
+        raise error
 
 
 def collect_traces(

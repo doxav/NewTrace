@@ -21,8 +21,11 @@ import json
 import os
 import statistics
 import time
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field, asdict, replace
+from typing import Any, Dict, Iterable, List, Mapping, Optional
+
+
+_ARTIFACT_STATUSES = {"candidate", "promoted", "rejected", "rolled_back", "superseded"}
 
 
 @dataclass
@@ -37,6 +40,47 @@ class EpisodeTrace:  # M1
     ts: float = field(default_factory=time.time)
 
 
+@dataclass(frozen=True)
+class KnowledgeCard:
+    """Typed, portable knowledge artifact stored by the existing MemoryLite."""
+
+    claim: str
+    scope: Dict[str, str]
+    preconditions: List[str]
+    recommended_action: str
+    evidence_refs: List[str]
+    counterevidence_refs: List[str]
+    support: int
+    uncertainty: float
+    status: str
+    runtime_compatibility: Dict[str, Any]
+    supersedes: List[str]
+    artifact_type: str = field(default="knowledge_card", init=False)
+
+    def __post_init__(self) -> None:
+        if not self.claim.strip():
+            raise ValueError("knowledge card claim must be non-empty")
+        if not self.recommended_action.strip():
+            raise ValueError("knowledge card recommended_action must be non-empty")
+        if not isinstance(self.scope, dict) or not all(
+            isinstance(key, str) and isinstance(value, str)
+            for key, value in self.scope.items()
+        ):
+            raise TypeError("knowledge card scope must map strings to strings")
+        for name in ("preconditions", "evidence_refs", "counterevidence_refs", "supersedes"):
+            values = getattr(self, name)
+            if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
+                raise TypeError(f"knowledge card {name} must be a list of strings")
+        if not isinstance(self.support, int) or self.support < 0:
+            raise ValueError("knowledge card support must be a non-negative integer")
+        if not isinstance(self.uncertainty, (int, float)) or not 0 <= self.uncertainty <= 1:
+            raise ValueError("knowledge card uncertainty must be between 0 and 1")
+        if self.status not in _ARTIFACT_STATUSES:
+            raise ValueError(f"knowledge card status must be one of {sorted(_ARTIFACT_STATUSES)}")
+        if not isinstance(self.runtime_compatibility, dict):
+            raise TypeError("knowledge card runtime_compatibility must be a mapping")
+
+
 @dataclass
 class ArtifactRecord:  # M2 — artifact / experiment lineage
     artifact_id: str
@@ -44,10 +88,14 @@ class ArtifactRecord:  # M2 — artifact / experiment lineage
     level: str  # O0 | O1 | O2 | O3 | capability | code
     family: str
     kind: str  # config | code | capability | policy | prior
-    content: str
+    content: Any
     score: float
     iteration: int
     metrics: Dict[str, Any] = field(default_factory=dict)
+    artifact_type: str = "artifact"
+    status: str = "promoted"
+    scope: Dict[str, str] = field(default_factory=dict)
+    supersedes: List[str] = field(default_factory=list)
     ts: float = field(default_factory=time.time)
 
 
@@ -127,6 +175,15 @@ class MemoryLite:
         with open(self._path(name), "a") as f:
             f.write(json.dumps(asdict(obj)) + "\n")
 
+    def _rewrite(self, name: str, objects: Iterable[Any]) -> None:
+        """Atomically rewrite one compact JSONL ledger after a status transition."""
+        path = self._path(name)
+        temporary = f"{path}.tmp"
+        with open(temporary, "w") as handle:
+            for obj in objects:
+                handle.write(json.dumps(asdict(obj)) + "\n")
+        os.replace(temporary, path)
+
     def _refresh(self) -> None:
         """Reload persisted memory written by traced/copy-isolated module calls."""
         self._episodes = self._load("episodes.jsonl", EpisodeTrace)
@@ -164,16 +221,43 @@ class MemoryLite:
         level: str,
         family: str,
         kind: str,
-        content: str,
+        content: Any,
         score: float,
         parent_id: Optional[str] = None,
         metrics: Optional[Dict] = None,
+        *,
+        artifact_type: Optional[str] = None,
+        status: Optional[str] = None,
+        scope: Optional[Dict[str, str]] = None,
+        supersedes: Optional[List[str]] = None,
     ) -> ArtifactRecord:
         """Append a versioned artifact (config/code/capability/policy/prior).
 
         ``parent_id`` links a revised artifact to the one it was derived from, so
         ``lineage()`` can reconstruct the initial->final chain with scores/diffs.
         """
+        if isinstance(content, KnowledgeCard):
+            card = content
+            content = asdict(card)
+            artifact_type = artifact_type or card.artifact_type
+            status = status or card.status
+            scope = scope or card.scope
+            supersedes = supersedes or card.supersedes
+        artifact_type = artifact_type or kind
+        status = status or "promoted"
+        if status not in _ARTIFACT_STATUSES:
+            raise ValueError(f"artifact status must be one of {sorted(_ARTIFACT_STATUSES)}")
+        if not isinstance(artifact_type, str) or not artifact_type:
+            raise ValueError("artifact_type must be a non-empty string")
+        if not isinstance(scope or {}, dict) or not all(
+            isinstance(key, str) and isinstance(value, str)
+            for key, value in (scope or {}).items()
+        ):
+            raise TypeError("artifact scope must map strings to strings")
+        try:
+            json.dumps(content, allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise TypeError("artifact content must be JSON-serializable") from exc
         iteration = sum(1 for a in self._artifacts if a.family == family and a.kind == kind)
         rec = ArtifactRecord(
             artifact_id=f"{family}:{kind}:{iteration}:{int(time.time()*1000)%100000}",
@@ -181,14 +265,47 @@ class MemoryLite:
             level=level,
             family=family,
             kind=kind,
-            content=str(content),
+            content=content,
             score=float(score),
             iteration=iteration,
             metrics=metrics or {},
+            artifact_type=artifact_type,
+            status=status,
+            scope=dict(scope or {}),
+            supersedes=list(supersedes or []),
         )
         self._artifacts.append(rec)
         self._append("artifacts.jsonl", rec)
         return rec
+
+    def update_artifact_status(
+        self, artifact_id: str, status: str, *, reason: str
+    ) -> ArtifactRecord:
+        """Apply an explicit promotion/rollback status transition in MemoryLite."""
+        if status not in _ARTIFACT_STATUSES:
+            raise ValueError(f"artifact status must be one of {sorted(_ARTIFACT_STATUSES)}")
+        if not reason.strip():
+            raise ValueError("artifact status transition reason must be non-empty")
+        self._artifacts = self._load("artifacts.jsonl", ArtifactRecord)
+        updated: Optional[ArtifactRecord] = None
+        records: List[ArtifactRecord] = []
+        for artifact in self._artifacts:
+            if artifact.artifact_id == artifact_id:
+                if updated is not None:
+                    raise ValueError(f"duplicate artifact id {artifact_id!r}")
+                updated = replace(
+                    artifact,
+                    status=status,
+                    metrics={**artifact.metrics, "status_reason": reason},
+                )
+                records.append(updated)
+            else:
+                records.append(artifact)
+        if updated is None:
+            raise ValueError(f"unknown artifact id {artifact_id!r}")
+        self._artifacts = records
+        self._rewrite("artifacts.jsonl", records)
+        return updated
 
     def lineage(self, artifact_id: str) -> List[ArtifactRecord]:
         """Return the chain [root, ..., artifact_id] following parent links."""
@@ -335,7 +452,10 @@ class MemoryLite:
     # ---- thin retrieval API ---------------------------------------------- #
     def retrieve(self, family: Optional[str] = None, *, level: Optional[str] = None,
                  kind: Optional[str] = None, min_score: Optional[float] = None,
-                 topk: int = 5, sort: str = "best") -> Dict[str, Any]:
+                 topk: int = 5, sort: str = "best",
+                 artifact_type: Optional[str] = None,
+                 statuses: Optional[Iterable[str]] = ("promoted",),
+                 scope: Optional[Mapping[str, str]] = None) -> Dict[str, Any]:
         """Filtered retrieval over M1 episodes + M2 artifacts (+ the M3 prior).
 
         ``sort``: "best" (score desc) or "recent" (timestamp desc). ``family``
@@ -343,6 +463,14 @@ class MemoryLite:
         family-scoped by definition).
         """
         self._refresh()
+        if topk <= 0:
+            raise ValueError("topk must be positive")
+        if sort not in {"best", "recent"}:
+            raise ValueError("sort must be 'best' or 'recent'")
+        allowed_statuses = None if statuses is None else set(statuses)
+        if allowed_statuses is not None and not allowed_statuses <= _ARTIFACT_STATUSES:
+            raise ValueError(f"statuses must be drawn from {sorted(_ARTIFACT_STATUSES)}")
+        requested_scope = dict(scope or {})
         fam = None if family in (None, "*") else family
         def _keep(x, with_kind: bool) -> bool:
             return ((fam is None or x.family == fam)
@@ -351,7 +479,17 @@ class MemoryLite:
                     and (min_score is None or x.score >= min_score))
         key = (lambda x: x.score) if sort == "best" else (lambda x: x.ts)
         eps = sorted((e for e in self._episodes if _keep(e, False)), key=key, reverse=True)
-        arts = sorted((a for a in self._artifacts if _keep(a, True)), key=key, reverse=True)
+        arts = sorted(
+            (
+                a for a in self._artifacts
+                if _keep(a, True)
+                and (artifact_type is None or a.artifact_type == artifact_type)
+                and (allowed_statuses is None or a.status in allowed_statuses)
+                and all(a.scope.get(name) == value for name, value in requested_scope.items())
+            ),
+            key=key,
+            reverse=True,
+        )
         return {"episodes": eps[:topk], "artifacts": arts[:topk],
                 "prior": self._priors.get(fam) if fam else None}
 

@@ -37,11 +37,20 @@ from opto.features.recursive_opt.tracebench import (
     make_dataset,
     make_tracebench_direct_answer_evaluator,
 )
-from opto.trace.io.optimization import EvalResult, optimize_graph
-
-
 TASK_BBEH = "internal:multiobjective_bbeh"
 DEFAULT_OUTPUT_ROOT = Path("examples/notebook_outputs/recursive_opt_abc_probe")
+
+
+def _require_experimental_graph_optimizer() -> Tuple[Any, Any]:
+    """Load the historical graph optimizer only for legacy live probe paths."""
+    try:
+        from opto.trace.io.optimization import EvalResult, optimize_graph
+    except ImportError as exc:
+        raise RuntimeError(
+            "The legacy graph probe requires the experimental opto.trace.io optimizer; "
+            "use recursive_opt.module.graph@1 for supported control-plane runs."
+        ) from exc
+    return EvalResult, optimize_graph
 
 
 def _norm_answer(value: Any) -> str:
@@ -465,6 +474,7 @@ def run_code_bbeh(output_root: Path, args: argparse.Namespace) -> Dict[str, Any]
 
 def run_graph_bbeh(output_root: Path, args: argparse.Namespace) -> Dict[str, Any]:
     """Run graph/tool topology optimization on the same BBEH examples."""
+    EvalResult, optimize_graph = _require_experimental_graph_optimizer()
     examples = load_tracebench_direct_answer_examples(TASK_BBEH, max_examples=args.max_examples)
     adapter = LangGraphAdapter(
         graph_factory=build_bool_tool_graph,
@@ -552,6 +562,7 @@ def run_graph_bbeh(output_root: Path, args: argparse.Namespace) -> Dict[str, Any
 
 def run_suboptimizer_graph(output_root: Path, args: argparse.Namespace) -> Dict[str, Any]:
     """Run graph routing that learns to use SciPy as a downstream sub-optimizer."""
+    EvalResult, optimize_graph = _require_experimental_graph_optimizer()
     centers = [-3.5, 1.75, 4.25, 7.0]
     adapter = LangGraphAdapter(
         graph_factory=build_suboptimizer_graph,
@@ -649,6 +660,7 @@ def run_suboptimizer_graph(output_root: Path, args: argparse.Namespace) -> Dict[
 
 def run_conditional_suboptimizer_graph(output_root: Path, args: argparse.Namespace) -> Dict[str, Any]:
     """Run cost-aware graph routing that should prefer a conditional policy."""
+    EvalResult, optimize_graph = _require_experimental_graph_optimizer()
     centers = [-3.5, -0.1, 0.0, 0.2, 1.75, 4.25]
     adapter = LangGraphAdapter(
         graph_factory=build_conditional_suboptimizer_graph,

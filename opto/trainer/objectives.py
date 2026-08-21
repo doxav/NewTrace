@@ -8,7 +8,7 @@ All functions are pure (no side effects) and depend only on numpy, typing,
 and dataclasses. No imports from opto.trainer to avoid circular dependencies.
 """
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 import numpy as np
 
 
@@ -16,6 +16,159 @@ import numpy as np
 ScalarScore = float
 VectorScore = Dict[str, float]
 ScoreLike = Union[int, float, bool, Dict[str, float]]
+_USAGE_ROLES = ("forward", "optimizer", "feedback", "judge")
+
+
+@dataclass(frozen=True)
+class EvaluationResult:
+    """Canonical evaluator output with explicit validity and role usage."""
+
+    valid: bool
+    status: str
+    metrics: Dict[str, float] = field(default_factory=dict)
+    feedback: Any = ""
+    trace: Any = None
+    usage: Dict[str, Dict[str, Union[int, float]]] = field(default_factory=dict)
+    artifacts: Any = field(default_factory=dict)
+    error: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.valid, bool):
+            raise TypeError("EvaluationResult.valid must be a boolean")
+        if not isinstance(self.status, str) or not self.status:
+            raise ValueError("EvaluationResult.status must be a non-empty string")
+        metrics = to_score_dict(self.metrics) if self.metrics else {}
+        if self.valid and not metrics:
+            raise ValueError("a valid EvaluationResult requires at least one metric")
+        if self.error is not None and not isinstance(self.error, str):
+            raise TypeError("EvaluationResult.error must be a string or None")
+        object.__setattr__(self, "metrics", metrics)
+        object.__setattr__(self, "usage", _normalize_usage(self.usage))
+
+
+def normalize_evaluation_result(value: Any) -> EvaluationResult:
+    """Adapt canonical results and legacy float/dict/(score, feedback) shapes."""
+    if isinstance(value, EvaluationResult):
+        return value
+    if isinstance(value, tuple):
+        if len(value) != 2:
+            raise ValueError("legacy evaluation tuples must be (score, feedback)")
+        normalized = normalize_evaluation_result(value[0])
+        return EvaluationResult(
+            valid=normalized.valid,
+            status=normalized.status,
+            metrics=normalized.metrics,
+            feedback=value[1],
+            trace=normalized.trace,
+            usage=normalized.usage,
+            artifacts=normalized.artifacts,
+            error=normalized.error,
+        )
+    if isinstance(value, (bool, int, float)):
+        return EvaluationResult(valid=True, status="ok", metrics=to_score_dict(value))
+    if not isinstance(value, Mapping):
+        raise TypeError(
+            "evaluation result must be EvaluationResult, score, score dict, or (score, feedback)"
+        )
+
+    result_keys = {"valid", "status", "metrics", "feedback", "trace", "usage", "artifacts", "error"}
+    if not (set(value) & result_keys):
+        return EvaluationResult(valid=True, status="ok", metrics=to_score_dict(dict(value)))
+
+    unknown = set(value) - result_keys - {"score"}
+    if unknown:
+        raise ValueError(f"unknown evaluation result keys: {sorted(unknown)}")
+    raw_metrics = value.get("metrics")
+    if raw_metrics is None and "score" in value:
+        raw_score = value["score"]
+        raw_metrics = raw_score if isinstance(raw_score, Mapping) else {"score": raw_score}
+    metrics = to_score_dict(dict(raw_metrics)) if isinstance(raw_metrics, Mapping) else {}
+    error = value.get("error")
+    valid = value.get("valid")
+    if valid is None:
+        valid = error is None and value.get("status") not in {"invalid", "error"}
+    status = value.get("status") or ("ok" if valid else "invalid")
+    return EvaluationResult(
+        valid=valid,
+        status=status,
+        metrics=metrics,
+        feedback=value.get("feedback", ""),
+        trace=value.get("trace"),
+        usage=dict(value.get("usage") or {}),
+        artifacts=value.get("artifacts", {}),
+        error=error,
+    )
+
+
+def satisfies_hard_constraints(
+    result: EvaluationResult, constraints: Sequence[Mapping[str, Any]]
+) -> bool:
+    """Return whether a valid result satisfies every declared metric constraint."""
+    if not result.valid:
+        return False
+    comparisons = {
+        "<": lambda actual, expected: actual < expected,
+        "<=": lambda actual, expected: actual <= expected,
+        "==": lambda actual, expected: actual == expected,
+        "!=": lambda actual, expected: actual != expected,
+        ">=": lambda actual, expected: actual >= expected,
+        ">": lambda actual, expected: actual > expected,
+    }
+    for constraint in constraints:
+        metric = constraint["metric"]
+        operation = constraint["op"]
+        if metric not in result.metrics:
+            return False
+        if operation not in comparisons:
+            raise ValueError(f"unsupported hard-constraint operator {operation!r}")
+        if not comparisons[operation](result.metrics[metric], float(constraint["value"])):
+            return False
+    return True
+
+
+def select_evaluation_result(
+    results: Sequence[Any],
+    config: "ObjectiveConfig",
+    hard_constraints: Sequence[Mapping[str, Any]] = (),
+) -> EvaluationResult:
+    """Apply validity/constraints before selecting with existing objective logic."""
+    normalized = [normalize_evaluation_result(result) for result in results]
+    feasible = [
+        result for result in normalized
+        if satisfies_hard_constraints(result, hard_constraints)
+    ]
+    if not feasible:
+        raise ValueError("no valid evaluation result satisfies the hard constraints")
+    index = select_best([(result.metrics, result) for result in feasible], config)
+    return feasible[index]
+
+
+def _normalize_usage(
+    usage: Mapping[str, Mapping[str, Union[int, float]]]
+) -> Dict[str, Dict[str, Union[int, float]]]:
+    """Materialize non-negative runtime token usage for all supported roles."""
+    if not isinstance(usage, Mapping):
+        raise TypeError("EvaluationResult.usage must be a role mapping")
+    unknown = set(usage) - set(_USAGE_ROLES)
+    if unknown:
+        raise ValueError(f"unknown EvaluationResult usage roles: {sorted(unknown)}")
+    normalized: Dict[str, Dict[str, Union[int, float]]] = {}
+    for role in _USAGE_ROLES:
+        values = usage.get(role, {})
+        if not isinstance(values, Mapping):
+            raise TypeError(f"usage for role {role!r} must be a mapping")
+        merged: Dict[str, Union[int, float]] = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0,
+            **dict(values),
+        }
+        for name, amount in merged.items():
+            if not isinstance(amount, (int, float)) or amount < 0:
+                raise ValueError(f"usage {role}.{name} must be a non-negative number")
+        normalized[role] = merged
+    return normalized
 
 
 @dataclass(frozen=True)

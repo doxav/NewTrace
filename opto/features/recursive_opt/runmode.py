@@ -23,7 +23,7 @@ from __future__ import annotations
 import os
 import re
 import sys
-from typing import Any, Optional
+from typing import Any, Mapping, MutableMapping, Optional
 
 from .budget import BudgetResource, budget_status, budgeted_llm
 
@@ -71,6 +71,67 @@ class CompletionTokenCompatLLM:
         return self._llm(*args, **kwargs)
 
 
+class _RoleUsageLLM:
+    """Thin runtime adapter that attributes provider-reported usage to one role."""
+
+    def __init__(
+        self,
+        llm: Any,
+        role: str,
+        sink: MutableMapping[str, MutableMapping[str, float | int]],
+    ) -> None:
+        self._llm = llm
+        self.role = role
+        self._sink = sink
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        response = self._llm(*args, **kwargs)
+        usage = _response_usage(response)
+        totals = self._sink.setdefault(self.role, {})
+        totals["calls"] = totals.get("calls", 0) + 1
+        for name, amount in usage.items():
+            totals[name] = totals.get(name, 0) + amount
+        return response
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._llm, name)
+
+
+def track_llm_usage(
+    llm: Any,
+    role: str,
+    sink: MutableMapping[str, MutableMapping[str, float | int]],
+) -> Any:
+    """Wrap one provider runtime and accumulate its reported usage by LLM role."""
+    if role not in {"forward", "optimizer", "feedback", "judge"}:
+        raise ValueError(f"unknown LLM role {role!r}")
+    if not isinstance(sink, MutableMapping):
+        raise TypeError("usage sink must be a mutable mapping")
+    return _RoleUsageLLM(llm, role, sink)
+
+
+def _response_usage(response: Any) -> dict[str, float | int]:
+    """Extract supported counters from a LiteLLM-style response object."""
+    raw = getattr(response, "usage", None)
+    if raw is None:
+        return {}
+    if hasattr(raw, "model_dump"):
+        raw = raw.model_dump()
+    elif not isinstance(raw, Mapping) and hasattr(raw, "dict"):
+        raw = raw.dict()
+    if not isinstance(raw, Mapping):
+        raise TypeError("LLM response usage must be a mapping")
+    usage: dict[str, float | int] = {}
+    for name in ("prompt_tokens", "completion_tokens", "total_tokens", "cost_usd"):
+        amount = raw.get(name)
+        if amount is None:
+            continue
+        if not isinstance(amount, (int, float)) or amount < 0:
+            raise ValueError(f"LLM response usage {name} must be a non-negative number")
+        usage[name] = amount
+    return usage
+
+
 def _positive_float_env(name: str) -> Optional[float]:
     """Read an optional positive float environment variable."""
     raw = os.environ.get(name)
@@ -107,6 +168,8 @@ def make_live_llm(
     base_delay: float = 1.0,
     request_timeout_s: Optional[float] = None,
     budget_resource: Optional[BudgetResource] = "optimizer_llm_calls",
+    role: Optional[str] = None,
+    usage: Optional[MutableMapping[str, MutableMapping[str, float | int]]] = None,
 ) -> Any:
     """Create the LiteLLM backend used by recursive-opt live optimizers.
 
@@ -130,7 +193,12 @@ def make_live_llm(
     timeout_s = request_timeout_s if request_timeout_s is not None else _positive_float_env("RECURSIVE_OPT_LLM_TIMEOUT_S")
     if uses_completion_token_param(model_name) or timeout_s is not None:
         llm = CompletionTokenCompatLLM(llm, model_name, timeout_s)
-    return budgeted_llm(llm, budget_resource)
+    llm = budgeted_llm(llm, budget_resource)
+    if role is not None:
+        if usage is None:
+            raise ValueError("make_live_llm requires a usage sink when role is set")
+        llm = track_llm_usage(llm, role, usage)
+    return llm
 
 
 def preflight_model(model: Optional[str] = None) -> None:
