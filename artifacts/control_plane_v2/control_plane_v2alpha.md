@@ -1,6 +1,6 @@
 # ADR: recursive-opt control plane v2alpha
 
-- Status: accepted; semantic-closure correction ready for commit
+- Status: accepted; semantic closure committed at `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
 - Date: 2026-08-22
 - Baseline SHA: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
 - Public schema: `recursive-opt/v2alpha`

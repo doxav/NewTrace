@@ -4,6 +4,8 @@ Original implementation baseline: `6fc278a398709fe79a0fc9be22bae99bffd8cba6`
 
 Semantic-closure baseline: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
 
+Corrective implementation: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
+
 ## Corrective semantic-closure gate — 2026-08-22
 
 The phase log below is retained as historical implementation evidence. This section supersedes its execution-shape, GEPA holdout, migration-category, footprint, and final-test claims where they differ.
@@ -18,6 +20,7 @@ The phase log below is retained as historical implementation evidence. This sect
 - Current footprint is 8,730 recursive-opt runtime lines and 2,613 `spec.py` lines, respectively 73 and 75 below the `21a0ad3` baseline. Public package exports remain 114.
 - After synchronizing footprint evidence, the pre-commit network-blocked mandated regression passed: `277 passed, 3 skipped, 1 warning in 11.14s`. The complete unit suite passed: `457 passed, 4 skipped, 1 warning in 33.28s`. The authoritative post-commit reruns are recorded in `proof.md`.
 - No live provider or paid call was executed.
+- Exact-SHA post-commit verification at `c92f0af4af3e72a12b0228dbed215f86f8c9475b`: mandated regression `278 passed, 2 skipped, 1 warning in 11.17s`; complete unit suite `458 passed, 3 skipped, 1 warning in 32.03s`; changed-file/graph Ruff `All checks passed`.
 
 ## Phase 0 — baseline and footprint
 
