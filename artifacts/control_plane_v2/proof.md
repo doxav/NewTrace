@@ -3,13 +3,13 @@
 - Branch: `recursive_opt`
 - Baseline SHA: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
 - Semantic-closure implementation SHA: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
-- Completion-audit implementation SHA: `PENDING_COMPLETION_AUDIT_COMMIT`
+- Completion-audit implementation SHA: `05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf`
 - Environment: conda `humanllm`, Python 3.12
 - Date: 2026-08-22 (Europe/Paris)
 - Live provider or paid calls: **none**
 - CI workflow: `.github/workflows/recursive-opt-v2.yml`, job `recursive-opt v2 offline (required)`; manual no-paid-call job `GEPA 0.1.4 contract (manual)`
 
-The completion-audit implementation commit will have parent `fc00beac05fc1a73b0c017b7615b56b4162f12f1`. SHA-bearing evidence is a post-commit worktree update because a commit cannot contain its own hash.
+The completion-audit implementation commit has parent `fc00beac05fc1a73b0c017b7615b56b4162f12f1`. SHA-bearing evidence is a post-commit worktree update because a commit cannot contain its own hash.
 
 ## Invariant matrix
 
@@ -21,7 +21,7 @@ The completion-audit implementation commit will have parent `fc00beac05fc1a73b0c
 | module artifact, inputs, targets, config validation | 09–10, 13b | mandated regression | pass | module artifact |
 | portable evaluator and dataset registries | 11–13 | mandated regression | pass | normalized refs/fingerprint |
 | exact role clients, preflight, fallbacks, usage | 14–16 | mandated regression | pass | selected models/usage |
-| weighted/Pareto objectives, constraints, rollback | 17–20 | mandated regression | pass | canonical evaluation/artifact |
+| weighted/Pareto objectives, constraints, rollback | 17–20b | mandated regression | pass | canonical evaluation/artifact |
 | structural holdout isolation | 21 | mandated regression | pass | phase-context fault injection |
 | GEPA holdout externalization and exact 0.1.4 public API | 22/22b | mandated regression | pass | no-provider contract |
 | in-run budgets and all policies | 23–24 | mandated regression | pass | budget report |
@@ -43,8 +43,10 @@ Mandated recursive regression (network disabled; localhost allowed only for the 
 ```bash
 env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
   -u GOOGLE_API_KEY -u TAVILY_API_KEY \
-  RECURSIVE_OPT_LIVE=0 PYTHONHASHSEED=0 PYTHONPATH=. \
-  python -m pytest -q --disable-socket \
+  RECURSIVE_OPT_LIVE=0 \
+  RECURSIVE_OPT_FINAL_SHA=05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf \
+  PYTHONHASHSEED=0 PYTHONPATH=. \
+  /home/xav/miniconda3/envs/humanllm/bin/python -m pytest -q --disable-socket \
   --allow-hosts=127.0.0.1,localhost \
   tests/unit_tests/test_recursive_spec.py \
   tests/unit_tests/test_recursive_opt.py \
@@ -60,26 +62,28 @@ env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
   tests/unit_tests/test_recursive_opt_abc_probe.py
 ```
 
-Pre-commit authoritative completion-audit result: **283 passed, 3 skipped, 1 warning in 11.72s**.
+Pre-commit authoritative completion-audit result, with only `RECURSIVE_OPT_FINAL_SHA` omitted: **283 passed, 3 skipped, 1 warning in 11.72s**.
 
 Complete unit suite:
 
 ```bash
 env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
   -u GOOGLE_API_KEY -u TAVILY_API_KEY \
-  RECURSIVE_OPT_LIVE=0 PYTHONHASHSEED=0 PYTHONPATH=. \
-  python -m pytest -q --disable-socket \
+  RECURSIVE_OPT_LIVE=0 \
+  RECURSIVE_OPT_FINAL_SHA=05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf \
+  PYTHONHASHSEED=0 PYTHONPATH=. \
+  /home/xav/miniconda3/envs/humanllm/bin/python -m pytest -q --disable-socket \
   --allow-hosts=127.0.0.1,localhost tests/unit_tests
 ```
 
-Pre-commit authoritative completion-audit result: **463 passed, 4 skipped, 1 warning in 33.27s**.
+Pre-commit authoritative completion-audit result, with only `RECURSIVE_OPT_FINAL_SHA` omitted: **463 passed, 4 skipped, 1 warning in 33.27s**.
 
 Pre-commit skips: two tests require optional graph/telemetry backends; one is the deliberately post-commit final-SHA gate; the complete-unit-only fourth skip requires the Graphviz `dot` executable. GEPA 0.1.4 and LangGraph contract tests ran rather than skipping. The single warning is LangGraph's pending default change for serializer `allowed_objects`.
 
 Lint for every changed Python file and the retained graph contract:
 
 ```bash
-ruff check opto/features/graph \
+/home/xav/miniconda3/envs/humanllm/bin/ruff check opto/features/graph \
   opto/features/recursive_opt/spec.py \
   opto/features/recursive_opt/__init__.py \
   tests/unit_tests/test_recursive_control_plane_v2.py
@@ -87,7 +91,7 @@ ruff check opto/features/graph \
 
 Result: **All checks passed**. A broader unchanged recursive-opt directory scan reports nine baseline findings in untouched files (`capabilities.py`, `experiments.py`, `inspect_utils.py`, `levels.py`, and `tracebench.py`); they are not suppressed or mixed into this corrective patch.
 
-Post-commit exact-SHA verification: **pending completion-audit commit**.
+Post-commit exact-SHA verification with `RECURSIVE_OPT_FINAL_SHA=05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf`: **284 passed, 2 skipped, 1 warning in 11.08s** for the mandated regression and **464 passed, 3 skipped, 1 warning in 30.12s** for the complete unit suite. The SHA gate ran and passed. The two common skips require optional graph/telemetry backends; the complete-suite-only third skip requires Graphviz `dot`. Changed-file/graph Ruff and `git diff --check` again passed.
 
 ## Migration and footprint
 
@@ -104,14 +108,19 @@ The graph package is byte-clean against the baseline SHA and was not expanded.
 
 ## Changed scope and limitations
 
-The intended corrective commit contains only the canonical runtime/export files, the control-plane test matrix, smoke notebook/goldens, migrated normalized specs, and control-plane evidence. Exact staged paths and post-commit `git status --short` are recorded after staging/commit.
+The complete corrective series contains only the canonical runtime/export files, the control-plane test matrix, smoke notebook/goldens, migrated normalized specs, and control-plane evidence. Exact staged paths and post-commit `git status --short` are recorded below.
 
-The original semantic-closure implementation changed 29 files. The completion-audit correction is deliberately surgical and changes the runtime, its causal test matrix, and these readiness records. Exact completion-audit commit statistics and final staged evidence are recorded after the commit. The SHA-bearing evidence is staged separately and intentionally not committed because advancing HEAD would invalidate the exact-SHA gate.
+The original semantic-closure implementation changed 29 files. The completion-audit commit changes 8 files with 433 insertions and 63 deletions: one runtime file, its causal test matrix, and six readiness records. The SHA-bearing evidence is staged separately and intentionally not committed because advancing HEAD would invalidate the exact-SHA gate.
 
 ```text
-pending post-commit SHA evidence
+M  artifacts/control_plane_v2/code_footprint_after.json
+M  artifacts/control_plane_v2/control_plane_v2alpha.md
+M  artifacts/control_plane_v2/evidence.md
+M  artifacts/control_plane_v2/prompt18_readiness.json
+M  artifacts/control_plane_v2/proof.md
+M  artifacts/control_plane_v2/readiness_audit.md
 ```
 
-Unrelated, pre-existing user-owned experiment/config/output paths remain untracked and are excluded from the corrective commit. The exact tracked status is recorded after SHA-bound verification.
+The full short status has 108 entries: the six staged SHA-evidence files above and 102 unrelated, pre-existing user-owned experiment/config/output entries. None of the untracked files is staged or modified. There is no post-commit diff under `opto/`, `tests/`, or `examples/recursive_opt_use_cases.ipynb`, so the tested implementation/client tree is exactly the committed SHA.
 
 Limitations: no live OpenRouter run, no paid GEPA optimization, and no historical efficacy claim. The real installed GEPA API is checked only where it can run without a provider. Historical config/family-policy/prior behavior remains non-replayable without the precisely listed dependencies. This gate establishes readiness for Prompt 18; it does not begin that experiment.

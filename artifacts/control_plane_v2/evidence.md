@@ -6,7 +6,7 @@ Semantic-closure baseline: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
 
 Semantic-closure implementation: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
 
-Completion-audit correction: `PENDING_COMPLETION_AUDIT_COMMIT`
+Completion-audit correction: `05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf`
 
 ## Completion-audit gate — 2026-08-22
 
@@ -16,7 +16,8 @@ Completion-audit correction: `PENDING_COMPLETION_AUDIT_COMMIT`
 - Holdout materialization occurs only after fitting and candidate selection. Test-override identity is persisted in the resolved manifest.
 - Level and final resume payloads carry canonical SHA-256 result digests. A second process replaces the evaluator with a raising implementation to prove a valid resume makes zero evaluator calls; partial and tampered artifacts are rejected and repaired.
 - The pre-commit network-blocked mandated regression passed: `283 passed, 3 skipped, 1 warning in 11.72s`. The complete unit suite passed: `463 passed, 4 skipped, 1 warning in 33.27s`. The control-plane file alone passed `42 passed, 1 skipped in 5.90s`; the legacy spec file passed `47 passed in 1.92s`; changed-file/graph Ruff and `git diff --check` passed.
-- No live provider or paid call was executed. The post-commit exact-SHA reruns remain pending.
+- Exact-SHA verification at `05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf` passed: mandated regression `284 passed, 2 skipped, 1 warning in 11.08s`; complete unit suite `464 passed, 3 skipped, 1 warning in 30.12s`; changed-file/graph Ruff and `git diff --check` passed again. The SHA gate ran rather than skipping.
+- No live provider or paid call was executed.
 
 ## Corrective semantic-closure gate — 2026-08-22
 

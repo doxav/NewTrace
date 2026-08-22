@@ -88,6 +88,6 @@ The baseline findings above are immutable audit evidence. The following rows rec
 | 25 | closed | six semantic migration classifications and precise representative dependencies | 30 plus `migration_report.json.representatives` |
 | 26 | closed | the real Trace path uses `optimize` on `_EvaluatedModule` | 07 performs a real scripted candidate update through `optimize`; no direct artifact restore or custom fit callback implements the improvement |
 | 27 | closed | exact installed GEPA 0.1.4 types and keyword-only evaluator contract | 22b runs without a provider or paid call |
-| 28 | pending final SHA | proof, footprint, and readiness are prepared for the completion-audit commit | 35 will run with the exact new SHA after the commit |
+| 28 | closed | proof, footprint, and readiness name completion-audit commit `05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf` | 35 runs with that exact SHA after the commit |
 
 Additional anti-no-op closure in test 13b rejects `runtime.strict_refs=false`, binding-level `ordering_only`, nonempty `objective.aggregation.weights`, descriptor-form `directions`, unsupported role `base_url`, and per-level output directory/format overrides. These fields now fail explicitly instead of altering only a fingerprint.
