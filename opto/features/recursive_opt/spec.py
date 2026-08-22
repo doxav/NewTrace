@@ -939,7 +939,7 @@ def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping
         guard.record_candidate('evaluated')
         score, info = _project_for_gepa(evaluation, objective)
         evaluation_info.append(info)
-        return (score, _thaw(candidate), {'evaluation': info, 'scores': info['metrics']})
+        return float(score), info # return (score, _thaw(candidate), {'evaluation': info, 'scores': info['metrics']})
     config_values = _gepa_config_values(spec['engine']['config'], unit.seed, unit.spec['budget'])
     planned_candidates = config_values.get('engine', {}).get('max_candidate_proposals')
     guard.consume('candidates', 1 if planned_candidates is None else int(planned_candidates))
