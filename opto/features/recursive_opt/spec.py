@@ -1,15 +1,19 @@
 """Declarative canonical and legacy-compatible recursive optimization control plane."""
 from __future__ import annotations
-import json
+import copy
 import hashlib
+import inspect
+import json
 import math
 import os
 import random
 import re
+import subprocess
 import time
-import copy
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import lru_cache
+from importlib.metadata import packages_distributions, version
 from itertools import product
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple
@@ -37,16 +41,15 @@ _BLOCK_KEYS = {'surface': {'kind', 'targets'}, 'module': {'ref', 'config', 'arti
 _LEVEL_KEYS = {'id', 'depends_on', 'ordering_only', *_LEVEL_BLOCKS}
 _DATASET_REF_KEYS = {'ref', 'split', 'config'}
 _METRIC_KEYS = {'direction', 'source', 'aggregate_examples'}
-_PROFILE_KEYS = {'provider', 'model', 'resolved_model', 'api_key_ref', 'fallbacks', 'temperature', 'max_tokens', 'base_url'}
+_PROFILE_KEYS = {'provider', 'model', 'resolved_model', 'api_key_ref', 'fallbacks', 'temperature', 'max_tokens', 'base_url', 'request_params'}
 _ROLE_KEYS = {'forward', 'optimizer', 'feedback', 'judge'}
 _ROLE_OVERRIDE_KEYS = {'profile', *_PROFILE_KEYS}
 _BINDING_KEYS = {'from', 'to', 'codec', 'ordering_only'}
 _VERSIONED_REF = re.compile('^[A-Za-z0-9_.-]+@[1-9][0-9]*$')
 _SECRET_KEYS = {'api_key', 'apikey', 'access_token', 'token', 'secret', 'password'}
-
+_REQUEST_IDENTITY_KEYS = _SECRET_KEYS | {'model', 'provider', 'credential_ref', 'api_key_ref', 'base_url'}
 class _FrozenDict(dict):
     """JSON-serializable dictionary that rejects mutation after construction."""
-
     def _immutable(self, *_args: Any, **_kwargs: Any) -> None:
         raise TypeError('normalized recursive-opt specs are immutable')
     __setitem__ = _immutable
@@ -56,7 +59,6 @@ class _FrozenDict(dict):
     popitem = _immutable
     setdefault = _immutable
     update = _immutable
-
 @dataclass(frozen=True)
 class ModuleRegistryEntry:
     """Build and persist one versioned kind of generic ``trace.Module``."""
@@ -66,13 +68,16 @@ class ModuleRegistryEntry:
     validate_artifact: Callable[[Mapping[str, Any]], None]
     capabilities: frozenset[str]
     validate_config: Optional[Callable[[Mapping[str, Any]], None]] = None
-
 @dataclass(frozen=True)
 class EngineRegistryEntry:
     """Run one execution unit and declare supported compile-time capabilities."""
     run: Callable[['_ExecutionUnit', '_LevelPlan', Mapping[str, Any]], 'RunResult']
     capabilities: frozenset[str]
-
+@dataclass(frozen=True)
+class _EvaluatorEntry:
+    """Explicit output or legacy-module evaluator contract."""
+    evaluate: Callable[..., EvaluationResult]
+    mode: str
 @dataclass(frozen=True)
 class _LevelPlan:
     """One immutable, fully resolved level within an execution unit."""
@@ -82,7 +87,6 @@ class _LevelPlan:
     spec: Mapping[str, Any]
     datasets: Mapping[str, Any]
     fingerprint: str
-
 @dataclass(frozen=True)
 class _ExecutionUnit:
     """One internal, fully materialized arm/seed/matrix execution unit."""
@@ -92,7 +96,6 @@ class _ExecutionUnit:
     matrix: Mapping[str, Any]
     spec: Mapping[str, Any]
     levels: Tuple[_LevelPlan, ...]
-
 @dataclass(frozen=True)
 class RunResult:
     """Canonical, JSON-exportable result of one compiled execution unit."""
@@ -117,7 +120,6 @@ class RunResult:
     def to_dict(self) -> Dict[str, Any]:
         """Return the canonical result as plain JSON-compatible containers."""
         return {'unit_id': self.unit_id, 'plan_fingerprint': self.plan_fingerprint, 'spec_fingerprint': self.spec_fingerprint, 'engine': self.engine, 'module_ref': self.module_ref, 'status': self.status, 'valid': self.valid, 'evaluation': {'valid': self.evaluation.valid, 'status': self.evaluation.status, 'metrics': _thaw(self.evaluation.metrics), 'feedback': _thaw(self.evaluation.feedback), 'trace': _thaw(self.evaluation.trace), 'usage': _thaw(self.evaluation.usage), 'artifacts': _thaw(self.evaluation.artifacts), 'error': self.evaluation.error}, 'artifact': _thaw(self.artifact), 'lineage': _thaw(self.lineage), 'usage': _thaw(self.usage), 'budget': _thaw(self.budget), 'metadata': _thaw(self.metadata), 'error': self.error, 'level_results': _thaw(self.level_results), 'portable': self.portable, 'promotable': self.promotable}
-
 @dataclass(frozen=True)
 class ExecutionPlan:
     """Immutable compilation product consumed by engine runners."""
@@ -125,16 +127,15 @@ class ExecutionPlan:
     units: Tuple[_ExecutionUnit, ...]
     fingerprint: str
     raw_spec: Mapping[str, Any]
+    code_provenance: Mapping[str, Any]
 
     def explain(self) -> Dict[str, Any]:
         """Return a compact JSON explanation of this immutable plan."""
         return {'fingerprint': self.fingerprint, 'execution_units': len(self.units), 'engines': sorted({level.spec['engine']['name'] for unit in self.units for level in unit.levels}), 'module_refs': sorted({level.spec['module']['ref'] for unit in self.units for level in unit.levels}), 'level_ids': [level.level_id for level in self.units[0].levels], 'unit_ids': [unit.unit_id for unit in self.units]}
-
 class DatasetAccess:
     """Capability gate that prevents holdout access during optimization phases."""
     _PHASES = {'fit', 'proposal', 'induction', 'candidate_selection', 'final_evaluation', 'promotion', 'report'}
     _HOLDOUT_PHASES = {'final_evaluation', 'promotion', 'report'}
-
     def __init__(self, datasets: Mapping[str, Any]) -> None:
         if not isinstance(datasets, Mapping):
             raise TypeError('datasets must be a mapping')
@@ -142,7 +143,6 @@ class DatasetAccess:
         if unknown:
             raise ValueError(f'unknown dataset splits: {sorted(unknown)}')
         self._datasets = _freeze({split: _thaw(datasets.get(split, [])) for split in ('train', 'validation', 'holdout')})
-
     def read(self, split: str, *, phase: str) -> Any:
         """Read one split only when the named execution phase has capability."""
         if phase not in self._PHASES:
@@ -152,26 +152,26 @@ class DatasetAccess:
         if split == 'holdout' and phase not in self._HOLDOUT_PHASES:
             raise PermissionError(f'holdout is inaccessible during {phase}')
         return _thaw(self._datasets[split])
-
+@bundle()
+def _component_output(inputs: Mapping[str, Any], names: Tuple[str, ...], *values: Any) -> Dict[str, Any]:
+    """Retain component-to-output Trace edges in the generic workflow."""
+    return {'inputs': inputs, 'components': dict(zip(names, values))}
 class _ComponentModule(Module):
     """Small generic multi-component module used by registered workflows."""
-
     def __init__(self, components: Mapping[str, Any], inputs: Mapping[str, Any]) -> None:
         if not components:
             raise ValueError('module.config.components must be a non-empty mapping')
         self.components = Map({name: node(value, name=name, trainable=True) for name, value in components.items()})
         self.inputs = _thaw(inputs)
-
-    def forward(self, inputs: Any) -> Dict[str, Any]:
-        """Expose resolved component values alongside the module input."""
+    def forward(self, inputs: Any) -> Any:
+        """Return one traced output over resolved inputs and component values."""
         runtime_inputs = getattr(inputs, 'data', inputs)
         resolved_inputs = {**self.inputs, **runtime_inputs} if isinstance(runtime_inputs, Mapping) else {**self.inputs, 'value': runtime_inputs}
-        return {'inputs': resolved_inputs, 'components': {name: value.data for name, value in self.components.items()}}
+        return _component_output(resolved_inputs, tuple(self.components), *self.components.values())
 _MODULE_REGISTRY: Dict[str, ModuleRegistryEntry] = {}
 _ENGINE_REGISTRY: Dict[str, EngineRegistryEntry] = {}
-_EVALUATOR_REGISTRY: Dict[str, Callable[[Module, Any, Mapping[str, Any]], EvaluationResult]] = {}
+_EVALUATOR_REGISTRY: Dict[str, _EvaluatorEntry] = {}
 _DATASET_REGISTRY: Dict[str, Callable[[str, Mapping[str, Any]], Any]] = {}
-
 @dataclass(frozen=True)
 class _CodecEntry:
     """Typed internal codec used by causal bindings."""
@@ -180,7 +180,6 @@ class _CodecEntry:
     output_type: Any
     input_description: str
 _CODEC_REGISTRY: Dict[str, _CodecEntry] = {}
-
 def register_module(ref: str, entry: ModuleRegistryEntry) -> None:
     """Register one exact module reference, rejecting aliases and replacement."""
     if not isinstance(ref, str) or not _VERSIONED_REF.fullmatch(ref):
@@ -192,7 +191,6 @@ def register_module(ref: str, entry: ModuleRegistryEntry) -> None:
     if ref in _MODULE_REGISTRY and _MODULE_REGISTRY[ref] != entry:
         raise ValueError(f'module ref {ref!r} is already registered')
     _MODULE_REGISTRY[ref] = entry
-
 def register_engine(name: str, entry: EngineRegistryEntry) -> None:
     """Register one engine runner without importing optional dependencies."""
     if not isinstance(name, str) or not name:
@@ -202,15 +200,21 @@ def register_engine(name: str, entry: EngineRegistryEntry) -> None:
     if name in _ENGINE_REGISTRY and _ENGINE_REGISTRY[name] != entry:
         raise ValueError(f'engine {name!r} is already registered')
     _ENGINE_REGISTRY[name] = entry
-
-def register_evaluator(ref: str, evaluator: Callable[[Module, Any, Mapping[str, Any]], EvaluationResult]) -> None:
-    """Register an exact versioned evaluator without import fallback."""
-    _register_callable(_EVALUATOR_REGISTRY, ref, evaluator, 'evaluator')
-
+def register_evaluator(ref: str, evaluator: Callable[..., EvaluationResult], *, mode: str='output') -> None:
+    """Register an exact evaluator with an explicit output or legacy contract."""
+    if mode not in {'output', 'legacy_module'}:
+        raise ValueError("evaluator mode must be 'output' or 'legacy_module'")
+    if not isinstance(ref, str) or not _VERSIONED_REF.fullmatch(ref):
+        raise ValueError('evaluator registry keys must be exact versioned refs')
+    if not callable(evaluator):
+        raise TypeError('evaluator must be callable')
+    entry = _EvaluatorEntry(evaluator, mode)
+    if ref in _EVALUATOR_REGISTRY and _EVALUATOR_REGISTRY[ref] != entry:
+        raise ValueError(f'evaluator ref {ref!r} is already registered')
+    _EVALUATOR_REGISTRY[ref] = entry
 def register_dataset(ref: str, resolver: Callable[[str, Mapping[str, Any]], Any]) -> None:
     """Register an exact versioned dataset resolver."""
     _register_callable(_DATASET_REGISTRY, ref, resolver, 'dataset')
-
 def _register_callable(registry: MutableMapping[str, Callable[..., Any]], ref: str, value: Callable[..., Any], kind: str) -> None:
     """Apply the shared exact-ref and replacement rules to callable registries."""
     if not isinstance(ref, str) or not _VERSIONED_REF.fullmatch(ref):
@@ -220,7 +224,6 @@ def _register_callable(registry: MutableMapping[str, Callable[..., Any]], ref: s
     if ref in registry and registry[ref] is not value:
         raise ValueError(f'{kind} ref {ref!r} is already registered')
     registry[ref] = value
-
 def register_codec(ref: str, encode: Callable[[Any], Any], *, input_type: Any, output_type: Any, input_description: str) -> None:
     """Register an exact typed codec used by explicit causal bindings."""
     if not isinstance(ref, str) or not _VERSIONED_REF.fullmatch(ref):
@@ -231,7 +234,6 @@ def register_codec(ref: str, encode: Callable[[Any], Any], *, input_type: Any, o
     if ref in _CODEC_REGISTRY and _CODEC_REGISTRY[ref] != entry:
         raise ValueError(f'codec ref {ref!r} is already registered')
     _CODEC_REGISTRY[ref] = entry
-
 def build_module(spec: Mapping[str, Any], resources: Optional[Mapping[str, Any]]=None, *, level_id: Optional[str]=None) -> Module:
     """Build one declared level module, restoring its artifact and targets."""
     level = _select_level(normalize_spec(spec), level_id)
@@ -310,13 +312,17 @@ def compile_plan(raw_spec: Mapping[str, Any]) -> ExecutionPlan:
             module = _module_entry(level.spec['module']['ref'])
             if module.validate_config is not None:
                 module.validate_config(level.spec['module']['config'])
-            _evaluator_entry(level.spec['objective']['evaluator_ref'])
+            evaluator = _evaluator_entry(level.spec['objective']['evaluator_ref'])
+            if evaluator.mode != 'output' and not (normalized['runtime']['test_mode'] or 'legacy' in module.capabilities):
+                raise ValueError('portable canonical v2 requires an output evaluator')
             engine = _engine_entry(level.spec['engine']['name'])
             compile_objective(level.spec['objective'], capabilities=engine.capabilities)
             for binding in level.spec['bindings']:
                 if not binding['ordering_only']:
                     _codec_entry(binding['codec'])
-    return ExecutionPlan(spec=normalized, units=units, fingerprint=normalized['fingerprint'], raw_spec=_freeze(_thaw(raw_spec)))
+    _codec_entry(normalized['knowledge']['injection_codec'])
+    provenance = _code_provenance(units, normalized['knowledge']['injection_codec'])
+    return ExecutionPlan(spec=normalized, units=units, fingerprint=normalized['fingerprint'], raw_spec=_freeze(_thaw(raw_spec)), code_provenance=_freeze(provenance))
 
 def execute_plan(plan: ExecutionPlan, resources: Optional[Mapping[str, Any]]=None) -> Tuple[RunResult, ...]:
     """Execute each unit through one ordered canonical multilevel runner."""
@@ -351,7 +357,8 @@ def execute_plan(plan: ExecutionPlan, resources: Optional[Mapping[str, Any]]=Non
                         if _should_raise(unit.spec['budget'], exc):
                             raise
                         result = _failed_level_result(plan, unit, level, guard, exc)
-                    result = RunResult(**{**result.__dict__, 'plan_fingerprint': plan.fingerprint, 'portable': not bool(overrides), 'promotable': not bool(overrides) and result.valid})
+                    portable = not bool(overrides) and _evaluator_entry(level.spec['objective']['evaluator_ref']).mode == 'output'
+                    result = RunResult(**{**result.__dict__, 'plan_fingerprint': plan.fingerprint, 'portable': portable, 'promotable': portable and result.valid})
                     _persist_level_result(plan, unit, level, result, output_root)
                 level_results.append(result)
                 upstream[level.level_id] = {'outputs': _level_outputs(result)}
@@ -465,7 +472,7 @@ def _engine_entry(name: str) -> EngineRegistryEntry:
         raise ValueError(f'unregistered engine {name!r}')
     return entry
 
-def _evaluator_entry(ref: str) -> Callable[[Module, Any, Mapping[str, Any]], EvaluationResult]:
+def _evaluator_entry(ref: str) -> _EvaluatorEntry:
     """Resolve one exact evaluator ref without dynamic imports."""
     evaluator = _EVALUATOR_REGISTRY.get(ref)
     if evaluator is None:
@@ -496,7 +503,69 @@ def _codec_entry(ref: str) -> _CodecEntry:
     if entry is None:
         raise ValueError(f'unregistered codec ref {ref!r}')
     return entry
-
+@lru_cache(maxsize=1)
+def _runtime_tree_sha256() -> str:
+    """Hash the recursive-opt source tree independently of Git metadata."""
+    root = Path(__file__).resolve().parent
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob('*.py')):
+        digest.update(str(path.relative_to(root)).encode('utf-8') + b'\0' + path.read_bytes())
+    return digest.hexdigest()
+@lru_cache(maxsize=None)
+def _package_version(module: str) -> Optional[str]:
+    """Resolve the installed distribution version for a Python module."""
+    distributions = packages_distributions().get(module.split('.', 1)[0], [])
+    return version(distributions[0]) if distributions else None
+def _callable_provenance(value: Callable[..., Any]) -> Dict[str, Any]:
+    """Describe and hash one callable's source without relying on Git."""
+    target = value if inspect.isfunction(value) or inspect.ismethod(value) or inspect.isclass(value) else type(value)
+    module = getattr(target, '__module__', type(value).__module__)
+    qualified_name = getattr(target, '__qualname__', getattr(target, '__name__', type(value).__qualname__))
+    source_path = inspect.getsourcefile(target)
+    try:
+        source = inspect.getsource(target).encode('utf-8')
+    except (OSError, TypeError):
+        source = Path(source_path).read_bytes() if source_path else f'{module}.{qualified_name}'.encode('utf-8')
+    if source_path:
+        try:
+            source_path = str(Path(source_path).resolve().relative_to(Path(__file__).resolve().parents[3]))
+        except ValueError:
+            source_path = str(Path(source_path).resolve())
+    return {'python_module': module, 'qualified_name': qualified_name, 'source_file': source_path, 'source_sha256': hashlib.sha256(source).hexdigest(), 'package_version': _package_version(module)}
+def _registry_record(kind: str, ref: str, entry: Any) -> Dict[str, Any]:
+    """Build compact source provenance for one resolved registry entry."""
+    if kind == 'module':
+        targets, contract = [entry.build, entry.snapshot, entry.restore, entry.validate_artifact, entry.validate_config], sorted(entry.capabilities)
+    elif kind == 'engine':
+        targets, contract = [entry.run], sorted(entry.capabilities)
+    elif kind == 'evaluator':
+        targets, contract = [entry.evaluate], entry.mode
+    elif kind == 'dataset':
+        targets, contract = [entry], None
+    else:
+        targets, contract = [entry.encode], [entry.input_description, str(entry.input_type), str(entry.output_type)]
+    details = [_callable_provenance(target) for target in targets if target is not None]
+    primary = details[0]
+    implementation = hashlib.sha256(_canonical_json({'sources': [item['source_sha256'] for item in details], 'contract': contract}).encode('utf-8')).hexdigest()
+    return {'ref': ref, **primary, 'implementation_sha256': implementation}
+def _code_provenance(units: Iterable[_ExecutionUnit], knowledge_codec: str) -> Dict[str, Any]:
+    """Resolve authoritative source/registry hashes plus informational Git state."""
+    refs = {'module': set(), 'engine': set(), 'evaluator': set(), 'dataset': set(), 'codec': {knowledge_codec}}
+    for unit in units:
+        for level in unit.levels:
+            refs['module'].add(level.spec['module']['ref'])
+            refs['engine'].add(level.spec['engine']['name'])
+            refs['evaluator'].add(level.spec['objective']['evaluator_ref'])
+            refs['dataset'].update(value['ref'] for value in level.spec['datasets'].values() if isinstance(value, Mapping))
+            refs['codec'].update(binding['codec'] for binding in level.spec['bindings'])
+    registries = {'module': _MODULE_REGISTRY, 'engine': _ENGINE_REGISTRY, 'evaluator': _EVALUATOR_REGISTRY, 'dataset': _DATASET_REGISTRY, 'codec': _CODEC_REGISTRY}
+    entries = {f'{kind}s': [_registry_record(kind, ref, registries[kind][ref]) for ref in sorted(values)] for kind, values in refs.items()}
+    try:
+        git_commit = subprocess.run(['git', 'rev-parse', 'HEAD'], check=True, capture_output=True, text=True).stdout.strip()
+        git_dirty: Optional[bool] = bool(subprocess.run(['git', 'status', '--porcelain', '--untracked-files=no'], check=True, capture_output=True, text=True).stdout)
+    except (OSError, subprocess.CalledProcessError):
+        git_commit, git_dirty = None, None
+    return {'runtime_tree_sha256': _runtime_tree_sha256(), 'registry_sha256': hashlib.sha256(_canonical_json(entries).encode('utf-8')).hexdigest(), 'entries': entries, 'git_commit': git_commit, 'git_dirty': git_dirty}
 def _resolve_dotted_path(value: Mapping[str, Any], path: str) -> Any:
     """Resolve a required dotted source path from execution outputs."""
     current: Any = value
@@ -535,7 +604,7 @@ class _BudgetGuard:
 
     def __init__(self, limits: Mapping[str, Any]) -> None:
         self.limits = _thaw(limits)
-        self.used = {'optimizer_llm_calls': 0, 'eval_llm_calls': 0, 'candidates': 0, 'evaluator_runs': 0, 'total_tokens': 0}
+        self.used = {'optimizer_llm_calls': 0, 'eval_llm_calls': 0, 'candidates': 0, 'candidates_reserved': 0, 'candidates_proposed': 0, 'candidates_evaluated': 0, 'evaluator_runs': 0, 'total_tokens': 0}
         self.started_at = time.monotonic()
         self.previous_wall_time_s = 0.0
 
@@ -557,6 +626,13 @@ class _BudgetGuard:
         limit = self.limits.get(resource)
         if limit is not None and self.used[resource] + amount > limit:
             raise BudgetExceeded(f'budget exhausted for {resource}: requested {amount}, used {self.used[resource]}, limit {limit}')
+
+    def record_candidate(self, stage: str, amount: int=1) -> None:
+        """Record an observed candidate stage without treating it as a limit."""
+        key = f'candidates_{stage}'
+        if key not in {'candidates_reserved', 'candidates_proposed', 'candidates_evaluated'} or not isinstance(amount, int) or amount < 0:
+            raise ValueError('candidate accounting requires a known stage and non-negative count')
+        self.used[key] += amount
 
     def check_wall_time(self) -> None:
         """Raise before work when the unit wall-time limit is exhausted."""
@@ -622,7 +698,7 @@ def _prepare_output_root(plan: ExecutionPlan, overrides: Mapping[str, str]) -> O
     root.mkdir(parents=True, exist_ok=True)
     _write_json(root / 'raw_spec.json', plan.raw_spec)
     _write_json(root / 'normalized_spec.json', plan.spec)
-    _write_json(root / 'resolved_execution_plan.json', {**plan.explain(), 'test_overrides': overrides, 'units': [{'unit_id': unit.unit_id, 'seed': unit.seed, 'matrix': unit.matrix, 'levels': [{'id': level.level_id, 'fingerprint': level.fingerprint, 'engine': level.spec['engine']['name'], 'module_ref': level.spec['module']['ref'], 'evaluator_ref': level.spec['objective']['evaluator_ref'], 'dataset_refs': _dataset_identities(level.spec['datasets'])} for level in unit.levels]} for unit in plan.units]})
+    _write_json(root / 'resolved_execution_plan.json', {**plan.explain(), 'code_provenance': plan.code_provenance, 'test_overrides': overrides, 'units': [{'unit_id': unit.unit_id, 'seed': unit.seed, 'matrix': unit.matrix, 'levels': [{'id': level.level_id, 'fingerprint': level.fingerprint, 'engine': level.spec['engine']['name'], 'module_ref': level.spec['module']['ref'], 'evaluator_ref': level.spec['objective']['evaluator_ref'], 'dataset_refs': _dataset_identities(level.spec['datasets']), 'llm_roles': level.spec['llm_roles']} for level in unit.levels]} for unit in plan.units]})
     return root
 
 def _write_json(path: Path, value: Any) -> None:
@@ -633,7 +709,7 @@ def _write_json(path: Path, value: Any) -> None:
 
 def _resume_identity(plan: ExecutionPlan, unit: _ExecutionUnit, level: _LevelPlan) -> Dict[str, Any]:
     """Return every identity dimension required for safe level resume."""
-    return {'spec_fingerprint': plan.fingerprint, 'unit_id': unit.unit_id, 'level_id': level.level_id, 'level_fingerprint': level.fingerprint, 'engine': level.spec['engine']['name'], 'module_ref': level.spec['module']['ref'], 'evaluator_ref': level.spec['objective']['evaluator_ref'], 'dataset_refs': _dataset_identities(level.spec['datasets'])}
+    return {'spec_fingerprint': plan.fingerprint, 'unit_id': unit.unit_id, 'level_id': level.level_id, 'level_fingerprint': level.fingerprint, 'engine': level.spec['engine']['name'], 'module_ref': level.spec['module']['ref'], 'evaluator_ref': level.spec['objective']['evaluator_ref'], 'dataset_refs': _dataset_identities(level.spec['datasets']), 'runtime_tree_sha256': plan.code_provenance['runtime_tree_sha256'], 'registry_sha256': plan.code_provenance['registry_sha256']}
 
 def _level_result_path(root: Path, unit: _ExecutionUnit, level: _LevelPlan) -> Path:
     """Return the persisted result path for one unit/level pair."""
@@ -700,7 +776,7 @@ def _load_final_result(plan: ExecutionPlan, unit: _ExecutionUnit, root: Optional
 
 def _final_resume_identity(plan: ExecutionPlan, unit: _ExecutionUnit) -> Dict[str, Any]:
     """Return the exact identity of a complete experiment-unit result."""
-    return {'spec_fingerprint': plan.fingerprint, 'unit_id': unit.unit_id, 'levels': [level.fingerprint for level in unit.levels]}
+    return {'spec_fingerprint': plan.fingerprint, 'unit_id': unit.unit_id, 'levels': [level.fingerprint for level in unit.levels], 'runtime_tree_sha256': plan.code_provenance['runtime_tree_sha256'], 'registry_sha256': plan.code_provenance['registry_sha256']}
 
 def _result_checksum(value: Mapping[str, Any]) -> str:
     """Return a canonical integrity digest for one persisted result."""
@@ -733,7 +809,8 @@ def _combine_unit_result(plan: ExecutionPlan, unit: _ExecutionUnit, results: Lis
     final = results[-1]
     valid = len(results) == len(unit.levels) and all((result.valid for result in results))
     metadata = {**_thaw(final.metadata), 'level_ids': [level.level_id for level in unit.levels], 'resolved_models': {result.metadata['level_id']: result.metadata.get('selected_models', {}) for result in results}, 'test_overrides': _thaw(overrides), 'arm_id': unit.arm_id, 'seed': unit.seed if unit.seed is not None else unit.spec['runtime']['seed'], 'matrix': _thaw(unit.matrix)}
-    return RunResult(unit_id=unit.unit_id, plan_fingerprint=plan.fingerprint, spec_fingerprint=unit.spec['fingerprint'], engine=final.engine, module_ref=final.module_ref, status=final.status, valid=valid, evaluation=final.evaluation, artifact=final.artifact, lineage=tuple((item for result in results for item in result.lineage)), usage=_merge_usage([result.usage for result in results]), budget=guard.report(), metadata=_freeze(metadata), error=final.error, level_results=tuple((result.to_dict() for result in results)), portable=not bool(overrides), promotable=not bool(overrides) and valid)
+    portable = all(result.portable for result in results)
+    return RunResult(unit_id=unit.unit_id, plan_fingerprint=plan.fingerprint, spec_fingerprint=unit.spec['fingerprint'], engine=final.engine, module_ref=final.module_ref, status=final.status, valid=valid, evaluation=final.evaluation, artifact=final.artifact, lineage=tuple((item for result in results for item in result.lineage)), usage=_merge_usage([result.usage for result in results]), budget=guard.report(), metadata=_freeze(metadata), error=final.error, level_results=tuple((result.to_dict() for result in results)), portable=portable, promotable=portable and valid)
 
 def _merge_usage(items: Iterable[Mapping[str, Any]]) -> Mapping[str, Any]:
     """Sum canonical role usage across level results."""
@@ -771,6 +848,7 @@ def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources:
     should_fit = True
     try:
         guard.consume('candidates', iterations * num_candidates)
+        guard.record_candidate('reserved', iterations * num_candidates)
     except BudgetExceeded:
         if unit.spec['budget']['on_exceed'] != 'return_best_valid':
             raise
@@ -853,16 +931,19 @@ def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping
     evaluation_info: List[Dict[str, Any]] = []
 
     def gepa_evaluator(candidate: Any, *, example: Any, opt_state: Any=None) -> Tuple[float, Any, Dict[str, Any]]:
+        guard.record_candidate('proposed')
         candidate_module = _build_level_module(prepared['bound_spec'], prepared['module_resources'])
         artifact = _candidate_to_artifact(seed_artifact, candidate)
         _restore_level_module(spec, candidate_module, artifact)
         evaluation = _evaluate_dataset(candidate_module, [example], prepared['fit_context'], objective, evaluator, guard, prepared['metered_roles'], prepared['records'])
+        guard.record_candidate('evaluated')
         score, info = _project_for_gepa(evaluation, objective)
         evaluation_info.append(info)
         return (score, _thaw(candidate), {'evaluation': info, 'scores': info['metrics']})
     config_values = _gepa_config_values(spec['engine']['config'], unit.seed, unit.spec['budget'])
     planned_candidates = config_values.get('engine', {}).get('max_candidate_proposals')
     guard.consume('candidates', 1 if planned_candidates is None else int(planned_candidates))
+    guard.record_candidate('reserved', 1 if planned_candidates is None else int(planned_candidates))
     gepa_resources = {**resources, '_reflection_lm': prepared['clients'].get('optimizer'), '_budget_stopper': _GepaBudgetStopper(guard)}
     optimize_anything, config = _resolve_gepa(gepa_resources, config_values)
     gepa_result = optimize_anything(seed_candidate=seed_candidate, evaluator=gepa_evaluator, dataset=train, valset=validation, objective=spec['objective']['intent'], config=config)
@@ -989,6 +1070,7 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
         config = spec['engine']['config']
         try:
             guard.consume('candidates', config['iterations'] * config['num_candidates'])
+            guard.record_candidate('reserved', config['iterations'] * config['num_candidates'])
         except BudgetExceeded as error:
             if unit.spec['budget']['on_exceed'] != 'return_best_valid':
                 raise
@@ -1006,7 +1088,8 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
         if validation:
             trainer_kwargs.update({'validate_dataset': _trainer_dataset(validation), 'validate_guide': RecursiveGuide(), 'validate_exploration_candidates': bool(config['validation_gate'])})
         try:
-            optimize(evaluated_module, _trainer_dataset(train), guide=RecursiveGuide(), trainer=trainer, optimizer=optimizer, optimizer_kwargs=optimizer_kwargs, iterations=config['iterations'], num_candidates=config['num_candidates'], budget=RecursiveOptBudget(), **trainer_kwargs)
+            trainer_result = optimize(evaluated_module, _trainer_dataset(train), guide=RecursiveGuide(), trainer=trainer, optimizer=optimizer, optimizer_kwargs=optimizer_kwargs, iterations=config['iterations'], num_candidates=config['num_candidates'], budget=RecursiveOptBudget(), allow_env_overrides=False, **trainer_kwargs)
+            guard.record_candidate('proposed', len(getattr(getattr(trainer_result, 'memory', None), 'memory', []) or []))
         except BudgetExceeded as error:
             _restore_level_module(spec, module, initial_artifact)
             if unit.spec['budget']['on_exceed'] != 'return_best_valid':
@@ -1040,7 +1123,7 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
 class _EvaluatedModule(Module):
     """Attach registered evaluator results to real Trace parameter dependencies."""
 
-    def __init__(self, module: Module, evaluator: Callable[..., Any], objective: Mapping[str, Any], context: Mapping[str, Any], guard: _BudgetGuard, metered_roles: set[str], records: List[Dict[str, Any]]) -> None:
+    def __init__(self, module: Module, evaluator: _EvaluatorEntry, objective: Mapping[str, Any], context: Mapping[str, Any], guard: _BudgetGuard, metered_roles: set[str], records: List[Dict[str, Any]]) -> None:
         self.module = module
         self.evaluator = evaluator
         self.objective = objective
@@ -1054,16 +1137,17 @@ class _EvaluatedModule(Module):
         return [parameter for parameter in self.module.parameters() if parameter.trainable]
 
     @bundle()
-    def _attach(self, _parameters: Any, payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    def _attach(self, _output: Any, payload: Mapping[str, Any]) -> Mapping[str, Any]:
         return payload
 
     def forward(self, example: Any) -> Any:
         """Evaluate one example and return trainer-compatible traced objectives."""
-        self.module(example)
-        evaluation = _evaluate_dataset(self.module, [getattr(example, 'data', example)], self.context, self.objective, self.evaluator, self.guard, self.metered_roles)
+        evaluation, output = _evaluate_example(self.module, getattr(example, 'data', example), self.context, self.evaluator, self.guard, self.metered_roles)
+        evaluation = _aggregate_evaluations([evaluation], self.objective)
         info = _evaluation_info(evaluation)
         self.records.append(info)
-        return self._attach(list(self.module.parameters()), {'score': _objective_score(evaluation, self.objective), 'objectives': _thaw(evaluation.metrics), 'feedback': evaluation.feedback, 'trace': evaluation.trace})
+        self.guard.record_candidate('evaluated')
+        return self._attach(output if output is not None else list(self.module.parameters()), {'score': _objective_score(evaluation, self.objective), 'objectives': _thaw(evaluation.metrics), 'feedback': evaluation.feedback, 'trace': evaluation.trace})
 
     def __deepcopy__(self, memo: Dict[int, Any]) -> '_EvaluatedModule':
         """Copy trainable state while sharing guards and immutable run context."""
@@ -1118,7 +1202,7 @@ def _prepare_level(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping[s
     clients = _resolve_role_clients(unit.spec, spec, resources, usage)
     module_resources = {'llm_clients': clients, 'memory': memory, **({'graph_executors': resources['graph_executors']} if 'graph_executors' in resources else {})}
     module = _build_level_module(_freeze(bound_spec), module_resources)
-    evaluator = resources.get('evaluator') or _evaluator_entry(spec['objective']['evaluator_ref'])
+    evaluator = _EvaluatorEntry(resources['evaluator'], 'legacy_module') if resources.get('evaluator') is not None else _evaluator_entry(spec['objective']['evaluator_ref'])
     records: List[Dict[str, Any]] = []
     common = {'inputs': _freeze(module_inputs), 'objective': objective, 'llm_roles': _freeze(clients), 'engine': spec['engine']['name']}
     return {'module': module, 'evaluator': evaluator, 'bound_spec': _freeze(bound_spec), 'module_resources': module_resources, 'lineage': tuple(_freeze(lineage)), 'clients': clients, 'usage': usage, 'metered_roles': {role for role, client in clients.items() if client is not None}, 'fit_context': _freeze({**common, 'spec': _phase_spec(unit.spec, bound_spec, level.datasets), 'datasets': {'train': level.datasets['train'], 'validation': level.datasets['validation']}, 'phase': 'fit'}), 'final_context': _freeze({**common, 'spec': _phase_spec(unit.spec, bound_spec, level.datasets), 'datasets': {'train': level.datasets['train'], 'validation': level.datasets['validation']}, 'phase': 'final_evaluation'}), 'records': records}
@@ -1146,8 +1230,7 @@ def _apply_level_bindings(level: Mapping[str, Any], outputs: Mapping[str, Any], 
 
 class _GuardedRoleClient:
     """Charge common call/token budgets and attribute provider usage once."""
-
-    def __init__(self, client: Any, role: str, usage: MutableMapping[str, MutableMapping[str, float | int]], guard: _BudgetGuard, max_tokens: Optional[int], temperature: Optional[float], model: str) -> None:
+    def __init__(self, client: Any, role: str, usage: MutableMapping[str, MutableMapping[str, float | int]], guard: _BudgetGuard, max_tokens: Optional[int], temperature: Optional[float], request_params: Mapping[str, Any], model: str) -> None:
         from .runmode import track_llm_usage
         self._client = track_llm_usage(client, role, usage)
         self.role = role
@@ -1155,13 +1238,14 @@ class _GuardedRoleClient:
         self.guard = guard
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.request_params = _thaw(request_params)
         self.selected_model = model
-
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        kwargs.update(self.request_params)
         if self.max_tokens is not None:
-            kwargs.setdefault('max_tokens', self.max_tokens)
+            kwargs['max_tokens'] = self.max_tokens
         if self.temperature is not None:
-            kwargs.setdefault('temperature', self.temperature)
+            kwargs['temperature'] = self.temperature
         resource = 'optimizer_llm_calls' if self.role == 'optimizer' else 'eval_llm_calls'
         self.guard.consume(resource)
         if self.guard.limits.get('total_tokens') is not None:
@@ -1171,23 +1255,18 @@ class _GuardedRoleClient:
         after = int(self.usage.get(self.role, {}).get('total_tokens', 0))
         self.guard.consume('total_tokens', max(0, after - before))
         return response
-
     def __getattr__(self, name: str) -> Any:
         return getattr(self._client, name)
-
     def __deepcopy__(self, memo: Dict[int, Any]) -> '_GuardedRoleClient':
         memo[id(self)] = self
         return self
-
 class _FallbackRoleClient:
     """Try explicitly declared provider clients in deterministic listed order."""
-
     def __init__(self, clients: Iterable[_GuardedRoleClient]) -> None:
         self.clients = tuple(clients)
         if not self.clients:
             raise ValueError('fallback client requires at least one provider')
         self.selected_model = self.clients[0].selected_model
-
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         last_error: Optional[Exception] = None
         for client in self.clients:
@@ -1200,14 +1279,11 @@ class _FallbackRoleClient:
             return response
         assert last_error is not None
         raise last_error
-
     def __getattr__(self, name: str) -> Any:
         return getattr(self.clients[0], name)
-
     def __deepcopy__(self, memo: Dict[int, Any]) -> '_FallbackRoleClient':
         memo[id(self)] = self
         return self
-
 def _resolve_role_clients(global_spec: Mapping[str, Any], level: Mapping[str, Any], resources: Mapping[str, Any], usage: MutableMapping[str, MutableMapping[str, float | int]]) -> Dict[str, Any]:
     """Construct actual role clients from exact profiles and explicit fallbacks."""
     clients: Dict[str, Any] = {}
@@ -1221,7 +1297,6 @@ def _resolve_role_clients(global_spec: Mapping[str, Any], level: Mapping[str, An
         guarded = [_make_guarded_role_client(candidate, role, factory, usage, guard) for candidate in profiles]
         clients[role] = guarded[0] if len(guarded) == 1 else _FallbackRoleClient(guarded)
     return clients
-
 def _make_guarded_role_client(profile: Mapping[str, Any], role: str, factory: Optional[Callable[..., Any]], usage: MutableMapping[str, MutableMapping[str, float | int]], guard: _BudgetGuard) -> _GuardedRoleClient:
     """Construct one exact provider attempt for a role or fallback."""
     if guard.limits.get('total_tokens') is not None and profile.get('max_tokens') is None:
@@ -1234,23 +1309,29 @@ def _make_guarded_role_client(profile: Mapping[str, Any], role: str, factory: Op
     else:
         from .runmode import make_live_llm
         client = make_live_llm(profile['resolved_model'], request_timeout_s=None, budget_resource=None)
-    return _GuardedRoleClient(client, role, usage, guard, profile.get('max_tokens'), profile.get('temperature'), profile['resolved_model'])
-
-def _evaluate_dataset(module: Module, dataset: Iterable[Any], context: Mapping[str, Any], objective: Mapping[str, Any], evaluator: Callable[..., Any], guard: _BudgetGuard, metered_roles: set[str], records: Optional[List[Dict[str, Any]]]=None) -> EvaluationResult:
+    return _GuardedRoleClient(client, role, usage, guard, profile.get('max_tokens'), profile.get('temperature'), profile['request_params'], profile['resolved_model'])
+def _evaluate_example(module: Module, example: Any, context: Mapping[str, Any], evaluator: _EvaluatorEntry, guard: _BudgetGuard, metered_roles: set[str]) -> Tuple[EvaluationResult, Any]:
+    """Run one explicit evaluator contract and return its exact output anchor."""
+    guard.consume('evaluator_runs')
+    if evaluator.mode == 'output':
+        output = module(example)
+        result = normalize_evaluation_result(evaluator.evaluate(output, example, context))
+    else:
+        output = None
+        result = normalize_evaluation_result(evaluator.evaluate(module, [example], context))
+    _charge_reported_usage(result.usage, guard, metered_roles)
+    return result, output
+def _evaluate_dataset(module: Module, dataset: Iterable[Any], context: Mapping[str, Any], objective: Mapping[str, Any], evaluator: _EvaluatorEntry, guard: _BudgetGuard, metered_roles: set[str], records: Optional[List[Dict[str, Any]]]=None) -> EvaluationResult:
     """Evaluate examples under the common guard and aggregate declared sources."""
-    examples = list(dataset)
-    batches = [[example] for example in examples] or [[]]
+    examples = list(dataset) or [context['inputs']]
     results: List[EvaluationResult] = []
-    for batch in batches:
-        guard.consume('evaluator_runs')
-        result = normalize_evaluation_result(evaluator(module, batch, context))
-        _charge_reported_usage(result.usage, guard, metered_roles)
+    for example in examples:
+        result, _output = _evaluate_example(module, example, context, evaluator, guard, metered_roles)
         results.append(result)
     aggregated = _aggregate_evaluations(results, objective)
     if records is not None:
         records.append(_evaluation_info(aggregated))
     return aggregated
-
 def _charge_reported_usage(usage: Mapping[str, Any], guard: _BudgetGuard, metered_roles: set[str]) -> None:
     """Charge usage declared by evaluators only when no wrapped client did so."""
     for role, values in usage.items():
@@ -1311,14 +1392,13 @@ def _combined_runtime_usage(evaluation: Mapping[str, Any], runtime: Mapping[str,
         combined[role] = {name: max(left.get(name, 0), right.get(name, 0)) for name in names}
     return _freeze(combined)
 
-def _default_module_evaluator(module: Module, dataset: Any, context: Mapping[str, Any]) -> EvaluationResult:
+def _default_module_evaluator(output: Any, _example: Any, _context: Mapping[str, Any]) -> EvaluationResult:
     """Evaluate a module whose output already follows the canonical result shape."""
-    item = dataset[0] if isinstance(dataset, (list, tuple)) and dataset else context['inputs']
-    return normalize_evaluation_result(module(item))
+    return normalize_evaluation_result(getattr(output, 'data', output))
 
-def _reasoning_evaluator(module: Module, dataset: Any, context: Mapping[str, Any]) -> EvaluationResult:
+def _reasoning_evaluator(output: Any, example: Any, context: Mapping[str, Any]) -> EvaluationResult:
     """Score a named reasoning component against deterministic expected output."""
-    item = dataset[0] if isinstance(dataset, (list, tuple)) and dataset else None
+    item = getattr(example, 'data', example)
     if not isinstance(item, Mapping):
         raise TypeError('reasoning evaluator requires a mapping dataset item')
     if tuple(context['spec']['objective']['metrics']) != ('accuracy',):
@@ -1328,7 +1408,7 @@ def _reasoning_evaluator(module: Module, dataset: Any, context: Mapping[str, Any
         raise ValueError('reasoning evaluator dataset requires a component name')
     if 'expected' not in item:
         raise ValueError('reasoning evaluator dataset requires expected output')
-    output = module(item.get('input', {}))
+    output = getattr(output, 'data', output)
     components = output.get('components') if isinstance(output, Mapping) else None
     if not isinstance(components, Mapping) or component not in components:
         raise ValueError(f'reasoning module output is missing component {component!r}')
@@ -1600,7 +1680,7 @@ register_module('recursive_opt.module.reasoning_workflow@1', ModuleRegistryEntry
 register_module('recursive_opt.module.graph@1', ModuleRegistryEntry(build=_build_graph_module, snapshot=_snapshot_graph, restore=_restore_graph, validate_artifact=_validate_graph_artifact, capabilities=frozenset({'graph_executor', 'json_snapshot', 'trace_module', 'input_output_codecs'}), validate_config=_validate_graph_config))
 register_evaluator('recursive_opt.evaluator.module_output@1', _default_module_evaluator)
 register_evaluator('recursive_opt.evaluator.reasoning@1', _reasoning_evaluator)
-register_evaluator('recursive_opt.evaluator.legacy_level@1', _legacy_level_evaluator)
+register_evaluator('recursive_opt.evaluator.legacy_level@1', _legacy_level_evaluator, mode='legacy_module')
 register_dataset('recursive_opt.dataset.legacy_level@1', _legacy_level_dataset)
 register_codec('recursive_opt.codec.artifact_to_prior@1', _artifact_to_prior, input_type=(ArtifactRecord, Mapping), output_type=dict, input_description='a mapping artifact with content')
 register_codec('recursive_opt.codec.component_dict@1', _component_dict, input_type=Mapping, output_type=dict, input_description='a string-keyed component mapping')
@@ -1825,7 +1905,7 @@ def _normalize_llm_profiles(spec: Dict[str, Any]) -> None:
     """Materialize exact provider models, secret refs, and fallbacks."""
     profiles: Dict[str, Dict[str, Any]] = {}
     for name, raw_profile in spec['llm_profiles'].items():
-        profile = {'provider': None, 'model': None, 'resolved_model': None, 'api_key_ref': None, 'fallbacks': [], 'temperature': None, 'max_tokens': None, 'base_url': None, **_thaw(raw_profile)}
+        profile = {'provider': None, 'model': None, 'resolved_model': None, 'api_key_ref': None, 'fallbacks': [], 'temperature': None, 'max_tokens': None, 'base_url': None, 'request_params': {}, **_thaw(raw_profile)}
         if profile['provider'] == 'openrouter':
             profile['model'] = profile['model'] or 'deepseek/deepseek-v4-flash-0731'
             profile['resolved_model'] = f"openrouter/{profile['model']}"
@@ -2012,6 +2092,25 @@ def _validate_profile(profile: Mapping[str, Any], path: str, profiles: Mapping[s
         raise ValueError(f'{path} max_tokens must be positive or null')
     if profile['base_url'] is not None:
         raise ValueError(f'{path} base_url is unsupported; configure the provider externally')
+    if not isinstance(profile['request_params'], Mapping):
+        raise TypeError(f'{path} request_params must be a mapping')
+    _validate_request_params(profile['request_params'], f'{path}.request_params')
+
+def _validate_request_params(value: Any, path: str) -> None:
+    """Reject request controls that can replace normalized provider identity."""
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError(f'{path} contains a non-string key')
+            normalized = key.lower().replace('-', '_').replace(' ', '_')
+            if normalized in _REQUEST_IDENTITY_KEYS:
+                raise ValueError(f'{path}.{key} may not override model, provider, credentials, or base_url')
+            _validate_request_params(item, f'{path}.{key}')
+    elif isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            _validate_request_params(item, f'{path}[{index}]')
+    elif isinstance(value, float) and not math.isfinite(value):
+        raise ValueError(f'{path} must contain finite JSON numbers')
 
 def _validate_gepa_engine_config(config: Mapping[str, Any], index: int) -> None:
     """Validate the JSON-safe GEPA 0.1.4 configuration subset we construct."""

@@ -28,8 +28,8 @@ parameters in place; the helper returns the trainer result.
 """
 from __future__ import annotations
 
-import os
 import json
+import os
 from typing import Any, Optional, Union
 
 from opto import trace
@@ -131,6 +131,7 @@ def optimize(
     batch_size: int = 1,
     keep_best_validated: bool = True,
     budget: "Any" = None,
+    allow_env_overrides: bool = True,
     **trainer_kwargs,
 ) -> Any:
     """Optimize a recursive level with a Trainer (no hand-rolled loop).
@@ -155,11 +156,11 @@ def optimize(
     if budget is not None:
         from .budget import make_budget, reset_budget
         reset_budget(make_budget(budget))
-    resolved_iterations = (
-        current_iterations() if iterations is None else _positive_int(iterations, "iterations")
-    )
+    if not isinstance(allow_env_overrides, bool):
+        raise TypeError("allow_env_overrides must be boolean")
+    resolved_iterations = ((current_iterations() if allow_env_overrides else ITERATIONS) if iterations is None else _positive_int(iterations, "iterations"))
     resolved_num_candidates = (
-        current_num_candidates()
+        (current_num_candidates() if allow_env_overrides else NUM_CANDIDATES)
         if num_candidates is None
         else _positive_int(num_candidates, "num_candidates")
     )
@@ -177,10 +178,10 @@ def optimize(
     result = _train_returning_trainer(
         model=model,
         train_dataset=train_dataset,
-        algorithm=resolve_trainer(trainer),
-        optimizer=current_optimizer() if optimizer is None else optimizer,
+        algorithm=resolve_trainer(trainer if trainer is not None or allow_env_overrides else TRAINER),
+        optimizer=(current_optimizer() if allow_env_overrides else OPTIMIZER) if optimizer is None else optimizer,
         guide=guide or RecursiveGuide(),
-        optimizer_kwargs=_optimizer_kwargs(optimizer_kwargs),
+        optimizer_kwargs=_optimizer_kwargs(optimizer_kwargs, allow_env_overrides=allow_env_overrides),
         guide_kwargs=guide_kwargs,
         logger=logger,
         logger_kwargs=logger_kwargs,
@@ -190,7 +191,7 @@ def optimize(
         num_epochs=0,
         num_candidates=resolved_num_candidates,
         batch_size=batch_size,
-        **_trainer_kwargs(trainer_kwargs),
+        **_trainer_kwargs(trainer_kwargs, allow_env_overrides=allow_env_overrides),
     )
     if keep_best_validated:
         restore_best_validated(result, model)   # write-back to the CALLER's model
@@ -198,16 +199,16 @@ def optimize(
     return result
 
 
-def _optimizer_kwargs(user_kwargs: Optional[dict]) -> dict:
+def _optimizer_kwargs(user_kwargs: Optional[dict], *, allow_env_overrides: bool=True) -> dict:
     """Return optimizer kwargs with a live-model LLM adapter when configured."""
-    kwargs = _json_env_dict("RECURSIVE_OPT_OPTIMIZER_KWARGS")
+    kwargs = _json_env_dict("RECURSIVE_OPT_OPTIMIZER_KWARGS") if allow_env_overrides else {}
     kwargs.update(user_kwargs or {})
-    model_name = os.environ.get("RECURSIVE_OPT_MODEL") or os.environ.get("TRACE_LITELLM_MODEL")
+    model_name = (os.environ.get("RECURSIVE_OPT_MODEL") or os.environ.get("TRACE_LITELLM_MODEL")) if allow_env_overrides else None
     if model_name and "llm" not in kwargs:
         kwargs["llm"] = make_live_llm(model_name)
 
     # handling multiple LLM profiles
-    for name, spec in _json_env_dict("RECURSIVE_OPT_LLM_PROFILES").items():
+    for name, spec in (_json_env_dict("RECURSIVE_OPT_LLM_PROFILES") if allow_env_overrides else {}).items():
         if not name or not isinstance(spec, dict):
             raise ValueError("RECURSIVE_OPT_LLM_PROFILES must map profile names to JSON objects.")
         backend = spec.get("backend", "LiteLLM")
@@ -217,9 +218,9 @@ def _optimizer_kwargs(user_kwargs: Optional[dict]) -> dict:
     return kwargs
 
 
-def _trainer_kwargs(user_kwargs: dict[str, Any]) -> dict[str, Any]:
+def _trainer_kwargs(user_kwargs: dict[str, Any], *, allow_env_overrides: bool=True) -> dict[str, Any]:
     """Return trainer kwargs, with explicit kwargs overriding env defaults."""
-    kwargs = _json_env_dict("RECURSIVE_OPT_TRAINER_KWARGS")
+    kwargs = _json_env_dict("RECURSIVE_OPT_TRAINER_KWARGS") if allow_env_overrides else {}
     kwargs.update(user_kwargs)
     return kwargs
 

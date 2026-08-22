@@ -72,6 +72,14 @@ Against the semantic-closure baseline, recursive-opt runtime is **8,750** physic
 
 The final causal audit found that a scripted real Trace optimizer could still mutate a non-target component through candidate restoration. The Trace wrapper now exposes only parameters marked trainable. The same audit made invalid evaluations unrankable for Trace and GEPA, applies the execution-unit seed while resolving registered datasets, records test-override identity in the resolved manifest, delays holdout materialization until fitting and selection finish, and protects persisted level and final results with canonical integrity digests. Tests exercise each behavior through the runtime path, including a cross-process zero-call resume.
 
+### Prompt 17.7 final hardening
+
+Portable v2 evaluators have an explicit output contract: the runner executes the workflow once, passes that exact output to the evaluator, and attaches the evaluation to the same traced node. Explicit legacy module evaluators remain nonportable compatibility. The canonical Trace route disables demo environment overrides while leaving the public helper's legacy default unchanged.
+
+Behavioral provider request parameters are normalized, secret/identity checked, fingerprinted, persisted per fallback, and applied with deterministic precedence. Resolved registry entries and the recursive-opt source tree are independently hashed; those authoritative digests participate in resume identity and replace the self-referential final-commit readiness gate. Git state is informational only.
+
+Candidate reports distinguish reservations from observed proposals and evaluations. The required offline workflow now installs `.[gepa]` and includes the hardening tests. Local executable gates are green, but Prompt-18 readiness remains false until the unpushed required GitHub Actions job is observed green.
+
 ## Public-field classification
 
 The classifications below are normative. “Active” includes fields consumed in canonical compilation/execution and legacy-only controls consumed by the migrated legacy module. Unsupported values fail validation rather than remaining fingerprint-only metadata.

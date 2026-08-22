@@ -8,6 +8,18 @@ Semantic-closure implementation: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
 
 Completion-audit correction: `05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf`
 
+Prompt 17.7 starting HEAD: `14b832c82341bbc55e9c662ebaebcba4e3e8e95b`
+
+## Prompt 17.7 final-hardening gate — 2026-08-22
+
+- A counting stochastic workflow proves fixed, Trace, and injected GEPA execute exactly one workflow forward per evaluator invocation. The output evaluator receives the exact traced output, its evaluation attachment retains the real parameter dependency, and standard optimizer feedback reaches that parameter.
+- Canonical Trace disables legacy environment overrides. Changing all nine listed optimizer/trainer/model environment variables leaves the normalized fingerprint, resolved trainer/optimizer/iteration/candidate/kwargs values, selected artifact, and result unchanged.
+- Per-profile and per-fallback `request_params` are normalized, fingerprinted, manifested, and sent to fake providers. Recursive identity, endpoint, credential, and secret overrides fail validation.
+- Resolved module/evaluator/dataset/codec/engine provenance is persisted. Authoritative digests are `runtime_tree_sha256=6315c6fc23d7f4e51effeb936f0b8c5938a36d821dd7b85346f7e2d8407ef07c` and `registry_sha256=f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4` for the golden readiness spec. Replacing evaluator code behind the same ref invalidates resume.
+- Candidate accounting distinguishes reserved, proposed, and evaluated counts. Runtime is 8,850 lines, +100 from Prompt 17.7's 8,750-line start and at its +100 bound.
+- Network-blocked results: focused `21 passed`; mandated regression `305 passed, 2 skipped`; complete units `485 passed, 3 skipped`; clean-kernel notebook `1 passed`; isolated-worktree readiness `26 passed`. Ruff, `git diff --check`, and workflow YAML validation pass. No provider call occurred.
+- The required workflow installs `.[gepa]` and runs the hardening suite, but this unpushed workflow cannot be invoked or queried here. The CI and Prompt-18 readiness gates are therefore false pending an observed green `recursive-opt v2 offline (required)` run.
+
 ## Completion-audit gate — 2026-08-22
 
 - A scripted optimizer through the real `recursive_opt.optimize.optimize` path initially changed both the declared target and a protected component. The failing causal test exposed that candidate application did not honor `ParameterNode.trainable`; `_EvaluatedModule.parameters()` now restricts the trainer to declared targets, and the same test proves the target changes while the protected component does not.

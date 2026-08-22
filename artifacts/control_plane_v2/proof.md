@@ -4,10 +4,13 @@
 - Baseline SHA: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
 - Semantic-closure implementation SHA: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
 - Completion-audit implementation SHA: `05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf`
+- Prompt 17.7 starting SHA: `14b832c82341bbc55e9c662ebaebcba4e3e8e95b`
 - Environment: conda `humanllm`, Python 3.12
 - Date: 2026-08-22 (Europe/Paris)
 - Live provider or paid calls: **none**
-- CI workflow: `.github/workflows/recursive-opt-v2.yml`, job `recursive-opt v2 offline (required)`; manual no-paid-call job `GEPA 0.1.4 contract (manual)`
+- CI workflow: `.github/workflows/recursive-opt-v2.yml`, job `recursive-opt v2 offline (required)`, now including the pinned GEPA extra and hardening suite
+
+Prompt 17.7 authoritative source digests are `runtime_tree_sha256=6315c6fc23d7f4e51effeb936f0b8c5938a36d821dd7b85346f7e2d8407ef07c` and golden-spec `registry_sha256=f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`. They supersede the historical exact-SHA readiness mechanism below. GitHub Actions for this unpushed patch is unavailable, so CI and Prompt-18 readiness remain false pending an observed green required job.
 
 The completion-audit implementation commit has parent `fc00beac05fc1a73b0c017b7615b56b4162f12f1`. SHA-bearing evidence is a post-commit worktree update because a commit cannot contain its own hash.
 
@@ -32,7 +35,22 @@ The completion-audit implementation commit has parent `fc00beac05fc1a73b0c017b76
 | fixed/Trace/GEPA same-spec result shape | 31 | mandated regression | pass | canonical `RunResult` |
 | spec-only notebook and clean offline kernel | 32–33 | mandated regression | pass | smoke notebook |
 | footprint limits | 34 | mandated regression | pass | footprint JSON |
-| exact corrective SHA | 35 | post-commit mandated regression | pass | readiness JSON |
+| source/registry provenance and stale-resume rejection | 35 + hardening suite | network-blocked regression | pass | readiness JSON and resolved manifest |
+
+## Prompt 17.7 verification
+
+All commands removed provider keys and used `--disable-socket --allow-hosts=127.0.0.1,localhost`.
+
+- Focused hardening: **21 passed in 2.12s**.
+- Mandated recursive/Trace/GEPA regression: **305 passed, 2 skipped, 1 warning in 16.12s**.
+- Complete unit suite: **485 passed, 3 skipped, 1 warning in 37.27s**.
+- Clean-kernel notebook: **1 passed in 4.11s**.
+- Isolated worktree focused readiness, including real Trace, installed GEPA, notebook, footprint, and source gates: **26 passed in 5.32s**.
+- Ruff on `spec.py`, `optimize.py`, and both changed test files: **All checks passed**.
+- `git diff --check`: **passed**.
+- Workflow YAML parse and required-job structure check: **passed**.
+
+The required job installs `python -m pip install -e '.[gepa]'` and runs the control-plane, recursive-spec, objective/vector, multi-objective, and hardening suites. No GitHub Actions result is claimed for the unpushed worktree.
 
 The 28 baseline diagnoses and their corrective dispositions are mapped individually in `readiness_audit.md`.
 
@@ -44,7 +62,6 @@ Mandated recursive regression (network disabled; localhost allowed only for the 
 env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
   -u GOOGLE_API_KEY -u TAVILY_API_KEY \
   RECURSIVE_OPT_LIVE=0 \
-  RECURSIVE_OPT_FINAL_SHA=05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf \
   PYTHONHASHSEED=0 PYTHONPATH=. \
   /home/xav/miniconda3/envs/humanllm/bin/python -m pytest -q --disable-socket \
   --allow-hosts=127.0.0.1,localhost \
@@ -59,6 +76,7 @@ env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
   tests/unit_tests/test_evaluators_vector.py \
   tests/unit_tests/test_trainers_multiobjective.py \
   tests/unit_tests/test_recursive_control_plane_v2.py \
+  tests/unit_tests/test_recursive_final_hardening.py \
   tests/unit_tests/test_recursive_opt_abc_probe.py
 ```
 
@@ -70,7 +88,6 @@ Complete unit suite:
 env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
   -u GOOGLE_API_KEY -u TAVILY_API_KEY \
   RECURSIVE_OPT_LIVE=0 \
-  RECURSIVE_OPT_FINAL_SHA=05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf \
   PYTHONHASHSEED=0 PYTHONPATH=. \
   /home/xav/miniconda3/envs/humanllm/bin/python -m pytest -q --disable-socket \
   --allow-hosts=127.0.0.1,localhost tests/unit_tests
@@ -123,4 +140,4 @@ M  artifacts/control_plane_v2/readiness_audit.md
 
 The full short status has 108 entries: the six staged SHA-evidence files above and 102 unrelated, pre-existing user-owned experiment/config/output entries. None of the untracked files is staged or modified. There is no post-commit diff under `opto/`, `tests/`, or `examples/recursive_opt_use_cases.ipynb`, so the tested implementation/client tree is exactly the committed SHA.
 
-Limitations: no live OpenRouter run, no paid GEPA optimization, and no historical efficacy claim. The real installed GEPA API is checked only where it can run without a provider. Historical config/family-policy/prior behavior remains non-replayable without the precisely listed dependencies. This gate establishes readiness for Prompt 18; it does not begin that experiment.
+Limitations: no live OpenRouter run, no paid GEPA optimization, and no historical efficacy claim. The real installed GEPA API is checked only where it can run without a provider. Historical config/family-policy/prior behavior remains non-replayable without the precisely listed dependencies. Local Prompt 17.7 gates are green, but Prompt-18 readiness remains false until the required GitHub Actions job is observed green; Prompt 18 was not begun.

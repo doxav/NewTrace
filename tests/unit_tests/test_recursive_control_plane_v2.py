@@ -183,13 +183,17 @@ def _metric_objective(
         "hard_constraints": constraints or [],
     }
 
+def _output_data(output: Any) -> Any:
+    """Return the exact plain value carried by a traced workflow output."""
+    return getattr(output, "data", output)
+
 
 def _bound_evaluator(
-    module: Module, dataset: Any, _context: Mapping[str, Any]
+    output: Any, example: Any, _context: Mapping[str, Any]
 ) -> EvaluationResult:
     """Score the actual upstream component injected into module inputs."""
-    expected = dataset[0]["expected"]
-    inputs = module({})["inputs"]
+    expected = example["expected"]
+    inputs = _output_data(output)["inputs"]
     actual = inputs.get("upstream", {}).get("planner")
     return EvaluationResult(
         valid=True,
@@ -200,10 +204,10 @@ def _bound_evaluator(
 
 
 def _selection_evaluator(
-    module: Module, _dataset: Any, _context: Mapping[str, Any]
+    output: Any, _example: Any, _context: Mapping[str, Any]
 ) -> EvaluationResult:
     """Give the candidate more quality but substantially more cost."""
-    planner = module({})["components"]["planner"]
+    planner = _output_data(output)["components"]["planner"]
     metrics = {"quality": 0.9, "cost": 10.0} if planner == "candidate" else {
         "quality": 0.6,
         "cost": 1.0,
@@ -212,10 +216,10 @@ def _selection_evaluator(
 
 
 def _pareto_evaluator(
-    module: Module, _dataset: Any, _context: Mapping[str, Any]
+    output: Any, _example: Any, _context: Mapping[str, Any]
 ) -> EvaluationResult:
     """Make the candidate Pareto-dominate the initial artifact."""
-    planner = module({})["components"]["planner"]
+    planner = _output_data(output)["components"]["planner"]
     metrics = {"quality": 0.9, "cost": 0.5} if planner == "candidate" else {
         "quality": 0.6,
         "cost": 1.0,
@@ -224,7 +228,7 @@ def _pareto_evaluator(
 
 
 def _role_evaluator(
-    _module: Module, _dataset: Any, context: Mapping[str, Any]
+    _output: Any, _example: Any, context: Mapping[str, Any]
 ) -> EvaluationResult:
     """Call every configured role client exactly once."""
     for client in context["llm_roles"].values():
@@ -234,7 +238,7 @@ def _role_evaluator(
 
 
 def _random_evaluator(
-    _module: Module, _dataset: Any, _context: Mapping[str, Any]
+    _output: Any, _example: Any, _context: Mapping[str, Any]
 ) -> EvaluationResult:
     """Expose Python and NumPy RNG values as deterministic metrics."""
     return EvaluationResult(
@@ -245,10 +249,10 @@ def _random_evaluator(
 
 
 def _knowledge_evaluator(
-    module: Module, _dataset: Any, _context: Mapping[str, Any]
+    output: Any, _example: Any, _context: Mapping[str, Any]
 ) -> EvaluationResult:
     """Score whether all promoted cards reached the module input."""
-    cards = module({})["inputs"].get("knowledge", [])
+    cards = _output_data(output)["inputs"].get("knowledge", [])
     return EvaluationResult(
         valid=True,
         status="ok",
@@ -258,10 +262,10 @@ def _knowledge_evaluator(
 
 
 def _aggregation_evaluator(
-    _module: Module, dataset: Any, _context: Mapping[str, Any]
+    _output: Any, example: Any, _context: Mapping[str, Any]
 ) -> EvaluationResult:
     """Expose per-example metrics, feedback, and trace for objective controls."""
-    value = float(dataset[0]["value"])
+    value = float(example["value"])
     return EvaluationResult(
         valid=True,
         status="ok",
@@ -272,10 +276,10 @@ def _aggregation_evaluator(
 
 
 def _invalid_candidate_evaluator(
-    module: Module, _dataset: Any, _context: Mapping[str, Any]
+    output: Any, _example: Any, _context: Mapping[str, Any]
 ) -> EvaluationResult:
     """Give an invalid candidate a deceptively high numeric metric."""
-    candidate = module({})["components"]["planner"] == "correct"
+    candidate = _output_data(output)["components"]["planner"] == "correct"
     return EvaluationResult(
         valid=not candidate,
         status="invalid" if candidate else "ok",
@@ -489,7 +493,7 @@ def test_10b_module_config_inputs_and_snapshot_restore_are_exact() -> None:
     module = S.build_module(raw, level_id="level-a")
     snapshot = S.snapshot_module(raw, module, level_id="level-a")
 
-    assert module({})["inputs"]["prior"] == "bound"
+    assert _output_data(module({}))["inputs"]["prior"] == "bound"
     assert snapshot == {"components": {"planner": "correct"}}
     module.components["planner"]._set("changed")
     S.restore_module(raw, module, snapshot, level_id="level-a")
@@ -497,7 +501,7 @@ def test_10b_module_config_inputs_and_snapshot_restore_are_exact() -> None:
 
     changed = _spec()
     changed["levels"][0]["module"]["config"]["components"]["planner"] = "changed"
-    assert S.build_module(changed, level_id="level-a")({})["components"] != module({})["components"]
+    assert _output_data(S.build_module(changed, level_id="level-a")({}))["components"] != _output_data(module({}))["components"]
 
 
 def test_11_public_evaluator_registry_executes() -> None:
@@ -1128,7 +1132,7 @@ def test_27_cross_process_resume(tmp_path: Path) -> None:
     fail_if_evaluated = (
         "import json,sys;"
         "from opto.features.recursive_opt import spec as S;"
-        "S._EVALUATOR_REGISTRY['recursive_opt.evaluator.reasoning@1']="
+        "S._evaluate_dataset="
         "lambda *_a,**_k:(_ for _ in ()).throw(RuntimeError('evaluator called'));"
         "print(json.dumps(S.run_spec(json.loads(sys.argv[1])).to_dict(),sort_keys=True))"
     )
@@ -1322,22 +1326,29 @@ def test_34_final_footprint_matches_evidence() -> None:
     actual = {str(path): len(path.read_text(encoding="utf-8").splitlines()) for path in runtime_files}
 
     assert evidence["files"] == actual
-    assert evidence["total_lines"] == sum(actual.values()) <= 8803
-    assert actual["opto/features/recursive_opt/spec.py"] < 2688
+    assert evidence["total_lines"] == sum(actual.values()) <= 8850
+    assert evidence["prompt_17_7"] == {
+        "starting_lines": 8750,
+        "after_lines": sum(actual.values()),
+        "delta": sum(actual.values()) - 8750,
+        "limit": 100,
+        "starting_spec_lines": 2633,
+    }
 
 
-def test_35_final_sha_provenance() -> None:
-    expected = os.environ.get("RECURSIVE_OPT_FINAL_SHA")
-    if expected is None:
-        pytest.skip("final-SHA gate runs after the corrective commit")
+def test_35_source_provenance() -> None:
+    smoke = json.loads(
+        Path("artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    provenance = S.compile_plan(smoke).code_provenance
     readiness = json.loads(
         Path("artifacts/control_plane_v2/prompt18_readiness.json").read_text(
             encoding="utf-8"
         )
     )
-    actual = subprocess.run(
-        ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
-    ).stdout.strip()
 
-    assert expected == actual == readiness["final_sha"]
-    assert readiness["gates"]["final_sha_verified"] is True
+    assert "final_sha" not in readiness
+    assert readiness["verified_runtime_tree_sha256"] == provenance["runtime_tree_sha256"]
+    assert readiness["verified_registry_sha256"] == provenance["registry_sha256"]

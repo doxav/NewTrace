@@ -36,7 +36,7 @@
     },
     "private_api_calls": 230
   },
-  "git_sha": "05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf",
+  "git_sha": null,
   "graph": {
     "accepted_runtime_lines": 384,
     "removed_from_user_import": 4639,
@@ -72,14 +72,14 @@
       "opto/features/recursive_opt/levels.py": 915,
       "opto/features/recursive_opt/memory.py": 531,
       "opto/features/recursive_opt/numeric_optimizers.py": 243,
-      "opto/features/recursive_opt/optimize.py": 396,
+      "opto/features/recursive_opt/optimize.py": 397,
       "opto/features/recursive_opt/progress.py": 184,
       "opto/features/recursive_opt/runmode.py": 328,
-      "opto/features/recursive_opt/spec.py": 2633,
+      "opto/features/recursive_opt/spec.py": 2732,
       "opto/features/recursive_opt/tracebench.py": 1327,
       "opto/features/recursive_opt/traces.py": 195
     },
-    "lines": 8750,
+    "lines": 8850,
     "public_top_level": {
       "classes": 43,
       "functions": 113,
@@ -103,18 +103,25 @@
       "spec_lines": 2688
     },
     "delta": {
-      "lines": -53,
-      "spec_lines": -55
+      "lines": 47,
+      "spec_lines": 44
     }
   },
   "runtime_plus_notebook": {
     "before": 8819,
-    "after": 8766,
-    "delta": -53
+    "after": 8866,
+    "delta": 47
   },
   "schema_version": "control-plane-footprint/v1",
-  "worktree": "05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf completion-audit implementation",
+  "worktree": "Prompt 17.7 final-hardening worktree; source digests are authoritative",
   "baseline_sha": "21a0ad3d2f4f835ce2ffb1eef18c36a622265418",
+  "prompt_17_7": {
+    "starting_lines": 8750,
+    "after_lines": 8850,
+    "delta": 100,
+    "limit": 100,
+    "starting_spec_lines": 2633
+  },
   "files": {
     "opto/features/recursive_opt/__init__.py": 245,
     "opto/features/recursive_opt/budget.py": 403,
@@ -126,12 +133,12 @@
     "opto/features/recursive_opt/levels.py": 915,
     "opto/features/recursive_opt/memory.py": 531,
     "opto/features/recursive_opt/numeric_optimizers.py": 243,
-    "opto/features/recursive_opt/optimize.py": 396,
+    "opto/features/recursive_opt/optimize.py": 397,
     "opto/features/recursive_opt/progress.py": 184,
     "opto/features/recursive_opt/runmode.py": 328,
-    "opto/features/recursive_opt/spec.py": 2633,
+    "opto/features/recursive_opt/spec.py": 2732,
     "opto/features/recursive_opt/tracebench.py": 1327,
     "opto/features/recursive_opt/traces.py": 195
   },
-  "total_lines": 8750
+  "total_lines": 8850
 }
