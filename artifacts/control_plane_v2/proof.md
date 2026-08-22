@@ -10,7 +10,7 @@
 - Live provider or paid calls: **none**
 - CI workflow: `.github/workflows/recursive-opt-v2.yml`, job `recursive-opt v2 offline (required)`, now including the pinned GEPA extra and hardening suite
 
-After the GEPA 0.1.4 public-contract hotfix, authoritative source digests are `runtime_tree_sha256=5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642` and golden-spec `registry_sha256=f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`. They supersede the historical exact-SHA readiness mechanism below. Required CI and Prompt-18 readiness remain false until the hotfix is pushed and the required job is observed green.
+After the GEPA 0.1.4 public-contract hotfix, authoritative source digests are `runtime_tree_sha256=5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642` and golden-spec `registry_sha256=f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`. They supersede the historical exact-SHA readiness mechanism below. Required GitHub Actions run `32583433295` for hotfix commit `52a7b0bd86b21975e2de09cec0a957b04e835312` completed successfully; required job `97056076300` passed in 1m07s. Prompt-18 readiness is true.
 
 ## GEPA 0.1.4 hotfix verification
 
@@ -34,7 +34,7 @@ Provider-free/network-blocked results in conda `humanllm`:
 - clean-kernel notebook: **1 passed, 44 deselected in 4.47s**;
 - changed-file Ruff and both diff checks: **passed**.
 
-The two common skips require optional graph/telemetry backends; the third complete-suite skip requires Graphviz `dot`. No GEPA test skipped. No live provider or paid call occurred. Required CI is not claimed at this pre-push checkpoint.
+The two common skips require optional graph/telemetry backends; the third complete-suite skip requires Graphviz `dot`. No GEPA test skipped. No live provider or paid call occurred. The pre-push checkpoint kept readiness false; run `32583433295` subsequently supplied the required `completed / success` evidence.
 
 The completion-audit implementation commit has parent `fc00beac05fc1a73b0c017b7615b56b4162f12f1`. SHA-bearing evidence is a post-commit worktree update because a commit cannot contain its own hash.
 

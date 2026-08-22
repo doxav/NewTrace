@@ -79,3 +79,15 @@ Production-computed authoritative digests:
 Required CI remains unclaimed until the pushed hotfix is observed green.
 Accordingly, `required_gepa_ci=false` and `ready_for_prompt_18=false` at this
 pre-push checkpoint.
+
+## Required CI outcome
+
+- Hotfix commit: `52a7b0bd86b21975e2de09cec0a957b04e835312`.
+- GitHub Actions run: `32583433295`.
+- Required job: `recursive-opt v2 offline (required)` (`97056076300`).
+- Result: `completed / success` in 1m07s.
+- URL: <https://github.com/doxav/NewTrace/actions/runs/32583433295>.
+
+The required job installed `.[gepa]` and passed the public-contract test through
+the actual GEPA 0.1.4 package. The readiness gate is therefore promoted to
+`required_gepa_ci=true` and `ready_for_prompt_18=true`.

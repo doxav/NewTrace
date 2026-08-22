@@ -18,7 +18,7 @@ Prompt 17.7 starting HEAD: `14b832c82341bbc55e9c662ebaebcba4e3e8e95b`
 - Weighted accuracy/maximize plus `forward_token_ratio`/minimize preserves direction; invalid candidates retain the explicit floor and `valid=false`.
 - Network-blocked results: focused seam `4 passed`; control plane `45 passed`; final hardening `21 passed`; recursive spec `47 passed`; objective matrix `89 passed`; all recursive units `224 passed, 2 skipped`; complete units `487 passed, 3 skipped`; clean-kernel notebook `1 passed`. No GEPA test skipped. Ruff and both diff checks passed.
 - Runtime footprint remains 8,850 lines (zero-line hotfix delta). Authoritative digests are `runtime_tree_sha256=5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642` and `registry_sha256=f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
-- Pre-push readiness remains false pending an observed green `recursive-opt v2 offline (required)` run.
+- Required GitHub Actions run `32583433295` for hotfix commit `52a7b0bd86b21975e2de09cec0a957b04e835312` completed successfully. Job `recursive-opt v2 offline (required)` (`97056076300`) installed `.[gepa]` and passed in 1m07s. Readiness is promoted to true.
 
 ## Prompt 17.7 final-hardening gate — 2026-08-22
 

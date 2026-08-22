@@ -558,6 +558,15 @@ def test_readiness_uses_source_digests_without_sha_environment() -> None:
     assert "final_sha" not in readiness
     assert readiness["verified_runtime_tree_sha256"] == provenance["runtime_tree_sha256"]
     assert readiness["verified_registry_sha256"] == provenance["registry_sha256"]
-    assert readiness["gates"]["required_gepa_ci"] is False
-    assert readiness["ready_for_prompt_18"] is False
-    assert any("GitHub Actions" in blocker for blocker in readiness["blockers"])
+    assert readiness["gates"]["required_gepa_ci"] is True
+    assert readiness["ready_for_prompt_18"] is True
+    assert readiness["blockers"] == []
+    assert readiness["required_ci_run"] == {
+        "id": 32583433295,
+        "job_id": 97056076300,
+        "job": "recursive-opt v2 offline (required)",
+        "head_sha": "52a7b0bd86b21975e2de09cec0a957b04e835312",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/doxav/NewTrace/actions/runs/32583433295",
+    }
