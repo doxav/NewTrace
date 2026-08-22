@@ -10,12 +10,22 @@ Completion-audit correction: `05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf`
 
 Prompt 17.7 starting HEAD: `14b832c82341bbc55e9c662ebaebcba4e3e8e95b`
 
+## GEPA 0.1.4 public evaluator contract hotfix — 2026-08-22
+
+- Published GEPA 0.1.4 accepts a public evaluator result of `score | (score, side_info)`. Its actual wheel-local `EvaluatorWrapper` converts the public pair to the internal `(score, None, side_info)` triple consumed by `OptimizeAnythingAdapter`; a public 3-tuple reproduces `ValueError: too many values to unpack (expected 2)`.
+- `_run_gepa_engine` now returns only `float(score), info`. The candidate is owned by GEPA, canonical metrics remain at `side_info["metrics"]`, and no `side_info["scores"]` falsely exposes minimize metrics as higher-is-better Pareto axes.
+- The corrected tests cover the public callback, actual wrapper, internal adapter, and actual public `optimize_anything()` entry point with a one-evaluation budget, deterministic local reflection callable, removed keys, and blocked sockets.
+- Weighted accuracy/maximize plus `forward_token_ratio`/minimize preserves direction; invalid candidates retain the explicit floor and `valid=false`.
+- Network-blocked results: focused seam `4 passed`; control plane `45 passed`; final hardening `21 passed`; recursive spec `47 passed`; objective matrix `89 passed`; all recursive units `224 passed, 2 skipped`; complete units `487 passed, 3 skipped`; clean-kernel notebook `1 passed`. No GEPA test skipped. Ruff and both diff checks passed.
+- Runtime footprint remains 8,850 lines (zero-line hotfix delta). Authoritative digests are `runtime_tree_sha256=5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642` and `registry_sha256=f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+- Pre-push readiness remains false pending an observed green `recursive-opt v2 offline (required)` run.
+
 ## Prompt 17.7 final-hardening gate — 2026-08-22
 
 - A counting stochastic workflow proves fixed, Trace, and injected GEPA execute exactly one workflow forward per evaluator invocation. The output evaluator receives the exact traced output, its evaluation attachment retains the real parameter dependency, and standard optimizer feedback reaches that parameter.
 - Canonical Trace disables legacy environment overrides. Changing all nine listed optimizer/trainer/model environment variables leaves the normalized fingerprint, resolved trainer/optimizer/iteration/candidate/kwargs values, selected artifact, and result unchanged.
 - Per-profile and per-fallback `request_params` are normalized, fingerprinted, manifested, and sent to fake providers. Recursive identity, endpoint, credential, and secret overrides fail validation.
-- Resolved module/evaluator/dataset/codec/engine provenance is persisted. Authoritative digests are `runtime_tree_sha256=6315c6fc23d7f4e51effeb936f0b8c5938a36d821dd7b85346f7e2d8407ef07c` and `registry_sha256=f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4` for the golden readiness spec. Replacing evaluator code behind the same ref invalidates resume.
+- Resolved module/evaluator/dataset/codec/engine provenance is persisted. After the GEPA 0.1.4 public-contract hotfix, authoritative digests are `runtime_tree_sha256=5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642` and `registry_sha256=f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4` for the golden readiness spec. Replacing evaluator code behind the same ref invalidates resume.
 - Candidate accounting distinguishes reserved, proposed, and evaluated counts. Runtime is 8,850 lines, +100 from Prompt 17.7's 8,750-line start and at its +100 bound.
 - Network-blocked results: focused `21 passed`; mandated regression `305 passed, 2 skipped`; complete units `485 passed, 3 skipped`; clean-kernel notebook `1 passed`; isolated-worktree readiness `26 passed`. Ruff, `git diff --check`, and workflow YAML validation pass. No provider call occurred.
 - The required workflow installs `.[gepa]` and runs the hardening suite, but this unpushed workflow cannot be invoked or queried here. The CI and Prompt-18 readiness gates are therefore false pending an observed green `recursive-opt v2 offline (required)` run.

@@ -930,7 +930,7 @@ def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping
     validation = list(access.read('validation', phase='candidate_selection'))
     evaluation_info: List[Dict[str, Any]] = []
 
-    def gepa_evaluator(candidate: Any, *, example: Any, opt_state: Any=None) -> Tuple[float, Any, Dict[str, Any]]:
+    def gepa_evaluator(candidate: Any, *, example: Any, opt_state: Any=None) -> Tuple[float, Dict[str, Any]]:
         guard.record_candidate('proposed')
         candidate_module = _build_level_module(prepared['bound_spec'], prepared['module_resources'])
         artifact = _candidate_to_artifact(seed_artifact, candidate)
@@ -939,7 +939,7 @@ def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping
         guard.record_candidate('evaluated')
         score, info = _project_for_gepa(evaluation, objective)
         evaluation_info.append(info)
-        return float(score), info # return (score, _thaw(candidate), {'evaluation': info, 'scores': info['metrics']})
+        return float(score), info
     config_values = _gepa_config_values(spec['engine']['config'], unit.seed, unit.spec['budget'])
     planned_candidates = config_values.get('engine', {}).get('max_candidate_proposals')
     guard.consume('candidates', 1 if planned_candidates is None else int(planned_candidates))

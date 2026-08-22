@@ -113,7 +113,7 @@
     "delta": 47
   },
   "schema_version": "control-plane-footprint/v1",
-  "worktree": "Prompt 17.7 final-hardening worktree; source digests are authoritative",
+  "worktree": "GEPA 0.1.4 public evaluator contract hotfix worktree; source digests are authoritative",
   "baseline_sha": "21a0ad3d2f4f835ce2ffb1eef18c36a622265418",
   "prompt_17_7": {
     "starting_lines": 8750,
@@ -121,6 +121,17 @@
     "delta": 100,
     "limit": 100,
     "starting_spec_lines": 2633
+  },
+  "gepa_0_1_4_contract_hotfix": {
+    "starting_runtime_lines": 8850,
+    "after_runtime_lines": 8850,
+    "runtime_delta": 0,
+    "starting_spec_lines": 2732,
+    "after_spec_lines": 2732,
+    "spec_delta": 0,
+    "production_scope": [
+      "opto/features/recursive_opt/spec.py"
+    ]
   },
   "files": {
     "opto/features/recursive_opt/__init__.py": 245,

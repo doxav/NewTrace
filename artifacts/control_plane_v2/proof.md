@@ -10,7 +10,31 @@
 - Live provider or paid calls: **none**
 - CI workflow: `.github/workflows/recursive-opt-v2.yml`, job `recursive-opt v2 offline (required)`, now including the pinned GEPA extra and hardening suite
 
-Prompt 17.7 authoritative source digests are `runtime_tree_sha256=6315c6fc23d7f4e51effeb936f0b8c5938a36d821dd7b85346f7e2d8407ef07c` and golden-spec `registry_sha256=f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`. They supersede the historical exact-SHA readiness mechanism below. GitHub Actions for this unpushed patch is unavailable, so CI and Prompt-18 readiness remain false pending an observed green required job.
+After the GEPA 0.1.4 public-contract hotfix, authoritative source digests are `runtime_tree_sha256=5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642` and golden-spec `registry_sha256=f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`. They supersede the historical exact-SHA readiness mechanism below. Required CI and Prompt-18 readiness remain false until the hotfix is pushed and the required job is observed green.
+
+## GEPA 0.1.4 hotfix verification
+
+| invariant | causal test | command | result | evidence |
+|---|---|---|---|---|
+| public evaluator is a scalar or pair | 22, 22b | focused GEPA seam | pass | wrapper output is `(1.0, None, {"valid": true})` |
+| public entry point supplies the wrapper | 22c | actual `optimize_anything()` with one seed evaluation and blocked sockets | pass | one validation call; no reflection/provider call |
+| weighted minimize direction remains scalar | 22d | focused GEPA seam | pass | ratio 0.5 scores above 1.5 |
+| rich ASI without reserved Pareto axes | 22, 22d | focused GEPA seam | pass | raw `metrics` retained; `scores` absent |
+| invalidity dominates raw metrics | 20b, 22d | control-plane suite | pass | explicit invalid floor and `valid=false` |
+
+Provider-free/network-blocked results in conda `humanllm`:
+
+- focused GEPA seam: **4 passed, 41 deselected in 1.59s**;
+- control-plane v2: **45 passed in 10.20s**;
+- final hardening: **21 passed in 2.61s**;
+- recursive spec: **47 passed in 2.89s**;
+- objective/vector/multi-objective: **89 passed in 2.92s**;
+- all recursive unit files: **224 passed, 2 skipped, 1 warning in 16.78s**;
+- complete unit suite: **487 passed, 3 skipped, 1 warning in 39.26s**;
+- clean-kernel notebook: **1 passed, 44 deselected in 4.47s**;
+- changed-file Ruff and both diff checks: **passed**.
+
+The two common skips require optional graph/telemetry backends; the third complete-suite skip requires Graphviz `dot`. No GEPA test skipped. No live provider or paid call occurred. Required CI is not claimed at this pre-push checkpoint.
 
 The completion-audit implementation commit has parent `fc00beac05fc1a73b0c017b7615b56b4162f12f1`. SHA-bearing evidence is a post-commit worktree update because a commit cannot contain its own hash.
 
@@ -26,7 +50,7 @@ The completion-audit implementation commit has parent `fc00beac05fc1a73b0c017b76
 | exact role clients, preflight, fallbacks, usage | 14–16 | mandated regression | pass | selected models/usage |
 | weighted/Pareto objectives, constraints, rollback | 17–20b | mandated regression | pass | canonical evaluation/artifact |
 | structural holdout isolation | 21 | mandated regression | pass | phase-context fault injection |
-| GEPA holdout externalization and exact 0.1.4 public API | 22/22b | mandated regression | pass | no-provider contract |
+| GEPA holdout externalization and exact 0.1.4 public API | 22/22b/22c | mandated regression | pass | no-provider public wrapper and entry-point contract |
 | in-run budgets and all policies | 23–24 | mandated regression | pass | budget report |
 | scoped deterministic seeds | 25 | mandated regression | pass | deterministic metrics |
 | atomic outputs and cross-process resume | 26–27 | mandated regression | pass | persisted run tree |

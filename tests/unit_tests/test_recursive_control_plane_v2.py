@@ -867,14 +867,16 @@ def test_22_gepa_externalizes_holdout() -> None:
     seen: dict[str, Any] = {}
 
     def fake_gepa(**kwargs: Any) -> Any:
-        """Validate the installed API shape without accepting holdout."""
+        """Treat the callback as GEPA's public evaluator without accepting holdout."""
         seen.update(kwargs)
         assert "test_set" not in kwargs
-        score, output, side = kwargs["evaluator"](
+        score, side_info = kwargs["evaluator"](
             kwargs["seed_candidate"], example=kwargs["dataset"][0], opt_state={}
         )
-        assert isinstance(score, float) and output == kwargs["seed_candidate"]
-        assert side["evaluation"]["valid"] is True
+        assert isinstance(score, float)
+        assert isinstance(side_info, dict)
+        assert side_info["valid"] is True
+        assert "scores" not in side_info
         return SimpleNamespace(best_candidate=kwargs["seed_candidate"])
 
     result = S.run_spec(raw, resources={"gepa_optimize": fake_gepa})
@@ -888,42 +890,155 @@ def test_22b_real_gepa_public_contract_without_provider_calls() -> None:
     from importlib.metadata import version
 
     from gepa.optimize_anything import (
-        EngineConfig,
-        GEPAConfig,
-        GEPAResult,
+        EvaluatorWrapper,
         OptimizeAnythingAdapter,
-        ReflectionConfig,
     )
 
     calls: list[tuple[Any, Any, Any]] = []
 
     def evaluator(
         candidate: Any, *, example: Any, opt_state: Any
-    ) -> tuple[float, Any, dict[str, Any]]:
+    ) -> tuple[float, dict[str, Any]]:
         """Exercise GEPA's documented keyword-only evaluator contract."""
         calls.append((candidate, example, opt_state))
-        return 1.0, candidate, {"valid": True}
+        return 1.0, {"valid": True}
 
-    config = GEPAConfig(
-        engine=EngineConfig(seed=7, max_metric_calls=2, max_candidate_proposals=1),
-        reflection=ReflectionConfig(reflection_lm=None),
+    wrapped = EvaluatorWrapper(
+        evaluator,
+        single_instance_mode=False,
+        capture_stdio=False,
+        str_candidate_mode=False,
+        raise_on_exception=True,
     )
-    batch = OptimizeAnythingAdapter(evaluator=evaluator, parallel=False).evaluate(
+    score, output, side_info = wrapped(
+        {"text": "seed"}, {"id": "example"}, opt_state={}
+    )
+    batch = OptimizeAnythingAdapter(evaluator=wrapped, parallel=False).evaluate(
         [{"id": "example"}], {"text": "seed"}, capture_traces=True
-    )
-    result = GEPAResult(
-        candidates=[{"text": "seed"}],
-        parents=[[None]],
-        val_aggregate_scores=[1.0],
-        val_subscores=[{}],
-        per_val_instance_best_candidates={},
-        discovery_eval_counts=[1],
     )
 
     assert version("gepa") == S.GEPA_VERSION == "0.1.4"
-    assert config.engine.seed == 7 and batch.scores == [1.0]
+    assert score == 1.0 and output is None and side_info["valid"] is True
+    assert batch.scores == [1.0]
     assert calls[0][1] == {"id": "example"}
-    assert S._gepa_best_candidate(result) == {"text": "seed"}
+
+
+def test_22c_public_optimize_anything_contract_smoke_without_provider_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import socket
+    from importlib.metadata import version
+
+    from gepa.optimize_anything import (
+        EngineConfig,
+        GEPAConfig,
+        ReflectionConfig,
+        optimize_anything,
+    )
+
+    def network_forbidden(*_args: Any, **_kwargs: Any) -> None:
+        raise AssertionError("network access attempted")
+
+    for key in ("OPENAI_API_KEY", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setattr(socket, "socket", network_forbidden)
+    calls: list[tuple[Any, Any, Any]] = []
+    reflection_calls: list[str] = []
+
+    def evaluator(
+        candidate: Any, *, example: Any, opt_state: Any
+    ) -> tuple[float, dict[str, Any]]:
+        calls.append((candidate, example, opt_state))
+        return 1.0, {"valid": True, "metrics": {"accuracy": 1.0}}
+
+    def reflection_lm(prompt: str) -> str:
+        reflection_calls.append(prompt)
+        return "```seed```"
+
+    config = GEPAConfig(
+        engine=EngineConfig(
+            seed=7,
+            max_metric_calls=1,
+            max_candidate_proposals=0,
+            parallel=False,
+            use_cloudpickle=False,
+        ),
+        reflection=ReflectionConfig(
+            reflection_lm=reflection_lm,
+            reflection_minibatch_size=1,
+        ),
+    )
+    result = optimize_anything(
+        seed_candidate={"text": "seed"},
+        evaluator=evaluator,
+        dataset=[{"split": "train"}],
+        valset=[{"split": "validation"}],
+        objective="Keep the deterministic seed.",
+        config=config,
+    )
+
+    assert version("gepa") == S.GEPA_VERSION == "0.1.4"
+    assert result.best_candidate == {"text": "seed"}
+    assert len(calls) == 1 and calls[0][1] == {"split": "validation"}
+    assert reflection_calls == []
+
+
+def test_22d_gepa_weighted_minimize_projection_has_no_pareto_scores() -> None:
+    raw = _spec()
+    raw["levels"][0]["objective"] = {
+        "evaluator_ref": "recursive_opt.evaluator.reasoning@1",
+        "intent": "Maximize accuracy while minimizing forward token ratio.",
+        "metrics": {
+            "accuracy": {
+                "direction": "maximize",
+                "source": "evaluation.metrics.accuracy",
+                "aggregate_examples": "mean",
+            },
+            "forward_token_ratio": {
+                "direction": "minimize",
+                "source": "evaluation.metrics.forward_token_ratio",
+                "aggregate_examples": "mean",
+            },
+        },
+        "selection": {
+            "mode": "weighted",
+            "weights": {"accuracy": 1.0, "forward_token_ratio": 1.0},
+        },
+    }
+    objective = S.compile_objective(
+        S.normalize_spec(raw)["levels"][0]["objective"],
+        capabilities={"weighted"},
+    )
+    better = EvaluationResult(
+        valid=True,
+        status="ok",
+        metrics={"accuracy": 0.8, "forward_token_ratio": 0.5},
+    )
+    worse = EvaluationResult(
+        valid=True,
+        status="ok",
+        metrics={"accuracy": 0.8, "forward_token_ratio": 1.5},
+    )
+
+    better_score, better_side_info = S._project_for_gepa(better, objective)
+    worse_score, worse_side_info = S._project_for_gepa(worse, objective)
+    invalid_score, invalid_side_info = S._project_for_gepa(
+        EvaluationResult(
+            valid=False,
+            status="invalid",
+            metrics={"accuracy": 1_000_000.0, "forward_token_ratio": 0.0},
+        ),
+        objective,
+    )
+
+    assert better_score > worse_score
+    assert "scores" not in better_side_info and "scores" not in worse_side_info
+    assert better_side_info["metrics"] == {
+        "accuracy": 0.8,
+        "forward_token_ratio": 0.5,
+    }
+    assert invalid_score == -1_000_000_000_000.0
+    assert invalid_side_info["valid"] is False
 
 
 def test_23_budget_is_enforced_before_evaluator_run() -> None:
