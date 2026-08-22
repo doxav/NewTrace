@@ -324,7 +324,7 @@ def execute_plan(plan: ExecutionPlan, resources: Optional[Mapping[str, Any]]=Non
         raise TypeError('plan must be an ExecutionPlan')
     runtime_resources = dict(resources or {})
     overrides = _validate_runtime_resources(plan.spec, runtime_resources)
-    output_root = _prepare_output_root(plan)
+    output_root = _prepare_output_root(plan, overrides)
     preflight_checker = runtime_resources.get('preflight_checker')
     if not plan.spec['runtime']['offline'] and (not plan.spec['runtime']['test_mode'] or preflight_checker is not None):
         preflight_llm_profiles(plan.spec, checker=preflight_checker)
@@ -611,7 +611,7 @@ def _override_identity(value: Any) -> str:
     name = getattr(target, '__qualname__', getattr(target, '__name__', type(value).__qualname__))
     return f'{module}.{name}'
 
-def _prepare_output_root(plan: ExecutionPlan) -> Optional[Path]:
+def _prepare_output_root(plan: ExecutionPlan, overrides: Mapping[str, str]) -> Optional[Path]:
     """Create the fingerprinted output root and persist immutable run inputs."""
     directory = plan.spec['outputs']['directory']
     if directory is None:
@@ -622,7 +622,7 @@ def _prepare_output_root(plan: ExecutionPlan) -> Optional[Path]:
     root.mkdir(parents=True, exist_ok=True)
     _write_json(root / 'raw_spec.json', plan.raw_spec)
     _write_json(root / 'normalized_spec.json', plan.spec)
-    _write_json(root / 'resolved_execution_plan.json', {**plan.explain(), 'units': [{'unit_id': unit.unit_id, 'seed': unit.seed, 'matrix': unit.matrix, 'levels': [{'id': level.level_id, 'fingerprint': level.fingerprint, 'engine': level.spec['engine']['name'], 'module_ref': level.spec['module']['ref'], 'evaluator_ref': level.spec['objective']['evaluator_ref'], 'dataset_refs': _dataset_identities(level.spec['datasets'])} for level in unit.levels]} for unit in plan.units]})
+    _write_json(root / 'resolved_execution_plan.json', {**plan.explain(), 'test_overrides': overrides, 'units': [{'unit_id': unit.unit_id, 'seed': unit.seed, 'matrix': unit.matrix, 'levels': [{'id': level.level_id, 'fingerprint': level.fingerprint, 'engine': level.spec['engine']['name'], 'module_ref': level.spec['module']['ref'], 'evaluator_ref': level.spec['objective']['evaluator_ref'], 'dataset_refs': _dataset_identities(level.spec['datasets'])} for level in unit.levels]} for unit in plan.units]})
     return root
 
 def _write_json(path: Path, value: Any) -> None:
@@ -650,9 +650,10 @@ def _load_resume(plan: ExecutionPlan, unit: _ExecutionUnit, level: _LevelPlan, r
         payload = json.loads(path.read_text(encoding='utf-8'))
     except (OSError, json.JSONDecodeError):
         return None
-    if payload.get('complete') is not True or payload.get('identity') != _resume_identity(plan, unit, level):
+    result = payload.get('result')
+    if payload.get('complete') is not True or payload.get('identity') != _resume_identity(plan, unit, level) or not isinstance(result, Mapping) or payload.get('result_sha256') != _result_checksum(result):
         return None
-    return _run_result_from_dict(payload['result'])
+    return _run_result_from_dict(result)
 
 def _persist_level_result(plan: ExecutionPlan, unit: _ExecutionUnit, level: _LevelPlan, result: RunResult, root: Optional[Path]) -> None:
     """Persist a complete level result and its operational side records."""
@@ -660,7 +661,8 @@ def _persist_level_result(plan: ExecutionPlan, unit: _ExecutionUnit, level: _Lev
         return
     path = _level_result_path(root, unit, level)
     path.parent.mkdir(parents=True, exist_ok=True)
-    _write_json(path, {'complete': True, 'identity': _resume_identity(plan, unit, level), 'result': result.to_dict()})
+    result_dict = result.to_dict()
+    _write_json(path, {'complete': True, 'identity': _resume_identity(plan, unit, level), 'result_sha256': _result_checksum(result_dict), 'result': result_dict})
     _write_json(path.parent / 'evaluator_records.json', result.metadata.get('evaluator_records', []))
     _write_json(path.parent / 'usage.json', result.usage)
     _write_json(path.parent / 'budget.json', result.budget)
@@ -674,7 +676,8 @@ def _persist_final_result(plan: ExecutionPlan, unit: _ExecutionUnit, result: Run
     if root is not None:
         path = root / 'units' / unit.unit_id / 'run_result.json'
         path.parent.mkdir(parents=True, exist_ok=True)
-        _write_json(path, result.to_dict())
+        result_dict = result.to_dict()
+        _write_json(path, {'complete': True, 'identity': _final_resume_identity(plan, unit), 'result_sha256': _result_checksum(result_dict), 'result': result_dict})
 
 def _load_final_result(plan: ExecutionPlan, unit: _ExecutionUnit, root: Optional[Path]) -> Optional[RunResult]:
     """Load the exact final result after every constituent level resumed."""
@@ -684,12 +687,24 @@ def _load_final_result(plan: ExecutionPlan, unit: _ExecutionUnit, root: Optional
     if not path.exists():
         return None
     try:
-        result = _run_result_from_dict(json.loads(path.read_text(encoding='utf-8')))
+        payload = json.loads(path.read_text(encoding='utf-8'))
+        result_dict = payload['result']
+        if payload.get('complete') is not True or payload.get('identity') != _final_resume_identity(plan, unit) or payload.get('result_sha256') != _result_checksum(result_dict):
+            return None
+        result = _run_result_from_dict(result_dict)
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
         return None
     if result.plan_fingerprint != plan.fingerprint or result.spec_fingerprint != unit.spec['fingerprint'] or result.unit_id != unit.unit_id or (len(result.level_results) != len(unit.levels)):
         return None
     return result
+
+def _final_resume_identity(plan: ExecutionPlan, unit: _ExecutionUnit) -> Dict[str, Any]:
+    """Return the exact identity of a complete experiment-unit result."""
+    return {'spec_fingerprint': plan.fingerprint, 'unit_id': unit.unit_id, 'levels': [level.fingerprint for level in unit.levels]}
+
+def _result_checksum(value: Mapping[str, Any]) -> str:
+    """Return a canonical integrity digest for one persisted result."""
+    return hashlib.sha256(_canonical_json(value).encode('utf-8')).hexdigest()
 
 def _run_result_from_dict(value: Mapping[str, Any]) -> RunResult:
     """Rebuild the canonical typed result from persisted JSON."""
@@ -878,7 +893,7 @@ def _candidate_to_artifact(seed_artifact: Mapping[str, Any], candidate: Any) -> 
 def _project_for_gepa(evaluation: EvaluationResult, objective: Mapping[str, Any]) -> Tuple[float, Dict[str, Any]]:
     """Project canonical metrics deterministically while retaining complete info."""
     config = objective['config']
-    feasible = satisfies_hard_constraints(evaluation, objective['hard_constraints'])
+    feasible = evaluation.valid and satisfies_hard_constraints(evaluation, objective['hard_constraints'])
     if not feasible:
         score = -1000000000000.0
     elif config.mode == 'weighted':
@@ -965,7 +980,6 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
     access = DatasetAccess(level.datasets)
     train = list(access.read('train', phase='fit'))
     validation = list(access.read('validation', phase='candidate_selection'))
-    holdout = list(access.read('holdout', phase='final_evaluation'))
     initial_artifact = _snapshot_level_module(spec, module)
     initial_validation: Optional[EvaluationResult] = None
     if fit and validation and spec['engine']['config']['validation_gate']:
@@ -1009,6 +1023,7 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
                 _restore_level_module(spec, module, initial_artifact)
             else:
                 _restore_level_module(spec, module, candidate_artifact)
+    holdout = list(access.read('holdout', phase='final_evaluation'))
     dataset = holdout or validation or train
     try:
         evaluation = _evaluate_dataset(module, dataset, prepared['final_context'], objective, evaluator, guard, prepared['metered_roles'], prepared['records'])
@@ -1033,6 +1048,10 @@ class _EvaluatedModule(Module):
         self.guard = guard
         self.metered_roles = metered_roles
         self.records = records
+
+    def parameters(self) -> List[Any]:
+        """Expose only declared trainable targets to the Trace trainer."""
+        return [parameter for parameter in self.module.parameters() if parameter.trainable]
 
     @bundle()
     def _attach(self, _parameters: Any, payload: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -1270,7 +1289,7 @@ def _evaluation_source(result: EvaluationResult, source: str) -> Any:
 
 def _objective_score(evaluation: EvaluationResult, objective: Mapping[str, Any]) -> float:
     """Project one evaluation for trainer ranking through ObjectiveConfig."""
-    if not satisfies_hard_constraints(evaluation, objective['hard_constraints']):
+    if not evaluation.valid or not satisfies_hard_constraints(evaluation, objective['hard_constraints']):
         return -1000000000000.0
     config = objective['config']
     if config.mode == 'scalar':
@@ -1509,7 +1528,8 @@ def _expand_execution_units(spec: Mapping[str, Any]) -> List[_ExecutionUnit]:
                 unit_spec = normalize_spec(unit_raw)
                 seed_label = 'none' if effective_seed is None else str(effective_seed)
                 unit_id = f'{arm_id}:seed-{seed_label}:matrix-{matrix_index}'
-                level_plans = tuple((_compile_level_plan(level) for level in unit_spec['levels']))
+                with _seed_scope(effective_seed):
+                    level_plans = tuple((_compile_level_plan(level) for level in unit_spec['levels']))
                 units.append(_ExecutionUnit(unit_id, arm_id, effective_seed, _freeze(selected), unit_spec, level_plans))
     return units
 

@@ -36,7 +36,7 @@
     },
     "private_api_calls": 230
   },
-  "git_sha": "c92f0af4af3e72a12b0228dbed215f86f8c9475b",
+  "git_sha": null,
   "graph": {
     "accepted_runtime_lines": 384,
     "removed_from_user_import": 4639,
@@ -75,11 +75,11 @@
       "opto/features/recursive_opt/optimize.py": 396,
       "opto/features/recursive_opt/progress.py": 184,
       "opto/features/recursive_opt/runmode.py": 328,
-      "opto/features/recursive_opt/spec.py": 2613,
+      "opto/features/recursive_opt/spec.py": 2633,
       "opto/features/recursive_opt/tracebench.py": 1327,
       "opto/features/recursive_opt/traces.py": 195
     },
-    "lines": 8730,
+    "lines": 8750,
     "public_top_level": {
       "classes": 43,
       "functions": 113,
@@ -103,17 +103,17 @@
       "spec_lines": 2688
     },
     "delta": {
-      "lines": -73,
-      "spec_lines": -75
+      "lines": -53,
+      "spec_lines": -55
     }
   },
   "runtime_plus_notebook": {
     "before": 8819,
-    "after": 8746,
-    "delta": -73
+    "after": 8766,
+    "delta": -53
   },
   "schema_version": "control-plane-footprint/v1",
-  "worktree": "recursive_opt v2alpha semantic closure verified at corrective commit",
+  "worktree": "recursive_opt v2alpha completion-audit correction before final commit",
   "baseline_sha": "21a0ad3d2f4f835ce2ffb1eef18c36a622265418",
   "files": {
     "opto/features/recursive_opt/__init__.py": 245,
@@ -129,9 +129,9 @@
     "opto/features/recursive_opt/optimize.py": 396,
     "opto/features/recursive_opt/progress.py": 184,
     "opto/features/recursive_opt/runmode.py": 328,
-    "opto/features/recursive_opt/spec.py": 2613,
+    "opto/features/recursive_opt/spec.py": 2633,
     "opto/features/recursive_opt/tracebench.py": 1327,
     "opto/features/recursive_opt/traces.py": 195
   },
-  "total_lines": 8730
+  "total_lines": 8750
 }

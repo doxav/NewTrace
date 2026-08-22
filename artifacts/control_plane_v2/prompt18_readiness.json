@@ -1,6 +1,6 @@
 {
-  "final_sha": "c92f0af4af3e72a12b0228dbed215f86f8c9475b",
-  "ready_for_prompt_18": true,
+  "final_sha": "PENDING_COMPLETION_AUDIT_COMMIT",
+  "ready_for_prompt_18": false,
   "gates": {
     "canonical_multilevel_schema": true,
     "single_execution_path": true,
@@ -13,7 +13,9 @@
     "seeds_applied": true,
     "outputs_and_resume": true,
     "gepa_adapter_ready": true,
-    "final_sha_verified": true
+    "final_sha_verified": false
   },
-  "blockers": []
+  "blockers": [
+    "Commit the completion-audit correction and pass the exact-SHA gate."
+  ]
 }

@@ -1,6 +1,6 @@
 # ADR: recursive-opt control plane v2alpha
 
-- Status: accepted; semantic closure committed at `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
+- Status: accepted; semantic closure at `c92f0af4af3e72a12b0228dbed215f86f8c9475b`, completion-audit correction pending final commit
 - Date: 2026-08-22
 - Baseline SHA: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
 - Public schema: `recursive-opt/v2alpha`
@@ -66,7 +66,11 @@ Any positive final runtime-plus-notebook delta must be itemized against a requir
 
 ### Corrective footprint result
 
-Against the semantic-closure baseline, recursive-opt runtime is **8,730** physical lines versus **8,803** (`-73`), and `spec.py` is **2,613** versus **2,688** (`-75`). Notebook code remains 16 lines, so runtime plus notebook is also `-73`. The public package export count remains 114: `register_evaluator` and `register_dataset` replace two obsolete exports. No footprint exception is required; `code_footprint_after.json` contains the per-file measurement.
+Against the semantic-closure baseline, recursive-opt runtime is **8,750** physical lines versus **8,803** (`-53`), and `spec.py` is **2,633** versus **2,688** (`-55`). Notebook code remains 16 lines, so runtime plus notebook is also `-53`. The public package export count remains 114: `register_evaluator` and `register_dataset` replace two obsolete exports. No footprint exception is required; `code_footprint_after.json` contains the per-file measurement.
+
+### Completion-audit correction
+
+The final causal audit found that a scripted real Trace optimizer could still mutate a non-target component through candidate restoration. The Trace wrapper now exposes only parameters marked trainable. The same audit made invalid evaluations unrankable for Trace and GEPA, applies the execution-unit seed while resolving registered datasets, records test-override identity in the resolved manifest, delays holdout materialization until fitting and selection finish, and protects persisted level and final results with canonical integrity digests. Tests exercise each behavior through the runtime path, including a cross-process zero-call resume.
 
 ## Public-field classification
 

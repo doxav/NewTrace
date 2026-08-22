@@ -64,30 +64,30 @@ The baseline findings above are immutable audit evidence. The following rows rec
 | 1 | closed | `normalize_spec`, `_normalize_level` | 01–03: canonical one/two-level form and flat shorthand migration |
 | 2 | closed | `_ExecutionUnit.levels`, `execute_plan` | 05: two levels execute in order |
 | 3 | closed | `_migrate_legacy_level`, `_run_legacy_level_engine` | 04 plus all 47 legacy spec regressions |
-| 4 | closed | `_run_trace_engine` calls `recursive_opt.optimize.optimize` | 07 observes the real optimize entry with real `ParameterNode`s |
+| 4 | closed | `_run_trace_engine` calls `recursive_opt.optimize.optimize`; `_EvaluatedModule.parameters` exposes only trainable targets | 07 drives a scripted real optimizer, mutates the declared target, and proves a protected component remains unchanged |
 | 5 | closed | validated Trace engine config reaches optimizer/trainer | 08 changes only iterations and changes candidate accounting |
 | 6 | closed | public `register_evaluator`/`_evaluator_entry` | 11 executes a registered exact evaluator ref |
-| 7 | closed | public `register_dataset`/`_resolve_datasets` | 12 resolves all three splits through an exact ref |
-| 8 | closed | `_validate_runtime_resources` | 13 rejects hidden behavioral resources unless explicit nonportable test mode permits the named adapter |
+| 7 | closed | public `register_dataset`/`_resolve_datasets` inside `_seed_scope` | 12 resolves all three splits through an exact ref; 25 proves seeded resolver sampling |
+| 8 | closed | `_validate_runtime_resources`, `_prepare_output_root` | 13 rejects hidden behavioral resources unless explicit nonportable test mode permits and persists the named adapter identity |
 | 9 | closed | `_build_level_module` validates/restores artifact | 09 changes only artifact and changes accuracy |
-| 10 | closed | `_apply_trainable_targets` | 10 proves selected/nonselected targets and pre-execution unknown-target failure |
+| 10 | closed | `_apply_trainable_targets`, `_EvaluatedModule.parameters` | 07 and 10 prove selected/nonselected targets, real optimizer isolation, exact snapshot/restore, and pre-execution unknown-target failure |
 | 11 | closed | `_build_role_clients`, `_GuardedRoleClient` | 14 and 16 prove construction, fallback order, and exactly-once role usage |
 | 12 | closed | `execute_plan` automatic live preflight | 15 records exact primary and fallback models |
-| 13 | closed | `_seed_scope` and GEPA seed mapping | 25 proves same-seed equality and different-seed divergence |
+| 13 | closed | `_seed_scope` covers unit compilation/execution and GEPA seed mapping | 25 proves same-seed equality and different-seed divergence for evaluators, registered datasets, optimizer construction, Python RNG, and NumPy RNG |
 | 14 | closed | shared `_BudgetGuard` before consuming operations | 23 proves zero-budget means zero evaluator calls |
 | 15 | closed | `_should_raise` and budget-exhausted result path | 24 proves fail, raise, and return-best-valid |
-| 16 | closed | `_prepare_output_root`, atomic `_write_json`, persistence helpers | 26 verifies every required persisted record |
-| 17 | closed | `_resume_identity`, `_load_resume`, `_load_final_result` | 27 uses two processes and observes no rewrite/additional evaluation |
+| 16 | closed | `_prepare_output_root`, atomic `_write_json`, persistence helpers | 13 and 26 verify the resolved override identity and every required record, including artifact suppression only when requested |
+| 17 | closed | exact resume identities plus canonical result checksums in `_load_resume`/`_load_final_result` | 27 proves zero evaluator calls in a second process and rejects/repairs partial or tampered results |
 | 18 | closed | `_phase_context` exposes a holdout-free spec/datasets/input view | 21 fault-injects all three forbidden access paths |
 | 19 | closed | `_run_gepa_engine` omits `test_set`; final holdout evaluation follows extraction | 22 asserts holdout never enters OptimizeAnything |
-| 20 | closed | `_aggregate_evaluations`, feedback-channel filtering, descriptor defaulting | 17–20 prove selection/constraints/rollback; existing aggregation/feedback tests prove causal outputs |
+| 20 | closed | `_aggregate_evaluations`, feedback-channel filtering, descriptor defaulting, validity-aware Trace/GEPA projection | 17–20b prove selection/constraints/rollback and causal aggregation, feedback, intent, and invalid-candidate rejection |
 | 21 | closed | `_resolve_knowledge_store`, `_knowledge_store` | 28 rejects an unregistered store ref |
 | 22 | closed | semantic validation rejects nonempty promotion/rollback rules | existing knowledge-policy rejection test plus 13b anti-no-op validation matrix |
 | 23 | closed | `_prepare_level_inputs` iterates every retrieved card | 29 proves both ids in lineage and downstream binding |
 | 24 | closed | `execute_plan` populates `_upstream` from actual earlier results | 05–06 prove actual propagation and counterfactual behavior |
 | 25 | closed | six semantic migration classifications and precise representative dependencies | 30 plus `migration_report.json.representatives` |
-| 26 | closed | the real Trace path uses `optimize` on `_EvaluatedModule` | 07; no custom fit callback exists in portable execution |
+| 26 | closed | the real Trace path uses `optimize` on `_EvaluatedModule` | 07 performs a real scripted candidate update through `optimize`; no direct artifact restore or custom fit callback implements the improvement |
 | 27 | closed | exact installed GEPA 0.1.4 types and keyword-only evaluator contract | 22b runs without a provider or paid call |
-| 28 | closed | proof, footprint, and readiness name corrective commit `c92f0af4af3e72a12b0228dbed215f86f8c9475b` | 35 is run with that exact SHA after the commit |
+| 28 | pending final SHA | proof, footprint, and readiness are prepared for the completion-audit commit | 35 will run with the exact new SHA after the commit |
 
 Additional anti-no-op closure in test 13b rejects `runtime.strict_refs=false`, binding-level `ordering_only`, nonempty `objective.aggregation.weights`, descriptor-form `directions`, unsupported role `base_url`, and per-level output directory/format overrides. These fields now fail explicitly instead of altering only a fingerprint.

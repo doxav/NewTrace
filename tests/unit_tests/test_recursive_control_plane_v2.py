@@ -11,7 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 import numpy as np
 import pytest
@@ -44,6 +44,31 @@ class _NoLLMOptimizer(Optimizer):
 
     def backward(self, *_args: Any, **_kwargs: Any) -> None:
         """Accept trainer feedback without external work."""
+
+
+class _ScriptedOptimizer(Optimizer):
+    """Propose deterministic values through the real Trace optimizer protocol."""
+
+    def __init__(self, parameters: list[Any], **_kwargs: Any) -> None:
+        super().__init__(parameters)
+
+    def _step(self, *_args: Any, **_kwargs: Any) -> dict[Any, str]:
+        """Improve the target while attempting to mutate a protected component."""
+        return {
+            parameter: "correct" if parameter.name.startswith("planner:") else "mutated"
+            for parameter in self.parameters
+        }
+
+
+_OPTIMIZER_RANDOM: list[tuple[float, float]] = []
+
+
+class _SeedRecordingOptimizer(_NoLLMOptimizer):
+    """Record RNG state from inside optimizer construction."""
+
+    def __init__(self, parameters: list[Any], **kwargs: Any) -> None:
+        _OPTIMIZER_RANDOM.append((random.random(), float(np.random.random())))
+        super().__init__(parameters, **kwargs)
 
 
 class _FakeResponse:
@@ -232,13 +257,47 @@ def _knowledge_evaluator(
     )
 
 
+def _aggregation_evaluator(
+    _module: Module, dataset: Any, _context: Mapping[str, Any]
+) -> EvaluationResult:
+    """Expose per-example metrics, feedback, and trace for objective controls."""
+    value = float(dataset[0]["value"])
+    return EvaluationResult(
+        valid=True,
+        status="ok",
+        metrics={"quality": value},
+        feedback=f"feedback-{value:g}",
+        trace={"value": value},
+    )
+
+
+def _invalid_candidate_evaluator(
+    module: Module, _dataset: Any, _context: Mapping[str, Any]
+) -> EvaluationResult:
+    """Give an invalid candidate a deceptively high numeric metric."""
+    candidate = module({})["components"]["planner"] == "correct"
+    return EvaluationResult(
+        valid=not candidate,
+        status="invalid" if candidate else "ok",
+        metrics={"quality": 1.0 if candidate else 0.5},
+    )
+
+
 _DATASET_CALLS: list[tuple[str, dict[str, Any]]] = []
+_RANDOM_DATASET_CALLS: list[tuple[int, float, float]] = []
 
 
 def _registered_dataset(split: str, config: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Resolve a deterministic registered split and record its exact config."""
     _DATASET_CALLS.append((split, dict(config)))
     return [{"component": "planner", "expected": config["expected"], "input": {}}]
+
+
+def _random_dataset(split: str, _config: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Expose resolver sampling so compilation seed scope is observable."""
+    sample = (len(_RANDOM_DATASET_CALLS), random.random(), float(np.random.random()))
+    _RANDOM_DATASET_CALLS.append(sample)
+    return [{"split": split, "sample": sample[1:]}]
 
 
 @pytest.fixture(autouse=True)
@@ -252,8 +311,13 @@ def _registered_contracts() -> Any:
     register_evaluator("tests.evaluator.roles@1", _role_evaluator)
     register_evaluator("tests.evaluator.random@1", _random_evaluator)
     register_evaluator("tests.evaluator.knowledge@1", _knowledge_evaluator)
+    register_evaluator("tests.evaluator.aggregation@1", _aggregation_evaluator)
+    register_evaluator("tests.evaluator.invalid_candidate@1", _invalid_candidate_evaluator)
     register_dataset("tests.dataset.reasoning@1", _registered_dataset)
+    register_dataset("tests.dataset.random@1", _random_dataset)
     _DATASET_CALLS.clear()
+    _RANDOM_DATASET_CALLS.clear()
+    _OPTIMIZER_RANDOM.clear()
     reset_budget()
     yield
     reset_budget()
@@ -353,9 +417,11 @@ def test_06_upstream_output_counterfactual() -> None:
 
 
 def test_07_real_trace_optimize_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    raw = _spec([_level(engine="trace")])
+    level = _level(engine="trace", planner="wrong")
+    level["module"]["config"]["components"]["critic"] = "protected"
+    raw = _spec([level])
     raw["runtime"]["test_mode"] = True
-    raw["levels"][0]["engine"]["config"] = {"iterations": 1, "num_candidates": 1}
+    raw["levels"][0]["engine"]["config"] = {"iterations": 2, "num_candidates": 1}
     original = S.optimize
     calls = {"count": 0}
 
@@ -365,10 +431,17 @@ def test_07_real_trace_optimize_path(monkeypatch: pytest.MonkeyPatch) -> None:
         return original(*args, **kwargs)
 
     monkeypatch.setattr(S, "optimize", observed)
-    result = S.run_spec(raw, resources={"optimizer": _NoLLMOptimizer})
+    result = S.run_spec(raw, resources={"optimizer": _ScriptedOptimizer})
 
     assert result.valid and calls["count"] == 1
     assert result.metadata["trace_optimize_path"] is True
+    assert result.artifact["components"] == {
+        "planner": "correct", "critic": "protected",
+    }
+    assert result.portable is result.promotable is False
+    assert result.metadata["test_overrides"]["optimizer"].endswith(
+        "._ScriptedOptimizer"
+    )
 
 
 def test_08_engine_config_is_causal() -> None:
@@ -410,17 +483,37 @@ def test_10_surface_targets_are_causal_and_validated() -> None:
         S.build_module(raw, level_id="level-a")
 
 
+def test_10b_module_config_inputs_and_snapshot_restore_are_exact() -> None:
+    raw = _spec()
+    raw["levels"][0]["module"]["inputs"] = {"prior": "bound"}
+    module = S.build_module(raw, level_id="level-a")
+    snapshot = S.snapshot_module(raw, module, level_id="level-a")
+
+    assert module({})["inputs"]["prior"] == "bound"
+    assert snapshot == {"components": {"planner": "correct"}}
+    module.components["planner"]._set("changed")
+    S.restore_module(raw, module, snapshot, level_id="level-a")
+    assert S.snapshot_module(raw, module, level_id="level-a") == snapshot
+
+    changed = _spec()
+    changed["levels"][0]["module"]["config"]["components"]["planner"] = "changed"
+    assert S.build_module(changed, level_id="level-a")({})["components"] != module({})["components"]
+
+
 def test_11_public_evaluator_registry_executes() -> None:
     raw = _spec()
+    default_fingerprint = S.normalize_spec(raw)["fingerprint"]
     raw["levels"][0]["objective"] = _accuracy_objective("tests.evaluator.bound@1")
     raw["levels"][0]["module"]["inputs"] = {"upstream": {"planner": "correct"}}
     raw["levels"][0]["datasets"]["holdout"] = [{"expected": "correct"}]
 
     assert S.run_spec(raw).evaluation.metrics["accuracy"] == 1.0
+    assert S.normalize_spec(raw)["fingerprint"] != default_fingerprint
 
 
 def test_12_public_dataset_registry_executes() -> None:
     raw = _spec()
+    inline_fingerprint = S.normalize_spec(raw)["fingerprint"]
     raw["levels"][0]["datasets"] = {
         split: {
             "ref": "tests.dataset.reasoning@1",
@@ -434,9 +527,10 @@ def test_12_public_dataset_registry_executes() -> None:
     assert [split for split, _config in _DATASET_CALLS] == [
         "train", "validation", "holdout"
     ]
+    assert S.normalize_spec(raw)["fingerprint"] != inline_fingerprint
 
 
-def test_13_strict_rejection_of_hidden_behavioral_resources() -> None:
+def test_13_strict_rejection_of_hidden_behavioral_resources(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="portable strict mode"):
         S.run_spec(_spec(), resources={"evaluator": _bound_evaluator})
 
@@ -444,6 +538,15 @@ def test_13_strict_rejection_of_hidden_behavioral_resources() -> None:
     test_spec["runtime"]["test_mode"] = True
     with pytest.raises(ValueError, match="unknown runtime resources"):
         S.run_spec(test_spec, resources={"fit": lambda: None})
+
+    test_spec["outputs"] = {"directory": str(tmp_path)}
+    result = S.run_spec(test_spec, resources={"evaluator": _role_evaluator})
+    manifest = json.loads(
+        (tmp_path / result.plan_fingerprint / "resolved_execution_plan.json").read_text()
+    )
+    assert result.portable is result.promotable is False
+    assert manifest["test_overrides"] == result.metadata["test_overrides"]
+    assert manifest["test_overrides"]["evaluator"].endswith("._role_evaluator")
 
 
 def test_13b_decorative_schema_controls_are_rejected() -> None:
@@ -486,6 +589,27 @@ def test_13b_decorative_schema_controls_are_rejected() -> None:
     with pytest.raises(ValueError, match="base_url is unsupported"):
         S.normalize_spec(role_override)
 
+    knowledge_policy = _spec()
+    knowledge_policy["knowledge"] = {"promotion_rule": {"min_support": 2}}
+    with pytest.raises(ValueError, match="promotion_rule/rollback_rule"):
+        S.normalize_spec(knowledge_policy)
+
+    unknown_policy = _spec()
+    unknown_policy["budget"] = {"on_exceed": "continue"}
+    with pytest.raises(ValueError, match="on_exceed"):
+        S.normalize_spec(unknown_policy)
+
+    entry = S._module_entry("recursive_opt.module.reasoning_workflow@1")
+    unvalidated = S.ModuleRegistryEntry(
+        build=entry.build,
+        snapshot=entry.snapshot,
+        restore=entry.restore,
+        validate_artifact=entry.validate_artifact,
+        capabilities=entry.capabilities,
+    )
+    with pytest.raises(ValueError, match="config validator"):
+        S.register_module("tests.module.unvalidated@1", unvalidated)
+
 
 def test_14_role_client_construction_and_fallback_order() -> None:
     raw = _spec()
@@ -502,7 +626,7 @@ def test_14_role_client_construction_and_fallback_order() -> None:
     raw["levels"][0]["objective"] = _accuracy_objective("tests.evaluator.roles@1")
     created: list[str] = []
 
-    def factory(profile: Mapping[str, Any], _role: str) -> _FakeClient:
+    def factory(profile: Mapping[str, Any], _role: str) -> Any:
         """Build a failing primary and successful declared fallback."""
         created.append(profile["resolved_model"])
         return _FakeClient(
@@ -565,6 +689,9 @@ def test_16_per_role_usage_is_attributed_once() -> None:
     for role in ("forward", "optimizer", "feedback", "judge"):
         assert result.usage[role]["calls"] == 1
         assert result.usage[role]["total_tokens"] == 5
+    assert result.budget["accounted"]["optimizer_llm_calls"] == 1
+    assert result.budget["accounted"]["eval_llm_calls"] == 3
+    assert result.budget["accounted"]["total_tokens"] == 20
 
 
 def test_17_objective_weighted_selection(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -628,6 +755,77 @@ def test_20_validation_gate_rolls_back_worse_candidate(
     assert S.run_spec(_spec([unguarded])).artifact["components"]["planner"] == "candidate"
 
 
+def test_20b_objective_aggregation_feedback_intent_and_invalidity_are_causal() -> None:
+    def objective(aggregation: str, channels: list[str], intent: str) -> dict[str, Any]:
+        """Build an objective whose descriptor inherits aggregation mode."""
+        return {
+            "evaluator_ref": "tests.evaluator.aggregation@1",
+            "intent": intent,
+            "metrics": {
+                "quality": {
+                    "direction": "maximize",
+                    "source": "evaluation.metrics.quality",
+                },
+            },
+            "selection": {"mode": "scalar", "score_key": "quality"},
+            "aggregation": {"mode": aggregation},
+            "feedback_channels": channels,
+        }
+
+    mean = _spec()
+    mean["levels"][0]["datasets"]["holdout"] = [{"value": 1}, {"value": 3}]
+    mean["levels"][0]["objective"] = objective(
+        "mean", ["natural_language", "trace"], "mean intent",
+    )
+    summed = copy.deepcopy(mean)
+    summed["levels"][0]["objective"]["aggregation"]["mode"] = "sum"
+    silent = copy.deepcopy(mean)
+    silent["levels"][0]["objective"]["feedback_channels"] = []
+    renamed = copy.deepcopy(mean)
+    renamed["levels"][0]["objective"]["intent"] = "renamed intent"
+
+    mean_result = S.run_spec(mean)
+    sum_result = S.run_spec(summed)
+    silent_result = S.run_spec(silent)
+    assert mean_result.evaluation.metrics["quality"] == 2.0
+    assert sum_result.evaluation.metrics["quality"] == 4.0
+    assert mean_result.evaluation.feedback and mean_result.evaluation.trace
+    assert silent_result.evaluation.feedback == "" and silent_result.evaluation.trace is None
+    assert S.compile_plan(mean).fingerprint != S.compile_plan(summed).fingerprint
+    assert S.compile_plan(mean).fingerprint != S.compile_plan(silent).fingerprint
+    assert S.compile_plan(mean).fingerprint != S.compile_plan(renamed).fingerprint
+
+    invalid = _spec([_level(engine="trace", planner="wrong")])
+    invalid["runtime"]["test_mode"] = True
+    invalid["levels"][0]["objective"] = {
+        "evaluator_ref": "tests.evaluator.invalid_candidate@1",
+        "metrics": {
+            "quality": {
+                "direction": "maximize",
+                "source": "evaluation.metrics.quality",
+                "aggregate_examples": "mean",
+            },
+        },
+        "selection": {"mode": "scalar", "score_key": "quality"},
+    }
+    invalid["levels"][0]["engine"]["config"] = {
+        "iterations": 1, "num_candidates": 1,
+    }
+    result = S.run_spec(invalid, resources={"optimizer": _ScriptedOptimizer})
+    assert result.valid
+    assert result.artifact["components"]["planner"] == "wrong"
+
+    compiled = S.compile_objective(
+        S.normalize_spec(invalid)["levels"][0]["objective"],
+        capabilities={"scalar"},
+    )
+    score, info = S._project_for_gepa(
+        EvaluationResult(valid=False, status="invalid", metrics={"quality": 100.0}),
+        compiled,
+    )
+    assert score == -1_000_000_000_000.0 and info["valid"] is False
+
+
 def test_21_holdout_is_absent_from_every_fit_context() -> None:
     observations = {"fit_calls": 0}
 
@@ -640,10 +838,14 @@ def test_21_holdout_is_absent_from_every_fit_context() -> None:
             assert "holdout" not in context["spec"]["datasets"]
             assert "holdout" not in context["datasets"]
             assert "holdout" not in context["inputs"]
+            assert "holdout-secret" not in repr(context)
         return EvaluationResult(valid=True, status="ok", metrics={"accuracy": 1.0})
 
     raw = _spec([_level(engine="trace")])
     raw["runtime"]["test_mode"] = True
+    raw["levels"][0]["datasets"]["holdout"] = [
+        {"secret_holdout": "holdout-secret"},
+    ]
     raw["levels"][0]["engine"]["config"] = {"iterations": 1, "num_candidates": 1}
     result = S.run_spec(
         raw, resources={"optimizer": _NoLLMOptimizer, "evaluator": evaluator}
@@ -764,6 +966,53 @@ def test_24_on_exceed_policies() -> None:
     assert best.artifact["components"]["planner"] == "correct"
 
 
+@pytest.mark.parametrize(
+    ("budget", "role"),
+    [
+        ({"eval_llm_calls": 0}, "forward"),
+        ({"optimizer_llm_calls": 0}, "optimizer"),
+        ({"total_tokens": 4}, "forward"),
+        ({"wall_time_s": 0}, "forward"),
+    ],
+)
+def test_24b_each_runtime_budget_stops_before_provider_call(
+    budget: dict[str, Any], role: str,
+) -> None:
+    raw = _spec()
+    raw["runtime"] = {"offline": False, "test_mode": True}
+    raw["llm_profiles"] = {
+        "main": {"provider": "fake", "model": "fake/exact", "max_tokens": 5},
+    }
+    raw["levels"][0]["llm_roles"] = {role: "main"}
+    raw["levels"][0]["objective"] = _accuracy_objective("tests.evaluator.roles@1")
+    raw["budget"] = {**budget, "on_exceed": "fail"}
+    calls = {"count": 0}
+
+    def factory(profile: Mapping[str, Any], _role: str) -> Callable[..., _FakeResponse]:
+        """Return a client whose invocation count must stay at zero."""
+        client = _FakeClient(profile["resolved_model"])
+        original = client.__call__
+
+        class CountingClient:
+            """Count calls before delegating to the deterministic fake client."""
+
+            def __call__(self, *args: Any, **kwargs: Any) -> _FakeResponse:
+                calls["count"] += 1
+                return original(*args, **kwargs)
+
+        return CountingClient()
+
+    result = S.run_spec(
+        raw,
+        resources={
+            "llm_factory": factory,
+            "preflight_checker": lambda _model: None,
+        },
+    )
+    assert result.status == "error"
+    assert calls["count"] == 0
+
+
 def test_25_seed_determinism() -> None:
     objective = {
         "evaluator_ref": "tests.evaluator.random@1",
@@ -791,6 +1040,37 @@ def test_25_seed_determinism() -> None:
     assert run(7) == run(7)
     assert run(7) != run(8)
 
+    def resolved_samples(seed: int) -> Mapping[str, Any]:
+        """Compile registered dataset sampling under one scoped seed."""
+        raw = _spec()
+        raw["runtime"]["seed"] = seed
+        raw["levels"][0]["datasets"] = {
+            split: {"ref": "tests.dataset.random@1", "split": split, "config": {}}
+            for split in ("train", "validation", "holdout")
+        }
+        _RANDOM_DATASET_CALLS.clear()
+        return S.compile_plan(raw).units[0].levels[0].datasets
+
+    assert resolved_samples(7) == resolved_samples(7)
+    assert resolved_samples(7) != resolved_samples(8)
+
+    def optimizer_sample(seed: int) -> tuple[float, float]:
+        """Observe RNG state inside a real trainer-created optimizer."""
+        raw = _spec([_level(engine="trace")])
+        raw["runtime"].update({"seed": seed, "test_mode": True})
+        raw["levels"][0]["engine"]["config"] = {
+            "iterations": 1, "num_candidates": 1,
+        }
+        _OPTIMIZER_RANDOM.clear()
+        S.run_spec(raw, resources={"optimizer": _SeedRecordingOptimizer})
+        return _OPTIMIZER_RANDOM[0]
+
+    assert optimizer_sample(7) == optimizer_sample(7)
+    assert optimizer_sample(7) != optimizer_sample(8)
+    assert S._gepa_config_values({}, 7, S.normalize_spec(_spec())["budget"])[
+        "engine"
+    ]["seed"] == 7
+
 
 def test_26_output_persistence(tmp_path: Path) -> None:
     raw = _spec()
@@ -808,6 +1088,23 @@ def test_26_output_persistence(tmp_path: Path) -> None:
     ):
         assert (level_root / name).exists()
     assert (root / "units" / result.unit_id / "run_result.json").exists()
+    final_payload = json.loads(
+        (root / "units" / result.unit_id / "run_result.json").read_text()
+    )
+    assert final_payload["complete"] is True and final_payload["result_sha256"]
+
+    without_artifact = _spec()
+    without_artifact["outputs"] = {
+        "directory": str(tmp_path / "without-artifact"),
+        "save_artifacts": False,
+    }
+    result = S.run_spec(without_artifact)
+    level_root = (
+        tmp_path / "without-artifact" / result.plan_fingerprint / "units"
+        / result.unit_id / "levels" / "level-a"
+    )
+    assert (level_root / "result.json").exists()
+    assert not (level_root / "module_artifact.json").exists()
 
 
 def test_27_cross_process_resume(tmp_path: Path) -> None:
@@ -828,10 +1125,36 @@ def test_27_cross_process_resume(tmp_path: Path) -> None:
         root / "units" / payload["unit_id"] / "levels" / "level-a" / "result.json"
     )
     first_mtime = level_path.stat().st_mtime_ns
-    second = subprocess.run(command, check=True, capture_output=True, text=True, env=env)
+    fail_if_evaluated = (
+        "import json,sys;"
+        "from opto.features.recursive_opt import spec as S;"
+        "S._EVALUATOR_REGISTRY['recursive_opt.evaluator.reasoning@1']="
+        "lambda *_a,**_k:(_ for _ in ()).throw(RuntimeError('evaluator called'));"
+        "print(json.dumps(S.run_spec(json.loads(sys.argv[1])).to_dict(),sort_keys=True))"
+    )
+    second = subprocess.run(
+        [sys.executable, "-c", fail_if_evaluated, json.dumps(raw)],
+        check=True, capture_output=True, text=True, env=env,
+    )
 
     assert first.stdout == second.stdout
     assert level_path.stat().st_mtime_ns == first_mtime
+
+    partial = json.loads(level_path.read_text())
+    partial["complete"] = False
+    level_path.write_text(json.dumps(partial), encoding="utf-8")
+    partial_mtime = level_path.stat().st_mtime_ns
+    subprocess.run(command, check=True, capture_output=True, text=True, env=env)
+    repaired = json.loads(level_path.read_text())
+    assert repaired["complete"] is True
+    assert level_path.stat().st_mtime_ns != partial_mtime
+
+    repaired["result"]["artifact"] = {"components": {"planner": "tampered"}}
+    level_path.write_text(json.dumps(repaired), encoding="utf-8")
+    subprocess.run(command, check=True, capture_output=True, text=True, env=env)
+    verified = json.loads(level_path.read_text())
+    assert verified["result"]["artifact"]["components"]["planner"] == "correct"
+    assert verified["result_sha256"] == S._result_checksum(verified["result"])
 
 
 def test_28_knowledge_store_resolution() -> None:
@@ -893,6 +1216,11 @@ def test_30_semantic_migration_classifications() -> None:
     assert all(entry["classification"] in expected for entry in report["entries"])
     assert report["summary"]["normalized_only"] == 10
     assert report["summary"]["local_nonportable"] == 6
+    assert set(report["representatives"]) == {"config", "family_policy", "prior"}
+    for representative in report["representatives"].values():
+        assert representative["classification"] == "normalized_only"
+        assert representative["missing_dependency"]
+        assert Path(representative["source"]).exists()
 
 
 def test_31_fixed_trace_gepa_same_spec_shape() -> None:
@@ -941,8 +1269,10 @@ def test_32_notebook_ast_is_spec_only() -> None:
     )
     tree = ast.parse(code)
     forbidden = {
-        "compile_level", "optimize", "_final_eval", "MemoryLite", "MetaLevel",
-        "CodeArtifactLevel",
+        "compile_level", "optimize", "optimize_config_numeric", "_final_eval",
+        "MemoryLite", "BaseLevel", "ArtifactLevel", "MetaLevel",
+        "CodeArtifactLevel", "CapabilityArtifactLevel", "FamilyPolicyLevel",
+        "PriorInductionLevel", "OptoPrime", "optimize_anything",
     }
     calls = {
         node.func.attr if isinstance(node.func, ast.Attribute) else node.func.id
@@ -952,10 +1282,16 @@ def test_32_notebook_ast_is_spec_only() -> None:
 
     assert "control-plane smoke notebook" in json.dumps(notebook).lower()
     assert calls.isdisjoint(forbidden)
+    assert calls <= {
+        "Path", "read_text", "loads", "normalize_spec", "explain_spec",
+        "run_spec", "display",
+    }
     assert not any(
         isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
         for node in ast.walk(tree)
     )
+    assert not any(isinstance(node, (ast.For, ast.AsyncFor, ast.While)) for node in ast.walk(tree))
+    assert "environ" not in code and "putenv" not in code and "GEPA" not in code
 
 
 def test_33_notebook_executes_in_clean_offline_kernel() -> None:

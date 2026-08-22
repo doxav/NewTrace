@@ -4,7 +4,19 @@ Original implementation baseline: `6fc278a398709fe79a0fc9be22bae99bffd8cba6`
 
 Semantic-closure baseline: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
 
-Corrective implementation: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
+Semantic-closure implementation: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
+
+Completion-audit correction: `PENDING_COMPLETION_AUDIT_COMMIT`
+
+## Completion-audit gate — 2026-08-22
+
+- A scripted optimizer through the real `recursive_opt.optimize.optimize` path initially changed both the declared target and a protected component. The failing causal test exposed that candidate application did not honor `ParameterNode.trainable`; `_EvaluatedModule.parameters()` now restricts the trainer to declared targets, and the same test proves the target changes while the protected component does not.
+- Invalid high-metric candidates are floored before both Trace ranking and GEPA projection. Aggregation, feedback channels, intent fingerprinting, exact module snapshot/restore, budget counters, and migration representatives now have direct assertions.
+- Registered dataset resolution and optimizer construction are executed inside the unit seed scope and are tested for same-seed equality and different-seed divergence across Python and NumPy RNGs.
+- Holdout materialization occurs only after fitting and candidate selection. Test-override identity is persisted in the resolved manifest.
+- Level and final resume payloads carry canonical SHA-256 result digests. A second process replaces the evaluator with a raising implementation to prove a valid resume makes zero evaluator calls; partial and tampered artifacts are rejected and repaired.
+- The pre-commit network-blocked mandated regression passed: `283 passed, 3 skipped, 1 warning in 11.72s`. The complete unit suite passed: `463 passed, 4 skipped, 1 warning in 33.27s`. The control-plane file alone passed `42 passed, 1 skipped in 5.90s`; the legacy spec file passed `47 passed in 1.92s`; changed-file/graph Ruff and `git diff --check` passed.
+- No live provider or paid call was executed. The post-commit exact-SHA reruns remain pending.
 
 ## Corrective semantic-closure gate — 2026-08-22
 

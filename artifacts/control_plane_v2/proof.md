@@ -2,13 +2,14 @@
 
 - Branch: `recursive_opt`
 - Baseline SHA: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
-- Corrective implementation SHA: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
+- Semantic-closure implementation SHA: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
+- Completion-audit implementation SHA: `PENDING_COMPLETION_AUDIT_COMMIT`
 - Environment: conda `humanllm`, Python 3.12
 - Date: 2026-08-22 (Europe/Paris)
 - Live provider or paid calls: **none**
 - CI workflow: `.github/workflows/recursive-opt-v2.yml`, job `recursive-opt v2 offline (required)`; manual no-paid-call job `GEPA 0.1.4 contract (manual)`
 
-The implementation commit has parent `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`. SHA-bearing evidence is a post-commit worktree update because a commit cannot contain its own hash.
+The completion-audit implementation commit will have parent `fc00beac05fc1a73b0c017b7615b56b4162f12f1`. SHA-bearing evidence is a post-commit worktree update because a commit cannot contain its own hash.
 
 ## Invariant matrix
 
@@ -59,7 +60,7 @@ env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
   tests/unit_tests/test_recursive_opt_abc_probe.py
 ```
 
-Pre-commit authoritative result after evidence synchronization: **277 passed, 3 skipped, 1 warning in 11.14s**. A repeat with `-rs` reported the same 277/3 result in 11.31s.
+Pre-commit authoritative completion-audit result: **283 passed, 3 skipped, 1 warning in 11.72s**.
 
 Complete unit suite:
 
@@ -71,7 +72,7 @@ env -u OPENAI_API_KEY -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
   --allow-hosts=127.0.0.1,localhost tests/unit_tests
 ```
 
-Pre-commit authoritative result after evidence synchronization: **457 passed, 4 skipped, 1 warning in 33.28s**.
+Pre-commit authoritative completion-audit result: **463 passed, 4 skipped, 1 warning in 33.27s**.
 
 Pre-commit skips: two tests require optional graph/telemetry backends; one is the deliberately post-commit final-SHA gate; the complete-unit-only fourth skip requires the Graphviz `dot` executable. GEPA 0.1.4 and LangGraph contract tests ran rather than skipping. The single warning is LangGraph's pending default change for serializer `allowed_objects`.
 
@@ -86,7 +87,7 @@ ruff check opto/features/graph \
 
 Result: **All checks passed**. A broader unchanged recursive-opt directory scan reports nine baseline findings in untouched files (`capabilities.py`, `experiments.py`, `inspect_utils.py`, `levels.py`, and `tracebench.py`); they are not suppressed or mixed into this corrective patch.
 
-Post-commit exact-SHA result with `RECURSIVE_OPT_FINAL_SHA=c92f0af4af3e72a12b0228dbed215f86f8c9475b`: **278 passed, 2 skipped, 1 warning in 11.17s** for the mandated regression, and **458 passed, 3 skipped, 1 warning in 32.03s** for the complete unit suite. The SHA gate ran and passed. The two common skips require optional graph/telemetry backends; the complete-suite-only third skip requires Graphviz `dot`. Changed-file/graph Ruff again reported **All checks passed**.
+Post-commit exact-SHA verification: **pending completion-audit commit**.
 
 ## Migration and footprint
 
@@ -94,8 +95,8 @@ All 85 tracked historical files are classified: `execution_replayable=0`, `norma
 
 | measure | baseline | corrective worktree | delta |
 |---|---:|---:|---:|
-| recursive-opt runtime lines | 8,803 | 8,730 | -73 |
-| `spec.py` lines | 2,688 | 2,613 | -75 |
+| recursive-opt runtime lines | 8,803 | 8,750 | -53 |
+| `spec.py` lines | 2,688 | 2,633 | -55 |
 | notebook code lines | 16 | 16 | 0 |
 | public package exports | 114 | 114 | 0 |
 
@@ -105,17 +106,12 @@ The graph package is byte-clean against the baseline SHA and was not expanded.
 
 The intended corrective commit contains only the canonical runtime/export files, the control-plane test matrix, smoke notebook/goldens, migrated normalized specs, and control-plane evidence. Exact staged paths and post-commit `git status --short` are recorded after staging/commit.
 
-The implementation commit changed 29 files: 3,141 insertions and 3,000 deletions, and initially left the index empty. The SHA-bearing evidence is staged separately and intentionally not committed because advancing HEAD would invalidate the exact-SHA gate. Final `git status --short --untracked-files=no` is exactly:
+The original semantic-closure implementation changed 29 files. The completion-audit correction is deliberately surgical and changes the runtime, its causal test matrix, and these readiness records. Exact completion-audit commit statistics and final staged evidence are recorded after the commit. The SHA-bearing evidence is staged separately and intentionally not committed because advancing HEAD would invalidate the exact-SHA gate.
 
 ```text
-M  artifacts/control_plane_v2/code_footprint_after.json
-M  artifacts/control_plane_v2/control_plane_v2alpha.md
-M  artifacts/control_plane_v2/evidence.md
-A  artifacts/control_plane_v2/prompt18_readiness.json
-M  artifacts/control_plane_v2/proof.md
-M  artifacts/control_plane_v2/readiness_audit.md
+pending post-commit SHA evidence
 ```
 
-The full short status has 108 entries because 102 unrelated, pre-existing user-owned experiment/config/output paths remain untracked; none was staged or modified. There is no post-commit diff under `opto/`, `tests/`, or `examples/recursive_opt_use_cases.ipynb`, so the tested implementation/client tree is exactly the committed SHA.
+Unrelated, pre-existing user-owned experiment/config/output paths remain untracked and are excluded from the corrective commit. The exact tracked status is recorded after SHA-bound verification.
 
 Limitations: no live OpenRouter run, no paid GEPA optimization, and no historical efficacy claim. The real installed GEPA API is checked only where it can run without a provider. Historical config/family-policy/prior behavior remains non-replayable without the precisely listed dependencies. This gate establishes readiness for Prompt 18; it does not begin that experiment.
