@@ -9,10 +9,21 @@ from pathlib import Path
 from .baseline import build_baseline_token_manifest
 from .datasets import dataset_manifest_v2
 from .forecast import build_cost_forecast
-from .live import run_micro_smoke, run_pilot
+from .live import (
+    CONTROL_PLANE_LOCK,
+    COST_FORECAST_PATH,
+    MICRO_REPORT_PATH,
+    PILOT_REPORT_PATH,
+    run_micro_smoke,
+    run_pilot,
+)
 from .offline_contract import run_offline_contract
 from .preflight import run_task_eligibility_preflight_v2
-from .provenance import build_control_plane_lock_after_gepa_reflection_fix
+from .provenance import (
+    build_control_plane_lock_after_gepa_reflection_fix,
+    build_control_plane_lock_after_empty_text_retry,
+    build_experiment_protocol_lock_after_proposal_gate_fix,
+)
 from .registration import assert_strict_output_evaluator, register_experiment_components
 
 
@@ -58,6 +69,8 @@ def main() -> int:
             "task-preflight-v2",
             "baseline-token-manifest",
             "control-plane-lock-after-gepa-reflection-fix",
+            "experiment-protocol-lock-after-proposal-gate-fix",
+            "control-plane-lock-after-empty-text-retry",
             "micro-smoke",
             "cost-forecast",
             "pilot",
@@ -85,17 +98,25 @@ def main() -> int:
             result,
         )
         return 0
+    if args.command == "experiment-protocol-lock-after-proposal-gate-fix":
+        result = build_experiment_protocol_lock_after_proposal_gate_fix()
+        _write_json(CONTROL_PLANE_LOCK, result)
+        return 0
+    if args.command == "control-plane-lock-after-empty-text-retry":
+        result = build_control_plane_lock_after_empty_text_retry()
+        _write_json(CONTROL_PLANE_LOCK, result)
+        return 0
     if args.command == "micro-smoke":
         result = run_micro_smoke()
-        _write_json(PACKAGE_ROOT / "reports" / "live_micro_smoke.json", result)
+        _write_json(MICRO_REPORT_PATH, result)
         return 0 if result["passed"] else 1
     if args.command == "cost-forecast":
         result = build_cost_forecast()
-        _write_json(PACKAGE_ROOT / "reports" / "cost_forecast.json", result)
+        _write_json(COST_FORECAST_PATH, result)
         return 0
     if args.command == "pilot":
         result = run_pilot()
-        _write_json(PACKAGE_ROOT / "reports" / "pilot.json", result)
+        _write_json(PILOT_REPORT_PATH, result)
         return 0 if result["passed"] else 1
     result = run_offline_contract()
     _write_json(PACKAGE_ROOT / "reports" / "offline_contract_report.json", result)

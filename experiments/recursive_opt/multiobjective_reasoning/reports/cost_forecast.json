@@ -1,0 +1,114 @@
+{
+  "main_full_v2_pool": {
+    "assumed_candidate_budgets": [
+      6,
+      12
+    ],
+    "assumed_seeds": 5,
+    "projected_cost_usd": 4.035941866666667,
+    "projected_tokens": {
+      "completion_tokens": 10792773.333333334,
+      "prompt_tokens": 26165533.333333332,
+      "total_tokens": 36958306.666666664
+    },
+    "projected_tokens_by_arm": {
+      "A": {
+        "completion_tokens": 63093.33333333333,
+        "prompt_tokens": 104173.33333333333,
+        "total_tokens": 167266.66666666666
+      },
+      "B": {
+        "completion_tokens": 4134000.0,
+        "prompt_tokens": 10994880.0,
+        "total_tokens": 15128880.0
+      },
+      "C": {
+        "completion_tokens": 2461680.0,
+        "prompt_tokens": 4071600.0,
+        "total_tokens": 6533280.0
+      },
+      "D": {
+        "completion_tokens": 4134000.0,
+        "prompt_tokens": 10994880.0,
+        "total_tokens": 15128880.0
+      }
+    }
+  },
+  "main_monetary_ceiling_usd": null,
+  "main_run_authorized": false,
+  "main_stop_reason": "no explicit main-run monetary ceiling is acknowledged",
+  "method": "linear projection from actual one-unit smoke usage; optimized arms scale by frozen proposal units and stage sample counts; D uses the measured Trace-B usage profile",
+  "micro_smoke": {
+    "estimated_cost_usd_by_arm": {
+      "A": 0.0001136,
+      "B": 0.0010408400000000001,
+      "C": 0.0004928399999999999
+    },
+    "estimated_total_cost_usd": 0.00164728,
+    "measured_tokens_by_arm": {
+      "A": {
+        "completion_tokens": 364.0,
+        "prompt_tokens": 601.0,
+        "total_tokens": 965.0
+      },
+      "B": {
+        "completion_tokens": 2650.0,
+        "prompt_tokens": 7048.0,
+        "total_tokens": 9698.0
+      },
+      "C": {
+        "completion_tokens": 1578.0,
+        "prompt_tokens": 2610.0,
+        "total_tokens": 4188.0
+      }
+    }
+  },
+  "pilot": {
+    "projected_cost_usd": 0.41555840000000005,
+    "projected_tokens": {
+      "completion_tokens": 1112128.0,
+      "prompt_tokens": 2692192.0,
+      "total_tokens": 3804320.0
+    },
+    "projected_tokens_by_arm": {
+      "A": {
+        "completion_tokens": 11648.0,
+        "prompt_tokens": 19232.0,
+        "total_tokens": 30880.0
+      },
+      "B": {
+        "completion_tokens": 424000.0,
+        "prompt_tokens": 1127680.0,
+        "total_tokens": 1551680.0
+      },
+      "C": {
+        "completion_tokens": 252480.0,
+        "prompt_tokens": 417600.0,
+        "total_tokens": 670080.0
+      },
+      "D": {
+        "completion_tokens": 424000.0,
+        "prompt_tokens": 1127680.0,
+        "total_tokens": 1551680.0
+      }
+    }
+  },
+  "pilot_forecast_complete": true,
+  "pricing": {
+    "cache_read_usd_per_million_tokens": 0.016,
+    "input_usd_per_million_tokens": 0.08,
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "output_usd_per_million_tokens": 0.18,
+    "provider": "openrouter",
+    "retrieved_at_utc": "2026-08-23T19:09:29Z",
+    "schema_version": "recursive-opt-provider-pricing/v1",
+    "source": "https://openrouter.ai/api/v1/models",
+    "source_model_id": "deepseek/deepseek-v4-flash-0731",
+    "source_per_token": {
+      "completion": "0.00000018",
+      "input_cache_read": "0.000000016",
+      "prompt": "0.00000008"
+    }
+  },
+  "schema_version": "recursive-opt-cost-forecast/v2"
+}

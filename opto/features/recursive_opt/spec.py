@@ -605,6 +605,8 @@ class _BudgetGuard:
     def __init__(self, limits: Mapping[str, Any]) -> None:
         self.limits = _thaw(limits)
         self.used = {'optimizer_llm_calls': 0, 'eval_llm_calls': 0, 'candidates': 0, 'candidates_reserved': 0, 'candidates_proposed': 0, 'candidates_evaluated': 0, 'evaluator_runs': 0, 'total_tokens': 0}
+        self.optimizer_response_diagnostics: List[Dict[str, Any]] = []
+        self.runtime_usage: MutableMapping[str, MutableMapping[str, float | int]] = {}
         self.started_at = time.monotonic()
         self.previous_wall_time_s = 0.0
 
@@ -795,8 +797,9 @@ def _level_outputs(result: RunResult) -> Dict[str, Any]:
 def _failed_level_result(plan: ExecutionPlan, unit: _ExecutionUnit, level: _LevelPlan, guard: _BudgetGuard, error: Exception) -> RunResult:
     """Convert a safe non-raising level failure into a canonical result."""
     message = _safe_error(error)
-    evaluation = EvaluationResult(valid=False, status='error', metrics={}, feedback='execution failed', error=message)
-    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint=plan.fingerprint, spec_fingerprint=unit.spec['fingerprint'], engine=level.spec['engine']['name'], module_ref=level.spec['module']['ref'], status='error', valid=False, evaluation=evaluation, artifact={}, lineage=(), usage=evaluation.usage, budget=guard.report(), metadata={'level_id': level.level_id}, error=message)
+    evaluation = EvaluationResult(valid=False, status='error', metrics={}, feedback='execution failed', usage=_thaw(guard.runtime_usage), error=message)
+    metadata = {'level_id': level.level_id, 'optimizer_response_diagnostics': _thaw(guard.optimizer_response_diagnostics)}
+    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint=plan.fingerprint, spec_fingerprint=unit.spec['fingerprint'], engine=level.spec['engine']['name'], module_ref=level.spec['module']['ref'], status='error', valid=False, evaluation=evaluation, artifact={}, lineage=(), usage=evaluation.usage, budget=guard.report(), metadata=metadata, error=message)
 
 def _should_raise(budget: Mapping[str, Any], error: Exception) -> bool:
     """Return whether an execution exception must escape the canonical runner."""
@@ -909,6 +912,43 @@ def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources:
         capture['_global_step'] = global_step + executed_steps
     evaluation = EvaluationResult(valid=True, status='ok', metrics={'score': float(score)}, feedback=data.get('feedback', '') if isinstance(data, Mapping) else '', trace={'legacy_data': _thaw(data)}, artifacts={'artifact_id': record.artifact_id})
     return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine='trace', module_ref=canonical['module']['ref'], status='success', valid=True, evaluation=evaluation, artifact=_freeze({'text': artifact_text}), lineage=(), usage=evaluation.usage, budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'legacy_compatibility': compatibility}))
+def _response_value(value: Any, name: str) -> Any:
+    """Read one response field from a mapping or provider-style object."""
+    return value.get(name) if isinstance(value, Mapping) else getattr(value, name, None)
+
+def _optimizer_response_text(response: Any) -> Optional[str]:
+    """Extract non-empty final text without substituting provider reasoning."""
+    if isinstance(response, str):
+        return response if response.strip() else None
+    choices = _response_value(response, 'choices')
+    message = _response_value(choices[0], 'message') if choices else None
+    content = _response_value(message, 'content') if message is not None else None
+    return content if isinstance(content, str) and content.strip() else None
+
+def _optimizer_response_diagnostic(response: Any, attempt: int, model: Any, usage: Mapping[str, float | int]) -> Dict[str, Any]:
+    """Describe one optimizer response without retaining prompt or reasoning text."""
+    choices = _response_value(response, 'choices') if not isinstance(response, str) else None
+    choice = choices[0] if choices else None
+    message = _response_value(choice, 'message') if choice is not None else None
+    raw_usage = _response_value(response, 'usage') if not isinstance(response, str) else None
+    details = _response_value(raw_usage, 'completion_tokens_details') if raw_usage is not None else None
+    reasoning_tokens = _response_value(details, 'reasoning_tokens') if details is not None else _response_value(raw_usage, 'reasoning_tokens') if raw_usage is not None else None
+    if not isinstance(reasoning_tokens, (int, float)) or reasoning_tokens < 0:
+        reasoning_tokens = None
+    reasoning = _response_value(message, 'reasoning') if message is not None else None
+    reasoning_content = _response_value(message, 'reasoning_content') if message is not None else None
+    finish_reason = _response_value(choice, 'finish_reason') if choice is not None else None
+    return {
+        'attempt': attempt,
+        'model': str(model) if model is not None else None,
+        'finish_reason': finish_reason if isinstance(finish_reason, str) else None,
+        'content_present': _optimizer_response_text(response) is not None,
+        'reasoning_present': bool(reasoning) or bool(reasoning_content),
+        'prompt_tokens': usage.get('prompt_tokens', 0),
+        'completion_tokens': usage.get('completion_tokens', 0),
+        'reasoning_tokens': reasoning_tokens,
+    }
+
 def _gepa_reflection_client(client: Any) -> Optional[Callable[[str], str]]:
     """Adapt GEPA text reflection to the canonical guarded chat client."""
     if client is None:
@@ -918,12 +958,8 @@ def _gepa_reflection_client(client: Any) -> Optional[Callable[[str], str]]:
         if not isinstance(prompt, str):
             raise TypeError('GEPA reflection prompt must be a string')
         response = client(messages=[{'role': 'user', 'content': prompt}])
-        if isinstance(response, str):
-            return response
-        choices = getattr(response, 'choices', None)
-        message = getattr(choices[0], 'message', None) if choices else None
-        content = getattr(message, 'content', None)
-        if not isinstance(content, str):
+        content = _optimizer_response_text(response)
+        if content is None:
             raise TypeError('GEPA reflection response must expose textual choices[0].message.content')
         return content
     return reflect
@@ -966,7 +1002,7 @@ def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping
     final_dataset = holdout or validation or train
     evaluation = _evaluate_dataset(final_module, final_dataset, prepared['final_context'], objective, evaluator, guard, prepared['metered_roles'], prepared['records'])
     artifact = _snapshot_level_module(spec, final_module)
-    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status='success' if evaluation.valid else 'invalid', valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'gepa_version': GEPA_VERSION, 'gepa_evaluations': evaluation_info, 'evaluator_records': prepared['records'], 'objective_projection': objective['config'].mode, 'gepa_holdout_externalized': True, 'gepa_budget_mapping': {'evaluator_runs': 'engine.max_metric_calls', 'candidates': 'engine.max_candidate_proposals', 'seed': 'engine.seed', 'wall_time_s': 'stop_callbacks', 'optimizer_llm_calls': 'wrapped reflection_lm', 'eval_llm_calls': 'wrapped evaluator roles', 'total_tokens': 'wrapped role clients'}, 'selected_models': _selected_role_models(prepared['clients'])}), error=evaluation.error)
+    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status='success' if evaluation.valid else 'invalid', valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'gepa_version': GEPA_VERSION, 'gepa_evaluations': evaluation_info, 'evaluator_records': prepared['records'], 'objective_projection': objective['config'].mode, 'gepa_holdout_externalized': True, 'gepa_budget_mapping': {'evaluator_runs': 'engine.max_metric_calls', 'candidates': 'engine.max_candidate_proposals', 'seed': 'engine.seed', 'wall_time_s': 'stop_callbacks', 'optimizer_llm_calls': 'wrapped reflection_lm', 'eval_llm_calls': 'wrapped evaluator roles', 'total_tokens': 'wrapped role clients'}, 'selected_models': _selected_role_models(prepared['clients']), 'optimizer_response_diagnostics': guard.optimizer_response_diagnostics}), error=evaluation.error)
 def _candidate_to_artifact(seed_artifact: Mapping[str, Any], candidate: Any) -> Dict[str, Any]:
     """Convert GEPA text/component candidates back to the registered artifact."""
     components = seed_artifact.get('components')
@@ -1123,7 +1159,7 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
         budget_exhausted = _safe_error(error)
     artifact = _snapshot_level_module(spec, module)
     status = 'budget_exhausted' if budget_exhausted else 'success' if evaluation.valid else 'invalid'
-    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status=status, valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'module_capabilities': sorted(_module_entry(spec['module']['ref']).capabilities), 'objective_mode': objective['config'].mode, 'evaluator_records': prepared['records'], 'trace_optimize_path': fit, 'selected_models': _selected_role_models(prepared['clients']), 'budget_exhausted': budget_exhausted}), error=evaluation.error)
+    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status=status, valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'module_capabilities': sorted(_module_entry(spec['module']['ref']).capabilities), 'objective_mode': objective['config'].mode, 'evaluator_records': prepared['records'], 'trace_optimize_path': fit, 'selected_models': _selected_role_models(prepared['clients']), 'budget_exhausted': budget_exhausted, 'optimizer_response_diagnostics': guard.optimizer_response_diagnostics}), error=evaluation.error)
 class _EvaluatedModule(Module):
     """Attach registered evaluator results to real Trace parameter dependencies."""
 
@@ -1199,6 +1235,7 @@ def _prepare_level(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping[s
     bound_spec = _thaw(spec)
     bound_spec['module']['inputs'] = module_inputs
     usage: Dict[str, MutableMapping[str, float | int]] = {}
+    resources['_budget'].runtime_usage = usage
     clients = _resolve_role_clients(unit.spec, spec, resources, usage)
     module_resources = {'llm_clients': clients, 'memory': memory, **({'graph_executors': resources['graph_executors']} if 'graph_executors' in resources else {})}
     module = _build_level_module(_freeze(bound_spec), module_resources)
@@ -1260,6 +1297,40 @@ class _GuardedRoleClient:
     def __deepcopy__(self, memo: Dict[int, Any]) -> '_GuardedRoleClient':
         memo[id(self)] = self
         return self
+class _TextRequiredOptimizerClient:
+    """Retry one metered optimizer request once when final text is absent."""
+    def __init__(self, client: Any, usage: MutableMapping[str, MutableMapping[str, float | int]], diagnostics: List[Dict[str, Any]]) -> None:
+        """Bind one guarded optimizer client and its canonical usage sinks."""
+        self._client = client
+        self.usage = usage
+        self.diagnostics = diagnostics
+        totals = self.usage.setdefault('optimizer', {})
+        for name in ('empty_text_responses', 'semantic_retries', 'semantic_retry_prompt_tokens', 'semantic_retry_completion_tokens', 'semantic_retry_total_tokens'):
+            totals.setdefault(name, 0)
+        totals.setdefault('semantic_retry_cost_usd', 0.0)
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """Return a response with final text after at most two metered calls."""
+        for attempt in (1, 2):
+            totals = self.usage['optimizer']
+            before = {name: totals.get(name, 0) for name in ('prompt_tokens', 'completion_tokens', 'total_tokens', 'cost_usd')}
+            response = self._client(*args, **kwargs)
+            call_usage = {name: totals.get(name, 0) - amount for name, amount in before.items()}
+            if attempt == 2:
+                totals['semantic_retries'] += 1
+                for name, amount in call_usage.items():
+                    totals[f'semantic_retry_{name}'] += amount
+            self.diagnostics.append(_optimizer_response_diagnostic(response, attempt, getattr(self._client, 'selected_model', None), call_usage))
+            if _optimizer_response_text(response) is not None:
+                return response
+            totals['empty_text_responses'] += 1
+        raise RuntimeError('optimizer LLM returned no final textual content after 2 metered attempts')
+    def __getattr__(self, name: str) -> Any:
+        """Expose guarded-client identity and provider compatibility fields."""
+        return getattr(self._client, name)
+    def __deepcopy__(self, memo: Dict[int, Any]) -> '_TextRequiredOptimizerClient':
+        """Share accounting state across optimizer copies."""
+        memo[id(self)] = self
+        return self
 class _FallbackRoleClient:
     """Try explicitly declared provider clients in deterministic listed order."""
     def __init__(self, clients: Iterable[_GuardedRoleClient]) -> None:
@@ -1295,7 +1366,8 @@ def _resolve_role_clients(global_spec: Mapping[str, Any], level: Mapping[str, An
             continue
         profiles = [profile] + [global_spec['llm_profiles'][name] for name in profile['fallbacks']]
         guarded = [_make_guarded_role_client(candidate, role, factory, usage, guard) for candidate in profiles]
-        clients[role] = guarded[0] if len(guarded) == 1 else _FallbackRoleClient(guarded)
+        client = guarded[0] if len(guarded) == 1 else _FallbackRoleClient(guarded)
+        clients[role] = _TextRequiredOptimizerClient(client, usage, guard.optimizer_response_diagnostics) if role == 'optimizer' else client
     return clients
 def _make_guarded_role_client(profile: Mapping[str, Any], role: str, factory: Optional[Callable[..., Any]], usage: MutableMapping[str, MutableMapping[str, float | int]], guard: _BudgetGuard) -> _GuardedRoleClient:
     """Construct one exact provider attempt for a role or fallback."""
@@ -1343,7 +1415,6 @@ def _charge_reported_usage(usage: Mapping[str, Any], guard: _BudgetGuard, metere
         tokens = int(values.get('total_tokens', 0))
         if tokens:
             guard.consume('total_tokens', tokens)
-
 def _aggregate_evaluations(results: List[EvaluationResult], objective: Mapping[str, Any]) -> EvaluationResult:
     """Aggregate exact metric sources and retain declared feedback channels."""
     metrics: Dict[str, float] = {}
@@ -1362,12 +1433,10 @@ def _aggregate_evaluations(results: List[EvaluationResult], objective: Mapping[s
     if satisfies_hard_constraints(evaluation, objective['hard_constraints']):
         return evaluation
     return EvaluationResult(valid=False, status='constraint_failed', metrics=metrics, feedback=feedback, trace=trace, usage=_thaw(usage), artifacts=evaluation.artifacts, error='hard constraints not satisfied')
-
 def _evaluation_source(result: EvaluationResult, source: str) -> Any:
     """Resolve one supported objective source from a canonical evaluation."""
     root = {'evaluation': {'metrics': result.metrics}, 'usage': result.usage}
     return _resolve_dotted_path(root, source)
-
 def _objective_score(evaluation: EvaluationResult, objective: Mapping[str, Any]) -> float:
     """Project one evaluation for trainer ranking through ObjectiveConfig."""
     if not evaluation.valid or not satisfies_hard_constraints(evaluation, objective['hard_constraints']):
@@ -1377,11 +1446,9 @@ def _objective_score(evaluation: EvaluationResult, objective: Mapping[str, Any])
         return to_scalar_score(evaluation.metrics, config)
     metrics = apply_minimize(evaluation.metrics, config.minimize)
     return weighted_scalarize(metrics, config.weights, config.missing_value)
-
 def _evaluation_info(evaluation: EvaluationResult) -> Dict[str, Any]:
     """Return a JSON evaluator record without losing feedback or trace."""
     return {'valid': evaluation.valid, 'status': evaluation.status, 'metrics': _thaw(evaluation.metrics), 'feedback': _thaw(evaluation.feedback), 'trace': _thaw(evaluation.trace), 'usage': _thaw(evaluation.usage), 'artifacts': _thaw(evaluation.artifacts), 'error': evaluation.error}
-
 def _combined_runtime_usage(evaluation: Mapping[str, Any], runtime: Mapping[str, Any]) -> Mapping[str, Any]:
     """Merge evaluator and wrapped-client counters without double attribution."""
     combined: Dict[str, Dict[str, float | int]] = {}
@@ -1391,11 +1458,9 @@ def _combined_runtime_usage(evaluation: Mapping[str, Any], runtime: Mapping[str,
         names = set(left) | set(right)
         combined[role] = {name: max(left.get(name, 0), right.get(name, 0)) for name in names}
     return _freeze(combined)
-
 def _default_module_evaluator(output: Any, _example: Any, _context: Mapping[str, Any]) -> EvaluationResult:
     """Evaluate a module whose output already follows the canonical result shape."""
     return normalize_evaluation_result(getattr(output, 'data', output))
-
 def _reasoning_evaluator(output: Any, example: Any, context: Mapping[str, Any]) -> EvaluationResult:
     """Score a named reasoning component against deterministic expected output."""
     item = getattr(example, 'data', example)
@@ -1416,13 +1481,11 @@ def _reasoning_evaluator(output: Any, example: Any, context: Mapping[str, Any]) 
     expected = item['expected']
     score = 1.0 if actual == expected else 0.0
     return EvaluationResult(valid=True, status='ok', metrics={'accuracy': score}, feedback=f'component {component!r}: expected {expected!r}, got {actual!r}', trace={'component': component})
-
 def _safe_error(error: Exception) -> str:
     """Return one-line, secret-redacted execution error text without traceback paths."""
     message = str(error).splitlines()[0] if str(error) else 'execution failed'
     message = re.sub('sk-[A-Za-z0-9_-]+', 'sk-<redacted>', message)
     return f'{type(error).__name__}: {message}'
-
 def _build_component_module(spec: Mapping[str, Any], _resources: Mapping[str, Any]) -> Module:
     """Build the registered reasoning workflow from named components."""
     config = spec['module']['config']
@@ -1432,7 +1495,6 @@ def _build_component_module(spec: Mapping[str, Any], _resources: Mapping[str, An
     if not all((isinstance(name, str) and name for name in components)):
         raise ValueError('component names must be non-empty strings')
     return _ComponentModule(components, spec['module']['inputs'])
-
 def _validate_component_config(config: Mapping[str, Any]) -> None:
     """Validate the portable named-component module configuration."""
     if not isinstance(config, Mapping):
@@ -1445,7 +1507,6 @@ def _validate_component_config(config: Mapping[str, Any]) -> None:
         raise ValueError('component names must be non-empty strings')
     if 'family' in config and (not isinstance(config['family'], str) or not config['family']):
         raise ValueError('module.config.family must be a non-empty string')
-
 def _validate_graph_config(config: Mapping[str, Any]) -> None:
     """Validate graph adapter config without resolving an executor resource."""
     allowed = {'executor_ref', 'input_key', 'output_key', 'input_codec', 'output_codec'}
@@ -1455,7 +1516,6 @@ def _validate_graph_config(config: Mapping[str, Any]) -> None:
     ref = config.get('executor_ref')
     if not isinstance(ref, str) or not _VERSIONED_REF.fullmatch(ref):
         raise ValueError('graph module requires an exact versioned executor_ref')
-
 def _validate_legacy_config(config: Mapping[str, Any]) -> None:
     """Validate the migration-only legacy module envelope."""
     if not isinstance(config, Mapping):
@@ -1463,7 +1523,6 @@ def _validate_legacy_config(config: Mapping[str, Any]) -> None:
     _reject_unknown_keys(config, {'level', 'families'}, 'module.config')
     if not isinstance(config.get('level'), Mapping) or not isinstance(config.get('families'), Mapping):
         raise TypeError('legacy module config requires level and families mappings')
-
 def _build_legacy_level_module(spec: Mapping[str, Any], resources: Mapping[str, Any]) -> Module:
     """Build the existing executable legacy level selected by migrated config."""
     config = spec['module']['config']
@@ -1475,7 +1534,6 @@ def _build_legacy_level_module(spec: Mapping[str, Any], resources: Mapping[str, 
     level_module._control_plane_level = level
     level_module._control_plane_families = _thaw(config['families'])
     return level_module
-
 def _build_graph_module(spec: Mapping[str, Any], resources: Mapping[str, Any]) -> Module:
     """Build a graph module from an explicitly supplied executor resource."""
     from opto.features.graph import GraphAdapter, GraphExecutor
@@ -1494,13 +1552,11 @@ def _build_graph_module(spec: Mapping[str, Any], resources: Mapping[str, Any]) -
         raise TypeError(f'graph executor resource {executor_ref!r} must implement GraphExecutor')
     adapter = GraphAdapter(executor, input_key=config.get('input_key', 'query'), output_key=config.get('output_key'), input_codec=config.get('input_codec', 'graph.codec.state@1'), output_codec=config.get('output_codec', 'graph.codec.output_key@1'))
     return adapter.as_module()
-
 def _snapshot_components(module: Module) -> Dict[str, Any]:
     """Snapshot named component parameters from a component module."""
     if not isinstance(module, _ComponentModule):
         raise TypeError('component artifact requires a registered component module')
     return {'components': {name: value.data for name, value in module.components.items()}}
-
 def _restore_components(module: Module, artifact: Mapping[str, Any]) -> None:
     """Restore named component values without changing module topology."""
     if not isinstance(module, _ComponentModule):
@@ -1511,7 +1567,6 @@ def _restore_components(module: Module, artifact: Mapping[str, Any]) -> None:
         raise ValueError(f'artifact component keys {sorted(components)} do not match {sorted(expected)}')
     for name, value in components.items():
         module.components[name]._set(value)
-
 def _validate_component_artifact(artifact: Mapping[str, Any]) -> None:
     """Validate the portable component-dict artifact contract."""
     if not isinstance(artifact, Mapping) or set(artifact) != {'components'}:
@@ -1521,53 +1576,45 @@ def _validate_component_artifact(artifact: Mapping[str, Any]) -> None:
         raise ValueError('artifact.components must be a non-empty mapping')
     if not all((isinstance(name, str) and name for name in components)):
         raise ValueError('artifact component keys must be non-empty strings')
-
 def _snapshot_graph(module: Module) -> Dict[str, Any]:
     """Snapshot a registered graph module through its explicit adapter contract."""
     from opto.features.graph import GraphModule
     if not isinstance(module, GraphModule):
         raise TypeError('graph artifact requires a registered GraphModule')
     return module.snapshot()
-
 def _restore_graph(module: Module, artifact: Mapping[str, Any]) -> None:
     """Restore a registered graph module without replacing its executor."""
     from opto.features.graph import GraphModule
     if not isinstance(module, GraphModule):
         raise TypeError('graph artifact requires a registered GraphModule')
     module.restore(artifact)
-
 def _validate_graph_artifact(artifact: Mapping[str, Any]) -> None:
     """Validate the portable graph artifact without importing optional LangGraph."""
     from opto.features.graph import GraphAdapter
     GraphAdapter.validate_artifact(artifact)
-
 def _snapshot_legacy(module: Module) -> Dict[str, Any]:
     """Snapshot the executable migrated level as portable text."""
     if not hasattr(module, '_control_plane_level'):
         raise TypeError('legacy artifact requires a migrated executable level')
     level = module._control_plane_level
     return {'text': _artifact_text(module, level['surface'])}
-
 def _restore_legacy(module: Module, artifact: Mapping[str, Any]) -> None:
     """Restore an executable migrated level's text artifact."""
     if not hasattr(module, '_control_plane_level'):
         raise TypeError('legacy artifact requires a migrated executable level')
     _seed_from_text(module, module._control_plane_level['surface'], str(artifact['text']))
-
 def _validate_legacy_artifact(artifact: Mapping[str, Any]) -> None:
     """Validate the migrated legacy-level artifact shape."""
     if not isinstance(artifact, Mapping) or set(artifact) != {'text'}:
         raise ValueError("legacy artifact must contain only 'text'")
     if not isinstance(artifact['text'], str):
         raise TypeError('legacy artifact text must be a string')
-
 def _legacy_level_evaluator(module: Module, _dataset: Any, _context: Mapping[str, Any]) -> EvaluationResult:
     """Evaluate a migrated level through its existing final-evaluation helper."""
     level = module._control_plane_level
     score, data = _final_eval(module, level, module._control_plane_families)
     feedback = data.get('feedback', '') if isinstance(data, Mapping) else ''
     return EvaluationResult(valid=True, status='ok', metrics={'score': score}, feedback=feedback)
-
 def _legacy_level_dataset(split: str, config: Mapping[str, Any]) -> Any:
     """Resolve the existing legacy training dataset without hidden imports."""
     if split != 'train':
@@ -1575,7 +1622,6 @@ def _legacy_level_dataset(split: str, config: Mapping[str, Any]) -> Any:
     level = _thaw(config['level'])
     iterations = int(level.get('iterations', 1))
     return _dataset_for(level, _thaw(config['families']), iterations)['inputs']
-
 def _expand_execution_units(spec: Mapping[str, Any]) -> List[_ExecutionUnit]:
     """Expand deterministic arm/seed/matrix products from a normalized spec."""
     experiment = spec['experiment']
@@ -1612,14 +1658,12 @@ def _expand_execution_units(spec: Mapping[str, Any]) -> List[_ExecutionUnit]:
                     level_plans = tuple((_compile_level_plan(level) for level in unit_spec['levels']))
                 units.append(_ExecutionUnit(unit_id, arm_id, effective_seed, _freeze(selected), unit_spec, level_plans))
     return units
-
 def _compile_level_plan(level: Mapping[str, Any]) -> _LevelPlan:
     """Resolve a canonical level's datasets and immutable identity."""
     datasets = {split: _resolve_dataset(split, value) for split, value in level['datasets'].items()}
     payload = {'level': _thaw(level), 'dataset_refs': _dataset_identities(level['datasets'])}
     fingerprint = hashlib.sha256(_canonical_json(payload).encode('utf-8')).hexdigest()
     return _LevelPlan(level_id=level['id'], depends_on=tuple(level['depends_on']), ordering_only=level['ordering_only'], spec=level, datasets=_freeze(datasets), fingerprint=fingerprint)
-
 def _resolve_dataset(split: str, value: Any) -> Any:
     """Resolve inline data or one exact registered dataset descriptor."""
     if not isinstance(value, Mapping):
@@ -1629,11 +1673,9 @@ def _resolve_dataset(split: str, value: Any) -> Any:
     _validate_no_callables_or_secrets(resolved, f"resolved dataset {value['ref']}")
     _canonical_json(resolved)
     return _thaw(resolved)
-
 def _dataset_identities(datasets: Mapping[str, Any]) -> Dict[str, Any]:
     """Return fingerprint-safe dataset ref or inline-content identities."""
     return {split: _thaw(value) if isinstance(value, Mapping) else {'inline_sha256': hashlib.sha256(_canonical_json(value).encode('utf-8')).hexdigest()} for split, value in datasets.items()}
-
 def _apply_arm(spec: Dict[str, Any], arm: Mapping[str, Any]) -> None:
     """Materialize one arm's engine and dotted overrides into a unit spec."""
     engine = arm.get('engine')
@@ -1654,7 +1696,6 @@ def _apply_arm(spec: Dict[str, Any], arm: Mapping[str, Any]) -> None:
         raise TypeError('experiment arm overrides must be a mapping')
     for path, value in overrides.items():
         _set_dotted_path(spec, path, value)
-
 def _set_dotted_path(spec: Dict[str, Any], path: str, value: Any) -> None:
     """Set an existing canonical dotted path, rejecting hidden new controls."""
     if not isinstance(path, str) or not path or path.startswith(('fingerprint', 'schema_version', 'kind')):
@@ -1688,7 +1729,6 @@ register_engine('fixed', EngineRegistryEntry(run=_run_fixed_engine, capabilities
 register_engine('trace', EngineRegistryEntry(run=_run_trace_engine, capabilities=frozenset({'scalar', 'weighted', 'pareto', 'trace_module', 'heterogeneous_parameters', 'rich_trace'})))
 register_engine('gepa_optimize_anything', EngineRegistryEntry(run=_run_gepa_engine, capabilities=frozenset({'scalar', 'weighted', 'trace_module', 'multi_component', 'rich_trace'})))
 register_module('recursive_opt.module.legacy_level@1', ModuleRegistryEntry(build=_build_legacy_level_module, snapshot=_snapshot_legacy, restore=_restore_legacy, validate_artifact=_validate_legacy_artifact, capabilities=frozenset({'legacy', 'json_snapshot', 'trace_module'}), validate_config=_validate_legacy_config))
-
 def migrate_legacy_spec(raw_spec: Mapping[str, Any]) -> Dict[str, Any]:
     """Migrate legacy or flat-v2 input into the canonical multilevel shape."""
     if not isinstance(raw_spec, Mapping):
@@ -1733,7 +1773,6 @@ def migrate_legacy_spec(raw_spec: Mapping[str, Any]) -> Dict[str, Any]:
     if promotion:
         extensions['recursive_opt.knowledge_policies'] = {'promotion_rule': promotion}
     return {'schema_version': SCHEMA_VERSION, 'kind': SPEC_KIND, 'runtime': runtime, 'budget': spec.get('budget', {}), 'levels': [_migrate_legacy_level(level, spec.get('families', {})) for level in legacy_levels], 'extensions': extensions}
-
 def _migrate_legacy_level(level: Mapping[str, Any], families: Mapping[str, Any]) -> Dict[str, Any]:
     """Translate one executable legacy level into a canonical level block."""
     if not isinstance(level, Mapping):
@@ -1746,7 +1785,6 @@ def _migrate_legacy_level(level: Mapping[str, Any], families: Mapping[str, Any])
     engine_config = {key: raw[key] for key in ('optimizer', 'trainer', 'iterations', 'num_candidates', 'optimizer_kwargs', 'trainer_kwargs') if key in raw}
     engine_config.setdefault('validation_gate', True)
     return {'id': level_id, 'depends_on': dependencies, 'ordering_only': bool(dependencies), 'surface': {'kind': str(raw.get('surface', 'custom')), 'targets': ['*']}, 'module': {'ref': 'recursive_opt.module.legacy_level@1', 'config': {'level': raw, 'families': _thaw(families)}, 'artifact': None, 'inputs': {}}, 'engine': {'name': 'trace', 'config': engine_config}, 'objective': {'evaluator_ref': 'recursive_opt.evaluator.legacy_level@1', 'metrics': {'score': {'direction': 'maximize', 'source': 'evaluation.metrics.score', 'aggregate_examples': 'mean'}}, 'selection': {'mode': 'scalar', 'score_key': 'score'}}, 'datasets': {'train': {'ref': 'recursive_opt.dataset.legacy_level@1', 'split': 'train', 'config': {'level': raw, 'families': _thaw(families)}}, 'validation': [], 'holdout': []}}
-
 def normalize_spec(raw_spec: Mapping[str, Any]) -> Dict[str, Any]:
     """Return a validated, immutable, secret-free canonical v2alpha spec."""
     migrated = migrate_legacy_spec(raw_spec)
@@ -1773,11 +1811,9 @@ def normalize_spec(raw_spec: Mapping[str, Any]) -> Dict[str, Any]:
         raise ValueError('spec fingerprint does not match normalized content')
     normalized['fingerprint'] = fingerprint
     return _freeze(normalized)
-
 def _canonical_defaults() -> Dict[str, Any]:
     """Return mutable defaults for global canonical blocks."""
     return {'runtime': {'strict_refs': True, 'reproducible': True, 'offline': False, 'resume': False, 'memory_root': './trace_memory', 'reuse_priors': False, 'tracebench': {}, 'scoring': {}, 'prior_promotion': {}, 'trainer_kwargs': {}, 'run_id': None, 'seed': None, 'test_mode': False}, 'llm_profiles': {}, 'knowledge': {'store': 'recursive_opt.knowledge.memory_lite@1', 'retrieval': 'best', 'statuses': ['promoted'], 'scope_fields': ['family', 'level', 'kind'], 'top_k': 5, 'injection_codec': 'recursive_opt.codec.artifact_to_prior@1', 'promotion_rule': {}, 'rollback_rule': {}}, 'outputs': {'directory': None, 'format': 'json', 'save_artifacts': True}, 'budget': {'optimizer_llm_calls': None, 'eval_llm_calls': None, 'candidates': None, 'evaluator_runs': None, 'wall_time_s': None, 'total_tokens': None, 'on_exceed': 'return_best_valid'}, 'experiment': {'seeds': [], 'arms': [], 'matrix': {}}, 'levels': []}
-
 def _normalize_level(raw_level: Mapping[str, Any], global_spec: Mapping[str, Any], index: int) -> Dict[str, Any]:
     """Materialize one fully specified canonical level."""
     if not isinstance(raw_level, Mapping):
@@ -1795,7 +1831,6 @@ def _normalize_level(raw_level: Mapping[str, Any], global_spec: Mapping[str, Any
         trace_defaults = {'optimizer': 'OptoPrimeV2', 'trainer': 'PrioritySearch', 'iterations': 4, 'num_candidates': 4, 'optimizer_kwargs': {}, 'trainer_kwargs': {}, 'validation_gate': True}
         level['engine']['config'] = _merge_defaults(trace_defaults, level['engine']['config'], f'levels[{index}].engine.config')
     return level
-
 def _normalize_objective(objective: Mapping[str, Any]) -> Dict[str, Any]:
     """Convert list/directions objectives into canonical metric descriptors."""
     result = _thaw(objective)
@@ -1811,7 +1846,6 @@ def _normalize_objective(objective: Mapping[str, Any]) -> Dict[str, Any]:
         aggregate = result.get('aggregation', {}).get('mode', 'mean')
         result['metrics'] = {name: {'aggregate_examples': aggregate, **_thaw(descriptor)} for name, descriptor in metrics.items()}
     return result
-
 def explain_spec(raw_spec: Mapping[str, Any]) -> Dict[str, Any]:
     """Return a JSON-serializable explanation of defaults and execution intent."""
     normalized = normalize_spec(raw_spec)
@@ -1822,13 +1856,11 @@ def explain_spec(raw_spec: Mapping[str, Any]) -> Dict[str, Any]:
     for values in experiment['matrix'].values():
         matrix_count *= len(values)
     return {'schema_version': normalized['schema_version'], 'kind': normalized['kind'], 'fingerprint': normalized['fingerprint'], 'engines': [level['engine']['name'] for level in normalized['levels']], 'module_refs': [level['module']['ref'] for level in normalized['levels']], 'objective_modes': [level['objective']['selection']['mode'] for level in normalized['levels']], 'levels': [level['id'] for level in normalized['levels']], 'execution_units': arm_count * seed_count * matrix_count, 'portable': not normalized['runtime']['test_mode']}
-
 def _merge_defaults(defaults: Dict[str, Any], value: Any, block: str) -> Dict[str, Any]:
     """Merge one validated control-plane block over its materialized defaults."""
     if not isinstance(value, Mapping):
         raise TypeError(f'spec[{block!r}] must be a mapping')
     return {**_thaw(defaults), **_thaw(value)}
-
 def _thaw(value: Any) -> Any:
     """Copy mappings and sequences into mutable JSON-compatible containers."""
     if isinstance(value, Mapping):
@@ -1836,7 +1868,6 @@ def _thaw(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_thaw(item) for item in value]
     return value
-
 def _freeze(value: Any) -> Any:
     """Recursively freeze a JSON-compatible value without breaking json.dumps."""
     if isinstance(value, dict):
@@ -1844,17 +1875,14 @@ def _freeze(value: Any) -> Any:
     if isinstance(value, list):
         return tuple((_freeze(item) for item in value))
     return value
-
 def _canonical_json(value: Any) -> str:
     """Serialize canonical spec content for stable SHA-256 fingerprints."""
     return json.dumps(value, allow_nan=False, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
-
 def _reject_unknown_keys(value: Mapping[str, Any], allowed: set[str], path: str) -> None:
     """Reject structural typos at one control-plane path."""
     unknown = set(value) - allowed
     if unknown:
         raise ValueError(f'unknown {path} keys: {sorted(unknown)}')
-
 def _validate_v2_structure(spec: Dict[str, Any]) -> None:
     """Validate v2alpha container types and reject unknown structural keys."""
     _reject_unknown_keys(spec, _TOP_LEVEL_KEYS, 'spec')
@@ -1900,7 +1928,6 @@ def _validate_v2_structure(spec: Dict[str, Any]) -> None:
     for namespace in extensions:
         if not isinstance(namespace, str) or '.' not in namespace:
             raise ValueError("extension keys must contain a namespace, for example 'acme.audit'")
-
 def _normalize_llm_profiles(spec: Dict[str, Any]) -> None:
     """Materialize exact provider models, secret refs, and fallbacks."""
     profiles: Dict[str, Dict[str, Any]] = {}
@@ -1914,7 +1941,6 @@ def _normalize_llm_profiles(spec: Dict[str, Any]) -> None:
             profile['resolved_model'] = profile['resolved_model'] or profile['model']
         profiles[name] = profile
     spec['llm_profiles'] = profiles
-
 def _materialize_role(value: Any, profiles: Mapping[str, Mapping[str, Any]], role: str) -> Optional[Dict[str, Any]]:
     """Resolve one role name/override into a fully explicit profile mapping."""
     if value is None:
@@ -1935,7 +1961,6 @@ def _materialize_role(value: Any, profiles: Mapping[str, Mapping[str, Any]], rol
     elif profile.get('model') is not None:
         profile['resolved_model'] = profile.get('resolved_model') or profile['model']
     return profile
-
 def _validate_v2_semantics(spec: Dict[str, Any]) -> None:
     """Validate every canonical field as active, designed validation, or rejected."""
     for path, ref in (('knowledge.store', spec['knowledge']['store']), ('knowledge.injection_codec', spec['knowledge']['injection_codec'])):
@@ -2001,7 +2026,6 @@ def _validate_v2_semantics(spec: Dict[str, Any]) -> None:
     matrix = spec['experiment']['matrix']
     if not isinstance(matrix, Mapping) or any((not isinstance(values, list) or not values for values in matrix.values())):
         raise ValueError('experiment.matrix must map paths to non-empty value lists')
-
 def _validate_level_semantics(level: Mapping[str, Any], profiles: Mapping[str, Any], global_outputs: Mapping[str, Any], reproducible: bool, index: int) -> None:
     """Validate references and causal controls for one canonical level."""
     module_ref = level['module']['ref']
@@ -2068,7 +2092,6 @@ def _validate_level_semantics(level: Mapping[str, Any], profiles: Mapping[str, A
         source_level = binding['from'].split('.', 1)[0]
         if source_level not in level['depends_on']:
             raise ValueError(f'levels[{index}].bindings[{binding_index}] must source a declared dependency')
-
 def _validate_profile(profile: Mapping[str, Any], path: str, profiles: Mapping[str, Any], reproducible: bool, profile_name: Optional[str]) -> None:
     """Validate one global or materialized role-specific LLM profile."""
     if not profile['provider'] or not profile['model']:
@@ -2095,7 +2118,6 @@ def _validate_profile(profile: Mapping[str, Any], path: str, profiles: Mapping[s
     if not isinstance(profile['request_params'], Mapping):
         raise TypeError(f'{path} request_params must be a mapping')
     _validate_request_params(profile['request_params'], f'{path}.request_params')
-
 def _validate_request_params(value: Any, path: str) -> None:
     """Reject request controls that can replace normalized provider identity."""
     if isinstance(value, Mapping):
@@ -2111,7 +2133,6 @@ def _validate_request_params(value: Any, path: str) -> None:
             _validate_request_params(item, f'{path}[{index}]')
     elif isinstance(value, float) and not math.isfinite(value):
         raise ValueError(f'{path} must contain finite JSON numbers')
-
 def _validate_gepa_engine_config(config: Mapping[str, Any], index: int) -> None:
     """Validate the JSON-safe GEPA 0.1.4 configuration subset we construct."""
     if not isinstance(config, Mapping):
@@ -2123,7 +2144,6 @@ def _validate_gepa_engine_config(config: Mapping[str, Any], index: int) -> None:
         raise TypeError('GEPA engine and reflection config values must be mappings')
     _reject_unknown_keys(engine, {'run_dir', 'seed', 'display_progress_bar', 'raise_on_exception', 'use_cloudpickle', 'track_best_outputs', 'max_metric_calls', 'max_candidate_proposals', 'max_reflection_cost', 'val_evaluation_policy', 'candidate_selection_strategy', 'frontier_type', 'acceptance_criterion', 'parallel', 'max_workers', 'cache_evaluation', 'cache_evaluation_storage', 'best_example_evals_k', 'capture_stdio'}, f'levels[{index}].engine.config.engine')
     _reject_unknown_keys(reflection, {'skip_perfect_score', 'perfect_score', 'batch_sampler', 'reflection_minibatch_size', 'module_selector', 'reflection_lm', 'reflection_lm_kwargs', 'reflection_prompt_template'}, f'levels[{index}].engine.config.reflection')
-
 def _validate_objective_semantics(objective: Mapping[str, Any], index: int) -> None:
     """Validate canonical metric descriptors and selection controls."""
     evaluator_ref = objective['evaluator_ref']
@@ -2179,7 +2199,6 @@ def _validate_objective_semantics(objective: Mapping[str, Any], index: int) -> N
         raise ValueError('objective.aggregation.mode is unsupported')
     if aggregation.get('weights'):
         raise ValueError('objective.aggregation.weights is unsupported; use objective.selection.weights')
-
 def _validate_no_callables_or_secrets(value: Any, path: str='spec') -> None:
     """Reject callables, non-string mapping keys, secrets, and non-JSON values."""
     if callable(value):
@@ -2198,7 +2217,6 @@ def _validate_no_callables_or_secrets(value: Any, path: str='spec') -> None:
         return
     if value is not None and (not isinstance(value, (str, int, float, bool))):
         raise TypeError(f'{path} contains non-JSON value {type(value).__name__}')
-
 def make_level_spec(*, id: str, surface: str, targets: Optional[List[str]]=None, fixed: Optional[Dict[str, Any]]=None, constraints: Optional[Dict[str, List[str]]]=None, **kwargs: Any) -> Dict[str, Any]:
     """Safe level-spec builder (DRY for examples/notebooks)."""
     level: Dict[str, Any] = {'id': id, 'surface': surface}
@@ -2211,7 +2229,6 @@ def make_level_spec(*, id: str, surface: str, targets: Optional[List[str]]=None,
     level.update(kwargs)
     return level
 _DEFAULT_POLICY_FIELDS = ('starting_artifact', 'trace_type', 'batch_design')
-
 def validate_spec(spec: dict) -> dict:
     """Validate a RecursiveSpec dict (structure, ids, surfaces, field values)."""
     if not isinstance(spec, dict):
@@ -2270,7 +2287,6 @@ def validate_spec(spec: dict) -> dict:
             if not _resolve_families(ls, families):
                 raise ValueError(f'level {lid}: {surface} needs at least one family')
     return spec
-
 def compile_level(level_spec: dict, memory: MemoryLite, families: Dict[str, List[str]], scoring: Optional[dict]=None):
     """Compile one level dict into the matching existing level object."""
     surface = level_spec['surface']
@@ -2303,7 +2319,6 @@ def compile_level(level_spec: dict, memory: MemoryLite, families: Dict[str, List
         holdout = {n: fams[n] for n in names[1:]} or {names[0]: fams[names[0]]}
         return PriorInductionLevel(train, holdout, run_task=make_scored_task_runner(score_config), invalid_floor=floor, fields=tuple(level_spec.get('targets') or _DEFAULT_POLICY_FIELDS), memory=memory)
     raise ValueError(f'unknown surface {surface!r}')
-
 def reuse_priors(memory: MemoryLite, level, level_spec: dict) -> dict:
     """Warm-start a level from (family, level) memory and load reusable tools."""
     surface = level_spec['surface']
@@ -2324,7 +2339,6 @@ def reuse_priors(memory: MemoryLite, level, level_spec: dict) -> dict:
                 used_prior = False
     tools = [a.content for a in memory.retrieve(family, kind='tool')['artifacts']]
     return {'used_prior': used_prior, 'tools': tools}
-
 def save_priors(memory: MemoryLite, level, level_spec: dict, score: float, metrics: Optional[dict]=None):
     """Persist the learned artifact (+ declared tools) tagged by family and level."""
     surface = level_spec['surface']
@@ -2333,7 +2347,6 @@ def save_priors(memory: MemoryLite, level, level_spec: dict, score: float, metri
     for tool in level_spec.get('tools') or []:
         memory.record_artifact(level=surface, family=family, kind='tool', content=str(tool), score=float(score))
     return rec
-
 def run_spec(spec: dict, *, optimizer: Any=None, trainer: Optional[str]=None, budget: 'RecursiveOptBudget | dict | None'=None, seeds: Optional[Iterable[int]]=None, resources: Optional[Mapping[str, Any]]=None) -> Any:
     """Migrate, normalize, compile, and execute a recursive optimization spec."""
     if not isinstance(spec, dict):
@@ -2372,7 +2385,6 @@ def run_spec(spec: dict, *, optimizer: Any=None, trainer: Optional[str]=None, bu
     if isinstance(memory, MemoryLite) and isinstance(progress, Mapping):
         memory.write_run_summary(dict(progress))
     return capture
-
 def _portable_legacy_input(spec: Mapping[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Extract callable legacy fixtures into an explicit non-portable override."""
     local_levels: Dict[str, Any] = {}
@@ -2383,7 +2395,6 @@ def _portable_legacy_input(spec: Mapping[str, Any]) -> Tuple[Dict[str, Any], Dic
                 raise ValueError('legacy callable levels require a non-empty id')
             local_levels[level_id] = _thaw(level)
     return (_strip_callables(spec), local_levels)
-
 def _contains_callable(value: Any) -> bool:
     """Return whether a nested legacy value contains executable behavior."""
     if callable(value):
@@ -2393,7 +2404,6 @@ def _contains_callable(value: Any) -> bool:
     if isinstance(value, (list, tuple)):
         return any((_contains_callable(item) for item in value))
     return False
-
 def _strip_callables(value: Any) -> Any:
     """Copy legacy data while omitting behavior carried by callable values."""
     if isinstance(value, Mapping):
@@ -2401,7 +2411,6 @@ def _strip_callables(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_strip_callables(item) for item in value if not callable(item)]
     return value
-
 def _resolve_families(level_spec: dict, families: Dict[str, List[str]]) -> Dict[str, List[str]]:
     sel = level_spec.get('families')
     fam = level_spec.get('family')
@@ -2414,7 +2423,6 @@ def _resolve_families(level_spec: dict, families: Dict[str, List[str]]) -> Dict[
     if isinstance(fam, str) and fam in families:
         return {fam: families[fam]}
     return dict(families)
-
 def _config_task_ids(level_spec: dict, families: Dict[str, List[str]]) -> List[str]:
     """Return concrete task ids for a config level."""
     tasks = level_spec.get('tasks')
@@ -2424,7 +2432,6 @@ def _config_task_ids(level_spec: dict, families: Dict[str, List[str]]) -> List[s
     if task:
         return [str(task)]
     return [str(families[level_spec['family']][0])]
-
 def _level_task_ids(level_spec: dict, families: Dict[str, List[str]]) -> List[str]:
     """Return task ids associated with any level for progress records."""
     if level_spec.get('surface') == 'config' and (level_spec.get('tasks') or level_spec.get('task') or level_spec.get('family') in families):
@@ -2434,7 +2441,6 @@ def _level_task_ids(level_spec: dict, families: Dict[str, List[str]]) -> List[st
     for tasks in selected.values():
         out.extend((str(task) for task in tasks))
     return out
-
 def _dataset_for(level_spec: dict, families: Dict[str, List[str]], iterations: int) -> dict:
     fam = level_spec.get('family')
     task = level_spec.get('task')
@@ -2444,7 +2450,6 @@ def _dataset_for(level_spec: dict, families: Dict[str, List[str]], iterations: i
     if tasks:
         return TB.make_dataset([f"task_set:{level_spec.get('id', 'config')}"], repeats=iterations)
     return TB.make_dataset([fam or task], repeats=iterations)
-
 def _artifact_text(level, surface: str) -> str:
     if surface == 'config':
         return best_config_from(level)
@@ -2459,11 +2464,9 @@ def _artifact_text(level, surface: str) -> str:
     out = level.forward(None)
     data = out.data if hasattr(out, 'data') else out
     return str(data)
-
 def _candidate_artifact_kind(surface: str) -> Optional[str]:
     """Return the kind used for validated candidate artifacts, if any."""
     return {'config': 'config_candidate', 'family_policy': 'policy', 'prior': 'prior'}.get(surface)
-
 def _candidate_artifact_families(level_spec: dict, families: Dict[str, List[str]]) -> List[str]:
     """Return candidate artifact family labels for one level spec."""
     surface = level_spec['surface']
@@ -2482,7 +2485,6 @@ def _candidate_artifact_families(level_spec: dict, families: Dict[str, List[str]
     if surface == 'prior':
         return ['<holdout>']
     return []
-
 def _select_best_saved_candidate(memory: MemoryLite, level_spec: dict, families: Dict[str, List[str]], final_score: float):
     """Return the best validated candidate when it beats the final state."""
     kind = _candidate_artifact_kind(level_spec['surface'])
@@ -2495,7 +2497,6 @@ def _select_best_saved_candidate(memory: MemoryLite, level_spec: dict, families:
         return None
     best = max(candidates, key=lambda artifact: float(artifact.score))
     return best if float(best.score) > float(final_score) else None
-
 def _seed_from_text(level, surface: str, text: str) -> None:
     if surface == 'config':
         getattr(level, '_cfg_node')._data = text
@@ -2507,7 +2508,6 @@ def _seed_from_text(level, surface: str, text: str) -> None:
         getattr(level, '_prior_node')._data = text
     elif surface == 'code':
         getattr(level, '_impl')._data = text
-
 def _final_eval(level, level_spec: dict, families: Dict[str, List[str]]):
     surface = level_spec['surface']
     if surface == 'config':

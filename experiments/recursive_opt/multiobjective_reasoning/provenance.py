@@ -206,3 +206,199 @@ def build_control_plane_lock_after_gepa_reflection_fix() -> dict[str, Any]:
             },
         },
     }
+
+
+def build_experiment_protocol_lock_after_proposal_gate_fix() -> dict[str, Any]:
+    """Version the proposal-gate correction against the frozen control plane."""
+    previous_path = PACKAGE_ROOT / "control_plane_lock_after_gepa_reflection_fix.json"
+    previous = _load_json(previous_path)
+    golden = _load_json(
+        REPOSITORY_ROOT
+        / "artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json"
+    )
+    control_provenance = control_plane.compile_plan(golden).code_provenance
+    expected_control = previous["control_plane"]
+    if (
+        control_provenance["runtime_tree_sha256"]
+        != expected_control["runtime_tree_sha256"]
+    ):
+        raise RuntimeError("frozen control-plane runtime digest changed")
+    if control_provenance["registry_sha256"] != expected_control["registry_sha256"]:
+        raise RuntimeError("frozen control-plane registry digest changed")
+    changed_control_files = subprocess.run(
+        [
+            "git",
+            "status",
+            "--porcelain",
+            "--untracked-files=no",
+            "--",
+            "opto/features/recursive_opt",
+            "opto/features/graph",
+        ],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if changed_control_files:
+        raise RuntimeError("frozen control-plane files have local modifications")
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return {
+        "schema_version": "recursive-opt-experiment-lock/v4",
+        "experiment_version": previous["experiment_version"],
+        "git_head": head,
+        "branch": previous["branch"],
+        "control_plane": previous["control_plane"],
+        "experiment": {
+            **previous["experiment"],
+            "source": experiment_source_provenance(),
+            "registry": experiment_registry_provenance(),
+        },
+        "workflow": previous["workflow"],
+        "environment": previous["environment"],
+        "gepa_public_evaluator_contract": previous[
+            "gepa_public_evaluator_contract"
+        ],
+        "gepa_reflection_protocol": previous["gepa_reflection_protocol"],
+        "protocol_amendment": {
+            "name": "proposal-gate-semantics-correction",
+            "proposal_gate": "optimizer usage plus proposed and evaluated candidates",
+            "selection_diagnostic": "selected artifact differs from P0",
+            "scientific_success_criteria_changed": False,
+        },
+        "supersedes": {
+            "path": str(previous_path.relative_to(PACKAGE_ROOT)),
+            "git_head": previous["git_head"],
+            "experiment_source_sha256": previous["experiment"]["source"]["sha256"],
+            "reason": "separate proposal execution from selected-artifact change",
+        },
+    }
+
+
+def build_control_plane_lock_after_empty_text_retry() -> dict[str, Any]:
+    """Lock the metered empty-text retry without changing Experiment 0 science."""
+    register_experiment_components()
+    previous_path = PACKAGE_ROOT / "experiment_protocol_lock_after_proposal_gate_fix.json"
+    previous = _load_json(previous_path)
+    readiness = _load_json(
+        REPOSITORY_ROOT / "artifacts/control_plane_v2/prompt18_readiness.json"
+    )
+    golden = _load_json(
+        REPOSITORY_ROOT
+        / "artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json"
+    )
+    control_provenance = control_plane.compile_plan(golden).code_provenance
+    if (
+        control_provenance["runtime_tree_sha256"]
+        != readiness["verified_runtime_tree_sha256"]
+    ):
+        raise RuntimeError("readiness runtime digest diverges from production")
+    if control_provenance["registry_sha256"] != readiness["verified_registry_sha256"]:
+        raise RuntimeError("readiness registry digest diverges from production")
+    changed_control_files = subprocess.run(
+        [
+            "git",
+            "status",
+            "--porcelain",
+            "--untracked-files=no",
+            "--",
+            "opto/features/recursive_opt",
+            "opto/optimizers/optoprime_v2.py",
+        ],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    required_ci = readiness.get("required_ci_run")
+    ready = bool(readiness.get("ready_for_prompt_18"))
+    if ready:
+        if not isinstance(required_ci, dict):
+            raise RuntimeError("ready control plane lacks required CI evidence")
+        if required_ci.get("status") != "completed" or required_ci.get("conclusion") != "success":
+            raise RuntimeError("required empty-text retry CI is not green")
+        if required_ci.get("head_sha") != head:
+            raise RuntimeError("current HEAD does not match required CI evidence")
+        if changed_control_files:
+            raise RuntimeError("CI-verified control-plane files have local modifications")
+    selected_task = previous["experiment"]["selected_task"]
+    plan_registry = {
+        engine: control_plane.compile_plan(
+            build_spec(
+                task=selected_task,
+                engine=engine,
+                seed=0,
+                output_directory=None,
+            )
+        ).code_provenance["registry_sha256"]
+        for engine in ("fixed", "trace", "gepa_optimize_anything")
+    }
+    workflow = None
+    if isinstance(required_ci, dict):
+        workflow = {
+            "name": "recursive-opt v2 contracts",
+            "run_id": required_ci["id"],
+            "job": required_ci["job"],
+            "job_id": required_ci["job_id"],
+            "head_sha": required_ci["head_sha"],
+            "status": required_ci["status"],
+            "conclusion": required_ci["conclusion"],
+            "url": required_ci["url"],
+        }
+    return {
+        "schema_version": "recursive-opt-experiment-lock/v5",
+        "experiment_version": previous["experiment_version"],
+        "git_head": head,
+        "branch": previous["branch"],
+        "ready_for_live_experiment": ready and not changed_control_files,
+        "control_plane": {
+            "runtime_tree_sha256": control_provenance["runtime_tree_sha256"],
+            "registry_sha256": control_provenance["registry_sha256"],
+            "runtime_files_locked": ready and not changed_control_files,
+            "local_modifications": bool(changed_control_files),
+        },
+        "experiment": {
+            **previous["experiment"],
+            "source": experiment_source_provenance(),
+            "registry": experiment_registry_provenance(),
+            "plan_registry_sha256_by_engine": plan_registry,
+        },
+        "workflow": workflow,
+        "environment": previous["environment"],
+        "gepa_public_evaluator_contract": previous[
+            "gepa_public_evaluator_contract"
+        ],
+        "gepa_reflection_protocol": previous["gepa_reflection_protocol"],
+        "optimizer_semantic_response_contract": {
+            "final_text_required": True,
+            "maximum_metered_attempts": 2,
+            "maximum_semantic_retries": 1,
+            "trace_and_gepa_shared": True,
+            "reasoning_text_is_not_final_output": True,
+        },
+        "scientific_protocol_changed": False,
+        "supersedes": {
+            "path": str(previous_path.relative_to(PACKAGE_ROOT)),
+            "git_head": previous["git_head"],
+            "runtime_tree_sha256": previous["control_plane"][
+                "runtime_tree_sha256"
+            ],
+            "experiment_source_sha256": previous["experiment"]["source"][
+                "sha256"
+            ],
+            "reason": "metered optimizer empty-text semantic retry",
+        },
+    }

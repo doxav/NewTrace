@@ -7,6 +7,7 @@ import copy
 import json
 import os
 import random
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -74,6 +75,7 @@ class _SeedRecordingOptimizer(_NoLLMOptimizer):
 class _FakeResponse:
     """Provider-like response carrying deterministic usage."""
 
+    choices = [SimpleNamespace(message=SimpleNamespace(content="ok"))]
     usage = {
         "prompt_tokens": 3,
         "completion_tokens": 2,
@@ -94,6 +96,73 @@ class _FakeClient:
         if self.fail:
             raise RuntimeError(f"provider unavailable: {self.model}")
         return _FakeResponse()
+
+
+def _optimizer_provider_response(
+    content: str | None,
+    *,
+    prompt_tokens: int,
+    completion_tokens: int,
+    cost_usd: float,
+    finish_reason: str = "stop",
+    reasoning: str | None = None,
+) -> Any:
+    """Build one provider response for semantic optimizer-boundary tests."""
+    return SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                finish_reason=finish_reason,
+                message=SimpleNamespace(content=content, reasoning=reasoning),
+            )
+        ],
+        usage={
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+            "cost_usd": cost_usd,
+        },
+    )
+
+
+class _SequentialChatClient:
+    """Return configured provider responses while recording exact requests."""
+
+    def __init__(self, responses: list[Any]) -> None:
+        """Store a non-empty deterministic response sequence."""
+        if not responses:
+            raise ValueError("response sequence must be non-empty")
+        self.responses = list(responses)
+        self.requests: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """Record one request and return the next configured response."""
+        self.requests.append((copy.deepcopy(args), copy.deepcopy(kwargs)))
+        if not self.responses:
+            raise AssertionError("unexpected extra provider call")
+        response = self.responses.pop(0)
+        return response(*args, **kwargs) if callable(response) else response
+
+
+def _text_required_test_client(
+    provider: _SequentialChatClient,
+) -> tuple[Any, dict[str, Any], Any, list[dict[str, Any]]]:
+    """Construct the production guarded and text-required optimizer layering."""
+    usage: dict[str, Any] = {}
+    guard = S._BudgetGuard(
+        {"optimizer_llm_calls": 2, "total_tokens": 100, "on_exceed": "fail"}
+    )
+    diagnostics: list[dict[str, Any]] = []
+    guarded = S._GuardedRoleClient(
+        provider,
+        "optimizer",
+        usage,
+        guard,
+        64,
+        0.0,
+        {"reasoning": {"effort": "low"}},
+        "fake/optimizer",
+    )
+    return S._TextRequiredOptimizerClient(guarded, usage, diagnostics), usage, guard, diagnostics
 
 
 def _accuracy_objective(
@@ -1094,6 +1163,193 @@ def test_22f_gepa_reflection_adapter_rejects_nontext_responses(
         adapted(42)  # type: ignore[arg-type]
 
 
+def test_22g_optimizer_empty_text_retries_once_and_accounts_both_calls() -> None:
+    provider = _SequentialChatClient(
+        [
+            _optimizer_provider_response(
+                None,
+                prompt_tokens=7,
+                completion_tokens=3,
+                cost_usd=0.1,
+                finish_reason="length",
+                reasoning="private reasoning must not be persisted",
+            ),
+            _optimizer_provider_response(
+                "exact optimizer answer",
+                prompt_tokens=11,
+                completion_tokens=5,
+                cost_usd=0.2,
+            ),
+        ]
+    )
+    adapted, usage, guard, diagnostics = _text_required_test_client(provider)
+
+    response = adapted(messages=[{"role": "user", "content": "same request"}])
+
+    assert S._optimizer_response_text(response) == "exact optimizer answer"
+    assert len(provider.requests) == 2
+    assert provider.requests[0] == provider.requests[1]
+    assert usage["optimizer"] == {
+        "calls": 2,
+        "prompt_tokens": 18,
+        "completion_tokens": 8,
+        "total_tokens": 26,
+        "cost_usd": pytest.approx(0.3),
+        "empty_text_responses": 1,
+        "semantic_retries": 1,
+        "semantic_retry_prompt_tokens": 11,
+        "semantic_retry_completion_tokens": 5,
+        "semantic_retry_total_tokens": 16,
+        "semantic_retry_cost_usd": pytest.approx(0.2),
+    }
+    assert guard.report()["accounted"]["optimizer_llm_calls"] == 2
+    assert guard.report()["accounted"]["total_tokens"] == 26
+    assert diagnostics[0]["finish_reason"] == "length"
+    assert diagnostics[0]["content_present"] is False
+    assert diagnostics[0]["reasoning_present"] is True
+    assert "private reasoning" not in repr(diagnostics)
+
+
+def test_22h_optimizer_two_empty_responses_fail_explicitly() -> None:
+    provider = _SequentialChatClient(
+        [
+            _optimizer_provider_response(
+                None, prompt_tokens=4, completion_tokens=2, cost_usd=0.01
+            ),
+            _optimizer_provider_response(
+                "   ", prompt_tokens=5, completion_tokens=3, cost_usd=0.02
+            ),
+        ]
+    )
+    adapted, usage, guard, diagnostics = _text_required_test_client(provider)
+
+    with pytest.raises(
+        RuntimeError,
+        match="no final textual content after 2 metered attempts",
+    ):
+        adapted(messages=[{"role": "user", "content": "same request"}])
+
+    assert len(provider.requests) == 2
+    assert usage["optimizer"]["calls"] == 2
+    assert usage["optimizer"]["total_tokens"] == 14
+    assert usage["optimizer"]["empty_text_responses"] == 2
+    assert usage["optimizer"]["semantic_retries"] == 1
+    assert guard.report()["accounted"]["optimizer_llm_calls"] == 2
+    assert guard.report()["accounted"]["total_tokens"] == 14
+    assert guard.report()["accounted"]["candidates_proposed"] == 0
+    assert guard.report()["accounted"]["candidates_evaluated"] == 0
+    assert [item["content_present"] for item in diagnostics] == [False, False]
+
+
+def test_22i_optimizer_normal_text_does_not_retry() -> None:
+    provider = _SequentialChatClient(
+        [
+            _optimizer_provider_response(
+                "normal answer", prompt_tokens=4, completion_tokens=2, cost_usd=0.01
+            )
+        ]
+    )
+    adapted, usage, guard, diagnostics = _text_required_test_client(provider)
+
+    response = adapted(messages=[{"role": "user", "content": "one request"}])
+
+    assert S._optimizer_response_text(response) == "normal answer"
+    assert len(provider.requests) == 1
+    assert usage["optimizer"]["calls"] == 1
+    assert usage["optimizer"]["empty_text_responses"] == 0
+    assert usage["optimizer"]["semantic_retries"] == 0
+    assert guard.report()["accounted"]["optimizer_llm_calls"] == 1
+    assert diagnostics[0]["content_present"] is True
+
+
+def test_22j_trace_real_optimizer_retries_empty_text_and_proposes() -> None:
+    def valid_proposal(*_args: Any, **kwargs: Any) -> Any:
+        """Return a valid update for the exact runtime-generated parameter name."""
+        prompt = "\n".join(message["content"] for message in kwargs["messages"])
+        names = re.findall(r'<variable name="([^"]+)"', prompt)
+        assert names
+        return _optimizer_provider_response(
+            "\n".join(
+                ["<reasoning>use the expected value</reasoning>"]
+                + [
+                    f"<variable><name>{name}</name><value>correct</value></variable>"
+                    for name in names
+                ]
+            ),
+            prompt_tokens=9,
+            completion_tokens=3,
+            cost_usd=0.02,
+        )
+
+    provider = _SequentialChatClient(
+        [
+            _optimizer_provider_response(
+                None, prompt_tokens=7, completion_tokens=3, cost_usd=0.01
+            ),
+            valid_proposal,
+        ]
+    )
+    level = _level(planner="wrong", engine="trace")
+    level["engine"]["config"] = {
+        "iterations": 2,
+        "num_candidates": 1,
+        "validation_gate": False,
+    }
+    level["llm_roles"] = {"optimizer": "optimizer"}
+    raw = _spec([level])
+    raw["runtime"] = {"offline": True, "test_mode": True, "seed": 7}
+    raw["llm_profiles"] = {
+        "optimizer": {
+            "provider": "fake",
+            "model": "fake/optimizer",
+            "max_tokens": 64,
+            "temperature": 0.0,
+            "request_params": {"reasoning": {"effort": "low"}},
+        }
+    }
+    raw["budget"] = {
+        "optimizer_llm_calls": 2,
+        "candidates": 2,
+        "evaluator_runs": 20,
+        "total_tokens": 100,
+        "on_exceed": "fail",
+    }
+
+    result = S.run_spec(
+        raw,
+        resources={
+            "llm_factory": lambda _profile, _role: provider,
+            "preflight_checker": lambda _model: None,
+        },
+    )
+
+    assert result.valid and result.status == "success"
+    assert result.artifact["components"]["planner"] == "correct"
+    assert len(provider.requests) == 2
+    assert provider.requests[0] == provider.requests[1]
+    assert result.usage["optimizer"]["calls"] == 2
+    assert result.usage["optimizer"]["total_tokens"] == 22
+    assert result.usage["optimizer"]["empty_text_responses"] == 1
+    assert result.usage["optimizer"]["semantic_retries"] == 1
+    assert result.budget["accounted"]["optimizer_llm_calls"] == 2
+    assert result.budget["accounted"]["total_tokens"] == 22
+    assert result.budget["accounted"]["candidates_proposed"] >= 1
+    assert result.budget["accounted"]["candidates_evaluated"] >= 1
+
+
+def test_22k_direct_optoprime_v2_missing_text_is_explicit() -> None:
+    from opto.optimizers.optoprime_v2 import OptoPrimeV2
+
+    optimizer = object.__new__(OptoPrimeV2)
+    optimizer.llm = lambda **_kwargs: _optimizer_provider_response(
+        None, prompt_tokens=3, completion_tokens=2, cost_usd=0.0
+    )
+    optimizer.use_json_object_format = False
+
+    with pytest.raises(RuntimeError, match="no final textual content"):
+        optimizer.call_llm(system_prompt="system", user_prompt="user")
+
+
 def test_22g_real_gepa_reflection_proposal_through_run_spec(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1122,6 +1378,7 @@ def test_22g_real_gepa_reflection_proposal_through_run_spec(
             assert kwargs["temperature"] == 0.0
             assert kwargs["reasoning"] == {"effort": "low"}
             provider_calls.append(copy.deepcopy(kwargs))
+            content = None if len(provider_calls) == 1 else "```\ncorrect\n```"
             return SimpleNamespace(
                 usage={
                     "prompt_tokens": 7,
@@ -1130,7 +1387,7 @@ def test_22g_real_gepa_reflection_proposal_through_run_spec(
                 },
                 choices=[
                     SimpleNamespace(
-                        message=SimpleNamespace(content="```\ncorrect\n```")
+                        message=SimpleNamespace(content=content)
                     )
                 ],
             )
@@ -1206,11 +1463,14 @@ def test_22g_real_gepa_reflection_proposal_through_run_spec(
     assert version("gepa") == S.GEPA_VERSION == "0.1.4"
     assert result.valid and result.status == "success"
     assert result.artifact["components"]["planner"] == "correct"
-    assert len(provider_calls) == 1
-    assert result.usage["optimizer"]["calls"] == 1
-    assert result.usage["optimizer"]["total_tokens"] == 10
-    assert accounted["optimizer_llm_calls"] == 1
-    assert accounted["total_tokens"] == 10
+    assert len(provider_calls) == 2
+    assert provider_calls[0] == provider_calls[1]
+    assert result.usage["optimizer"]["calls"] == 2
+    assert result.usage["optimizer"]["total_tokens"] == 20
+    assert result.usage["optimizer"]["empty_text_responses"] == 1
+    assert result.usage["optimizer"]["semantic_retries"] == 1
+    assert accounted["optimizer_llm_calls"] == 2
+    assert accounted["total_tokens"] == 20
     assert accounted["candidates_proposed"] >= 1
     assert accounted["candidates_evaluated"] >= 1
     assert any(planner == "correct" for _split, _phase, planner in evaluation_calls)

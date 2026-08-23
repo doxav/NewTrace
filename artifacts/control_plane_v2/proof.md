@@ -1,5 +1,24 @@
 # recursive-opt v2alpha semantic-closure proof
 
+## Optimizer empty-text retry proof — pre-CI
+
+Six provider-free causal tests prove one shared optimizer text contract across
+Trace and installed GEPA 0.1.4: empty/text succeeds after exactly two identical
+metered requests; empty/empty fails explicitly after two; normal text makes one
+call; real Trace and GEPA both propose and evaluate candidates after the retry;
+and direct `OptoPrimeV2` cannot reach `"TERMINATE" in None`.
+
+The full provider-free results are 212 focused passes, 317 mandated recursive
+passes with two accepted optional skips, 497 complete-unit passes with three
+accepted optional skips, 23 Experiment-0 passes including its full offline
+contract, and one clean-kernel notebook pass. Runtime footprint remains exactly
+8,850 recursive-opt lines through whitespace-only compaction; no footprint gate
+was relaxed. Runtime digest is
+`ba4836d9f43cffcd0271086932745b270d75478b5287a7d8100be4928b623cbc`
+and registry digest remains
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+Required CI and Prompt-18 readiness are intentionally false before push.
+
 ## GEPA reflection-protocol hotfix proof
 
 The provider-free installed-`gepa==0.1.4` test reaches a real reflective

@@ -6,17 +6,19 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
-from experiments.recursive_opt.multiobjective_reasoning import live
+from experiments.recursive_opt.multiobjective_reasoning import forecast, live
 from experiments.recursive_opt.multiobjective_reasoning.datasets import (
     _resolve_v2,
     v2_pool_indices,
 )
 from experiments.recursive_opt.multiobjective_reasoning.offline_contract import (
     _FakeClient,
+    run_offline_contract,
 )
 from experiments.recursive_opt.multiobjective_reasoning.preflight import (
     classify_near_eligible_tasks,
@@ -244,6 +246,14 @@ def test_offline_provider_rejects_gepa_positional_protocol() -> None:
     assert [request["kind"] for request in client.requests] == ["gepa_reflection"]
 
 
+def test_complete_offline_contract_uses_no_external_network() -> None:
+    """Run all offline assertions under the caller's pytest-socket policy."""
+    result = run_offline_contract()
+
+    assert result["passed"] is True
+    assert len(result["assertions"]) == 20
+
+
 def test_live_runner_reads_versioned_runtime_lock(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -260,3 +270,322 @@ def test_live_runner_reads_versioned_runtime_lock(
     lock_path.write_text("{}", encoding="utf-8")
     with pytest.raises(ValueError, match="lacks a runtime digest"):
         live._locked_runtime_tree_sha256()
+
+
+def test_rejected_candidate_exercises_proposal_without_changing_selection() -> None:
+    accounted = {"candidates_proposed": 1, "candidates_evaluated": 1}
+    optimizer_usage = {"calls": 1, "total_tokens": 10}
+
+    assert live._proposal_path_exercised(
+        optimized=True,
+        optimizer_usage=optimizer_usage,
+        accounted=accounted,
+    )
+    assert not live._selection_changed(
+        optimized=True,
+        artifact=live.INITIAL_ARTIFACT,
+    )
+    checks = {
+        name: True for name in live._RESUME_INFRASTRUCTURE_PREREQUISITES
+    }
+    checks.update(
+        proposal_path_exercised=True,
+        selection_changed=False,
+        output_persistence_and_resume=True,
+    )
+    assert live._infrastructure_checks_pass(checks)
+
+
+def test_missing_optimizer_call_or_candidate_fails_proposal_path() -> None:
+    assert not live._proposal_path_exercised(
+        optimized=True,
+        optimizer_usage={"calls": 0, "total_tokens": 0},
+        accounted={"candidates_proposed": 0, "candidates_evaluated": 0},
+    )
+
+
+def test_accepted_candidate_exercises_proposal_and_changes_selection() -> None:
+    accepted = {
+        **live.INITIAL_ARTIFACT,
+        "analysis_instruction": "Accepted optimized instruction.",
+    }
+
+    assert live._proposal_path_exercised(
+        optimized=True,
+        optimizer_usage={"calls": 1, "total_tokens": 10},
+        accounted={"candidates_proposed": 1, "candidates_evaluated": 1},
+    )
+    assert live._selection_changed(optimized=True, artifact=accepted)
+
+
+def test_resume_runs_when_selection_is_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    raw = {
+        "budget": {},
+        "runtime": {},
+        "llm_profiles": {
+            "forward_primary": {
+                "request_params": {"reasoning": {"enabled": False}}
+            },
+            "optimizer_primary": {
+                "request_params": {"reasoning": {"effort": "low"}}
+            },
+        },
+    }
+    output = object()
+    result = SimpleNamespace(
+        status="success",
+        valid=True,
+        error=None,
+        artifact=copy.deepcopy(live.INITIAL_ARTIFACT),
+        evaluation=SimpleNamespace(metrics={"accuracy": 1.0}),
+        usage={
+            "forward": {"calls": 1, "total_tokens": 10},
+            "optimizer": {"calls": 1, "total_tokens": 5},
+        },
+        budget={
+            "accounted": {
+                "eval_llm_calls": 1,
+                "evaluator_runs": 1,
+                "candidates_proposed": 1,
+                "candidates_evaluated": 1,
+            }
+        },
+        metadata={"selected_models": {}},
+        to_dict=lambda: {"result": "stable"},
+    )
+    plan = SimpleNamespace(
+        spec=raw,
+        fingerprint="fingerprint",
+        code_provenance={
+            "runtime_tree_sha256": "a" * 64,
+            "registry_sha256": "b" * 64,
+        },
+    )
+    calls = 0
+
+    def fake_run_spec(spec: dict[str, Any]) -> Any:
+        """Populate events only for the initial execution, not its resume."""
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            live.FORWARD_EVENTS.append({"output": output})
+            live.EVALUATOR_EVENTS.append(
+                {
+                    "output_identity": id(output),
+                    "sample_id": "train-1",
+                    "phase": "proposal",
+                }
+            )
+        return result
+
+    monkeypatch.setattr(live, "build_spec", lambda **kwargs: copy.deepcopy(raw))
+    monkeypatch.setattr(live.control_plane, "compile_plan", lambda spec: plan)
+    monkeypatch.setattr(live.control_plane, "run_spec", fake_run_spec)
+    monkeypatch.setattr(live, "_locked_runtime_tree_sha256", lambda: "a" * 64)
+    monkeypatch.setattr(
+        live,
+        "_locked_experiment_source_sha256",
+        lambda: "c" * 64,
+    )
+    monkeypatch.setattr(
+        live,
+        "experiment_source_provenance",
+        lambda: {"sha256": "c" * 64},
+    )
+    monkeypatch.setattr(
+        live,
+        "_load_json",
+        lambda path: {"tasks": {"gsm8k": {"samples": []}}},
+    )
+    monkeypatch.setattr(
+        live,
+        "_per_example_forward_usage",
+        lambda: [
+            {
+                "usage": {"total_tokens": 10},
+                "provider_calls": [
+                    {
+                        "actual_provider": "openrouter",
+                        "actual_model": live.MODEL,
+                        "cache_hit": False,
+                    }
+                ],
+            }
+        ],
+    )
+    for name in live._OVERRIDE_ENVIRONMENT:
+        monkeypatch.delenv(name, raising=False)
+
+    run = live._execute_arm(
+        arm="C",
+        task="gsm8k",
+        baseline_tokens={},
+        seed=0,
+        proposals=1,
+        split_limits={"train": 1, "validation": 1, "holdout": 1},
+        budget_limits={},
+        output_directory=tmp_path,
+    )
+
+    assert calls == 2
+    assert run["checks"]["proposal_path_exercised"] is True
+    assert run["checks"]["selection_changed"] is False
+    assert run["checks"]["output_persistence_and_resume"] is True
+    assert run["passed"] is True
+
+
+def test_pilot_keeps_real_proposals_and_selection_change_independent() -> None:
+    runs = [
+        {
+            "arm": arm,
+            "checks": {
+                "proposal_path_exercised": True,
+                "selection_changed": False,
+            },
+        }
+        for arm in ("B", "C", "D")
+    ]
+
+    gates = live._pilot_optimizer_gates(runs)
+
+    assert gates == {
+        "trace_real_proposal": True,
+        "gepa_real_proposal": True,
+        "optimized_artifact_differs": False,
+    }
+
+
+def test_pilot_retry_statistics_are_separate_and_metered_by_arm() -> None:
+    runs = [
+        {
+            "arm": "B",
+            "usage": {
+                "optimizer": {
+                    "empty_text_responses": 1,
+                    "semantic_retries": 1,
+                    "semantic_retry_prompt_tokens": 10,
+                    "semantic_retry_completion_tokens": 2,
+                    "semantic_retry_total_tokens": 12,
+                    "semantic_retry_cost_usd": 0.01,
+                }
+            },
+        },
+        {
+            "arm": "B",
+            "usage": {
+                "optimizer": {
+                    "empty_text_responses": 2,
+                    "semantic_retries": 1,
+                    "semantic_retry_prompt_tokens": 20,
+                    "semantic_retry_completion_tokens": 4,
+                    "semantic_retry_total_tokens": 24,
+                    "semantic_retry_cost_usd": 0.02,
+                }
+            },
+        },
+        {"arm": "C", "usage": {"optimizer": {}}},
+    ]
+
+    statistics = live._pilot_retry_statistics(runs)
+
+    assert statistics["B"] == {
+        "empty_text_responses": 3,
+        "semantic_retries": 2,
+        "semantic_retry_prompt_tokens": 30,
+        "semantic_retry_completion_tokens": 6,
+        "semantic_retry_total_tokens": 36,
+        "semantic_retry_cost_usd": pytest.approx(0.03),
+    }
+    assert statistics["C"]["empty_text_responses"] == 0
+    assert statistics["C"]["semantic_retries"] == 0
+
+
+def test_completed_pilot_replaces_smoke_projection_and_includes_retry_cost(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pilot_path = tmp_path / "pilot.json"
+    pilot_path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(forecast, "PILOT_REPORT_PATH", pilot_path)
+    micro = {
+        "passed": True,
+        "arms": {
+            arm: {
+                "usage": {
+                    "forward": {
+                        "prompt_tokens": 1,
+                        "completion_tokens": 1,
+                        "total_tokens": 2,
+                    },
+                    "optimizer": {},
+                }
+            }
+            for arm in ("A", "B", "C")
+        },
+    }
+    pilot = {
+        "passed": True,
+        "runs": [
+            {
+                "arm": arm,
+                "usage": {
+                    "forward": {
+                        "prompt_tokens": 100,
+                        "completion_tokens": 50,
+                        "total_tokens": 150,
+                    },
+                    "optimizer": {
+                        "prompt_tokens": 20,
+                        "completion_tokens": 10,
+                        "total_tokens": 30,
+                    },
+                },
+            }
+            for arm in ("A", "B", "C", "D")
+        ],
+        "retry_statistics_by_arm": {
+            "B": {
+                "semantic_retry_prompt_tokens": 20,
+                "semantic_retry_completion_tokens": 10,
+            }
+        },
+    }
+    preregistration = {
+        "dataset_pools": {
+            "micro_smoke_subset": {"train": 1, "validation": 1, "holdout": 1},
+            "pilot_subset": {"train": 4, "validation": 4, "holdout": 8},
+            "minimum_sizes": {"train": 16, "validation": 12, "holdout": 24},
+        },
+        "pilot": {"candidate_budgets": [4, 6]},
+        "main_monetary_ceiling_usd": None,
+    }
+    pricing = {
+        "input_usd_per_million_tokens": 1.0,
+        "output_usd_per_million_tokens": 2.0,
+    }
+
+    def fake_load(path: Path) -> dict[str, Any]:
+        """Return deterministic forecast inputs for each requested path."""
+        if path == forecast.MICRO_REPORT_PATH:
+            return micro
+        if path == pilot_path:
+            return pilot
+        if path.name == "preregistration_v2.json":
+            return preregistration
+        if path.name == "provider_pricing.json":
+            return pricing
+        raise AssertionError(f"unexpected forecast input: {path}")
+
+    monkeypatch.setattr(forecast, "_load_json", fake_load)
+
+    result = forecast.build_cost_forecast()
+
+    assert result["pilot"]["complete"] is True
+    assert result["pilot"]["tokens"]["total_tokens"] == 720
+    assert result["pilot"]["retry_cost_usd_by_arm"]["B"] == 0.00004
+    assert result["main_full_v2_pool"]["projected_tokens"]["total_tokens"] > 720
+    assert result["recommended_main_cost_ceiling_usd"] == pytest.approx(
+        result["main_full_v2_pool"]["projected_cost_usd"] * 1.2
+    )
+    assert result["main_run_authorized"] is False

@@ -1,5 +1,27 @@
 # Control plane v2 implementation evidence
 
+## Optimizer empty-text semantic retry — pending CI (2026-08-24)
+
+The recursive-opt optimizer-role boundary now requires non-empty final text and
+retries the identical request once through the same guarded client. Trace and
+GEPA share this adapter; all retry calls and tokens remain metered, reasoning
+text is never used as final output, and direct `OptoPrimeV2` raises an explicit
+missing-text error. The Experiment-0 scientific protocol is unchanged.
+
+Provider-free causal seams passed **6 tests**. The network-blocked focused
+matrix passed **212 tests**; the mandated regression passed **317 tests with 2
+optional skips**; the complete unit suite passed **497 tests with 3 optional
+skips**; Experiment-0 passed **23 tests**, including its full 20-assertion
+offline contract; and the clean-kernel notebook passed. Ruff, diff checking,
+and credential scanning passed. No Trace, GEPA, or Experiment-0 test skipped.
+
+The new runtime digest is
+`ba4836d9f43cffcd0271086932745b270d75478b5287a7d8100be4928b623cbc`.
+The registry digest remains
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+Readiness and the required-CI gate remain false pending an observed green
+`recursive-opt v2 offline (required)` run.
+
 ## GEPA 0.1.4 reflection protocol relock (2026-08-23)
 
 The GEPA engine now adapts its text reflection callable to the existing guarded

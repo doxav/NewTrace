@@ -1,0 +1,23 @@
+{
+  "schema_version": "recursive-opt-pilot-runtime-classification/v1",
+  "runtime_label": "pre_empty_text_retry_runtime",
+  "pilot_report": "pilot.json",
+  "pilot_report_sha256": "bb24afbae79e945de0eeab97a971f50a5fee63fb619fc37dde9df0d4123a3d04",
+  "pilot_run_file_count": 66,
+  "pilot_run_content_hash_set_sha256": "bd6d7577e795edc73fcf0c84668d87a557b49f011ccb005bc3ac80d211c57900",
+  "planned_runs": 24,
+  "completed_runs": 6,
+  "stopped_after": {
+    "seed": 0,
+    "proposal_budget": 6,
+    "arm": "B"
+  },
+  "efficacy_evidence": "incomplete_provisional_do_not_combine",
+  "infrastructure_failure_evidence": "valid",
+  "accounted_total_tokens": 219351,
+  "optimizer_llm_calls": 18,
+  "eval_llm_calls": 328,
+  "candidate_evaluations": 112,
+  "holdout_leakage": false,
+  "replacement_policy": "Restart all 24 paired pilot runs from the beginning under the post-hotfix lock."
+}

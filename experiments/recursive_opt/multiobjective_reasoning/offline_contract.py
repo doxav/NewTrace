@@ -212,7 +212,7 @@ def run_offline_contract() -> dict[str, Any]:
     package_root = Path(__file__).resolve().parent
     repository_root = package_root.parents[2]
     lock = json.loads(
-        (package_root / "control_plane_lock_after_gepa_reflection_fix.json").read_text(
+        (package_root / "control_plane_lock_after_empty_text_retry.json").read_text(
             encoding="utf-8"
         )
     )

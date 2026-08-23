@@ -1,0 +1,317 @@
+{
+  "code_provenance": {
+    "entries": {
+      "codecs": [
+        {
+          "implementation_sha256": "10ddc7eb77b925aecd6c4d040cd6e1d3abde29f6772d2bf56c9e8733c8f4ea39",
+          "package_version": "0.2.0",
+          "python_module": "opto.features.recursive_opt.spec",
+          "qualified_name": "_artifact_to_prior",
+          "ref": "recursive_opt.codec.artifact_to_prior@1",
+          "source_file": "opto/features/recursive_opt/spec.py",
+          "source_sha256": "59add791eca2fe6ff2521a6ab8a347992d57b6bbf55584bf3e5626d5506d6e5c"
+        }
+      ],
+      "datasets": [
+        {
+          "implementation_sha256": "55dbc2cdddcddc3188bd2fb65ccd902820106f73b8e87d5ab6829aeb9d182d02",
+          "package_version": null,
+          "python_module": "experiments.recursive_opt.multiobjective_reasoning.datasets",
+          "qualified_name": "resolve_gsm8k_v2",
+          "ref": "recursive_experiments.dataset.gsm8k@2",
+          "source_file": "experiments/recursive_opt/multiobjective_reasoning/datasets.py",
+          "source_sha256": "d98e83081c6c89de2ed94cf72215d53aaf3513e314ecaad35376b37897464167"
+        }
+      ],
+      "engines": [
+        {
+          "implementation_sha256": "e5f27fc78f57e01f254f15119f35de736854fb9398fc6e69d1f1179ca8e17752",
+          "package_version": "0.2.0",
+          "python_module": "opto.features.recursive_opt.spec",
+          "qualified_name": "_run_trace_engine",
+          "ref": "trace",
+          "source_file": "opto/features/recursive_opt/spec.py",
+          "source_sha256": "42b0aedbae2da8bafa02362a0afd029a485bee82b0f71dc007c1035f6d19bfd7"
+        }
+      ],
+      "evaluators": [
+        {
+          "implementation_sha256": "8f108140752dc9f1a938c29dccde9f94c3dff518435dab8a42004aba0a2a8ecd",
+          "package_version": null,
+          "python_module": "experiments.recursive_opt.multiobjective_reasoning.evaluator",
+          "qualified_name": "exact_reasoning_evaluator",
+          "ref": "recursive_experiments.evaluator.exact_reasoning@1",
+          "source_file": "experiments/recursive_opt/multiobjective_reasoning/evaluator.py",
+          "source_sha256": "6cee2bf391fcd653b5636e0003710a244beb63ae256afa55cbe756b0d3370905"
+        }
+      ],
+      "modules": [
+        {
+          "implementation_sha256": "263abeeb4104e310cae8c645fda4a7d36343277cd887a2ebd7a7a7ded97d67d4",
+          "package_version": null,
+          "python_module": "experiments.recursive_opt.multiobjective_reasoning.components",
+          "qualified_name": "build_module",
+          "ref": "recursive_experiments.module.compound_reasoning@1",
+          "source_file": "experiments/recursive_opt/multiobjective_reasoning/components.py",
+          "source_sha256": "29ba89e6d443988f0d6dff1eac67c472c8814084c7a91285a2187c0cb851d756"
+        }
+      ]
+    },
+    "git_commit": "6171d1cd79865231876f5cf49ef1819e27200cfb",
+    "git_dirty": true,
+    "registry_sha256": "4afb255433b86255efcd98b0446fa4f836cc1d5b9d9f161d116b9567409ace27",
+    "runtime_tree_sha256": "37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e"
+  },
+  "engines": [
+    "trace"
+  ],
+  "execution_units": 1,
+  "fingerprint": "432745ae6f3416964539eacf02a483b36800b037f53bcd37357409ccef786c95",
+  "level_ids": [
+    "compound-reasoning"
+  ],
+  "module_refs": [
+    "recursive_experiments.module.compound_reasoning@1"
+  ],
+  "test_overrides": {},
+  "unit_ids": [
+    "default:seed-0:matrix-0"
+  ],
+  "units": [
+    {
+      "levels": [
+        {
+          "dataset_refs": {
+            "holdout": {
+              "config": {
+                "baseline_tokens": {
+                  "gsm8k:test:104": 583,
+                  "gsm8k:test:1054": 487,
+                  "gsm8k:test:1088": 792,
+                  "gsm8k:test:1144": 553,
+                  "gsm8k:test:1225": 724,
+                  "gsm8k:test:1229": 500,
+                  "gsm8k:test:218": 496,
+                  "gsm8k:test:264": 372,
+                  "gsm8k:test:286": 446,
+                  "gsm8k:test:302": 396,
+                  "gsm8k:test:35": 370,
+                  "gsm8k:test:381": 512,
+                  "gsm8k:test:383": 726,
+                  "gsm8k:test:674": 436,
+                  "gsm8k:test:685": 368,
+                  "gsm8k:test:703": 445,
+                  "gsm8k:test:735": 510,
+                  "gsm8k:test:763": 762,
+                  "gsm8k:test:864": 474,
+                  "gsm8k:test:915": 394,
+                  "gsm8k:test:927": 860,
+                  "gsm8k:test:942": 426,
+                  "gsm8k:test:97": 576,
+                  "gsm8k:test:970": 315,
+                  "gsm8k:train:1361": 415,
+                  "gsm8k:train:2059": 518,
+                  "gsm8k:train:2078": 422,
+                  "gsm8k:train:2180": 764,
+                  "gsm8k:train:2258": 410,
+                  "gsm8k:train:2742": 472,
+                  "gsm8k:train:2754": 430,
+                  "gsm8k:train:3796": 284,
+                  "gsm8k:train:3921": 586,
+                  "gsm8k:train:40": 636,
+                  "gsm8k:train:4145": 783,
+                  "gsm8k:train:5121": 636,
+                  "gsm8k:train:5480": 670,
+                  "gsm8k:train:5728": 1061,
+                  "gsm8k:train:5996": 490,
+                  "gsm8k:train:6088": 318,
+                  "gsm8k:train:6212": 450,
+                  "gsm8k:train:6227": 414,
+                  "gsm8k:train:6316": 556,
+                  "gsm8k:train:6481": 480,
+                  "gsm8k:train:6654": 492,
+                  "gsm8k:train:6799": 1019,
+                  "gsm8k:train:6891": 496,
+                  "gsm8k:train:6918": 606,
+                  "gsm8k:train:722": 595,
+                  "gsm8k:train:74": 544,
+                  "gsm8k:train:818": 640,
+                  "gsm8k:train:82": 336
+                },
+                "limit": 1
+              },
+              "ref": "recursive_experiments.dataset.gsm8k@2",
+              "split": "holdout"
+            },
+            "train": {
+              "config": {
+                "baseline_tokens": {
+                  "gsm8k:test:104": 583,
+                  "gsm8k:test:1054": 487,
+                  "gsm8k:test:1088": 792,
+                  "gsm8k:test:1144": 553,
+                  "gsm8k:test:1225": 724,
+                  "gsm8k:test:1229": 500,
+                  "gsm8k:test:218": 496,
+                  "gsm8k:test:264": 372,
+                  "gsm8k:test:286": 446,
+                  "gsm8k:test:302": 396,
+                  "gsm8k:test:35": 370,
+                  "gsm8k:test:381": 512,
+                  "gsm8k:test:383": 726,
+                  "gsm8k:test:674": 436,
+                  "gsm8k:test:685": 368,
+                  "gsm8k:test:703": 445,
+                  "gsm8k:test:735": 510,
+                  "gsm8k:test:763": 762,
+                  "gsm8k:test:864": 474,
+                  "gsm8k:test:915": 394,
+                  "gsm8k:test:927": 860,
+                  "gsm8k:test:942": 426,
+                  "gsm8k:test:97": 576,
+                  "gsm8k:test:970": 315,
+                  "gsm8k:train:1361": 415,
+                  "gsm8k:train:2059": 518,
+                  "gsm8k:train:2078": 422,
+                  "gsm8k:train:2180": 764,
+                  "gsm8k:train:2258": 410,
+                  "gsm8k:train:2742": 472,
+                  "gsm8k:train:2754": 430,
+                  "gsm8k:train:3796": 284,
+                  "gsm8k:train:3921": 586,
+                  "gsm8k:train:40": 636,
+                  "gsm8k:train:4145": 783,
+                  "gsm8k:train:5121": 636,
+                  "gsm8k:train:5480": 670,
+                  "gsm8k:train:5728": 1061,
+                  "gsm8k:train:5996": 490,
+                  "gsm8k:train:6088": 318,
+                  "gsm8k:train:6212": 450,
+                  "gsm8k:train:6227": 414,
+                  "gsm8k:train:6316": 556,
+                  "gsm8k:train:6481": 480,
+                  "gsm8k:train:6654": 492,
+                  "gsm8k:train:6799": 1019,
+                  "gsm8k:train:6891": 496,
+                  "gsm8k:train:6918": 606,
+                  "gsm8k:train:722": 595,
+                  "gsm8k:train:74": 544,
+                  "gsm8k:train:818": 640,
+                  "gsm8k:train:82": 336
+                },
+                "limit": 1
+              },
+              "ref": "recursive_experiments.dataset.gsm8k@2",
+              "split": "train"
+            },
+            "validation": {
+              "config": {
+                "baseline_tokens": {
+                  "gsm8k:test:104": 583,
+                  "gsm8k:test:1054": 487,
+                  "gsm8k:test:1088": 792,
+                  "gsm8k:test:1144": 553,
+                  "gsm8k:test:1225": 724,
+                  "gsm8k:test:1229": 500,
+                  "gsm8k:test:218": 496,
+                  "gsm8k:test:264": 372,
+                  "gsm8k:test:286": 446,
+                  "gsm8k:test:302": 396,
+                  "gsm8k:test:35": 370,
+                  "gsm8k:test:381": 512,
+                  "gsm8k:test:383": 726,
+                  "gsm8k:test:674": 436,
+                  "gsm8k:test:685": 368,
+                  "gsm8k:test:703": 445,
+                  "gsm8k:test:735": 510,
+                  "gsm8k:test:763": 762,
+                  "gsm8k:test:864": 474,
+                  "gsm8k:test:915": 394,
+                  "gsm8k:test:927": 860,
+                  "gsm8k:test:942": 426,
+                  "gsm8k:test:97": 576,
+                  "gsm8k:test:970": 315,
+                  "gsm8k:train:1361": 415,
+                  "gsm8k:train:2059": 518,
+                  "gsm8k:train:2078": 422,
+                  "gsm8k:train:2180": 764,
+                  "gsm8k:train:2258": 410,
+                  "gsm8k:train:2742": 472,
+                  "gsm8k:train:2754": 430,
+                  "gsm8k:train:3796": 284,
+                  "gsm8k:train:3921": 586,
+                  "gsm8k:train:40": 636,
+                  "gsm8k:train:4145": 783,
+                  "gsm8k:train:5121": 636,
+                  "gsm8k:train:5480": 670,
+                  "gsm8k:train:5728": 1061,
+                  "gsm8k:train:5996": 490,
+                  "gsm8k:train:6088": 318,
+                  "gsm8k:train:6212": 450,
+                  "gsm8k:train:6227": 414,
+                  "gsm8k:train:6316": 556,
+                  "gsm8k:train:6481": 480,
+                  "gsm8k:train:6654": 492,
+                  "gsm8k:train:6799": 1019,
+                  "gsm8k:train:6891": 496,
+                  "gsm8k:train:6918": 606,
+                  "gsm8k:train:722": 595,
+                  "gsm8k:train:74": 544,
+                  "gsm8k:train:818": 640,
+                  "gsm8k:train:82": 336
+                },
+                "limit": 1
+              },
+              "ref": "recursive_experiments.dataset.gsm8k@2",
+              "split": "validation"
+            }
+          },
+          "engine": "trace",
+          "evaluator_ref": "recursive_experiments.evaluator.exact_reasoning@1",
+          "fingerprint": "a3fece46a4b31e951099268fc3f514c99d9e6b4fb604e44aa3be2a917338fa42",
+          "id": "compound-reasoning",
+          "llm_roles": {
+            "feedback": null,
+            "forward": {
+              "api_key_ref": "env:OPENROUTER_API_KEY",
+              "base_url": null,
+              "fallbacks": [],
+              "max_tokens": 384,
+              "model": "deepseek/deepseek-v4-flash-0731",
+              "profile": "forward_primary",
+              "provider": "openrouter",
+              "request_params": {
+                "reasoning": {
+                  "enabled": false
+                }
+              },
+              "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+              "temperature": 0
+            },
+            "judge": null,
+            "optimizer": {
+              "api_key_ref": "env:OPENROUTER_API_KEY",
+              "base_url": null,
+              "fallbacks": [],
+              "max_tokens": 8192,
+              "model": "deepseek/deepseek-v4-flash-0731",
+              "profile": "optimizer_primary",
+              "provider": "openrouter",
+              "request_params": {
+                "reasoning": {
+                  "effort": "low"
+                }
+              },
+              "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+              "temperature": 0
+            }
+          },
+          "module_ref": "recursive_experiments.module.compound_reasoning@1"
+        }
+      ],
+      "matrix": {},
+      "seed": 0,
+      "unit_id": "default:seed-0:matrix-0"
+    }
+  ]
+}
