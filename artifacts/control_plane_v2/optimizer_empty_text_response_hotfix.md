@@ -131,11 +131,13 @@ The two common skips require unavailable optional graph/telemetry backends. The
 complete-suite-only third skip requires the Graphviz `dot` executable. No
 Trace, GEPA, or Experiment-0 test skipped.
 
-The pre-CI runtime digest is
+The authoritative runtime digest is
 `ba4836d9f43cffcd0271086932745b270d75478b5287a7d8100be4928b623cbc`;
 the registry digest remains
 `f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
-Readiness remains false until the required external job is observed green.
+Required Actions run `32669603929`, job `97268256178`, completed successfully
+for implementation commit `d63746afbb88d6193cbfedf2932b256d9f33b6e4`.
+Digest-based readiness is promoted to true for that CI-verified implementation.
 
 ## Preserved pilot evidence
 

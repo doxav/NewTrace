@@ -1,6 +1,6 @@
 # Control plane v2 implementation evidence
 
-## Optimizer empty-text semantic retry — pending CI (2026-08-24)
+## Optimizer empty-text semantic retry — CI verified (2026-08-24)
 
 The recursive-opt optimizer-role boundary now requires non-empty final text and
 retries the identical request once through the same guarded client. Trace and
@@ -19,8 +19,9 @@ The new runtime digest is
 `ba4836d9f43cffcd0271086932745b270d75478b5287a7d8100be4928b623cbc`.
 The registry digest remains
 `f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
-Readiness and the required-CI gate remain false pending an observed green
-`recursive-opt v2 offline (required)` run.
+Required Actions run `32669603929`, job `97268256178`, completed successfully
+for `d63746afbb88d6193cbfedf2932b256d9f33b6e4`; digest-based readiness is now
+true for that implementation.
 
 ## GEPA 0.1.4 reflection protocol relock (2026-08-23)
 

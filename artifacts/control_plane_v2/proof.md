@@ -1,6 +1,6 @@
 # recursive-opt v2alpha semantic-closure proof
 
-## Optimizer empty-text retry proof — pre-CI
+## Optimizer empty-text retry proof
 
 Six provider-free causal tests prove one shared optimizer text contract across
 Trace and installed GEPA 0.1.4: empty/text succeeds after exactly two identical
@@ -17,7 +17,9 @@ was relaxed. Runtime digest is
 `ba4836d9f43cffcd0271086932745b270d75478b5287a7d8100be4928b623cbc`
 and registry digest remains
 `f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
-Required CI and Prompt-18 readiness are intentionally false before push.
+Required Actions run `32669603929`, job `97268256178`, passed for implementation
+commit `d63746afbb88d6193cbfedf2932b256d9f33b6e4`; Prompt-18 readiness is true for
+the matching source digests.
 
 ## GEPA reflection-protocol hotfix proof
 
