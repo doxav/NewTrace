@@ -10,6 +10,11 @@ the unchanged registry digest is
 `f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
 Required Actions run `32650995105`, job `97222458541`, completed successfully
 on implementation commit `c1bf6a296d159b92d09ac29ee90556d2c1997a5d`.
+The subsequent evidence-state run `32651342206`, job `97223324883`, also
+completed successfully. Live Experiment-0 C then reached one real GEPA
+reflection and attributed its usage once; the experiment remained stopped
+because the reflected candidate was rejected and the frozen micro gate did not
+pass.
 
 Original implementation baseline: `6fc278a398709fe79a0fc9be22bae99bffd8cba6`
 

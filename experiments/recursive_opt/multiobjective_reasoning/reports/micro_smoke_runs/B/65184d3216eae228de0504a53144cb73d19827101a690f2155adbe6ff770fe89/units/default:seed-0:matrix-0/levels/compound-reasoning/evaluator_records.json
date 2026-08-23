@@ -2,21 +2,21 @@
   {
     "artifacts": [
       {
-        "answer": "",
+        "answer": "33",
         "expected": "33"
       }
     ],
-    "error": "hard constraints not satisfied",
-    "feedback": "Expected answer: 33. Produced answer: <invalid>.",
+    "error": null,
+    "feedback": "Expected answer: 33. Produced answer: 33.",
     "metrics": {
-      "accuracy": 0.0,
-      "forward_token_ratio": 1.5148514851485149,
-      "invalid_rate": 1.0,
-      "latency_s": 6.263779824017547
+      "accuracy": 1.0,
+      "forward_token_ratio": 1.2178217821782178,
+      "invalid_rate": 0.0,
+      "latency_s": 6.704338319017552
     },
-    "status": "constraint_failed",
+    "status": "ok",
     "trace": {
-      "output_identity": 124821351879056,
+      "output_identity": 123472139184000,
       "provider_calls": [
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -41,10 +41,10 @@
       },
       "forward": {
         "calls": 2,
-        "completion_tokens": 550,
+        "completion_tokens": 271,
         "cost_usd": 0.0,
-        "prompt_tokens": 368,
-        "total_tokens": 918
+        "prompt_tokens": 467,
+        "total_tokens": 738
       },
       "judge": {
         "completion_tokens": 0,
@@ -59,7 +59,7 @@
         "total_tokens": 0
       }
     },
-    "valid": false
+    "valid": true
   },
   {
     "artifacts": [
@@ -72,13 +72,13 @@
     "feedback": "Expected answer: 360. Produced answer: 2.",
     "metrics": {
       "accuracy": 0.0,
-      "forward_token_ratio": 0.5894308943089431,
+      "forward_token_ratio": 0.6178861788617886,
       "invalid_rate": 0.0,
-      "latency_s": 7.497680793981999
+      "latency_s": 5.015552783966996
     },
     "status": "ok",
     "trace": {
-      "output_identity": 124821352758016,
+      "output_identity": 123472280475152,
       "provider_calls": [
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -103,10 +103,10 @@
       },
       "forward": {
         "calls": 2,
-        "completion_tokens": 68,
+        "completion_tokens": 75,
         "cost_usd": 0.0,
-        "prompt_tokens": 222,
-        "total_tokens": 290
+        "prompt_tokens": 229,
+        "total_tokens": 304
       },
       "judge": {
         "completion_tokens": 0,
@@ -134,13 +134,13 @@
     "feedback": "Expected answer: 360. Produced answer: 2.",
     "metrics": {
       "accuracy": 0.0,
-      "forward_token_ratio": 0.6260162601626016,
+      "forward_token_ratio": 0.7967479674796748,
       "invalid_rate": 0.0,
-      "latency_s": 4.24346081900876
+      "latency_s": 1.6992002950282767
     },
     "status": "ok",
     "trace": {
-      "output_identity": 124821352458784,
+      "output_identity": 123472138305360,
       "provider_calls": [
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -165,10 +165,10 @@
       },
       "forward": {
         "calls": 2,
-        "completion_tokens": 77,
+        "completion_tokens": 119,
         "cost_usd": 0.0,
-        "prompt_tokens": 231,
-        "total_tokens": 308
+        "prompt_tokens": 273,
+        "total_tokens": 392
       },
       "judge": {
         "completion_tokens": 0,
@@ -196,13 +196,13 @@
     "feedback": "Expected answer: 33. Produced answer: 33.",
     "metrics": {
       "accuracy": 1.0,
-      "forward_token_ratio": 1.037953795379538,
+      "forward_token_ratio": 1.141914191419142,
       "invalid_rate": 0.0,
-      "latency_s": 4.355743110994808
+      "latency_s": 4.06537609489169
     },
     "status": "ok",
     "trace": {
-      "output_identity": 124821349773680,
+      "output_identity": 123472124083760,
       "provider_calls": [
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -227,10 +227,10 @@
       },
       "forward": {
         "calls": 2,
-        "completion_tokens": 192,
+        "completion_tokens": 221,
         "cost_usd": 0.0,
-        "prompt_tokens": 437,
-        "total_tokens": 629
+        "prompt_tokens": 471,
+        "total_tokens": 692
       },
       "judge": {
         "completion_tokens": 0,
@@ -258,13 +258,13 @@
     "feedback": "Expected answer: 33. Produced answer: 33.",
     "metrics": {
       "accuracy": 1.0,
-      "forward_token_ratio": 0.8910891089108911,
+      "forward_token_ratio": 1.1386138613861385,
       "invalid_rate": 0.0,
-      "latency_s": 6.925131258904003
+      "latency_s": 4.928371437010355
     },
     "status": "ok",
     "trace": {
-      "output_identity": 124821349765664,
+      "output_identity": 123472124074688,
       "provider_calls": [
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -289,10 +289,10 @@
       },
       "forward": {
         "calls": 2,
-        "completion_tokens": 172,
+        "completion_tokens": 247,
         "cost_usd": 0.0,
-        "prompt_tokens": 368,
-        "total_tokens": 540
+        "prompt_tokens": 443,
+        "total_tokens": 690
       },
       "judge": {
         "completion_tokens": 0,
@@ -320,13 +320,13 @@
     "feedback": "Expected answer: 360. Produced answer: 2.",
     "metrics": {
       "accuracy": 0.0,
-      "forward_token_ratio": 0.9654471544715447,
+      "forward_token_ratio": 0.7276422764227642,
       "invalid_rate": 0.0,
-      "latency_s": 3.488024568068795
+      "latency_s": 3.257316270028241
     },
     "status": "ok",
     "trace": {
-      "output_identity": 124821349772528,
+      "output_identity": 123472124257792,
       "provider_calls": [
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -351,10 +351,10 @@
       },
       "forward": {
         "calls": 2,
-        "completion_tokens": 136,
+        "completion_tokens": 75,
         "cost_usd": 0.0,
-        "prompt_tokens": 339,
-        "total_tokens": 475
+        "prompt_tokens": 283,
+        "total_tokens": 358
       },
       "judge": {
         "completion_tokens": 0,
@@ -374,21 +374,21 @@
   {
     "artifacts": [
       {
-        "answer": "360",
+        "answer": "2",
         "expected": "360"
       }
     ],
     "error": null,
-    "feedback": "Expected answer: 360. Produced answer: 360.",
+    "feedback": "Expected answer: 360. Produced answer: 2.",
     "metrics": {
-      "accuracy": 1.0,
-      "forward_token_ratio": 1.0182926829268293,
+      "accuracy": 0.0,
+      "forward_token_ratio": 0.6341463414634146,
       "invalid_rate": 0.0,
-      "latency_s": 7.234623350086622
+      "latency_s": 5.321420367923565
     },
     "status": "ok",
     "trace": {
-      "output_identity": 124821349768928,
+      "output_identity": 123472124251312,
       "provider_calls": [
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -413,10 +413,10 @@
       },
       "forward": {
         "calls": 2,
-        "completion_tokens": 149,
+        "completion_tokens": 52,
         "cost_usd": 0.0,
-        "prompt_tokens": 352,
-        "total_tokens": 501
+        "prompt_tokens": 260,
+        "total_tokens": 312
       },
       "judge": {
         "completion_tokens": 0,
@@ -444,13 +444,13 @@
     "feedback": "Expected answer: 33. Produced answer: 33.",
     "metrics": {
       "accuracy": 1.0,
-      "forward_token_ratio": 1.193069306930693,
+      "forward_token_ratio": 1.1947194719471947,
       "invalid_rate": 0.0,
-      "latency_s": 21.769825148046948
+      "latency_s": 1.9451228539692238
     },
     "status": "ok",
     "trace": {
-      "output_identity": 124821349910480,
+      "output_identity": 123472124468240,
       "provider_calls": [
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -475,10 +475,10 @@
       },
       "forward": {
         "calls": 2,
-        "completion_tokens": 239,
+        "completion_tokens": 237,
         "cost_usd": 0.0,
-        "prompt_tokens": 484,
-        "total_tokens": 723
+        "prompt_tokens": 487,
+        "total_tokens": 724
       },
       "judge": {
         "completion_tokens": 0,
@@ -506,13 +506,13 @@
     "feedback": "Expected answer: 30. Produced answer: 30.",
     "metrics": {
       "accuracy": 1.0,
-      "forward_token_ratio": 1.0113636363636365,
+      "forward_token_ratio": 0.9848484848484849,
       "invalid_rate": 0.0,
-      "latency_s": 25.075973912957124
+      "latency_s": 2.7094935490749776
     },
     "status": "ok",
     "trace": {
-      "output_identity": 124821349908752,
+      "output_identity": 123472124083376,
       "provider_calls": [
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -537,10 +537,10 @@
       },
       "forward": {
         "calls": 2,
-        "completion_tokens": 258,
+        "completion_tokens": 245,
         "cost_usd": 0.0,
-        "prompt_tokens": 543,
-        "total_tokens": 801
+        "prompt_tokens": 535,
+        "total_tokens": 780
       },
       "judge": {
         "completion_tokens": 0,

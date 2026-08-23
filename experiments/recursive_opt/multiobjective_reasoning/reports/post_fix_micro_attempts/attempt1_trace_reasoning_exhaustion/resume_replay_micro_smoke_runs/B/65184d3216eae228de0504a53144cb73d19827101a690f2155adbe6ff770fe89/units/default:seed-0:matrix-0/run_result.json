@@ -1,0 +1,224 @@
+{
+  "complete": true,
+  "identity": {
+    "levels": [
+      "bc0935731f0859e4d5c859848729c5b9c172bf14b0f8933c560fe7eb4e1faea6"
+    ],
+    "registry_sha256": "4afb255433b86255efcd98b0446fa4f836cc1d5b9d9f161d116b9567409ace27",
+    "runtime_tree_sha256": "37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e",
+    "spec_fingerprint": "65184d3216eae228de0504a53144cb73d19827101a690f2155adbe6ff770fe89",
+    "unit_id": "default:seed-0:matrix-0"
+  },
+  "result": {
+    "artifact": {},
+    "budget": {
+      "accounted": {
+        "candidates": 2,
+        "candidates_evaluated": 2,
+        "candidates_proposed": 0,
+        "candidates_reserved": 2,
+        "eval_llm_calls": 6,
+        "evaluator_runs": 3,
+        "optimizer_llm_calls": 1,
+        "total_tokens": 13851,
+        "wall_time_s": 133.691824
+      },
+      "candidates": 2,
+      "eval_llm_calls": 80,
+      "evaluator_runs": 40,
+      "exceeded": [],
+      "on_exceed": "fail",
+      "optimizer_llm_calls": 4,
+      "total_tokens": 60000,
+      "wall_time_s": 900
+    },
+    "engine": "trace",
+    "error": "TypeError: argument of type 'NoneType' is not iterable",
+    "evaluation": {
+      "artifacts": {},
+      "error": "TypeError: argument of type 'NoneType' is not iterable",
+      "feedback": "execution failed",
+      "metrics": {},
+      "status": "error",
+      "trace": null,
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "valid": false
+    },
+    "level_results": [
+      {
+        "artifact": {},
+        "budget": {
+          "accounted": {
+            "candidates": 2,
+            "candidates_evaluated": 2,
+            "candidates_proposed": 0,
+            "candidates_reserved": 2,
+            "eval_llm_calls": 6,
+            "evaluator_runs": 3,
+            "optimizer_llm_calls": 1,
+            "total_tokens": 13851,
+            "wall_time_s": 133.689708
+          },
+          "candidates": 2,
+          "eval_llm_calls": 80,
+          "evaluator_runs": 40,
+          "exceeded": [],
+          "on_exceed": "fail",
+          "optimizer_llm_calls": 4,
+          "total_tokens": 60000,
+          "wall_time_s": 900
+        },
+        "engine": "trace",
+        "error": "TypeError: argument of type 'NoneType' is not iterable",
+        "evaluation": {
+          "artifacts": {},
+          "error": "TypeError: argument of type 'NoneType' is not iterable",
+          "feedback": "execution failed",
+          "metrics": {},
+          "status": "error",
+          "trace": null,
+          "usage": {
+            "feedback": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "forward": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "judge": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "optimizer": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            }
+          },
+          "valid": false
+        },
+        "level_results": [],
+        "lineage": [],
+        "metadata": {
+          "level_id": "compound-reasoning"
+        },
+        "module_ref": "recursive_experiments.module.compound_reasoning@1",
+        "plan_fingerprint": "65184d3216eae228de0504a53144cb73d19827101a690f2155adbe6ff770fe89",
+        "portable": true,
+        "promotable": false,
+        "spec_fingerprint": "65184d3216eae228de0504a53144cb73d19827101a690f2155adbe6ff770fe89",
+        "status": "error",
+        "unit_id": "default:seed-0:matrix-0:compound-reasoning",
+        "usage": {
+          "feedback": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "forward": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "judge": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "optimizer": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          }
+        },
+        "valid": false
+      }
+    ],
+    "lineage": [],
+    "metadata": {
+      "arm_id": "default",
+      "level_id": "compound-reasoning",
+      "level_ids": [
+        "compound-reasoning"
+      ],
+      "matrix": {},
+      "resolved_models": {
+        "compound-reasoning": {}
+      },
+      "seed": 0,
+      "test_overrides": {}
+    },
+    "module_ref": "recursive_experiments.module.compound_reasoning@1",
+    "plan_fingerprint": "65184d3216eae228de0504a53144cb73d19827101a690f2155adbe6ff770fe89",
+    "portable": true,
+    "promotable": false,
+    "spec_fingerprint": "65184d3216eae228de0504a53144cb73d19827101a690f2155adbe6ff770fe89",
+    "status": "error",
+    "unit_id": "default:seed-0:matrix-0",
+    "usage": {
+      "feedback": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "forward": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "judge": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "optimizer": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      }
+    },
+    "valid": false
+  },
+  "result_sha256": "a6d43ff122c1e77340dc58a45ee5fc9b9676db33bdab1881562622d92985fa8f"
+}

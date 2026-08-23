@@ -14,6 +14,11 @@ Relocked digests are runtime
 `37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e`
 and registry
 `f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+The evidence-state run `32651342206` / job `97223324883` was also green. The
+live GEPA arm subsequently made one guarded reflection call and attributed
+1,584 optimizer tokens once without holdout leakage. Its changed proposal was
+evaluated but rejected, leaving the Experiment-0 micro gate false and preventing
+pilot execution.
 
 - Branch: `recursive_opt`
 - Baseline SHA: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`

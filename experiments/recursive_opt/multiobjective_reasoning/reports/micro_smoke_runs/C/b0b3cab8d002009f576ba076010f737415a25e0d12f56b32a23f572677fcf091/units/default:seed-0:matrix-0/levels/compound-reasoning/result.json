@@ -191,8 +191,8 @@
     "level_fingerprint": "46f5dc1d8822f49eea184720decab668dcec72b78dcb73efb0918e816ab23906",
     "level_id": "compound-reasoning",
     "module_ref": "recursive_experiments.module.compound_reasoning@1",
-    "registry_sha256": "2b93b079d996c3e6f2e873234bb58bbea8762186a9156fce6639e39ad30d7ff4",
-    "runtime_tree_sha256": "5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642",
+    "registry_sha256": "c279b8dbbdf6bfe4088f8e7da8d60900001a438eb32f46a01bbbc510820f1e53",
+    "runtime_tree_sha256": "37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e",
     "spec_fingerprint": "b0b3cab8d002009f576ba076010f737415a25e0d12f56b32a23f572677fcf091",
     "unit_id": "default:seed-0:matrix-0"
   },
@@ -204,14 +204,14 @@
     "budget": {
       "accounted": {
         "candidates": 1,
-        "candidates_evaluated": 2,
-        "candidates_proposed": 2,
+        "candidates_evaluated": 3,
+        "candidates_proposed": 3,
         "candidates_reserved": 1,
-        "eval_llm_calls": 6,
-        "evaluator_runs": 3,
-        "optimizer_llm_calls": 2,
-        "total_tokens": 1570,
-        "wall_time_s": 11.387021
+        "eval_llm_calls": 8,
+        "evaluator_runs": 4,
+        "optimizer_llm_calls": 1,
+        "total_tokens": 3617,
+        "wall_time_s": 21.454578
       },
       "candidates": 2,
       "eval_llm_calls": 80,
@@ -235,13 +235,13 @@
       "feedback": "Expected answer: 30. Produced answer: 30.",
       "metrics": {
         "accuracy": 1.0,
-        "forward_token_ratio": 0.9116161616161617,
+        "forward_token_ratio": 1.0580808080808082,
         "invalid_rate": 0.0,
-        "latency_s": 3.9526421108748764
+        "latency_s": 4.760399558930658
       },
       "status": "ok",
       "trace": {
-        "output_identity": 124821349054512,
+        "output_identity": 123472123355952,
         "provider_calls": [
           {
             "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -255,7 +255,7 @@
           }
         ],
         "sample_id": "gsm8k:test:1088",
-        "workflow_call": 3
+        "workflow_call": 4
       },
       "usage": {
         "feedback": {
@@ -266,10 +266,10 @@
         },
         "forward": {
           "calls": 2,
-          "completion_tokens": 243,
+          "completion_tokens": 301,
           "cost_usd": 0.0,
-          "prompt_tokens": 479,
-          "total_tokens": 722
+          "prompt_tokens": 537,
+          "total_tokens": 838
         },
         "judge": {
           "completion_tokens": 0,
@@ -308,13 +308,13 @@
           "feedback": "Expected answer: 33. Produced answer: 33.",
           "metrics": {
             "accuracy": 1.0,
-            "forward_token_ratio": 0.8910891089108911,
+            "forward_token_ratio": 1.0148514851485149,
             "invalid_rate": 0.0,
-            "latency_s": 4.541012499947101
+            "latency_s": 3.9819193410221487
           },
           "status": "ok",
           "trace": {
-            "output_identity": 124821348923344,
+            "output_identity": 123472123280560,
             "provider_calls": [
               {
                 "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -339,10 +339,10 @@
             },
             "forward": {
               "calls": 2,
-              "completion_tokens": 172,
+              "completion_tokens": 209,
               "cost_usd": 0.0,
-              "prompt_tokens": 368,
-              "total_tokens": 540
+              "prompt_tokens": 406,
+              "total_tokens": 615
             },
             "judge": {
               "completion_tokens": 0,
@@ -370,13 +370,13 @@
           "feedback": "Expected answer: 360. Produced answer: 2.",
           "metrics": {
             "accuracy": 0.0,
-            "forward_token_ratio": 0.6260162601626016,
+            "forward_token_ratio": 0.5772357723577236,
             "invalid_rate": 0.0,
-            "latency_s": 2.8628593570319936
+            "latency_s": 3.3624775641364977
           },
           "status": "ok",
           "trace": {
-            "output_identity": 124821349047312,
+            "output_identity": 123472123358352,
             "provider_calls": [
               {
                 "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -401,10 +401,72 @@
             },
             "forward": {
               "calls": 2,
-              "completion_tokens": 77,
+              "completion_tokens": 65,
               "cost_usd": 0.0,
-              "prompt_tokens": 231,
-              "total_tokens": 308
+              "prompt_tokens": 219,
+              "total_tokens": 284
+            },
+            "judge": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "optimizer": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            }
+          },
+          "valid": true
+        },
+        {
+          "artifacts": [
+            {
+              "answer": "2",
+              "expected": "360"
+            }
+          ],
+          "error": null,
+          "feedback": "Expected answer: 360. Produced answer: 2.",
+          "metrics": {
+            "accuracy": 0.0,
+            "forward_token_ratio": 0.6016260162601627,
+            "invalid_rate": 0.0,
+            "latency_s": 1.8933907811297104
+          },
+          "status": "ok",
+          "trace": {
+            "output_identity": 123472123351440,
+            "provider_calls": [
+              {
+                "actual_model": "deepseek/deepseek-v4-flash-0731",
+                "actual_provider": "openrouter",
+                "cache_hit": null
+              },
+              {
+                "actual_model": "deepseek/deepseek-v4-flash-0731",
+                "actual_provider": "openrouter",
+                "cache_hit": null
+              }
+            ],
+            "sample_id": "gsm8k:train:6654",
+            "workflow_call": 3
+          },
+          "usage": {
+            "feedback": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "forward": {
+              "calls": 2,
+              "completion_tokens": 66,
+              "cost_usd": 0.0,
+              "prompt_tokens": 230,
+              "total_tokens": 296
             },
             "judge": {
               "completion_tokens": 0,
@@ -432,13 +494,13 @@
           "feedback": "Expected answer: 30. Produced answer: 30.",
           "metrics": {
             "accuracy": 1.0,
-            "forward_token_ratio": 0.9116161616161617,
+            "forward_token_ratio": 1.0580808080808082,
             "invalid_rate": 0.0,
-            "latency_s": 3.9526421108748764
+            "latency_s": 4.760399558930658
           },
           "status": "ok",
           "trace": {
-            "output_identity": 124821349054512,
+            "output_identity": 123472123355952,
             "provider_calls": [
               {
                 "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -452,7 +514,7 @@
               }
             ],
             "sample_id": "gsm8k:test:1088",
-            "workflow_call": 3
+            "workflow_call": 4
           },
           "usage": {
             "feedback": {
@@ -463,10 +525,10 @@
             },
             "forward": {
               "calls": 2,
-              "completion_tokens": 243,
+              "completion_tokens": 301,
               "cost_usd": 0.0,
-              "prompt_tokens": 479,
-              "total_tokens": 722
+              "prompt_tokens": 537,
+              "total_tokens": 838
             },
             "judge": {
               "completion_tokens": 0,
@@ -505,13 +567,13 @@
           "feedback": "Expected answer: 33. Produced answer: 33.",
           "metrics": {
             "accuracy": 1.0,
-            "forward_token_ratio": 0.8910891089108911,
+            "forward_token_ratio": 1.0148514851485149,
             "invalid_rate": 0.0,
-            "latency_s": 4.541012499947101
+            "latency_s": 3.9819193410221487
           },
           "status": "ok",
           "trace": {
-            "output_identity": 124821348923344,
+            "output_identity": 123472123280560,
             "provider_calls": [
               {
                 "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -536,10 +598,10 @@
             },
             "forward": {
               "calls": 2,
-              "completion_tokens": 172,
+              "completion_tokens": 209,
               "cost_usd": 0.0,
-              "prompt_tokens": 368,
-              "total_tokens": 540
+              "prompt_tokens": 406,
+              "total_tokens": 615
             },
             "judge": {
               "completion_tokens": 0,
@@ -567,13 +629,13 @@
           "feedback": "Expected answer: 360. Produced answer: 2.",
           "metrics": {
             "accuracy": 0.0,
-            "forward_token_ratio": 0.6260162601626016,
+            "forward_token_ratio": 0.5772357723577236,
             "invalid_rate": 0.0,
-            "latency_s": 2.8628593570319936
+            "latency_s": 3.3624775641364977
           },
           "status": "ok",
           "trace": {
-            "output_identity": 124821349047312,
+            "output_identity": 123472123358352,
             "provider_calls": [
               {
                 "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -598,10 +660,72 @@
             },
             "forward": {
               "calls": 2,
-              "completion_tokens": 77,
+              "completion_tokens": 65,
               "cost_usd": 0.0,
-              "prompt_tokens": 231,
-              "total_tokens": 308
+              "prompt_tokens": 219,
+              "total_tokens": 284
+            },
+            "judge": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "optimizer": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            }
+          },
+          "valid": true
+        },
+        {
+          "artifacts": [
+            {
+              "answer": "2",
+              "expected": "360"
+            }
+          ],
+          "error": null,
+          "feedback": "Expected answer: 360. Produced answer: 2.",
+          "metrics": {
+            "accuracy": 0.0,
+            "forward_token_ratio": 0.6016260162601627,
+            "invalid_rate": 0.0,
+            "latency_s": 1.8933907811297104
+          },
+          "status": "ok",
+          "trace": {
+            "output_identity": 123472123351440,
+            "provider_calls": [
+              {
+                "actual_model": "deepseek/deepseek-v4-flash-0731",
+                "actual_provider": "openrouter",
+                "cache_hit": null
+              },
+              {
+                "actual_model": "deepseek/deepseek-v4-flash-0731",
+                "actual_provider": "openrouter",
+                "cache_hit": null
+              }
+            ],
+            "sample_id": "gsm8k:train:6654",
+            "workflow_call": 3
+          },
+          "usage": {
+            "feedback": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "forward": {
+              "calls": 2,
+              "completion_tokens": 66,
+              "cost_usd": 0.0,
+              "prompt_tokens": 230,
+              "total_tokens": 296
             },
             "judge": {
               "completion_tokens": 0,
@@ -645,11 +769,11 @@
         "total_tokens": 0
       },
       "forward": {
-        "calls": 6,
-        "completion_tokens": 492,
+        "calls": 8,
+        "completion_tokens": 641,
         "cost_usd": 0.0,
-        "prompt_tokens": 1078,
-        "total_tokens": 1570
+        "prompt_tokens": 1392,
+        "total_tokens": 2033
       },
       "judge": {
         "completion_tokens": 0,
@@ -658,13 +782,14 @@
         "total_tokens": 0
       },
       "optimizer": {
-        "completion_tokens": 0,
+        "calls": 1,
+        "completion_tokens": 943,
         "cost_usd": 0.0,
-        "prompt_tokens": 0,
-        "total_tokens": 0
+        "prompt_tokens": 641,
+        "total_tokens": 1584
       }
     },
     "valid": true
   },
-  "result_sha256": "24e949c65cdbb76a6dc366b2411419c36c3e1a1b40fe6dabe74919aa132a0dce"
+  "result_sha256": "d2440175289bc3f1837e9b9ee9fe5859a8733d0debaa24b9e26ef92da14df926"
 }

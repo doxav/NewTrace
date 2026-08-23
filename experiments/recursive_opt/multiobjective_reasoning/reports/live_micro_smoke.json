@@ -9,8 +9,8 @@
         "eval_llm_calls": 2,
         "evaluator_runs": 1,
         "optimizer_llm_calls": 0,
-        "total_tokens": 722,
-        "wall_time_s": 13.039973
+        "total_tokens": 952,
+        "wall_time_s": 7.343934
       },
       "actual_models": [
         "deepseek/deepseek-v4-flash-0731"
@@ -32,8 +32,8 @@
           "eval_llm_calls": 2,
           "evaluator_runs": 1,
           "optimizer_llm_calls": 0,
-          "total_tokens": 722,
-          "wall_time_s": 13.039973
+          "total_tokens": 952,
+          "wall_time_s": 7.343934
         },
         "candidates": 2,
         "eval_llm_calls": 80,
@@ -71,9 +71,9 @@
       "hidden_environment": [],
       "metrics": {
         "accuracy": 1.0,
-        "forward_token_ratio": 0.9116161616161617,
+        "forward_token_ratio": 1.202020202020202,
         "invalid_rate": 0.0,
-        "latency_s": 13.03353572404012
+        "latency_s": 7.3383230130421
       },
       "normalized_spec": {
         "budget": {
@@ -494,7 +494,7 @@
           }
         }
       },
-      "runtime_tree_sha256": "5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642",
+      "runtime_tree_sha256": "37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e",
       "seed": 0,
       "selected_models": {
         "feedback": null,
@@ -518,10 +518,10 @@
         },
         "forward": {
           "calls": 2,
-          "completion_tokens": 243,
+          "completion_tokens": 358,
           "cost_usd": 0.0,
-          "prompt_tokens": 479,
-          "total_tokens": 722
+          "prompt_tokens": 594,
+          "total_tokens": 952
         },
         "judge": {
           "completion_tokens": 0,
@@ -549,8 +549,8 @@
         "eval_llm_calls": 18,
         "evaluator_runs": 9,
         "optimizer_llm_calls": 1,
-        "total_tokens": 16385,
-        "wall_time_s": 195.637617
+        "total_tokens": 10183,
+        "wall_time_s": 50.896105
       },
       "actual_models": [
         "deepseek/deepseek-v4-flash-0731"
@@ -560,8 +560,8 @@
       ],
       "arm": "B",
       "artifact": {
-        "analysis_instruction": "Reason carefully and concisely. Identify the operations needed, compute them, and verify the result before handing analysis to the answer stage. Note: The question may ask for the number of packs, but the expected answer is the total number of index cards. Compute the total number of index cards by multiplying the number of packs by the number of students (classes * students per class).",
-        "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the number after FINAL:."
+        "analysis_instruction": "Read the question carefully and do not dismiss any numbers as irrelevant. Identify whether quantities are totals or per-student/per-class rates. If a rate is given, multiply by the relevant number of students or classes to find the total. Compute the result step by step, then verify that the final answer answers exactly what was asked.",
+        "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the final computed total after FINAL:. Do not return a partial quantity or a literal restatement of the question."
       },
       "budget_limits": {
         "accounted": {
@@ -572,8 +572,8 @@
           "eval_llm_calls": 18,
           "evaluator_runs": 9,
           "optimizer_llm_calls": 1,
-          "total_tokens": 16385,
-          "wall_time_s": 195.637617
+          "total_tokens": 10183,
+          "wall_time_s": 50.896105
         },
         "candidates": 2,
         "eval_llm_calls": 80,
@@ -611,9 +611,9 @@
       "hidden_environment": [],
       "metrics": {
         "accuracy": 1.0,
-        "forward_token_ratio": 1.0113636363636365,
+        "forward_token_ratio": 0.9848484848484849,
         "invalid_rate": 0.0,
-        "latency_s": 25.075973912957124
+        "latency_s": 2.7094935490749776
       },
       "normalized_spec": {
         "budget": {
@@ -1122,7 +1122,7 @@
           }
         }
       },
-      "runtime_tree_sha256": "5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642",
+      "runtime_tree_sha256": "37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e",
       "seed": 0,
       "selected_models": {
         "feedback": null,
@@ -1146,10 +1146,10 @@
         },
         "forward": {
           "calls": 18,
-          "completion_tokens": 1841,
+          "completion_tokens": 1542,
           "cost_usd": 0.0,
-          "prompt_tokens": 3344,
-          "total_tokens": 5185
+          "prompt_tokens": 3448,
+          "total_tokens": 4990
         },
         "judge": {
           "completion_tokens": 0,
@@ -1159,10 +1159,10 @@
         },
         "optimizer": {
           "calls": 1,
-          "completion_tokens": 7417,
+          "completion_tokens": 1369,
           "cost_usd": 0.0,
-          "prompt_tokens": 3783,
-          "total_tokens": 11200
+          "prompt_tokens": 3824,
+          "total_tokens": 5193
         }
       },
       "valid": true,
@@ -1172,14 +1172,14 @@
     "C": {
       "accounted": {
         "candidates": 1,
-        "candidates_evaluated": 2,
-        "candidates_proposed": 2,
+        "candidates_evaluated": 3,
+        "candidates_proposed": 3,
         "candidates_reserved": 1,
-        "eval_llm_calls": 6,
-        "evaluator_runs": 3,
-        "optimizer_llm_calls": 2,
-        "total_tokens": 1570,
-        "wall_time_s": 11.390185
+        "eval_llm_calls": 8,
+        "evaluator_runs": 4,
+        "optimizer_llm_calls": 1,
+        "total_tokens": 3617,
+        "wall_time_s": 21.457416
       },
       "actual_models": [
         "deepseek/deepseek-v4-flash-0731"
@@ -1195,14 +1195,14 @@
       "budget_limits": {
         "accounted": {
           "candidates": 1,
-          "candidates_evaluated": 2,
-          "candidates_proposed": 2,
+          "candidates_evaluated": 3,
+          "candidates_proposed": 3,
           "candidates_reserved": 1,
-          "eval_llm_calls": 6,
-          "evaluator_runs": 3,
-          "optimizer_llm_calls": 2,
-          "total_tokens": 1570,
-          "wall_time_s": 11.390185
+          "eval_llm_calls": 8,
+          "evaluator_runs": 4,
+          "optimizer_llm_calls": 1,
+          "total_tokens": 3617,
+          "wall_time_s": 21.457416
         },
         "candidates": 2,
         "eval_llm_calls": 80,
@@ -1228,21 +1228,21 @@
         "reasoning_parameters_recorded": true,
         "run_succeeded": true,
         "source_digest_stable": true,
-        "usage_populated": false
+        "usage_populated": true
       },
       "cost_usd": {
         "forward": null,
-        "optimizer": 0.0
+        "optimizer": null
       },
       "engine": "gepa_optimize_anything",
       "error": null,
-      "evaluator_invocations": 3,
+      "evaluator_invocations": 4,
       "hidden_environment": [],
       "metrics": {
         "accuracy": 1.0,
-        "forward_token_ratio": 0.9116161616161617,
+        "forward_token_ratio": 1.0580808080808082,
         "invalid_rate": 0.0,
-        "latency_s": 3.9526421108748764
+        "latency_s": 4.760399558930658
       },
       "normalized_spec": {
         "budget": {
@@ -1648,9 +1648,19 @@
         "schema_version": "recursive-opt/v2alpha"
       },
       "passed": false,
-      "plan_registry_sha256": "2b93b079d996c3e6f2e873234bb58bbea8762186a9156fce6639e39ad30d7ff4",
+      "plan_registry_sha256": "c279b8dbbdf6bfe4088f8e7da8d60900001a438eb32f46a01bbbc510820f1e53",
       "proposal_budget": 1,
       "provider_calls": [
+        {
+          "actual_model": "deepseek/deepseek-v4-flash-0731",
+          "actual_provider": "openrouter",
+          "cache_hit": null
+        },
+        {
+          "actual_model": "deepseek/deepseek-v4-flash-0731",
+          "actual_provider": "openrouter",
+          "cache_hit": null
+        },
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
           "actual_provider": "openrouter",
@@ -1694,7 +1704,7 @@
           }
         }
       },
-      "runtime_tree_sha256": "5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642",
+      "runtime_tree_sha256": "37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e",
       "seed": 0,
       "selected_models": {
         "feedback": null,
@@ -1717,11 +1727,11 @@
           "total_tokens": 0
         },
         "forward": {
-          "calls": 6,
-          "completion_tokens": 492,
+          "calls": 8,
+          "completion_tokens": 641,
           "cost_usd": 0.0,
-          "prompt_tokens": 1078,
-          "total_tokens": 1570
+          "prompt_tokens": 1392,
+          "total_tokens": 2033
         },
         "judge": {
           "completion_tokens": 0,
@@ -1730,15 +1740,16 @@
           "total_tokens": 0
         },
         "optimizer": {
-          "completion_tokens": 0,
+          "calls": 1,
+          "completion_tokens": 943,
           "cost_usd": 0.0,
-          "prompt_tokens": 0,
-          "total_tokens": 0
+          "prompt_tokens": 641,
+          "total_tokens": 1584
         }
       },
       "valid": true,
       "validation_gate": true,
-      "workflow_forwards": 3
+      "workflow_forwards": 4
     }
   },
   "completed_arms": [

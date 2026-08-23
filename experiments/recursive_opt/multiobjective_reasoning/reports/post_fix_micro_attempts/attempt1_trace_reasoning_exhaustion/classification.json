@@ -1,0 +1,15 @@
+{
+  "schema_version": "recursive-opt-live-attempt-classification/v1",
+  "report_sha256": "45ee75607949f769e11186fdf67c0df4c2166c75e53b09c2dc6d9ec5b9d6eaa7",
+  "completed_arms": [
+    "A",
+    "B"
+  ],
+  "failed_arm": "B",
+  "error": "TypeError: argument of type 'NoneType' is not iterable",
+  "optimizer_max_tokens": 8192,
+  "accounted_total_tokens": 13851,
+  "diagnosis": "The unchanged Trace optimizer path received a provider response without final textual content after exhausting its reasoning allowance; GEPA was not reached.",
+  "settings_changed_before_retry": false,
+  "efficacy_evidence": false
+}

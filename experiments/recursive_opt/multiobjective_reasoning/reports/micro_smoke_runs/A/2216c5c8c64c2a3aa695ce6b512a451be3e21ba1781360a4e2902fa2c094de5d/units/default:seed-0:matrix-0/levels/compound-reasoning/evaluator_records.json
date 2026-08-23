@@ -10,13 +10,13 @@
     "feedback": "Expected answer: 30. Produced answer: 30.",
     "metrics": {
       "accuracy": 1.0,
-      "forward_token_ratio": 0.9116161616161617,
+      "forward_token_ratio": 1.202020202020202,
       "invalid_rate": 0.0,
-      "latency_s": 13.03353572404012
+      "latency_s": 7.3383230130421
     },
     "status": "ok",
     "trace": {
-      "output_identity": 124821355470560,
+      "output_identity": 123472141123168,
       "provider_calls": [
         {
           "actual_model": "deepseek/deepseek-v4-flash-0731",
@@ -41,10 +41,10 @@
       },
       "forward": {
         "calls": 2,
-        "completion_tokens": 243,
+        "completion_tokens": 358,
         "cost_usd": 0.0,
-        "prompt_tokens": 479,
-        "total_tokens": 722
+        "prompt_tokens": 594,
+        "total_tokens": 952
       },
       "judge": {
         "completion_tokens": 0,

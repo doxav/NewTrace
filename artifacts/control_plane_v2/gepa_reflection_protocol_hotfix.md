@@ -97,3 +97,12 @@ The required job installed `.[gepa]` and ran the new actual-GEPA reflection
 test through `test_recursive_control_plane_v2.py`. The externally verified
 implementation therefore has `required_gepa_ci=true` and
 `ready_for_prompt_18=true`.
+
+The evidence-state commit `341e06f2eecef710ae873f37371f60d3d43f0d51`
+also passed required run `32651342206`, job `97223324883`. The subsequent live
+C micro arm confirmed the adapter against OpenRouter: one reflection call,
+1,584 optimizer tokens attributed once, a changed proposal evaluated, and no
+holdout leakage. GEPA rejected that proposal and retained P0, so the frozen
+Experiment-0 runner's selected-artifact-based `proposal_nontrivial` check stayed
+false. Experiment 0 stopped before forecast or pilot; details are preserved in
+`reports/prompt18_r3b_stop_decision.md`.

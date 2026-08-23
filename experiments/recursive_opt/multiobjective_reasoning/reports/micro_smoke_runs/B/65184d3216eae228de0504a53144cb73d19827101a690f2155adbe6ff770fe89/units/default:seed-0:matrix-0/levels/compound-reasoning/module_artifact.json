@@ -1,4 +1,4 @@
 {
-  "analysis_instruction": "Reason carefully and concisely. Identify the operations needed, compute them, and verify the result before handing analysis to the answer stage. Note: The question may ask for the number of packs, but the expected answer is the total number of index cards. Compute the total number of index cards by multiplying the number of packs by the number of students (classes * students per class).",
-  "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the number after FINAL:."
+  "analysis_instruction": "Read the question carefully and do not dismiss any numbers as irrelevant. Identify whether quantities are totals or per-student/per-class rates. If a rate is given, multiply by the relevant number of students or classes to find the total. Compute the result step by step, then verify that the final answer answers exactly what was asked.",
+  "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the final computed total after FINAL:. Do not return a partial quantity or a literal restatement of the question."
 }
