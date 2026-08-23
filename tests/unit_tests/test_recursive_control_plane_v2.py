@@ -1041,6 +1041,187 @@ def test_22d_gepa_weighted_minimize_projection_has_no_pareto_scores() -> None:
     assert invalid_side_info["valid"] is False
 
 
+def test_22e_gepa_reflection_adapter_uses_one_canonical_chat_request() -> None:
+    calls: list[dict[str, Any]] = []
+
+    class StrictChatClient:
+        """Reject positional calls and return one provider-style text response."""
+
+        def __call__(self, *args: Any, **kwargs: Any) -> Any:
+            assert args == ()
+            assert kwargs == {
+                "messages": [{"role": "user", "content": "reflect this"}]
+            }
+            calls.append(copy.deepcopy(kwargs))
+            return SimpleNamespace(
+                choices=[
+                    SimpleNamespace(message=SimpleNamespace(content="exact proposal"))
+                ]
+            )
+
+    adapted = S._gepa_reflection_client(StrictChatClient())
+
+    assert adapted is not None
+    assert adapted("reflect this") == "exact proposal"
+    assert len(calls) == 1
+    assert S._gepa_reflection_client(None) is None
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        SimpleNamespace(),
+        SimpleNamespace(choices=[]),
+        SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=42))]
+        ),
+    ],
+)
+def test_22f_gepa_reflection_adapter_rejects_nontext_responses(
+    response: Any,
+) -> None:
+    def malformed_client(*, messages: list[dict[str, str]]) -> Any:
+        """Return one configured malformed canonical-provider response."""
+        assert messages == [{"role": "user", "content": "reflect this"}]
+        return response
+
+    adapted = S._gepa_reflection_client(malformed_client)
+
+    assert adapted is not None
+    with pytest.raises(TypeError, match=r"textual choices\[0\]\.message\.content"):
+        adapted("reflect this")
+    with pytest.raises(TypeError, match="prompt must be a string"):
+        adapted(42)  # type: ignore[arg-type]
+
+
+def test_22g_real_gepa_reflection_proposal_through_run_spec(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import socket
+    from importlib.metadata import version
+
+    def network_forbidden(*_args: Any, **_kwargs: Any) -> None:
+        raise AssertionError("network access attempted")
+
+    for key in ("OPENAI_API_KEY", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setattr(socket, "socket", network_forbidden)
+    provider_calls: list[dict[str, Any]] = []
+    evaluation_calls: list[tuple[str, str, str]] = []
+
+    class StrictChatClient:
+        """Model one canonical provider and reject GEPA's positional protocol."""
+
+        def __call__(self, *args: Any, **kwargs: Any) -> Any:
+            assert args == ()
+            assert kwargs["messages"] == [
+                {"role": "user", "content": kwargs["messages"][0]["content"]}
+            ]
+            assert isinstance(kwargs["messages"][0]["content"], str)
+            assert kwargs["max_tokens"] == 64
+            assert kwargs["temperature"] == 0.0
+            assert kwargs["reasoning"] == {"effort": "low"}
+            provider_calls.append(copy.deepcopy(kwargs))
+            return SimpleNamespace(
+                usage={
+                    "prompt_tokens": 7,
+                    "completion_tokens": 3,
+                    "total_tokens": 10,
+                },
+                choices=[
+                    SimpleNamespace(
+                        message=SimpleNamespace(content="```\ncorrect\n```")
+                    )
+                ],
+            )
+
+    def evaluator(
+        output: Any, example: Mapping[str, Any], context: Mapping[str, Any]
+    ) -> EvaluationResult:
+        """Make the reflected `correct` candidate strictly dominate the seed."""
+        planner = _output_data(output)["components"]["planner"]
+        evaluation_calls.append((example["split"], context["phase"], planner))
+        return EvaluationResult(
+            valid=True,
+            status="ok",
+            metrics={"accuracy": 1.0 if planner == "correct" else 0.0},
+            feedback="Use the exact value correct.",
+        )
+
+    register_evaluator("tests.evaluator.gepa_reflection@1", evaluator)
+    level = _level(
+        planner="wrong",
+        engine="gepa_optimize_anything",
+        evaluator_ref="tests.evaluator.gepa_reflection@1",
+    )
+    for split in ("train", "validation", "holdout"):
+        level["datasets"][split] = [
+            {
+                "split": split,
+                "component": "planner",
+                "expected": "correct",
+                "input": {},
+            }
+        ]
+    level["engine"]["config"] = {
+        "engine": {
+            "max_metric_calls": 4,
+            "max_candidate_proposals": 1,
+            "parallel": False,
+            "use_cloudpickle": False,
+            "cache_evaluation": False,
+            "display_progress_bar": False,
+        },
+        "reflection": {"reflection_minibatch_size": 1},
+    }
+    level["llm_roles"] = {"optimizer": "optimizer"}
+    raw = _spec([level])
+    raw["runtime"] = {"offline": True, "test_mode": True, "seed": 7}
+    raw["llm_profiles"] = {
+        "optimizer": {
+            "provider": "fake",
+            "model": "fake/strict-chat",
+            "max_tokens": 64,
+            "temperature": 0.0,
+            "request_params": {"reasoning": {"effort": "low"}},
+        }
+    }
+    raw["budget"] = {
+        "optimizer_llm_calls": 2,
+        "candidates": 1,
+        "evaluator_runs": 10,
+        "total_tokens": 100,
+        "on_exceed": "fail",
+    }
+
+    result = S.run_spec(
+        raw,
+        resources={
+            "llm_factory": lambda _profile, _role: StrictChatClient(),
+            "preflight_checker": lambda _model: None,
+        },
+    )
+
+    accounted = result.budget["accounted"]
+    assert version("gepa") == S.GEPA_VERSION == "0.1.4"
+    assert result.valid and result.status == "success"
+    assert result.artifact["components"]["planner"] == "correct"
+    assert len(provider_calls) == 1
+    assert result.usage["optimizer"]["calls"] == 1
+    assert result.usage["optimizer"]["total_tokens"] == 10
+    assert accounted["optimizer_llm_calls"] == 1
+    assert accounted["total_tokens"] == 10
+    assert accounted["candidates_proposed"] >= 1
+    assert accounted["candidates_evaluated"] >= 1
+    assert any(planner == "correct" for _split, _phase, planner in evaluation_calls)
+    assert all(
+        phase == "final_evaluation"
+        for split, phase, _planner in evaluation_calls
+        if split == "holdout"
+    )
+    assert result.metadata["gepa_holdout_externalized"] is True
+
+
 def test_23_budget_is_enforced_before_evaluator_run() -> None:
     raw = _spec()
     raw["runtime"]["test_mode"] = True

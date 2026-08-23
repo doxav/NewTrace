@@ -811,7 +811,6 @@ def _combine_unit_result(plan: ExecutionPlan, unit: _ExecutionUnit, results: Lis
     metadata = {**_thaw(final.metadata), 'level_ids': [level.level_id for level in unit.levels], 'resolved_models': {result.metadata['level_id']: result.metadata.get('selected_models', {}) for result in results}, 'test_overrides': _thaw(overrides), 'arm_id': unit.arm_id, 'seed': unit.seed if unit.seed is not None else unit.spec['runtime']['seed'], 'matrix': _thaw(unit.matrix)}
     portable = all(result.portable for result in results)
     return RunResult(unit_id=unit.unit_id, plan_fingerprint=plan.fingerprint, spec_fingerprint=unit.spec['fingerprint'], engine=final.engine, module_ref=final.module_ref, status=final.status, valid=valid, evaluation=final.evaluation, artifact=final.artifact, lineage=tuple((item for result in results for item in result.lineage)), usage=_merge_usage([result.usage for result in results]), budget=guard.report(), metadata=_freeze(metadata), error=final.error, level_results=tuple((result.to_dict() for result in results)), portable=portable, promotable=portable and valid)
-
 def _merge_usage(items: Iterable[Mapping[str, Any]]) -> Mapping[str, Any]:
     """Sum canonical role usage across level results."""
     merged: Dict[str, Dict[str, float | int]] = {}
@@ -821,17 +820,14 @@ def _merge_usage(items: Iterable[Mapping[str, Any]]) -> Mapping[str, Any]:
             for name, amount in values.items():
                 target[name] = target.get(name, 0) + amount
     return _freeze(merged)
-
 def _run_fixed_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping[str, Any]) -> RunResult:
     """Evaluate a fixed registered module without fitting it."""
     return _run_module_engine(unit, level, resources, fit=False)
-
 def _run_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping[str, Any]) -> RunResult:
     """Optimize a registered module through the existing Trace optimize path."""
     if level.spec['module']['ref'] == 'recursive_opt.module.legacy_level@1':
         return _run_legacy_trace_engine(unit, level, resources)
     return _run_module_engine(unit, level, resources, fit=True)
-
 def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping[str, Any]) -> RunResult:
     """Execute one migrated legacy level inside the canonical engine boundary."""
     canonical = level.spec
@@ -913,7 +909,24 @@ def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources:
         capture['_global_step'] = global_step + executed_steps
     evaluation = EvaluationResult(valid=True, status='ok', metrics={'score': float(score)}, feedback=data.get('feedback', '') if isinstance(data, Mapping) else '', trace={'legacy_data': _thaw(data)}, artifacts={'artifact_id': record.artifact_id})
     return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine='trace', module_ref=canonical['module']['ref'], status='success', valid=True, evaluation=evaluation, artifact=_freeze({'text': artifact_text}), lineage=(), usage=evaluation.usage, budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'legacy_compatibility': compatibility}))
-
+def _gepa_reflection_client(client: Any) -> Optional[Callable[[str], str]]:
+    """Adapt GEPA text reflection to the canonical guarded chat client."""
+    if client is None:
+        return None
+    def reflect(prompt: str) -> str:
+        """Return the exact textual content from one guarded chat request."""
+        if not isinstance(prompt, str):
+            raise TypeError('GEPA reflection prompt must be a string')
+        response = client(messages=[{'role': 'user', 'content': prompt}])
+        if isinstance(response, str):
+            return response
+        choices = getattr(response, 'choices', None)
+        message = getattr(choices[0], 'message', None) if choices else None
+        content = getattr(message, 'content', None)
+        if not isinstance(content, str):
+            raise TypeError('GEPA reflection response must expose textual choices[0].message.content')
+        return content
+    return reflect
 def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping[str, Any]) -> RunResult:
     """Adapt GEPA OptimizeAnything to the canonical module/evaluator contracts."""
     spec = level.spec
@@ -929,7 +942,6 @@ def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping
     train = list(access.read('train', phase='fit'))
     validation = list(access.read('validation', phase='candidate_selection'))
     evaluation_info: List[Dict[str, Any]] = []
-
     def gepa_evaluator(candidate: Any, *, example: Any, opt_state: Any=None) -> Tuple[float, Dict[str, Any]]:
         guard.record_candidate('proposed')
         candidate_module = _build_level_module(prepared['bound_spec'], prepared['module_resources'])
@@ -944,7 +956,7 @@ def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping
     planned_candidates = config_values.get('engine', {}).get('max_candidate_proposals')
     guard.consume('candidates', 1 if planned_candidates is None else int(planned_candidates))
     guard.record_candidate('reserved', 1 if planned_candidates is None else int(planned_candidates))
-    gepa_resources = {**resources, '_reflection_lm': prepared['clients'].get('optimizer'), '_budget_stopper': _GepaBudgetStopper(guard)}
+    gepa_resources = {**resources, '_reflection_lm': _gepa_reflection_client(prepared['clients'].get('optimizer')), '_budget_stopper': _GepaBudgetStopper(guard)}
     optimize_anything, config = _resolve_gepa(gepa_resources, config_values)
     gepa_result = optimize_anything(seed_candidate=seed_candidate, evaluator=gepa_evaluator, dataset=train, valset=validation, objective=spec['objective']['intent'], config=config)
     best_candidate = _gepa_best_candidate(gepa_result)
@@ -955,7 +967,6 @@ def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping
     evaluation = _evaluate_dataset(final_module, final_dataset, prepared['final_context'], objective, evaluator, guard, prepared['metered_roles'], prepared['records'])
     artifact = _snapshot_level_module(spec, final_module)
     return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status='success' if evaluation.valid else 'invalid', valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'gepa_version': GEPA_VERSION, 'gepa_evaluations': evaluation_info, 'evaluator_records': prepared['records'], 'objective_projection': objective['config'].mode, 'gepa_holdout_externalized': True, 'gepa_budget_mapping': {'evaluator_runs': 'engine.max_metric_calls', 'candidates': 'engine.max_candidate_proposals', 'seed': 'engine.seed', 'wall_time_s': 'stop_callbacks', 'optimizer_llm_calls': 'wrapped reflection_lm', 'eval_llm_calls': 'wrapped evaluator roles', 'total_tokens': 'wrapped role clients'}, 'selected_models': _selected_role_models(prepared['clients'])}), error=evaluation.error)
-
 def _candidate_to_artifact(seed_artifact: Mapping[str, Any], candidate: Any) -> Dict[str, Any]:
     """Convert GEPA text/component candidates back to the registered artifact."""
     components = seed_artifact.get('components')
@@ -970,7 +981,6 @@ def _candidate_to_artifact(seed_artifact: Mapping[str, Any], candidate: Any) -> 
     if not isinstance(candidate, Mapping):
         raise TypeError('GEPA candidate must be text or a component mapping')
     return {'components': _thaw(candidate)}
-
 def _project_for_gepa(evaluation: EvaluationResult, objective: Mapping[str, Any]) -> Tuple[float, Dict[str, Any]]:
     """Project canonical metrics deterministically while retaining complete info."""
     config = objective['config']
@@ -986,7 +996,6 @@ def _project_for_gepa(evaluation: EvaluationResult, objective: Mapping[str, Any]
         raise ValueError("GEPA does not support objective mode 'pareto'")
     info = {'valid': evaluation.valid and feasible, 'status': evaluation.status if feasible else 'constraint_failed', 'metrics': _thaw(evaluation.metrics), 'feedback': _thaw(evaluation.feedback), 'trace': _thaw(evaluation.trace), 'usage': _thaw(evaluation.usage), 'artifacts': _thaw(evaluation.artifacts), 'error': evaluation.error}
     return (float(score), info)
-
 def _resolve_gepa(resources: Mapping[str, Any], config_values: Mapping[str, Any]) -> Tuple[Callable[..., Any], Any]:
     """Resolve injected GEPA or import the exact pinned optional dependency."""
     injected = resources.get('gepa_optimize')
@@ -1013,7 +1022,6 @@ def _resolve_gepa(resources: Mapping[str, Any], config_values: Mapping[str, Any]
         raw['stop_callbacks'] = resources['_budget_stopper']
     config = GEPAConfig(engine=engine, reflection=reflection, **raw)
     return (optimize_anything, config)
-
 def _gepa_config_values(config: Mapping[str, Any], seed: Optional[int], budget: Mapping[str, Any]) -> Dict[str, Any]:
     """Map common seed/evaluation/candidate limits into GEPA 0.1.4 config."""
     values = _thaw(config)
@@ -1027,7 +1035,6 @@ def _gepa_config_values(config: Mapping[str, Any], seed: Optional[int], budget: 
     if budget['candidates'] is not None:
         engine.setdefault('max_candidate_proposals', budget['candidates'])
     return values
-
 class _GepaBudgetStopper:
     """Stop GEPA between operations when the common wall-time budget expires."""
 
@@ -1040,7 +1047,6 @@ class _GepaBudgetStopper:
         except BudgetExceeded:
             return True
         return False
-
 def _gepa_best_candidate(result: Any) -> Any:
     """Extract the documented best candidate from a GEPA result."""
     if isinstance(result, Mapping) and 'best_candidate' in result:
@@ -1048,7 +1054,6 @@ def _gepa_best_candidate(result: Any) -> Any:
     if hasattr(result, 'best_candidate'):
         return result.best_candidate
     raise TypeError('GEPA result does not expose best_candidate')
-
 def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping[str, Any], *, fit: bool) -> RunResult:
     """Run fixed evaluation or the existing Trace optimizer over one level."""
     spec = level.spec
@@ -1119,7 +1124,6 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
     artifact = _snapshot_level_module(spec, module)
     status = 'budget_exhausted' if budget_exhausted else 'success' if evaluation.valid else 'invalid'
     return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status=status, valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'module_capabilities': sorted(_module_entry(spec['module']['ref']).capabilities), 'objective_mode': objective['config'].mode, 'evaluator_records': prepared['records'], 'trace_optimize_path': fit, 'selected_models': _selected_role_models(prepared['clients']), 'budget_exhausted': budget_exhausted}), error=evaluation.error)
-
 class _EvaluatedModule(Module):
     """Attach registered evaluator results to real Trace parameter dependencies."""
 
@@ -1154,16 +1158,13 @@ class _EvaluatedModule(Module):
         copied = type(self)(copy.deepcopy(self.module, memo), self.evaluator, self.objective, self.context, self.guard, self.metered_roles, self.records)
         memo[id(self)] = copied
         return copied
-
 def _selected_role_models(clients: Mapping[str, Any]) -> Dict[str, Optional[str]]:
     """Return exact models selected so far by primary/fallback role clients."""
     return {role: None if client is None else str(client.selected_model) for role, client in clients.items()}
-
 def _trainer_dataset(values: Iterable[Any]) -> Dict[str, List[Any]]:
     """Convert resolved examples into the existing Trace trainer dataset shape."""
     inputs = list(values)
     return {'inputs': inputs, 'infos': [None] * len(inputs)}
-
 def _snapshot_level_module(level: Mapping[str, Any], module: Module) -> Dict[str, Any]:
     """Snapshot one already-normalized level without re-normalizing a whole spec."""
     entry = _module_entry(level['module']['ref'])
@@ -1171,7 +1172,6 @@ def _snapshot_level_module(level: Mapping[str, Any], module: Module) -> Dict[str
     entry.validate_artifact(artifact)
     _validate_no_callables_or_secrets(artifact, 'module artifact')
     return _thaw(artifact)
-
 def _restore_level_module(level: Mapping[str, Any], module: Module, artifact: Mapping[str, Any]) -> None:
     """Restore one already-normalized level artifact exactly."""
     entry = _module_entry(level['module']['ref'])

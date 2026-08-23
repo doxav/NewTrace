@@ -545,7 +545,7 @@ def test_required_workflow_has_gepa_dependency_and_hardening_matrix() -> None:
 
 
 def test_readiness_uses_source_digests_without_sha_environment() -> None:
-    """A checkout verifies readiness provenance without a self-referential SHA."""
+    """A checkout verifies digests and the explicit pre/post-CI readiness state."""
     readiness = json.loads(
         Path("artifacts/control_plane_v2/prompt18_readiness.json").read_text()
     )
@@ -558,15 +558,18 @@ def test_readiness_uses_source_digests_without_sha_environment() -> None:
     assert "final_sha" not in readiness
     assert readiness["verified_runtime_tree_sha256"] == provenance["runtime_tree_sha256"]
     assert readiness["verified_registry_sha256"] == provenance["registry_sha256"]
-    assert readiness["gates"]["required_gepa_ci"] is True
-    assert readiness["ready_for_prompt_18"] is True
-    assert readiness["blockers"] == []
-    assert readiness["required_ci_run"] == {
-        "id": 32583433295,
-        "job_id": 97056076300,
-        "job": "recursive-opt v2 offline (required)",
-        "head_sha": "52a7b0bd86b21975e2de09cec0a957b04e835312",
-        "status": "completed",
-        "conclusion": "success",
-        "url": "https://github.com/doxav/NewTrace/actions/runs/32583433295",
-    }
+    required_ci = readiness["gates"]["required_gepa_ci"]
+    assert readiness["ready_for_prompt_18"] is required_ci
+    if required_ci:
+        assert readiness["blockers"] == []
+        run = readiness["required_ci_run"]
+        assert run["job"] == "recursive-opt v2 offline (required)"
+        assert run["status"] == "completed" and run["conclusion"] == "success"
+        assert isinstance(run["id"], int) and isinstance(run["job_id"], int)
+        assert len(run["head_sha"]) == 40
+        assert run["url"].endswith(str(run["id"]))
+    else:
+        assert readiness["required_ci_run"] is None
+        assert readiness["blockers"] == [
+            "required recursive-opt v2 offline CI has not yet been observed for the GEPA reflection hotfix"
+        ]
