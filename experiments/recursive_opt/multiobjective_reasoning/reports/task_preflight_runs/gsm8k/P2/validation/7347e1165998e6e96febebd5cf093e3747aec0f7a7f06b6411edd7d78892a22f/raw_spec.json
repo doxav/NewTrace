@@ -1,0 +1,151 @@
+{
+  "budget": {
+    "candidates": 2,
+    "eval_llm_calls": 80,
+    "evaluator_runs": 40,
+    "on_exceed": "fail",
+    "optimizer_llm_calls": 4,
+    "total_tokens": 60000,
+    "wall_time_s": 900
+  },
+  "kind": "recursive_optimization",
+  "levels": [
+    {
+      "datasets": {
+        "holdout": [],
+        "train": {
+          "config": {
+            "baseline_tokens": {}
+          },
+          "ref": "recursive_experiments.dataset.gsm8k@1",
+          "split": "train"
+        },
+        "validation": {
+          "config": {
+            "baseline_tokens": {}
+          },
+          "ref": "recursive_experiments.dataset.gsm8k@1",
+          "split": "validation"
+        }
+      },
+      "engine": {
+        "config": {},
+        "name": "fixed"
+      },
+      "id": "compound-reasoning",
+      "llm_roles": {
+        "feedback": null,
+        "forward": "forward_primary",
+        "judge": null,
+        "optimizer": "optimizer_primary"
+      },
+      "module": {
+        "artifact": {
+          "analysis_instruction": "Solve step by step, check every operation, and independently verify the result.",
+          "answer_instruction": "Check the supplied reasoning, correct any mistake, then emit exactly FINAL: <answer>."
+        },
+        "config": {
+          "analysis_instruction": "Solve step by step, check every operation, and independently verify the result.",
+          "answer_instruction": "Check the supplied reasoning, correct any mistake, then emit exactly FINAL: <answer>."
+        },
+        "inputs": {},
+        "ref": "recursive_experiments.module.compound_reasoning@1"
+      },
+      "objective": {
+        "evaluator_ref": "recursive_experiments.evaluator.exact_reasoning@1",
+        "feedback_channels": [
+          "natural_language",
+          "trace"
+        ],
+        "hard_constraints": [
+          {
+            "metric": "invalid_rate",
+            "op": "<=",
+            "value": 0.0
+          }
+        ],
+        "intent": "Maximize exact-answer accuracy while reducing forward tokens; never select an invalid answer.",
+        "metrics": {
+          "accuracy": {
+            "aggregate_examples": "mean",
+            "direction": "maximize",
+            "source": "evaluation.metrics.accuracy"
+          },
+          "forward_token_ratio": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.forward_token_ratio"
+          },
+          "invalid_rate": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.invalid_rate"
+          },
+          "latency_s": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.latency_s"
+          }
+        },
+        "selection": {
+          "mode": "weighted",
+          "weights": {
+            "accuracy": 1.0,
+            "forward_token_ratio": 0.1
+          }
+        }
+      },
+      "surface": {
+        "kind": "custom",
+        "targets": [
+          "analysis_instruction",
+          "answer_instruction"
+        ]
+      }
+    }
+  ],
+  "llm_profiles": {
+    "forward_primary": {
+      "api_key_ref": "env:OPENROUTER_API_KEY",
+      "fallbacks": [],
+      "max_tokens": 384,
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openrouter",
+      "request_params": {
+        "reasoning": {
+          "enabled": false
+        }
+      },
+      "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+      "temperature": 0
+    },
+    "optimizer_primary": {
+      "api_key_ref": "env:OPENROUTER_API_KEY",
+      "fallbacks": [],
+      "max_tokens": 768,
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openrouter",
+      "request_params": {
+        "reasoning": {
+          "enabled": true
+        }
+      },
+      "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+      "temperature": 0
+    }
+  },
+  "outputs": {
+    "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/multiobjective_reasoning/reports/task_preflight_runs/gsm8k/P2/validation",
+    "format": "json",
+    "save_artifacts": true
+  },
+  "runtime": {
+    "offline": false,
+    "reproducible": true,
+    "resume": false,
+    "seed": 1803,
+    "strict_refs": true,
+    "test_mode": false
+  },
+  "schema_version": "recursive-opt/v2alpha"
+}

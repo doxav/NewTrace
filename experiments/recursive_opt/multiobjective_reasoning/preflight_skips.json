@@ -1,0 +1,35 @@
+{
+  "schema_version": "recursive-opt-preflight-skips/v1",
+  "control_plane_head": "8077703218d087c8b458d029ca581ce7dcd745b6",
+  "blocking_skips": 0,
+  "experiment_0_uses_graph_runtime": false,
+  "generic_graph_contract": {
+    "status": "passed",
+    "evidence": "The dependency-free GraphAdapter/GraphModule contracts pass in the focused matrix. The installed LangGraph probe passed 7 tests."
+  },
+  "skips": [
+    {
+      "node_id": "tests/unit_tests/test_recursive_opt.py::test_tracebench_adapter_collects_trace_type_feedback",
+      "reason": "optional graph/telemetry backends are not importable",
+      "missing_dependency_or_executable": "opto.trace.io telemetry_session/sysmonitoring integration",
+      "component": "optional OpenTelemetry/system-monitoring trace feedback for Trace-Bench",
+      "used_by_experiment_0": false,
+      "decision": "accept",
+      "justification": "Experiment 0 uses the ordinary Trace computational graph and does not request OTEL or sysmon. Generic internal Trace and deterministic degradation contracts are covered."
+    },
+    {
+      "node_id": "tests/unit_tests/test_recursive_opt.py::test_multitrace_session_uses_available_trace_io_backends",
+      "reason": "optional graph/telemetry backends are not importable",
+      "missing_dependency_or_executable": "opto.trace.io telemetry_session/sysmonitoring integration",
+      "component": "optional MultiTraceSession OTEL/sysmon merge",
+      "used_by_experiment_0": false,
+      "decision": "accept",
+      "justification": "Experiment 0 does not use telemetry backends. MultiTraceSession internal graph normalization and graceful optional-backend behavior remain covered by deterministic tests."
+    }
+  ],
+  "not_skipped": {
+    "langgraph": "7 passed in tests/unit_tests/test_recursive_opt_abc_probe.py",
+    "gepa": "all GEPA 0.1.4 public-contract tests ran",
+    "critical_experiment_components": "no skip affected Trace Module execution, Trace optimizer/trainer, strict output evaluation, exact traced output, weighted selection, validation gating, GEPA, datasets, LLM roles, request_params, budgets, holdout isolation, persistence/resume, or provenance"
+  }
+}

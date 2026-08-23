@@ -1,0 +1,302 @@
+{
+  "complete": true,
+  "identity": {
+    "dataset_refs": {
+      "holdout": {
+        "inline_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "train": {
+        "config": {
+          "baseline_tokens": {}
+        },
+        "ref": "recursive_experiments.dataset.bbh_boolean_expressions@1",
+        "split": "train"
+      },
+      "validation": {
+        "config": {
+          "baseline_tokens": {}
+        },
+        "ref": "recursive_experiments.dataset.bbh_boolean_expressions@1",
+        "split": "validation"
+      }
+    },
+    "engine": "fixed",
+    "evaluator_ref": "recursive_experiments.evaluator.exact_reasoning@1",
+    "level_fingerprint": "ef092da77b0e7ebeaf63e2ea011f3f0baec44cf9a22d3a006ba56421f47fd7f1",
+    "level_id": "compound-reasoning",
+    "module_ref": "recursive_experiments.module.compound_reasoning@1",
+    "registry_sha256": "862734f9335d24683fb0e273dbbbd3c2c0159670e67621e9286d3b530ee0f04b",
+    "runtime_tree_sha256": "5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642",
+    "spec_fingerprint": "aa9d2e388d8e8f89b6748bb38d5117a46833abe824b6a1b504a346add94c3e94",
+    "unit_id": "default:seed-1803:matrix-0"
+  },
+  "result": {
+    "artifact": {
+      "analysis_instruction": "Produce an exhaustive derivation, enumerate alternatives, check each intermediate result twice, and explain every verification in detail before deciding.",
+      "answer_instruction": "Review the full derivation at length, discuss possible errors, and finish with exactly FINAL: <answer>."
+    },
+    "budget": {
+      "accounted": {
+        "candidates": 0,
+        "candidates_evaluated": 0,
+        "candidates_proposed": 0,
+        "candidates_reserved": 0,
+        "eval_llm_calls": 4,
+        "evaluator_runs": 2,
+        "optimizer_llm_calls": 0,
+        "total_tokens": 7081,
+        "wall_time_s": 68.281158
+      },
+      "candidates": 2,
+      "eval_llm_calls": 80,
+      "evaluator_runs": 40,
+      "exceeded": [],
+      "on_exceed": "fail",
+      "optimizer_llm_calls": 4,
+      "total_tokens": 60000,
+      "wall_time_s": 900
+    },
+    "engine": "fixed",
+    "error": null,
+    "evaluation": {
+      "artifacts": [
+        {
+          "answer": "(A)",
+          "expected": "(C)"
+        },
+        {
+          "answer": "(A)",
+          "expected": "(E)"
+        }
+      ],
+      "error": null,
+      "feedback": [
+        "Expected answer: (C). Produced answer: (A).",
+        "Expected answer: (E). Produced answer: (A)."
+      ],
+      "metrics": {
+        "accuracy": 0.0,
+        "forward_token_ratio": 1.0,
+        "invalid_rate": 0.0,
+        "latency_s": 34.13912312249886
+      },
+      "status": "ok",
+      "trace": [
+        {
+          "output_identity": 140048022940816,
+          "provider_calls": [
+            {
+              "actual_model": "deepseek/deepseek-v4-flash-0731",
+              "actual_provider": "openrouter",
+              "cache_hit": null
+            },
+            {
+              "actual_model": "deepseek/deepseek-v4-flash-0731",
+              "actual_provider": "openrouter",
+              "cache_hit": null
+            }
+          ],
+          "sample_id": "boolean_expressions:boolean_expressions:130",
+          "workflow_call": 1
+        },
+        {
+          "output_identity": 140048024038736,
+          "provider_calls": [
+            {
+              "actual_model": "deepseek/deepseek-v4-flash-0731",
+              "actual_provider": "openrouter",
+              "cache_hit": null
+            },
+            {
+              "actual_model": "deepseek/deepseek-v4-flash-0731",
+              "actual_provider": "openrouter",
+              "cache_hit": null
+            }
+          ],
+          "sample_id": "boolean_expressions:boolean_expressions:47",
+          "workflow_call": 2
+        }
+      ],
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "calls": 4,
+          "completion_tokens": 1536,
+          "cost_usd": 0.0,
+          "prompt_tokens": 5545,
+          "total_tokens": 7081
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "valid": true
+    },
+    "level_results": [],
+    "lineage": [],
+    "metadata": {
+      "budget_exhausted": null,
+      "engine_capabilities": [
+        "pareto",
+        "rich_trace",
+        "scalar",
+        "trace_module",
+        "weighted"
+      ],
+      "evaluator_records": [
+        {
+          "artifacts": [
+            {
+              "answer": "(A)",
+              "expected": "(C)"
+            },
+            {
+              "answer": "(A)",
+              "expected": "(E)"
+            }
+          ],
+          "error": null,
+          "feedback": [
+            "Expected answer: (C). Produced answer: (A).",
+            "Expected answer: (E). Produced answer: (A)."
+          ],
+          "metrics": {
+            "accuracy": 0.0,
+            "forward_token_ratio": 1.0,
+            "invalid_rate": 0.0,
+            "latency_s": 34.13912312249886
+          },
+          "status": "ok",
+          "trace": [
+            {
+              "output_identity": 140048022940816,
+              "provider_calls": [
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                }
+              ],
+              "sample_id": "boolean_expressions:boolean_expressions:130",
+              "workflow_call": 1
+            },
+            {
+              "output_identity": 140048024038736,
+              "provider_calls": [
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                }
+              ],
+              "sample_id": "boolean_expressions:boolean_expressions:47",
+              "workflow_call": 2
+            }
+          ],
+          "usage": {
+            "feedback": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "forward": {
+              "calls": 4,
+              "completion_tokens": 1536,
+              "cost_usd": 0.0,
+              "prompt_tokens": 5545,
+              "total_tokens": 7081
+            },
+            "judge": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "optimizer": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            }
+          },
+          "valid": true
+        }
+      ],
+      "level_id": "compound-reasoning",
+      "module_capabilities": [
+        "json_snapshot",
+        "multi_component",
+        "trace_module"
+      ],
+      "objective_mode": "weighted",
+      "selected_models": {
+        "feedback": null,
+        "forward": "openrouter/deepseek/deepseek-v4-flash-0731",
+        "judge": null,
+        "optimizer": "openrouter/deepseek/deepseek-v4-flash-0731"
+      },
+      "trace_optimize_path": false
+    },
+    "module_ref": "recursive_experiments.module.compound_reasoning@1",
+    "plan_fingerprint": "aa9d2e388d8e8f89b6748bb38d5117a46833abe824b6a1b504a346add94c3e94",
+    "portable": true,
+    "promotable": true,
+    "spec_fingerprint": "aa9d2e388d8e8f89b6748bb38d5117a46833abe824b6a1b504a346add94c3e94",
+    "status": "success",
+    "unit_id": "default:seed-1803:matrix-0:compound-reasoning",
+    "usage": {
+      "feedback": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "forward": {
+        "calls": 4,
+        "completion_tokens": 1536,
+        "cost_usd": 0.0,
+        "prompt_tokens": 5545,
+        "total_tokens": 7081
+      },
+      "judge": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "optimizer": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      }
+    },
+    "valid": true
+  },
+  "result_sha256": "876ab2f24686f2549fc416b1da17cdf9910ae08781e86c46d15c5467efbd7d56"
+}

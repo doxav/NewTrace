@@ -1,0 +1,90 @@
+[
+  {
+    "artifacts": [
+      {
+        "answer": "378",
+        "expected": "181"
+      },
+      {
+        "answer": "435",
+        "expected": "87"
+      }
+    ],
+    "error": null,
+    "feedback": [
+      "Expected answer: 181. Produced answer: 378.",
+      "Expected answer: 87. Produced answer: 435."
+    ],
+    "metrics": {
+      "accuracy": 0.0,
+      "forward_token_ratio": 1.0,
+      "invalid_rate": 0.0,
+      "latency_s": 22.86222743347753
+    },
+    "status": "ok",
+    "trace": [
+      {
+        "output_identity": 140048021971808,
+        "provider_calls": [
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          },
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          }
+        ],
+        "sample_id": "object_counting:object_counting:199",
+        "workflow_call": 1
+      },
+      {
+        "output_identity": 140048024028656,
+        "provider_calls": [
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          },
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          }
+        ],
+        "sample_id": "object_counting:object_counting:145",
+        "workflow_call": 2
+      }
+    ],
+    "usage": {
+      "feedback": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "forward": {
+        "calls": 4,
+        "completion_tokens": 1536,
+        "cost_usd": 0.0,
+        "prompt_tokens": 10350,
+        "total_tokens": 11886
+      },
+      "judge": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "optimizer": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      }
+    },
+    "valid": true
+  }
+]

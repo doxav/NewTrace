@@ -83,6 +83,17 @@ Production-computed pre-CI digests:
 
 The registry digest is unchanged because the adapter does not modify canonical
 registry entries. The old runtime digest and required CI describe the
-pre-repair implementation and remain historical only. Until the new required
-workflow is observed green, `required_gepa_ci=false` and
-`ready_for_prompt_18=false`.
+pre-repair implementation and remain historical only.
+
+## Required CI outcome
+
+- Hotfix commit: `c1bf6a296d159b92d09ac29ee90556d2c1997a5d`.
+- GitHub Actions run: `32650995105`.
+- Required job: `recursive-opt v2 offline (required)` (`97222458541`).
+- Result: `completed / success` in 1m03s.
+- URL: <https://github.com/doxav/NewTrace/actions/runs/32650995105>.
+
+The required job installed `.[gepa]` and ran the new actual-GEPA reflection
+test through `test_recursive_control_plane_v2.py`. The externally verified
+implementation therefore has `required_gepa_ci=true` and
+`ready_for_prompt_18=true`.

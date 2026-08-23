@@ -2,8 +2,16 @@
   "schema_version": "prompt18-readiness/v2",
   "verified_runtime_tree_sha256": "37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e",
   "verified_registry_sha256": "f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4",
-  "ready_for_prompt_18": false,
-  "required_ci_run": null,
+  "ready_for_prompt_18": true,
+  "required_ci_run": {
+    "id": 32650995105,
+    "job_id": 97222458541,
+    "job": "recursive-opt v2 offline (required)",
+    "head_sha": "c1bf6a296d159b92d09ac29ee90556d2c1997a5d",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/doxav/NewTrace/actions/runs/32650995105"
+  },
   "gates": {
     "canonical_multilevel_schema": true,
     "single_execution_path": true,
@@ -20,9 +28,7 @@
     "environment_invariant": true,
     "request_params_causal": true,
     "source_provenance": true,
-    "required_gepa_ci": false
+    "required_gepa_ci": true
   },
-  "blockers": [
-    "required recursive-opt v2 offline CI has not yet been observed for the GEPA reflection hotfix"
-  ]
+  "blockers": []
 }

@@ -1,5 +1,16 @@
 # Control plane v2 implementation evidence
 
+## GEPA 0.1.4 reflection protocol relock (2026-08-23)
+
+The GEPA engine now adapts its text reflection callable to the existing guarded
+optimizer chat client without bypassing accounting, budgets, request parameters,
+or model fallback. The authoritative runtime digest is
+`37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e`;
+the unchanged registry digest is
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+Required Actions run `32650995105`, job `97222458541`, completed successfully
+on implementation commit `c1bf6a296d159b92d09ac29ee90556d2c1997a5d`.
+
 Original implementation baseline: `6fc278a398709fe79a0fc9be22bae99bffd8cba6`
 
 Semantic-closure baseline: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`

@@ -1,0 +1,202 @@
+{
+  "branch": "recursive_opt",
+  "control_plane": {
+    "local_modifications": false,
+    "registry_sha256": "f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4",
+    "runtime_files_locked": true,
+    "runtime_tree_sha256": "5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642"
+  },
+  "environment": {
+    "dependencies": {
+      "gepa": "0.1.4",
+      "litellm": "1.75.0",
+      "numpy": "2.4.4",
+      "pytest": "9.0.3",
+      "trace-opt": "0.2.0"
+    },
+    "os": "Linux-7.0.0-28-generic-x86_64-with-glibc2.39",
+    "python": "3.12.13"
+  },
+  "experiment": {
+    "plan_registry_sha256_by_engine": {
+      "fixed": "c7cd082c9e177180c448e11285bae9d23d53a4f48cfdeba886d7d6121d2d6d8b",
+      "gepa_optimize_anything": "2b93b079d996c3e6f2e873234bb58bbea8762186a9156fce6639e39ad30d7ff4",
+      "trace": "4afb255433b86255efcd98b0446fa4f836cc1d5b9d9f161d116b9567409ace27"
+    },
+    "registry": {
+      "entries": {
+        "datasets": [
+          {
+            "implementation_sha256": "3d214930c30a9f11453727f51e2c3aa918a41d533e6fc20af2992f97efe08706",
+            "package_version": null,
+            "python_module": "experiments.recursive_opt.multiobjective_reasoning.datasets",
+            "qualified_name": "resolve_bbeh_boolean_expressions_v2",
+            "ref": "recursive_experiments.dataset.bbeh_boolean_expressions@2",
+            "source_file": "experiments/recursive_opt/multiobjective_reasoning/datasets.py",
+            "source_sha256": "bbcd1384144a484accf40395935684150358b636eec2fcad1a89d4bc9d4c0f10"
+          },
+          {
+            "implementation_sha256": "5bd3b4fc9806176d2b406e2e8a623a7a19c421876e55400b34f5a93c6d0e9c77",
+            "package_version": null,
+            "python_module": "experiments.recursive_opt.multiobjective_reasoning.datasets",
+            "qualified_name": "resolve_bbeh_object_counting_v2",
+            "ref": "recursive_experiments.dataset.bbeh_object_counting@2",
+            "source_file": "experiments/recursive_opt/multiobjective_reasoning/datasets.py",
+            "source_sha256": "6728840961369b7ae4388ac1a123ffad9357d71633887cd2d0e7cd463afe3278"
+          },
+          {
+            "implementation_sha256": "3edd605d74ada34d5c6d7f3c63d4487140b713780015174f1770e9b6c6a8ccc0",
+            "package_version": null,
+            "python_module": "experiments.recursive_opt.multiobjective_reasoning.datasets",
+            "qualified_name": "resolve_boolean_expressions",
+            "ref": "recursive_experiments.dataset.bbh_boolean_expressions@1",
+            "source_file": "experiments/recursive_opt/multiobjective_reasoning/datasets.py",
+            "source_sha256": "f85d6a62dbb99d11bdbac43d8481ddbb2dc83a3cb04ece3c8b06a0335b393f7a"
+          },
+          {
+            "implementation_sha256": "3caa3e47822f785d5d3c2e1e83440937428e3016c190b406e884b7a58e84edf5",
+            "package_version": null,
+            "python_module": "experiments.recursive_opt.multiobjective_reasoning.datasets",
+            "qualified_name": "resolve_object_counting",
+            "ref": "recursive_experiments.dataset.bbh_object_counting@1",
+            "source_file": "experiments/recursive_opt/multiobjective_reasoning/datasets.py",
+            "source_sha256": "9cda49d039fd165364132ecff51842b536da19b2f92d87a802ab6f09f49c4bc9"
+          },
+          {
+            "implementation_sha256": "4b6358ad184a175fc4d02a2a7fab1620e340b4b69338412acbbf9bfccd273e13",
+            "package_version": null,
+            "python_module": "experiments.recursive_opt.multiobjective_reasoning.datasets",
+            "qualified_name": "resolve_gsm8k",
+            "ref": "recursive_experiments.dataset.gsm8k@1",
+            "source_file": "experiments/recursive_opt/multiobjective_reasoning/datasets.py",
+            "source_sha256": "abe39b536d31f8e5e488bf4ce6561d941b749f178cb9523aa406282c2a98a417"
+          },
+          {
+            "implementation_sha256": "55dbc2cdddcddc3188bd2fb65ccd902820106f73b8e87d5ab6829aeb9d182d02",
+            "package_version": null,
+            "python_module": "experiments.recursive_opt.multiobjective_reasoning.datasets",
+            "qualified_name": "resolve_gsm8k_v2",
+            "ref": "recursive_experiments.dataset.gsm8k@2",
+            "source_file": "experiments/recursive_opt/multiobjective_reasoning/datasets.py",
+            "source_sha256": "d98e83081c6c89de2ed94cf72215d53aaf3513e314ecaad35376b37897464167"
+          }
+        ],
+        "evaluators": [
+          {
+            "implementation_sha256": "8f108140752dc9f1a938c29dccde9f94c3dff518435dab8a42004aba0a2a8ecd",
+            "package_version": null,
+            "python_module": "experiments.recursive_opt.multiobjective_reasoning.evaluator",
+            "qualified_name": "exact_reasoning_evaluator",
+            "ref": "recursive_experiments.evaluator.exact_reasoning@1",
+            "source_file": "experiments/recursive_opt/multiobjective_reasoning/evaluator.py",
+            "source_sha256": "6cee2bf391fcd653b5636e0003710a244beb63ae256afa55cbe756b0d3370905"
+          }
+        ],
+        "modules": [
+          {
+            "implementation_sha256": "263abeeb4104e310cae8c645fda4a7d36343277cd887a2ebd7a7a7ded97d67d4",
+            "package_version": null,
+            "python_module": "experiments.recursive_opt.multiobjective_reasoning.components",
+            "qualified_name": "build_module",
+            "ref": "recursive_experiments.module.compound_reasoning@1",
+            "source_file": "experiments/recursive_opt/multiobjective_reasoning/components.py",
+            "source_sha256": "29ba89e6d443988f0d6dff1eac67c472c8814084c7a91285a2187c0cb851d756"
+          }
+        ]
+      },
+      "sha256": "18a7efd58f3d265a723fa62efb89d2dc07082afbcdf16c9470e6d4eb93a77121"
+    },
+    "selected_task": "gsm8k",
+    "source": {
+      "files": [
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/__init__.py",
+          "sha256": "663dd33553ea8bf7189f2d771909479220df5a1c36d2a6fc13741564cf23da25"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/baseline.py",
+          "sha256": "0ace021985b329ef7f3244d916fe8393a04cec65d3fa98d8623b66243667085e"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/components.py",
+          "sha256": "ae6dfe74fc513515c14c62bf1fa05ec9b6810d5339f4b5c8cd576ed8b91e6db8"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/datasets.py",
+          "sha256": "816d31e26b5ee6b40cb604187778837f755cafac5a7e850be14fac5abea27c16"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/evaluator.py",
+          "sha256": "96aba14935d026cc3a4771ac86df7043b27eefdf66175260589fb89401484eea"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/forecast.py",
+          "sha256": "b9c9f8b883322bd1ae45d8269fce3b7b27a79fcc7246c0f0f2aed7802584476a"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/live.py",
+          "sha256": "f91802e4b65a40e543e6465552e7dd064a94d78264b76bdfa1fb91c6253076b2"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/manifests/dataset_manifest_v2.json",
+          "sha256": "3c2ca2924868dc4edd8bb717139e6bfaa7b20388f1fc773f595551e0936661ee"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/manifests/preregistration_v2.json",
+          "sha256": "65ed7a962af99c899f5b0c7f68f61ec6c8e36db3e7ebc56eb6f6bf7c087d1523"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/offline_contract.py",
+          "sha256": "7fba0c104c5e59cb374585a0af9fa1aa87470f77105763fac2e53006ec2b60b6"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/preflight.py",
+          "sha256": "f3f9bc02a57c75d7bca0e92f3450c2fb05229e6ca66e21e4a0e6bbd5d179bed5"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/preflight_skips.json",
+          "sha256": "c5d069e5d16bc483f11b321fa5248b6e94260c4ccf444dfcc219554c94aad7b0"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/provenance.py",
+          "sha256": "545feffd866463d84ce2eafb9c66ad77b1ebc362ddf7693fdad5647e8a50b1a0"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/registration.py",
+          "sha256": "8896b7d39fb0d3417309c3e918af877145314c521ba99be021b70d235369aa0b"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/run.py",
+          "sha256": "02cfe304256329bbbc7b5499f3ac4d6b6e1deadeb9aebac354e1b642ddf6e84c"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/specs.py",
+          "sha256": "ee88017b9101757a82894ec434ae31d526b36d70875535510a58771e325581e5"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/tests/__init__.py",
+          "sha256": "85edaeb4294c1febb6d2c5084244c5862f8b2e5dd34e0403aa3271ecfbbe2695"
+        },
+        {
+          "path": "experiments/recursive_opt/multiobjective_reasoning/tests/test_eligibility.py",
+          "sha256": "e5713464f99a983fa3666b499e52dd447d6960224570ffd7c65dac1e5e2db691"
+        }
+      ],
+      "sha256": "4fc09f1f97bb0aefd355a7e934cc96aedcd58af02da203cd4c2b86ebd9c117da"
+    }
+  },
+  "experiment_version": "experiment-0-v2",
+  "gepa_public_evaluator_contract": "score | (score, side_info)",
+  "git_head": "8077703218d087c8b458d029ca581ce7dcd745b6",
+  "schema_version": "recursive-opt-experiment-lock/v2",
+  "workflow": {
+    "conclusion": "success",
+    "head_sha": "8077703218d087c8b458d029ca581ce7dcd745b6",
+    "job": "recursive-opt v2 offline (required)",
+    "job_id": 97056444766,
+    "name": "recursive-opt v2 contracts",
+    "run_id": 32583578664,
+    "status": "completed",
+    "url": "https://github.com/doxav/NewTrace/actions/runs/32583578664"
+  }
+}

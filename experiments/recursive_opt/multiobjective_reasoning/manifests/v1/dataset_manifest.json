@@ -1,0 +1,64 @@
+{
+  "content_sha256": "0bf7d98b002cc43d2601c2d3fe98213c07e21af6f5ee86559de4cd09e79f6b60",
+  "schema_version": "recursive-opt-dataset-manifest/v1",
+  "selection_seed": 1803,
+  "tasks": {
+    "boolean_expressions": {
+      "content_sha256": "2e063351a97c1f3968a45d2b320a2c3b9fb82043787e19bdc36b72104c441a89",
+      "count": 8,
+      "preprocessing": "question text plus deterministic exact target normalization",
+      "ref": "recursive_experiments.dataset.bbh_boolean_expressions@1",
+      "samples": [
+        {"content_sha256": "75ad205b1df53606c595c33c43adb36cdb5096f34471b0022b6c6857156aa726", "id": "boolean_expressions:boolean_expressions:70", "source_index": 70, "source_split": "boolean_expressions", "split": "train"},
+        {"content_sha256": "3e222619d78fe6b3c85c41b8fc3b5686471871a831148e9d8d9f2f85c23f4600", "id": "boolean_expressions:boolean_expressions:30", "source_index": 30, "source_split": "boolean_expressions", "split": "train"},
+        {"content_sha256": "cd443f5b938d35af89eca721d662dec98792288af0af4641d39b5a52e413326b", "id": "boolean_expressions:boolean_expressions:170", "source_index": 170, "source_split": "boolean_expressions", "split": "train"},
+        {"content_sha256": "1cbc4f13be1603082d59b50804c9bf75226b648e921ba164a2d07ca23f5340ae", "id": "boolean_expressions:boolean_expressions:86", "source_index": 86, "source_split": "boolean_expressions", "split": "train"},
+        {"content_sha256": "26490ad22121089140c16a56786d58432c97f6aed0da5ddc696fdede6c58e14f", "id": "boolean_expressions:boolean_expressions:130", "source_index": 130, "source_split": "boolean_expressions", "split": "validation"},
+        {"content_sha256": "fcc42a5422040ceff90a4356076a970961551257e72a492cdfcc41c9898f935e", "id": "boolean_expressions:boolean_expressions:47", "source_index": 47, "source_split": "boolean_expressions", "split": "validation"},
+        {"content_sha256": "4f55aeba94a33ed437292799579dc3b8b7ab21dc4aca96a4fdb1348ee773dd62", "id": "boolean_expressions:boolean_expressions:145", "source_index": 145, "source_split": "boolean_expressions", "split": "holdout"},
+        {"content_sha256": "8f234f49a227f0806b72349b5c7e7249f02d77532f80abfd44d45635563a0b36", "id": "boolean_expressions:boolean_expressions:166", "source_index": 166, "source_split": "boolean_expressions", "split": "holdout"}
+      ],
+      "selection_seed": 1803,
+      "source": "hubert233/BigBenchExtraHard",
+      "source_revision": "442521cdc7195d9e0fdc5ba010b6fcbd902fcc00"
+    },
+    "gsm8k": {
+      "content_sha256": "d2624a51037fd515a7742ed756904b46881e84ced9e3b9ac998e17d6c9cf3f62",
+      "count": 8,
+      "preprocessing": "question text plus deterministic exact target normalization",
+      "ref": "recursive_experiments.dataset.gsm8k@1",
+      "samples": [
+        {"content_sha256": "ee413664dfbd5d3583ef0f6e2702ddeb55d4ce79c32b02d83c34336bfb112519", "id": "gsm8k:train:6512", "source_index": 6512, "source_split": "train", "split": "train"},
+        {"content_sha256": "e220cab0578bfec27eb686c16cc68e6f8e4b6dbd05e683756e3e12f7f382e8c8", "id": "gsm8k:train:3890", "source_index": 3890, "source_split": "train", "split": "train"},
+        {"content_sha256": "fcd2356c1041e69b9bb459920df7bb57686f13c9f180762dbec0009dac29c318", "id": "gsm8k:train:6955", "source_index": 6955, "source_split": "train", "split": "train"},
+        {"content_sha256": "8f6924b42887bf28a541742fdc3069e677429cf08c77acfcaa4f09dc79a0409c", "id": "gsm8k:train:3147", "source_index": 3147, "source_split": "train", "split": "train"},
+        {"content_sha256": "e77b7a94f7806073299394c9bc18e0b46d231f15c71c4910e00bb7db62ad40d4", "id": "gsm8k:train:4100", "source_index": 4100, "source_split": "train", "split": "validation"},
+        {"content_sha256": "0cf4dfbcfc233dda45b941d40ebc42fc2615c881d88e7d820845a80575c4a794", "id": "gsm8k:train:425", "source_index": 425, "source_split": "train", "split": "validation"},
+        {"content_sha256": "cd094fce163cc92d80f8ed29abb8d69bcf0d989ea3156cff52b3c2fbd0803f68", "id": "gsm8k:test:1211", "source_index": 1211, "source_split": "test", "split": "holdout"},
+        {"content_sha256": "6a30b75f50f21b85894a9a059579bfce2bd22a4514c1e688abb458caa1595992", "id": "gsm8k:test:1132", "source_index": 1132, "source_split": "test", "split": "holdout"}
+      ],
+      "selection_seed": 1803,
+      "source": "openai/gsm8k",
+      "source_revision": "740312add88f781978c0658806c59bc2815b9866"
+    },
+    "object_counting": {
+      "content_sha256": "6c522e7a929857be8c7dd3280e2ecf86d4256fcd25d8bd788dbde4efbd27320b",
+      "count": 8,
+      "preprocessing": "question text plus deterministic exact target normalization",
+      "ref": "recursive_experiments.dataset.bbh_object_counting@1",
+      "samples": [
+        {"content_sha256": "af78cb570455267cbbc327f16dfe319a58f81c9591cfdb01e381e02fb10e2e66", "id": "object_counting:object_counting:175", "source_index": 175, "source_split": "object_counting", "split": "train"},
+        {"content_sha256": "aec221b2d05c39a5ab8120345dea77a82a368eb9d35248a3f6f92b1334108d4a", "id": "object_counting:object_counting:126", "source_index": 126, "source_split": "object_counting", "split": "train"},
+        {"content_sha256": "b00b0136c9eaca5b02550508263686d8f6a8a7432767157143b0912527b69e61", "id": "object_counting:object_counting:189", "source_index": 189, "source_split": "object_counting", "split": "train"},
+        {"content_sha256": "a9284b3a881743c3535778fc0ac85f6f71964c8f34049e0a888ca6362b979fe2", "id": "object_counting:object_counting:110", "source_index": 110, "source_split": "object_counting", "split": "train"},
+        {"content_sha256": "3573dd6f2e6d3e6548b0cc9f83914b78e1f76d74d19fd3659075f4844c194cc0", "id": "object_counting:object_counting:199", "source_index": 199, "source_split": "object_counting", "split": "validation"},
+        {"content_sha256": "066b9835ce2d5aa362194401bfe9b6d1985262ff2ff05b75a4cdeb79f2eec849", "id": "object_counting:object_counting:145", "source_index": 145, "source_split": "object_counting", "split": "validation"},
+        {"content_sha256": "7c1335242748c8ab9299408d8f919d80b98b0d38f04ab835a47ab6ffb641181a", "id": "object_counting:object_counting:55", "source_index": 55, "source_split": "object_counting", "split": "holdout"},
+        {"content_sha256": "cfe2c972b0bfee83ee10c207cb54dfbd44a640f06cce643db83da7ee2bb61840", "id": "object_counting:object_counting:102", "source_index": 102, "source_split": "object_counting", "split": "holdout"}
+      ],
+      "selection_seed": 1803,
+      "source": "hubert233/BigBenchExtraHard",
+      "source_revision": "442521cdc7195d9e0fdc5ba010b6fcbd902fcc00"
+    }
+  }
+}

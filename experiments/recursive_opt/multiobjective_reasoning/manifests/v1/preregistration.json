@@ -1,0 +1,159 @@
+{
+  "schema_version": "recursive-opt-experiment-preregistration/v1",
+  "experiment_version": "experiment-0-v1",
+  "title": "Cross-engine control-plane and optimizer-portability validation",
+  "control_plane_lock": "../control_plane_lock.json",
+  "candidate_tasks": [
+    "object_counting",
+    "boolean_expressions",
+    "gsm8k"
+  ],
+  "task_selection": {
+    "data_allowed": [
+      "train",
+      "validation"
+    ],
+    "holdout_allowed": false,
+    "rule": {
+      "baseline_accuracy_min": 0.2,
+      "baseline_accuracy_max": 0.95,
+      "probe_accuracy_spread_strictly_greater_than": 0.0,
+      "token_use_variation_required": true,
+      "maximum_invalid_rate": 0.25,
+      "nonempty_splits": [
+        "train",
+        "validation",
+        "holdout"
+      ],
+      "disjoint_splits_required": true,
+      "pilot_cost_within_forecast_required": true
+    },
+    "choice": "cheapest eligible task; ties follow candidate_tasks order",
+    "main_second_task": "use one distinct eligible task only if preregistered cost permits"
+  },
+  "manual_probes": {
+    "P0": {
+      "analysis_instruction": "Reason carefully and concisely. Identify the operations needed, compute them, and verify the result before handing analysis to the answer stage.",
+      "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the number after FINAL:."
+    },
+    "P1": {
+      "analysis_instruction": "Find the answer directly with only the minimum necessary reasoning.",
+      "answer_instruction": "Return the exact answer in one FINAL: line and nothing else."
+    },
+    "P2": {
+      "analysis_instruction": "Solve step by step, check every operation, and independently verify the result.",
+      "answer_instruction": "Check the supplied reasoning, correct any mistake, then emit exactly FINAL: <answer>."
+    },
+    "P3": {
+      "analysis_instruction": "Produce an exhaustive derivation, enumerate alternatives, check each intermediate result twice, and explain every verification in detail before deciding.",
+      "answer_instruction": "Review the full derivation at length, discuss possible errors, and finish with exactly FINAL: <answer>."
+    }
+  },
+  "module": {
+    "ref": "recursive_experiments.module.compound_reasoning@1",
+    "targets": [
+      "analysis_instruction",
+      "answer_instruction"
+    ],
+    "extractor_trainable": false
+  },
+  "evaluator": {
+    "ref": "recursive_experiments.evaluator.exact_reasoning@1",
+    "mode": "output",
+    "judge_llm": false,
+    "feedback_llm": false,
+    "one_workflow_forward_per_evaluator_example": true
+  },
+  "model_profiles": {
+    "provider": "openrouter",
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+    "forward": {
+      "temperature": 0,
+      "max_tokens": 384,
+      "request_params": {
+        "reasoning": {
+          "enabled": false
+        }
+      }
+    },
+    "optimizer": {
+      "temperature": 0,
+      "max_tokens": 768,
+      "request_params": {
+        "reasoning": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  "objective": {
+    "mode": "weighted",
+    "metrics": {
+      "accuracy": "maximize",
+      "invalid_rate": "minimize",
+      "forward_token_ratio": "minimize",
+      "latency_s": "minimize_diagnostic_only"
+    },
+    "weights": {
+      "accuracy": 1.0,
+      "forward_token_ratio": 0.1
+    },
+    "hard_constraints": [
+      "invalid_rate <= 0"
+    ],
+    "post_hoc_token_weight_grid": [
+      0.05,
+      0.1,
+      0.2
+    ]
+  },
+  "arms": {
+    "A": "fixed_baseline",
+    "B": "trace_optoprime_v2",
+    "C": "gepa_optimize_anything",
+    "D": "trace_without_validation_gate"
+  },
+  "cache_policy": "provider-response caching disabled; no optimization memory shared across arms",
+  "pilot": {
+    "paired_seeds": [
+      0,
+      1,
+      2
+    ],
+    "candidate_budgets": [
+      4,
+      6
+    ],
+    "arm_order": {
+      "0": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "1": [
+        "C",
+        "D",
+        "A",
+        "B"
+      ],
+      "2": [
+        "B",
+        "A",
+        "D",
+        "C"
+      ]
+    }
+  },
+  "harmful_proposal_definition": "candidate validation utility is below current validated utility or violates invalid_rate <= 0",
+  "fairness_primary": [
+    "evaluator-example executions",
+    "forward-model calls",
+    "forward-model tokens",
+    "maximum wall time"
+  ],
+  "main_monetary_ceiling_usd": null,
+  "main_run_policy": "pilot only until an explicit main-run monetary ceiling is acknowledged",
+  "bootstrap_seed": 1803
+}

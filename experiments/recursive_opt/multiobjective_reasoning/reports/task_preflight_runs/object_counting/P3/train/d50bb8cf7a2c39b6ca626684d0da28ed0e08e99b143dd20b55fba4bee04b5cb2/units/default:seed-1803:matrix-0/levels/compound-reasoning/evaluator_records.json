@@ -1,0 +1,134 @@
+[
+  {
+    "artifacts": [
+      {
+        "answer": "51",
+        "expected": "188"
+      },
+      {
+        "answer": "64",
+        "expected": "1488"
+      },
+      {
+        "answer": "3",
+        "expected": "1267"
+      },
+      {
+        "answer": "35",
+        "expected": "1216"
+      }
+    ],
+    "error": null,
+    "feedback": [
+      "Expected answer: 188. Produced answer: 51.",
+      "Expected answer: 1488. Produced answer: 64.",
+      "Expected answer: 1267. Produced answer: 3.",
+      "Expected answer: 1216. Produced answer: 35."
+    ],
+    "metrics": {
+      "accuracy": 0.0,
+      "forward_token_ratio": 1.0,
+      "invalid_rate": 0.0,
+      "latency_s": 35.03135378350271
+    },
+    "status": "ok",
+    "trace": [
+      {
+        "output_identity": 140048022755792,
+        "provider_calls": [
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          },
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          }
+        ],
+        "sample_id": "object_counting:object_counting:175",
+        "workflow_call": 1
+      },
+      {
+        "output_identity": 140048022940816,
+        "provider_calls": [
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          },
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          }
+        ],
+        "sample_id": "object_counting:object_counting:126",
+        "workflow_call": 2
+      },
+      {
+        "output_identity": 140048022750656,
+        "provider_calls": [
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          },
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          }
+        ],
+        "sample_id": "object_counting:object_counting:189",
+        "workflow_call": 3
+      },
+      {
+        "output_identity": 140048022938560,
+        "provider_calls": [
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          },
+          {
+            "actual_model": "deepseek/deepseek-v4-flash-0731",
+            "actual_provider": "openrouter",
+            "cache_hit": null
+          }
+        ],
+        "sample_id": "object_counting:object_counting:110",
+        "workflow_call": 4
+      }
+    ],
+    "usage": {
+      "feedback": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "forward": {
+        "calls": 8,
+        "completion_tokens": 3072,
+        "cost_usd": 0.0,
+        "prompt_tokens": 21809,
+        "total_tokens": 24881
+      },
+      "judge": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "optimizer": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      }
+    },
+    "valid": true
+  }
+]

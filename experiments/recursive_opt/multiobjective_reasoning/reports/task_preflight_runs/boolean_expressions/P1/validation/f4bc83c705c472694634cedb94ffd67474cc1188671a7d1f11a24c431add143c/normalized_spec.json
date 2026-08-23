@@ -1,0 +1,224 @@
+{
+  "budget": {
+    "candidates": 2,
+    "eval_llm_calls": 80,
+    "evaluator_runs": 40,
+    "on_exceed": "fail",
+    "optimizer_llm_calls": 4,
+    "total_tokens": 60000,
+    "wall_time_s": 900
+  },
+  "experiment": {
+    "arms": [],
+    "matrix": {},
+    "seeds": []
+  },
+  "extensions": {},
+  "fingerprint": "f4bc83c705c472694634cedb94ffd67474cc1188671a7d1f11a24c431add143c",
+  "kind": "recursive_optimization",
+  "knowledge": {
+    "injection_codec": "recursive_opt.codec.artifact_to_prior@1",
+    "promotion_rule": {},
+    "retrieval": "best",
+    "rollback_rule": {},
+    "scope_fields": [
+      "family",
+      "level",
+      "kind"
+    ],
+    "statuses": [
+      "promoted"
+    ],
+    "store": "recursive_opt.knowledge.memory_lite@1",
+    "top_k": 5
+  },
+  "levels": [
+    {
+      "bindings": [],
+      "datasets": {
+        "holdout": [],
+        "train": {
+          "config": {
+            "baseline_tokens": {}
+          },
+          "ref": "recursive_experiments.dataset.bbh_boolean_expressions@1",
+          "split": "train"
+        },
+        "validation": {
+          "config": {
+            "baseline_tokens": {}
+          },
+          "ref": "recursive_experiments.dataset.bbh_boolean_expressions@1",
+          "split": "validation"
+        }
+      },
+      "depends_on": [],
+      "engine": {
+        "config": {},
+        "name": "fixed"
+      },
+      "id": "compound-reasoning",
+      "llm_roles": {
+        "feedback": null,
+        "forward": {
+          "api_key_ref": "env:OPENROUTER_API_KEY",
+          "base_url": null,
+          "fallbacks": [],
+          "max_tokens": 384,
+          "model": "deepseek/deepseek-v4-flash-0731",
+          "profile": "forward_primary",
+          "provider": "openrouter",
+          "request_params": {
+            "reasoning": {
+              "enabled": false
+            }
+          },
+          "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+          "temperature": 0
+        },
+        "judge": null,
+        "optimizer": {
+          "api_key_ref": "env:OPENROUTER_API_KEY",
+          "base_url": null,
+          "fallbacks": [],
+          "max_tokens": 768,
+          "model": "deepseek/deepseek-v4-flash-0731",
+          "profile": "optimizer_primary",
+          "provider": "openrouter",
+          "request_params": {
+            "reasoning": {
+              "enabled": true
+            }
+          },
+          "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+          "temperature": 0
+        }
+      },
+      "module": {
+        "artifact": {
+          "analysis_instruction": "Find the answer directly with only the minimum necessary reasoning.",
+          "answer_instruction": "Return the exact answer in one FINAL: line and nothing else."
+        },
+        "config": {
+          "analysis_instruction": "Find the answer directly with only the minimum necessary reasoning.",
+          "answer_instruction": "Return the exact answer in one FINAL: line and nothing else."
+        },
+        "inputs": {},
+        "ref": "recursive_experiments.module.compound_reasoning@1"
+      },
+      "objective": {
+        "aggregation": {
+          "mode": "mean"
+        },
+        "evaluator_ref": "recursive_experiments.evaluator.exact_reasoning@1",
+        "feedback_channels": [
+          "natural_language",
+          "trace"
+        ],
+        "hard_constraints": [
+          {
+            "metric": "invalid_rate",
+            "op": "<=",
+            "value": 0.0
+          }
+        ],
+        "intent": "Maximize exact-answer accuracy while reducing forward tokens; never select an invalid answer.",
+        "metrics": {
+          "accuracy": {
+            "aggregate_examples": "mean",
+            "direction": "maximize",
+            "source": "evaluation.metrics.accuracy"
+          },
+          "forward_token_ratio": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.forward_token_ratio"
+          },
+          "invalid_rate": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.invalid_rate"
+          },
+          "latency_s": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.latency_s"
+          }
+        },
+        "selection": {
+          "mode": "weighted",
+          "weights": {
+            "accuracy": 1.0,
+            "forward_token_ratio": 0.1
+          }
+        }
+      },
+      "ordering_only": false,
+      "outputs": {
+        "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/multiobjective_reasoning/reports/task_preflight_runs/boolean_expressions/P1/validation",
+        "format": "json",
+        "save_artifacts": true
+      },
+      "surface": {
+        "kind": "custom",
+        "targets": [
+          "analysis_instruction",
+          "answer_instruction"
+        ]
+      }
+    }
+  ],
+  "llm_profiles": {
+    "forward_primary": {
+      "api_key_ref": "env:OPENROUTER_API_KEY",
+      "base_url": null,
+      "fallbacks": [],
+      "max_tokens": 384,
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openrouter",
+      "request_params": {
+        "reasoning": {
+          "enabled": false
+        }
+      },
+      "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+      "temperature": 0
+    },
+    "optimizer_primary": {
+      "api_key_ref": "env:OPENROUTER_API_KEY",
+      "base_url": null,
+      "fallbacks": [],
+      "max_tokens": 768,
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openrouter",
+      "request_params": {
+        "reasoning": {
+          "enabled": true
+        }
+      },
+      "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+      "temperature": 0
+    }
+  },
+  "outputs": {
+    "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/multiobjective_reasoning/reports/task_preflight_runs/boolean_expressions/P1/validation",
+    "format": "json",
+    "save_artifacts": true
+  },
+  "runtime": {
+    "memory_root": "./trace_memory",
+    "offline": false,
+    "prior_promotion": {},
+    "reproducible": true,
+    "resume": false,
+    "reuse_priors": false,
+    "run_id": null,
+    "scoring": {},
+    "seed": 1803,
+    "strict_refs": true,
+    "test_mode": false,
+    "tracebench": {},
+    "trainer_kwargs": {}
+  },
+  "schema_version": "recursive-opt/v2alpha"
+}

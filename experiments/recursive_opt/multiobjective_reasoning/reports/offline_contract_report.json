@@ -1,0 +1,573 @@
+{
+  "arms": {
+    "A": {
+      "artifact": {
+        "analysis_instruction": "Reason carefully and concisely. Identify the operations needed, compute them, and verify the result before handing analysis to the answer stage.",
+        "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the number after FINAL:."
+      },
+      "budget": {
+        "accounted": {
+          "candidates": 0,
+          "candidates_evaluated": 0,
+          "candidates_proposed": 0,
+          "candidates_reserved": 0,
+          "eval_llm_calls": 16,
+          "evaluator_runs": 8,
+          "optimizer_llm_calls": 0,
+          "total_tokens": 1862,
+          "wall_time_s": 0.026889
+        },
+        "candidates": 2,
+        "eval_llm_calls": 80,
+        "evaluator_runs": 40,
+        "exceeded": [],
+        "on_exceed": "fail",
+        "optimizer_llm_calls": 4,
+        "total_tokens": 500000,
+        "wall_time_s": 900
+      },
+      "engine": "fixed",
+      "metrics": {
+        "accuracy": 1.0,
+        "forward_token_ratio": 0.4578513309035469,
+        "invalid_rate": 0.0,
+        "latency_s": 6.718603253830224e-05
+      },
+      "observations": {
+        "evaluator_count": 8,
+        "exact_output": true,
+        "factory_roles": [
+          "forward",
+          "optimizer"
+        ],
+        "forward_count": 8,
+        "holdout_during_fit": false,
+        "provider_request_kinds": [
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward"
+        ],
+        "provider_requests": 16
+      },
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "calls": 16,
+          "completion_tokens": 72,
+          "cost_usd": 0.0,
+          "prompt_tokens": 1790,
+          "total_tokens": 1862
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "valid": true
+    },
+    "B": {
+      "artifact": {
+        "analysis_instruction": "OFFLINE IMPROVED analysis_instruction1",
+        "answer_instruction": "OFFLINE IMPROVED answer_instruction1"
+      },
+      "budget": {
+        "accounted": {
+          "candidates": 2,
+          "candidates_evaluated": 12,
+          "candidates_proposed": 3,
+          "candidates_reserved": 2,
+          "eval_llm_calls": 56,
+          "evaluator_runs": 28,
+          "optimizer_llm_calls": 1,
+          "total_tokens": 8654,
+          "wall_time_s": 0.950576
+        },
+        "candidates": 2,
+        "eval_llm_calls": 80,
+        "evaluator_runs": 40,
+        "exceeded": [],
+        "on_exceed": "fail",
+        "optimizer_llm_calls": 4,
+        "total_tokens": 500000,
+        "wall_time_s": 900
+      },
+      "engine": "trace",
+      "metrics": {
+        "accuracy": 1.0,
+        "forward_token_ratio": 0.3440509037750985,
+        "invalid_rate": 0.0,
+        "latency_s": 5.803022941108793e-05
+      },
+      "observations": {
+        "evaluator_count": 28,
+        "exact_output": true,
+        "factory_roles": [
+          "forward",
+          "optimizer"
+        ],
+        "forward_count": 28,
+        "holdout_during_fit": false,
+        "provider_request_kinds": [
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "optimizer"
+        ],
+        "provider_requests": 57
+      },
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "calls": 56,
+          "completion_tokens": 252,
+          "cost_usd": 0.0,
+          "prompt_tokens": 5159,
+          "total_tokens": 5411
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "calls": 1,
+          "completion_tokens": 90,
+          "cost_usd": 0.0,
+          "prompt_tokens": 3153,
+          "total_tokens": 3243
+        }
+      },
+      "valid": true
+    },
+    "C": {
+      "artifact": {
+        "analysis_instruction": "OFFLINE GEPA IMPROVED",
+        "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the number after FINAL:."
+      },
+      "budget": {
+        "accounted": {
+          "candidates": 1,
+          "candidates_evaluated": 10,
+          "candidates_proposed": 10,
+          "candidates_reserved": 1,
+          "eval_llm_calls": 36,
+          "evaluator_runs": 18,
+          "optimizer_llm_calls": 1,
+          "total_tokens": 4581,
+          "wall_time_s": 0.042611
+        },
+        "candidates": 2,
+        "eval_llm_calls": 80,
+        "evaluator_runs": 40,
+        "exceeded": [],
+        "on_exceed": "fail",
+        "optimizer_llm_calls": 4,
+        "total_tokens": 500000,
+        "wall_time_s": 900
+      },
+      "engine": "gepa_optimize_anything",
+      "metrics": {
+        "accuracy": 1.0,
+        "forward_token_ratio": 0.39625596004038594,
+        "invalid_rate": 0.0,
+        "latency_s": 5.3811396355740726e-05
+      },
+      "observations": {
+        "evaluator_count": 18,
+        "exact_output": true,
+        "factory_roles": [
+          "forward",
+          "optimizer"
+        ],
+        "forward_count": 18,
+        "holdout_during_fit": false,
+        "provider_request_kinds": [
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "gepa_reflection"
+        ],
+        "provider_requests": 37
+      },
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "calls": 36,
+          "completion_tokens": 162,
+          "cost_usd": 0.0,
+          "prompt_tokens": 3748,
+          "total_tokens": 3910
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "calls": 1,
+          "completion_tokens": 7,
+          "cost_usd": 0.0,
+          "prompt_tokens": 664,
+          "total_tokens": 671
+        }
+      },
+      "valid": true
+    },
+    "D": {
+      "artifact": {
+        "analysis_instruction": "OFFLINE IMPROVED analysis_instruction14",
+        "answer_instruction": "OFFLINE IMPROVED answer_instruction14"
+      },
+      "budget": {
+        "accounted": {
+          "candidates": 2,
+          "candidates_evaluated": 11,
+          "candidates_proposed": 3,
+          "candidates_reserved": 2,
+          "eval_llm_calls": 38,
+          "evaluator_runs": 19,
+          "optimizer_llm_calls": 1,
+          "total_tokens": 6589,
+          "wall_time_s": 0.036279
+        },
+        "candidates": 2,
+        "eval_llm_calls": 80,
+        "evaluator_runs": 40,
+        "exceeded": [],
+        "on_exceed": "fail",
+        "optimizer_llm_calls": 4,
+        "total_tokens": 500000,
+        "wall_time_s": 900
+      },
+      "engine": "trace",
+      "metrics": {
+        "accuracy": 1.0,
+        "forward_token_ratio": 0.34427694355810035,
+        "invalid_rate": 0.0,
+        "latency_s": 5.232362309470773e-05
+      },
+      "observations": {
+        "evaluator_count": 19,
+        "exact_output": true,
+        "factory_roles": [
+          "forward",
+          "optimizer"
+        ],
+        "forward_count": 19,
+        "holdout_during_fit": false,
+        "provider_request_kinds": [
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "forward",
+          "optimizer"
+        ],
+        "provider_requests": 39
+      },
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "calls": 38,
+          "completion_tokens": 171,
+          "cost_usd": 0.0,
+          "prompt_tokens": 3164,
+          "total_tokens": 3335
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "calls": 1,
+          "completion_tokens": 91,
+          "cost_usd": 0.0,
+          "prompt_tokens": 3163,
+          "total_tokens": 3254
+        }
+      },
+      "valid": true
+    }
+  },
+  "assertions": {
+    "candidate_accounting_consistent": true,
+    "evaluator_receives_exact_output": true,
+    "gepa_does_not_receive_holdout": true,
+    "gepa_real_candidate_proposed": true,
+    "holdout_inaccessible_during_optimization": true,
+    "one_forward_per_evaluator": true,
+    "output_persistence_and_resume": true,
+    "same_dataset_refs": true,
+    "same_evaluator_ref": true,
+    "same_initial_artifact": true,
+    "same_module_ref": true,
+    "same_normalized_base_spec": true,
+    "same_objective": true,
+    "same_registry_sha256": true,
+    "same_role_configuration": true,
+    "same_runtime_tree_sha256": true,
+    "trace_real_candidate": true,
+    "ungated_harmful_candidate_is_observable": true,
+    "usage_attributed_once": true,
+    "validation_gate_rejects_harmful": true
+  },
+  "harmful_gate": {
+    "gated_artifact": {
+      "analysis_instruction": "Reason carefully and concisely. Identify the operations needed, compute them, and verify the result before handing analysis to the answer stage.",
+      "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the number after FINAL:."
+    },
+    "gated_observations": {
+      "evaluator_count": 16,
+      "exact_output": true,
+      "factory_roles": [
+        "forward",
+        "optimizer"
+      ],
+      "forward_count": 16,
+      "holdout_during_fit": false,
+      "provider_request_kinds": [
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward"
+      ],
+      "provider_requests": 32
+    },
+    "ungated_artifact": {
+      "analysis_instruction": "HARMFUL INVALID analysis_instruction16",
+      "answer_instruction": "HARMFUL INVALID answer_instruction16"
+    },
+    "ungated_observations": {
+      "evaluator_count": 8,
+      "exact_output": true,
+      "factory_roles": [
+        "forward",
+        "optimizer"
+      ],
+      "forward_count": 8,
+      "holdout_during_fit": false,
+      "provider_request_kinds": [
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward",
+        "forward"
+      ],
+      "provider_requests": 16
+    }
+  },
+  "passed": true,
+  "plan_registry_sha256": {
+    "A": "c7cd082c9e177180c448e11285bae9d23d53a4f48cfdeba886d7d6121d2d6d8b",
+    "B": "4afb255433b86255efcd98b0446fa4f836cc1d5b9d9f161d116b9567409ace27",
+    "C": "c279b8dbbdf6bfe4088f8e7da8d60900001a438eb32f46a01bbbc510820f1e53",
+    "D": "4afb255433b86255efcd98b0446fa4f836cc1d5b9d9f161d116b9567409ace27"
+  },
+  "registry_sha256": "f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4",
+  "runtime_tree_sha256": "37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e",
+  "schema_version": "recursive-opt-offline-contract/v1",
+  "task": "gsm8k"
+}

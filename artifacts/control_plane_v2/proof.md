@@ -1,5 +1,20 @@
 # recursive-opt v2alpha semantic-closure proof
 
+## GEPA reflection-protocol hotfix proof
+
+The provider-free installed-`gepa==0.1.4` test reaches a real reflective
+proposal through `run_spec`, GEPA's public `optimize_anything()`, the private
+text/chat adapter, `_GuardedRoleClient`, and a strict chat-only provider fake.
+It proves one optimizer call and one usage attribution, a changed selected
+artifact, candidate evaluation, and holdout externalization with sockets
+blocked. Required Actions run `32650995105` / job `97222458541` passed on
+`c1bf6a296d159b92d09ac29ee90556d2c1997a5d`.
+
+Relocked digests are runtime
+`37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e`
+and registry
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+
 - Branch: `recursive_opt`
 - Baseline SHA: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
 - Semantic-closure implementation SHA: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`
