@@ -17,12 +17,18 @@ from .live import (
     run_micro_smoke,
     run_pilot,
 )
+from .main_experiment import (
+    MAIN_REPORT_PATH,
+    finalize_main_experiment,
+    run_main_experiment,
+)
 from .offline_contract import run_offline_contract
 from .preflight import run_task_eligibility_preflight_v2
 from .provenance import (
     build_control_plane_lock_after_gepa_reflection_fix,
     build_control_plane_lock_after_empty_text_retry,
     build_experiment_protocol_lock_after_proposal_gate_fix,
+    build_main_experiment_lock,
 )
 from .registration import assert_strict_output_evaluator, register_experiment_components
 
@@ -74,8 +80,14 @@ def main() -> int:
             "micro-smoke",
             "cost-forecast",
             "pilot",
+            "main-lock",
+            "main",
         ),
     )
+    parser.add_argument("--ci-run-id", type=int)
+    parser.add_argument("--ci-job-id", type=int)
+    parser.add_argument("--ci-head-sha")
+    parser.add_argument("--ci-url")
     args = parser.parse_args()
     register_experiment_components()
     assert_strict_output_evaluator()
@@ -106,6 +118,27 @@ def main() -> int:
         result = build_control_plane_lock_after_empty_text_retry()
         _write_json(CONTROL_PLANE_LOCK, result)
         return 0
+    if args.command == "main-lock":
+        missing = [
+            name
+            for name, value in (
+                ("--ci-run-id", args.ci_run_id),
+                ("--ci-job-id", args.ci_job_id),
+                ("--ci-head-sha", args.ci_head_sha),
+                ("--ci-url", args.ci_url),
+            )
+            if value is None
+        ]
+        if missing:
+            parser.error(f"main-lock requires {', '.join(missing)}")
+        result = build_main_experiment_lock(
+            ci_run_id=args.ci_run_id,
+            ci_job_id=args.ci_job_id,
+            ci_head_sha=args.ci_head_sha,
+            ci_url=args.ci_url,
+        )
+        _write_json(PACKAGE_ROOT / "control_plane_lock_for_main.json", result)
+        return 0
     if args.command == "micro-smoke":
         result = run_micro_smoke()
         _write_json(MICRO_REPORT_PATH, result)
@@ -117,6 +150,12 @@ def main() -> int:
     if args.command == "pilot":
         result = run_pilot()
         _write_json(PILOT_REPORT_PATH, result)
+        return 0 if result["passed"] else 1
+    if args.command == "main":
+        result = run_main_experiment()
+        _write_json(MAIN_REPORT_PATH, result)
+        if result["passed"]:
+            finalize_main_experiment(result)
         return 0 if result["passed"] else 1
     result = run_offline_contract()
     _write_json(PACKAGE_ROOT / "reports" / "offline_contract_report.json", result)

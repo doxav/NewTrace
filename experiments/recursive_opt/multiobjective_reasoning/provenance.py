@@ -36,6 +36,7 @@ def experiment_source_provenance() -> dict[str, Any]:
         [path for path in PACKAGE_ROOT.rglob("*.py") if "__pycache__" not in path.parts]
         + [
             PACKAGE_ROOT / "manifests/preregistration_v2.json",
+            PACKAGE_ROOT / "manifests/preregistration_frozen.json",
             PACKAGE_ROOT / "manifests/dataset_manifest_v2.json",
             PACKAGE_ROOT / "preflight_skips.json",
         ]
@@ -400,5 +401,120 @@ def build_control_plane_lock_after_empty_text_retry() -> dict[str, Any]:
                 "sha256"
             ],
             "reason": "metered optimizer empty-text semantic retry",
+        },
+    }
+
+
+def build_main_experiment_lock(
+    *,
+    ci_run_id: int,
+    ci_job_id: int,
+    ci_head_sha: str,
+    ci_url: str,
+) -> dict[str, Any]:
+    """Freeze the CI-verified source and user authorization for the main run."""
+    if ci_run_id <= 0 or ci_job_id <= 0:
+        raise ValueError("main lock requires positive CI run and job IDs")
+    if len(ci_head_sha) != 40:
+        raise ValueError("main lock requires a full CI head SHA")
+    if not ci_url.startswith("https://github.com/"):
+        raise ValueError("main lock requires the GitHub Actions run URL")
+    previous_path = PACKAGE_ROOT / "control_plane_lock_after_empty_text_retry.json"
+    previous = _load_json(previous_path)
+    frozen_path = PACKAGE_ROOT / "manifests/preregistration_frozen.json"
+    authorization_path = PACKAGE_ROOT / "reports/main_cost_authorization.json"
+    frozen = _load_json(frozen_path)
+    authorization = _load_json(authorization_path)
+    if not authorization.get("authorized") or not authorization.get(
+        "numeric_ceiling_waived"
+    ):
+        raise RuntimeError("main lock requires explicit user cost authorization")
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if head != ci_head_sha:
+        raise RuntimeError("current HEAD does not match the supplied CI head")
+    changed_control_files = subprocess.run(
+        [
+            "git",
+            "status",
+            "--porcelain",
+            "--untracked-files=no",
+            "--",
+            "opto/features/recursive_opt",
+            "opto/optimizers/optoprime_v2.py",
+        ],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if changed_control_files:
+        raise RuntimeError("frozen control-plane files have local modifications")
+    golden = _load_json(
+        REPOSITORY_ROOT
+        / "artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json"
+    )
+    control_provenance = control_plane.compile_plan(golden).code_provenance
+    expected_control = previous["control_plane"]
+    if control_provenance["runtime_tree_sha256"] != expected_control[
+        "runtime_tree_sha256"
+    ]:
+        raise RuntimeError("frozen control-plane runtime digest changed")
+    if control_provenance["registry_sha256"] != expected_control["registry_sha256"]:
+        raise RuntimeError("frozen control-plane registry digest changed")
+    task = str(frozen["task"])
+    plan_registry = {
+        engine: control_plane.compile_plan(
+            build_spec(task=task, engine=engine, seed=0, output_directory=None)
+        ).code_provenance["registry_sha256"]
+        for engine in ("fixed", "trace", "gepa_optimize_anything")
+    }
+    return {
+        "schema_version": "recursive-opt-experiment-lock/v6",
+        "experiment_version": previous["experiment_version"],
+        "git_head": head,
+        "branch": previous["branch"],
+        "ready_for_main_experiment": True,
+        "control_plane": expected_control,
+        "experiment": {
+            **previous["experiment"],
+            "source": experiment_source_provenance(),
+            "registry": experiment_registry_provenance(),
+            "plan_registry_sha256_by_engine": plan_registry,
+            "selected_task": task,
+        },
+        "main_preregistration_sha256": hashlib.sha256(
+            frozen_path.read_bytes()
+        ).hexdigest(),
+        "main_authorization_sha256": hashlib.sha256(
+            authorization_path.read_bytes()
+        ).hexdigest(),
+        "workflow": {
+            "name": "recursive-opt v2 contracts",
+            "run_id": ci_run_id,
+            "job": "recursive-opt v2 offline (required)",
+            "job_id": ci_job_id,
+            "head_sha": ci_head_sha,
+            "status": "completed",
+            "conclusion": "success",
+            "url": ci_url,
+        },
+        "environment": previous["environment"],
+        "scientific_protocol_changed": False,
+        "monetary_authorization": {
+            "numeric_ceiling_waived": True,
+            "forecast_cost_usd": authorization["forecast_cost_usd"],
+            "authorization_source": authorization["authorization_source"],
+        },
+        "supersedes": {
+            "path": str(previous_path.relative_to(PACKAGE_ROOT)),
+            "git_head": previous["git_head"],
+            "experiment_source_sha256": previous["experiment"]["source"]["sha256"],
+            "reason": "freeze main matrix and explicit user monetary-gate waiver",
         },
     }

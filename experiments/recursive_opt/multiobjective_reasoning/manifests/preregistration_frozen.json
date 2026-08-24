@@ -1,0 +1,192 @@
+{
+  "schema_version": "recursive-opt-main-preregistration/v1",
+  "experiment_version": "experiment-0-v2",
+  "frozen_at_utc": "2026-08-24T13:39:12Z",
+  "base_preregistration": {
+    "path": "preregistration_v2.json",
+    "sha256": "3d8b61a2085c6d2b7bc15dd0b9ec60b75ec3bd70ce85e5a0324b74380effc32d"
+  },
+  "authorization": {
+    "kind": "explicit_user_waiver_of_numeric_monetary_ceiling",
+    "received_at_utc": "2026-08-24T13:39:12Z",
+    "forecast_cost_usd": 1.0139590066666666,
+    "recommended_ceiling_usd": 1.2167508079999998,
+    "numeric_ceiling_required": false,
+    "scientific_protocol_changed": false
+  },
+  "task": "gsm8k",
+  "dataset_manifest": {
+    "path": "dataset_manifest_v2.json",
+    "sha256": "3c2ca2924868dc4edd8bb717139e6bfaa7b20388f1fc773f595551e0936661ee",
+    "ordering": "manifest order",
+    "splits": {
+      "train": [
+        "gsm8k:train:6654",
+        "gsm8k:train:5121",
+        "gsm8k:train:2078",
+        "gsm8k:train:6212",
+        "gsm8k:train:6227",
+        "gsm8k:train:2059",
+        "gsm8k:train:2258",
+        "gsm8k:train:1361",
+        "gsm8k:train:4145",
+        "gsm8k:train:6088",
+        "gsm8k:train:3796",
+        "gsm8k:train:5996",
+        "gsm8k:train:5480",
+        "gsm8k:train:2742",
+        "gsm8k:train:2754",
+        "gsm8k:train:40"
+      ],
+      "validation": [
+        "gsm8k:train:6918",
+        "gsm8k:train:74",
+        "gsm8k:train:3921",
+        "gsm8k:train:5728",
+        "gsm8k:train:6316",
+        "gsm8k:train:818",
+        "gsm8k:train:6481",
+        "gsm8k:train:6891",
+        "gsm8k:train:6799",
+        "gsm8k:train:82",
+        "gsm8k:train:722",
+        "gsm8k:train:2180"
+      ],
+      "holdout": [
+        "gsm8k:test:1088",
+        "gsm8k:test:915",
+        "gsm8k:test:703",
+        "gsm8k:test:763",
+        "gsm8k:test:970",
+        "gsm8k:test:1144",
+        "gsm8k:test:97",
+        "gsm8k:test:1054",
+        "gsm8k:test:286",
+        "gsm8k:test:302",
+        "gsm8k:test:927",
+        "gsm8k:test:1229",
+        "gsm8k:test:381",
+        "gsm8k:test:942",
+        "gsm8k:test:218",
+        "gsm8k:test:685",
+        "gsm8k:test:35",
+        "gsm8k:test:864",
+        "gsm8k:test:264",
+        "gsm8k:test:735",
+        "gsm8k:test:1225",
+        "gsm8k:test:383",
+        "gsm8k:test:104",
+        "gsm8k:test:674"
+      ]
+    }
+  },
+  "initial_artifact": {
+    "analysis_instruction": "Reason carefully and concisely. Identify the operations needed, compute them, and verify the result before handing analysis to the answer stage.",
+    "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the number after FINAL:."
+  },
+  "objective": {
+    "mode": "weighted",
+    "weights": {
+      "accuracy": 1.0,
+      "forward_token_ratio": 0.1
+    },
+    "directions": {
+      "accuracy": "maximize",
+      "forward_token_ratio": "minimize",
+      "invalid_rate": "minimize"
+    },
+    "hard_constraints": [
+      "invalid_rate <= 0"
+    ]
+  },
+  "model_profiles": {
+    "provider": "openrouter",
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+    "forward": {
+      "temperature": 0,
+      "max_tokens": 384,
+      "request_params": {
+        "reasoning": {
+          "enabled": false
+        }
+      }
+    },
+    "optimizer": {
+      "temperature": 0,
+      "max_tokens": 8192,
+      "request_params": {
+        "reasoning": {
+          "effort": "low"
+        }
+      }
+    }
+  },
+  "arms": {
+    "A": "fixed_baseline",
+    "B": "trace_optoprime_v2",
+    "C": "gepa_optimize_anything",
+    "D": "trace_without_validation_gate"
+  },
+  "main": {
+    "paired_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "candidate_budgets": [
+      6,
+      12
+    ],
+    "split_limits": {
+      "train": 16,
+      "validation": 12,
+      "holdout": 24
+    },
+    "arm_order_method": "balanced 4x4 Williams square; the unavoidable fifth row repeats index selection_seed mod 4",
+    "arm_order": {
+      "0": ["A", "B", "D", "C"],
+      "1": ["B", "C", "A", "D"],
+      "2": ["C", "D", "B", "A"],
+      "3": ["D", "A", "C", "B"],
+      "4": ["D", "A", "C", "B"]
+    },
+    "resource_budgets": {
+      "eval_llm_calls": 2080,
+      "evaluator_runs": 1040,
+      "total_tokens": 2000000,
+      "wall_time_s": 7200
+    },
+    "resource_budget_derivation": "common per-run evaluator ceilings scale the pilot limits by full_pool_examples/pilot_examples and max_main_budget/max_pilot_budget; the shared token ceiling remains 2,000,000 and wall time doubles",
+    "stop_on_first_infrastructure_failure": true
+  },
+  "statistics": {
+    "pairing": ["task", "seed", "candidate_budget"],
+    "bootstrap_unit": "paired seed-budget block",
+    "bootstrap_seed": 1803,
+    "bootstrap_resamples": 10000,
+    "confidence_level": 0.95,
+    "primary_comparisons": ["B-A", "C-A"],
+    "engine_comparison": "B-C",
+    "validation_gate_ablation": "D-B",
+    "quality_success": "lower 95% CI of paired accuracy delta > 0",
+    "efficiency_success": "lower 95% CI of paired accuracy delta >= -0.02 AND upper 95% CI of paired forward-token-ratio delta < 0",
+    "safety": "all selected artifacts have invalid_rate == 0"
+  },
+  "seed_expansion": {
+    "automatic": false,
+    "maximum_total_seeds": 10,
+    "decision_rule": "recommend expansion only when infrastructure is green, neither primary arm can be classified for quality or efficiency because a paired accuracy CI crosses a preregistered decision boundary, and no qualitative contradiction or provenance blocker exists; never add seeds selectively for significance"
+  },
+  "second_task": {
+    "included": false,
+    "reason": "no second task currently satisfies frozen v2 eligibility; adding one requires a separate preregistration amendment before observing optimizer results on that task"
+  },
+  "optional_ablations": {
+    "pareto": false,
+    "heterogeneous_artifact": false,
+    "reason": "secondary phases are not part of the frozen primary prompt-only comparison"
+  }
+}

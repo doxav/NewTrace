@@ -63,18 +63,18 @@ def _baseline_tokens() -> tuple[str, dict[str, int]]:
     return str(manifest["selected_task"]), values
 
 
-def _locked_runtime_tree_sha256() -> str:
-    """Return the runtime digest from the post-reflection-fix experiment lock."""
-    lock = _load_json(CONTROL_PLANE_LOCK)
+def _locked_runtime_tree_sha256(lock_path: Path | None = None) -> str:
+    """Return the runtime digest from the selected Experiment-0 lock."""
+    lock = _load_json(CONTROL_PLANE_LOCK if lock_path is None else lock_path)
     digest = lock.get("control_plane", {}).get("runtime_tree_sha256")
     if not isinstance(digest, str) or len(digest) != 64:
         raise ValueError("Experiment 0 control-plane lock lacks a runtime digest")
     return digest
 
 
-def _locked_experiment_source_sha256() -> str:
-    """Return the Experiment-0 source digest from the protocol amendment."""
-    lock = _load_json(CONTROL_PLANE_LOCK)
+def _locked_experiment_source_sha256(lock_path: Path | None = None) -> str:
+    """Return the Experiment-0 source digest from the selected protocol lock."""
+    lock = _load_json(CONTROL_PLANE_LOCK if lock_path is None else lock_path)
     digest = lock.get("experiment", {}).get("source", {}).get("sha256")
     if not isinstance(digest, str) or len(digest) != 64:
         raise ValueError("Experiment 0 protocol lock lacks a source digest")
@@ -169,6 +169,7 @@ def _execute_arm(
     split_limits: Mapping[str, int],
     budget_limits: Mapping[str, int],
     output_directory: Path,
+    control_plane_lock: Path | None = None,
 ) -> dict[str, Any]:
     engine, validation_gate = _arm_configuration(arm)
     hidden_environment = [name for name in _OVERRIDE_ENVIRONMENT if os.getenv(name)]
@@ -259,9 +260,17 @@ def _execute_arm(
             for event in EVALUATOR_EVENTS
         ),
         "source_digest_stable": plan.code_provenance["runtime_tree_sha256"]
-        == _locked_runtime_tree_sha256(),
+        == (
+            _locked_runtime_tree_sha256()
+            if control_plane_lock is None
+            else _locked_runtime_tree_sha256(control_plane_lock)
+        ),
         "experiment_source_digest_stable": experiment_source_provenance()["sha256"]
-        == _locked_experiment_source_sha256(),
+        == (
+            _locked_experiment_source_sha256()
+            if control_plane_lock is None
+            else _locked_experiment_source_sha256(control_plane_lock)
+        ),
         "artifact_reloadable": artifact_reloadable,
         "proposal_path_exercised": _proposal_path_exercised(
             optimized=optimized,
