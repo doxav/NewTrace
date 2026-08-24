@@ -36,7 +36,7 @@ _OVERRIDE_ENVIRONMENT = (
     "TRACE_LITELLM_MODEL",
 )
 _RESUME_INFRASTRUCTURE_PREREQUISITES = (
-    "run_succeeded",
+    "execution_completed",
     "one_workflow_forward_per_evaluator",
     "evaluator_received_exact_output",
     "forward_calls_reconciled",
@@ -113,16 +113,27 @@ def _selection_changed(*, optimized: bool, artifact: Mapping[str, Any]) -> bool:
     return optimized and artifact != INITIAL_ARTIFACT
 
 
+def _execution_completed(result: Any) -> bool:
+    """Return whether a canonical result completed without infrastructure failure."""
+    evaluation = getattr(result, "evaluation", None)
+    if evaluation is None:
+        return False
+    if result.status == "success":
+        return True
+    return result.status == "invalid" and getattr(evaluation, "status", None) in {
+        "invalid",
+        "constraint_failed",
+    }
+
+
 def _resume_infrastructure_ready(checks: Mapping[str, bool]) -> bool:
     """Return whether the prerequisites for a persistence/resume probe hold."""
     return all(checks[name] for name in _RESUME_INFRASTRUCTURE_PREREQUISITES)
 
 
 def _infrastructure_checks_pass(checks: Mapping[str, bool]) -> bool:
-    """Evaluate run gates while retaining selection outcome as a diagnostic."""
-    return all(
-        value for name, value in checks.items() if name != "selection_changed"
-    )
+    """Require every infrastructure-only run check to pass."""
+    return all(checks.values())
 
 
 def _pilot_optimizer_gates(runs: list[Mapping[str, Any]]) -> dict[str, bool]:
@@ -136,7 +147,9 @@ def _pilot_optimizer_gates(runs: list[Mapping[str, Any]]) -> dict[str, bool]:
         "gepa_real_proposal": bool(gepa_runs)
         and all(run["checks"]["proposal_path_exercised"] for run in gepa_runs),
         "optimized_artifact_differs": bool(optimized)
-        and any(run["checks"]["selection_changed"] for run in optimized),
+        and any(
+            run["scientific_outcomes"]["selection_changed"] for run in optimized
+        ),
     }
 
 
@@ -228,7 +241,7 @@ def _execute_arm(
         )
     }
     checks = {
-        "run_succeeded": result.status == "success" and result.valid,
+        "execution_completed": _execution_completed(result),
         "exact_model_available": actual_providers == ["openrouter"]
         and actual_models == [MODEL],
         "reasoning_parameters_recorded": request_parameters
@@ -277,12 +290,17 @@ def _execute_arm(
             optimizer_usage=optimizer_usage,
             accounted=accounted,
         ),
+        "no_environment_override": not hidden_environment,
+        "cache_not_shared": not any(call.get("cache_hit") is True for call in provider_calls),
+    }
+    scientific_outcomes = {
+        "scientific_feasible": bool(result.valid),
+        "safety_passed": float(result.evaluation.metrics.get("invalid_rate", float("inf")))
+        == 0.0,
         "selection_changed": _selection_changed(
             optimized=optimized,
             artifact=artifact,
         ),
-        "no_environment_override": not hidden_environment,
-        "cache_not_shared": not any(call.get("cache_hit") is True for call in provider_calls),
     }
     resume_succeeded = False
     if _resume_infrastructure_ready(checks):
@@ -329,6 +347,11 @@ def _execute_arm(
         "experiment_source_sha256": experiment_source_provenance()["sha256"],
         "plan_registry_sha256": plan.code_provenance["registry_sha256"],
         "checks": checks,
+        "execution_completed": checks["execution_completed"],
+        "scientific_feasible": scientific_outcomes["scientific_feasible"],
+        "safety_passed": scientific_outcomes["safety_passed"],
+        "selection_changed": scientific_outcomes["selection_changed"],
+        "scientific_outcomes": scientific_outcomes,
         "passed": _infrastructure_checks_pass(checks),
         "normalized_spec": normalized,
     }

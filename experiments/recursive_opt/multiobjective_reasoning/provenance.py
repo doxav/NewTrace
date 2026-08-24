@@ -37,6 +37,7 @@ def experiment_source_provenance() -> dict[str, Any]:
         + [
             PACKAGE_ROOT / "manifests/preregistration_v2.json",
             PACKAGE_ROOT / "manifests/preregistration_frozen.json",
+            PACKAGE_ROOT / "manifests/main_execution_semantics_amendment_v1.json",
             PACKAGE_ROOT / "manifests/dataset_manifest_v2.json",
             PACKAGE_ROOT / "preflight_skips.json",
         ]
@@ -412,16 +413,19 @@ def build_main_experiment_lock(
     ci_head_sha: str,
     ci_url: str,
 ) -> dict[str, Any]:
-    """Freeze the CI-verified source and user authorization for the main run."""
+    """Freeze the corrected CI-verified runner and unchanged main protocol."""
     if ci_run_id <= 0 or ci_job_id <= 0:
         raise ValueError("main lock requires positive CI run and job IDs")
     if len(ci_head_sha) != 40:
         raise ValueError("main lock requires a full CI head SHA")
     if not ci_url.startswith("https://github.com/"):
         raise ValueError("main lock requires the GitHub Actions run URL")
-    previous_path = PACKAGE_ROOT / "control_plane_lock_after_empty_text_retry.json"
+    previous_path = PACKAGE_ROOT / "control_plane_lock_for_main.json"
     previous = _load_json(previous_path)
     frozen_path = PACKAGE_ROOT / "manifests/preregistration_frozen.json"
+    amendment_path = (
+        PACKAGE_ROOT / "manifests/main_execution_semantics_amendment_v1.json"
+    )
     authorization_path = PACKAGE_ROOT / "reports/main_cost_authorization.json"
     frozen = _load_json(frozen_path)
     authorization = _load_json(authorization_path)
@@ -475,7 +479,7 @@ def build_main_experiment_lock(
         for engine in ("fixed", "trace", "gepa_optimize_anything")
     }
     return {
-        "schema_version": "recursive-opt-experiment-lock/v6",
+        "schema_version": "recursive-opt-experiment-lock/v7",
         "experiment_version": previous["experiment_version"],
         "git_head": head,
         "branch": previous["branch"],
@@ -490,6 +494,9 @@ def build_main_experiment_lock(
         },
         "main_preregistration_sha256": hashlib.sha256(
             frozen_path.read_bytes()
+        ).hexdigest(),
+        "execution_semantics_amendment_sha256": hashlib.sha256(
+            amendment_path.read_bytes()
         ).hexdigest(),
         "main_authorization_sha256": hashlib.sha256(
             authorization_path.read_bytes()
@@ -506,6 +513,11 @@ def build_main_experiment_lock(
         },
         "environment": previous["environment"],
         "scientific_protocol_changed": False,
+        "execution_semantics": {
+            "scientific_feasibility_is_not_infrastructure": True,
+            "safety_is_reported_separately": True,
+            "stop_on_first_infrastructure_failure": True,
+        },
         "monetary_authorization": {
             "numeric_ceiling_waived": True,
             "forecast_cost_usd": authorization["forecast_cost_usd"],
@@ -515,6 +527,6 @@ def build_main_experiment_lock(
             "path": str(previous_path.relative_to(PACKAGE_ROOT)),
             "git_head": previous["git_head"],
             "experiment_source_sha256": previous["experiment"]["source"]["sha256"],
-            "reason": "freeze main matrix and explicit user monetary-gate waiver",
+            "reason": "separate completed scientific safety failures from infrastructure failures",
         },
     }

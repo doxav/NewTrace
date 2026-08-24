@@ -1,0 +1,17 @@
+{
+  "schema_version": "recursive-opt-preserved-main-attempt/v1",
+  "classification": {
+    "efficacy_evidence": "incomplete",
+    "infrastructure_failure": false,
+    "scientific_safety_failure": true
+  },
+  "completed_units": 1,
+  "planned_units": 40,
+  "preserved_paths": {
+    "main_progress": "outputs/recursive_opt/experiment_0/experiment-0-v2/main/main.json",
+    "main_runs": "outputs/recursive_opt/experiment_0/experiment-0-v2/main/runs",
+    "stop_decision": "experiments/recursive_opt/multiobjective_reasoning/reports/prompt18_r3_main_stop_decision.md"
+  },
+  "main_progress_sha256": "094ba2fbc32b6af6499617fa52c677e4a887085edfcbadda0fa67bed3c22d75d",
+  "statement": "The original A result remains valid evidence that this stochastic P0 realization failed the frozen safety criterion. It is not combined statistically with the restarted matrix."
+}

@@ -25,15 +25,21 @@ from .specs import INITIAL_ARTIFACT, MODEL, RESOLVED_MODEL
 PACKAGE_ROOT = Path(__file__).resolve().parent
 REPOSITORY_ROOT = PACKAGE_ROOT.parents[2]
 FROZEN_PREREGISTRATION_PATH = PACKAGE_ROOT / "manifests/preregistration_frozen.json"
+EXECUTION_SEMANTICS_AMENDMENT_PATH = (
+    PACKAGE_ROOT / "manifests/main_execution_semantics_amendment_v1.json"
+)
 MAIN_AUTHORIZATION_PATH = PACKAGE_ROOT / "reports/main_cost_authorization.json"
-MAIN_LOCK_PATH = PACKAGE_ROOT / "control_plane_lock_for_main.json"
+MAIN_LOCK_PATH = (
+    PACKAGE_ROOT / "control_plane_lock_for_main_after_execution_semantics_fix.json"
+)
 OUTPUT_ROOT = REPOSITORY_ROOT / "outputs/recursive_opt/experiment_0/experiment-0-v2"
-MAIN_RUNS_DIRECTORY = OUTPUT_ROOT / "main/runs"
-MAIN_REPORT_PATH = OUTPUT_ROOT / "main/main.json"
-MAIN_ANALYSIS_PATH = OUTPUT_ROOT / "analysis.json"
-MAIN_DECISION_PATH = OUTPUT_ROOT / "decision.json"
-MAIN_REPORT_MARKDOWN_PATH = OUTPUT_ROOT / "report.md"
-EPISODE_AUDIT_PATH = OUTPUT_ROOT / "episode_trajectory_audit.json"
+MAIN_OUTPUT_ROOT = OUTPUT_ROOT / "main_after_scientific_vs_infrastructure_gate_fix"
+MAIN_RUNS_DIRECTORY = MAIN_OUTPUT_ROOT / "runs"
+MAIN_REPORT_PATH = MAIN_OUTPUT_ROOT / "main.json"
+MAIN_ANALYSIS_PATH = MAIN_OUTPUT_ROOT / "analysis.json"
+MAIN_DECISION_PATH = MAIN_OUTPUT_ROOT / "decision.json"
+MAIN_REPORT_MARKDOWN_PATH = MAIN_OUTPUT_ROOT / "report.md"
+EPISODE_AUDIT_PATH = MAIN_OUTPUT_ROOT / "episode_trajectory_audit.json"
 _METRICS = ("accuracy", "invalid_rate", "forward_token_ratio", "latency_s")
 _COMPARISONS = {
     "B-A": ("B", "A"),
@@ -169,6 +175,10 @@ def _load_main_lock(frozen: Mapping[str, Any]) -> dict[str, Any]:
         FROZEN_PREREGISTRATION_PATH
     ):
         raise RuntimeError("main lock does not match the frozen preregistration")
+    if lock.get("execution_semantics_amendment_sha256") != _sha256(
+        EXECUTION_SEMANTICS_AMENDMENT_PATH
+    ):
+        raise RuntimeError("main lock does not match the execution-semantics amendment")
     if lock.get("main_authorization_sha256") != _sha256(MAIN_AUTHORIZATION_PATH):
         raise RuntimeError("main lock does not match the user authorization")
     if lock["experiment"]["source"]["sha256"] != experiment_source_provenance()[
@@ -194,9 +204,10 @@ def _progress_document(
         "gepa_real_proposal": False,
         "optimized_artifact_differs": False,
     }
-    gates = {
+    infrastructure_gates = {
         "all_planned_runs_completed": len(runs) == len(matrix) and stopped_after is None,
-        "all_runs_passed": bool(runs) and all(run["passed"] for run in runs),
+        "all_run_infrastructure_passed": bool(runs)
+        and all(run["passed"] for run in runs),
         "no_holdout_leakage": bool(runs)
         and all(
             run["checks"]["holdout_inaccessible_during_optimization"] for run in runs
@@ -209,8 +220,8 @@ def _progress_document(
         == {lock["experiment"]["source"]["sha256"]},
         "one_forward_per_evaluator": bool(runs)
         and all(run["checks"]["one_workflow_forward_per_evaluator"] for run in runs),
-        "no_selected_invalid_artifact": bool(runs) and all(run["valid"] for run in runs),
-        **optimizer_gates,
+        "trace_real_proposal": optimizer_gates["trace_real_proposal"],
+        "gepa_real_proposal": optimizer_gates["gepa_real_proposal"],
         "forward_calls_reconcile": bool(runs)
         and all(run["checks"]["forward_calls_reconciled"] for run in runs),
         "forward_tokens_reconcile": bool(runs)
@@ -223,8 +234,31 @@ def _progress_document(
         and all(run["checks"]["no_environment_override"] for run in runs),
         "cost_authorized_by_user_waiver": True,
     }
+    safety_failures = [
+        {
+            "seed": int(run["seed"]),
+            "proposal_budget": int(run["proposal_budget"]),
+            "arm": str(run["arm"]),
+            "invalid_rate": float(run["metrics"]["invalid_rate"]),
+        }
+        for run in runs
+        if not run["scientific_outcomes"]["safety_passed"]
+    ]
+    scientific_outcomes = {
+        "all_runs_safety_passed": bool(runs) and not safety_failures,
+        "safety_failure_count": len(safety_failures),
+        "safety_failure_rate": len(safety_failures) / len(runs) if runs else None,
+        "safety_failures": safety_failures,
+        "scientifically_infeasible_run_count": sum(
+            not run["scientific_outcomes"]["scientific_feasible"] for run in runs
+        ),
+        "selected_artifact_changed_run_count": sum(
+            run["scientific_outcomes"]["selection_changed"] for run in runs
+        ),
+        "optimized_artifact_differs": optimizer_gates["optimized_artifact_differs"],
+    }
     return {
-        "schema_version": "recursive-opt-main-experiment/v1",
+        "schema_version": "recursive-opt-main-experiment/v2",
         "task": frozen["task"],
         "frozen_preregistration_sha256": _sha256(FROZEN_PREREGISTRATION_PATH),
         "control_plane_lock_sha256": _sha256(MAIN_LOCK_PATH),
@@ -233,8 +267,10 @@ def _progress_document(
         "stopped_after": stopped_after,
         "runs": list(runs),
         "retry_statistics_by_arm": _pilot_retry_statistics(list(runs)),
-        "gates": gates,
-        "passed": all(gates.values()),
+        "infrastructure_gates": infrastructure_gates,
+        "scientific_outcomes": scientific_outcomes,
+        "execution_complete": all(infrastructure_gates.values()),
+        "passed": all(infrastructure_gates.values()),
     }
 
 
@@ -243,6 +279,9 @@ def _snapshot_output_context() -> None:
     sources = {
         "preregistration.json": PACKAGE_ROOT / "manifests/preregistration_v2.json",
         "preregistration_frozen.json": FROZEN_PREREGISTRATION_PATH,
+        "main_execution_semantics_amendment_v1.json": (
+            EXECUTION_SEMANTICS_AMENDMENT_PATH
+        ),
         "control_plane_lock.json": MAIN_LOCK_PATH,
         "preflight_skips.json": PACKAGE_ROOT / "preflight_skips.json",
         "dataset_manifest.json": PACKAGE_ROOT / "manifests/dataset_manifest_v2.json",
@@ -252,7 +291,7 @@ def _snapshot_output_context() -> None:
         "main_cost_authorization.json": MAIN_AUTHORIZATION_PATH,
     }
     for name, source in sources.items():
-        _write_json(OUTPUT_ROOT / name, _load_json(source))
+        _write_json(MAIN_OUTPUT_ROOT / name, _load_json(source))
 
 
 def run_main_experiment() -> dict[str, Any]:
@@ -426,7 +465,11 @@ def _absolute_arm_summary(
         },
         "wall_time_s": sum(float(run["accounted"]["wall_time_s"]) for run in selected),
         "selected_artifact_changed_runs": sum(
-            bool(run["checks"]["selection_changed"]) for run in selected
+            bool(run["scientific_outcomes"]["selection_changed"])
+            for run in selected
+        ),
+        "runs_with_invalid_output": sum(
+            float(run["metrics"]["invalid_rate"]) > 0.0 for run in selected
         ),
         "unique_selected_artifact_hashes": len(
             {
@@ -528,6 +571,27 @@ def _paired_comparison(
     }
 
 
+def _comparison_outcomes(comparison: Mapping[str, Any]) -> dict[str, str]:
+    """Classify frozen quality and efficiency evidence without changing thresholds."""
+    accuracy_ci = comparison["deltas"]["accuracy"]["paired_bootstrap_95_ci"]
+    ratio_ci = comparison["deltas"]["forward_token_ratio"]["paired_bootstrap_95_ci"]
+    quality = (
+        "improved"
+        if comparison["quality_success"]
+        else "regressed"
+        if accuracy_ci[1] < 0
+        else "tied"
+    )
+    efficiency = (
+        "improved"
+        if comparison["efficiency_success"]
+        else "regressed"
+        if accuracy_ci[1] < -0.02 or ratio_ci[0] > 0
+        else "tied"
+    )
+    return {"quality": quality, "efficiency": efficiency}
+
+
 def analyze_main_experiment(report: Mapping[str, Any]) -> dict[str, Any]:
     """Compute frozen paired block-bootstrap statistics for the main run."""
     if not report.get("passed"):
@@ -541,10 +605,20 @@ def analyze_main_experiment(report: Mapping[str, Any]) -> dict[str, Any]:
         label: _paired_comparison(label, left, right, runs)
         for label, (left, right) in _COMPARISONS.items()
     }
-    safety = all(float(run["metrics"]["invalid_rate"]) == 0.0 for run in runs)
+    safety_failures = [
+        {
+            "seed": int(run["seed"]),
+            "proposal_budget": int(run["proposal_budget"]),
+            "arm": str(run["arm"]),
+            "invalid_rate": float(run["metrics"]["invalid_rate"]),
+        }
+        for run in runs
+        if float(run["metrics"]["invalid_rate"]) > 0.0
+    ]
+    safety = not safety_failures
     total_cost = sum(value["token_priced_cost_usd"] for value in absolute.values())
     return {
-        "schema_version": "recursive-opt-main-analysis/v1",
+        "schema_version": "recursive-opt-main-analysis/v2",
         "bootstrap": {
             "unit": "paired seed-budget block",
             "seed": 1803,
@@ -556,6 +630,11 @@ def analyze_main_experiment(report: Mapping[str, Any]) -> dict[str, Any]:
         "absolute_by_arm": absolute,
         "paired_comparisons": comparisons,
         "safety_passed": safety,
+        "safety_failures": safety_failures,
+        "runs_with_invalid_output_by_arm": {
+            arm: absolute[arm]["runs_with_invalid_output"]
+            for arm in ("A", "B", "C", "D")
+        },
         "provider_reported_cost_usd": None,
         "token_priced_cost_usd": total_cost,
         "retry_statistics_by_arm": report["retry_statistics_by_arm"],
@@ -567,6 +646,7 @@ def analyze_main_experiment(report: Mapping[str, Any]) -> dict[str, Any]:
             arm: {
                 "quality_success": comparisons[f"{arm}-A"]["quality_success"],
                 "efficiency_success": comparisons[f"{arm}-A"]["efficiency_success"],
+                **_comparison_outcomes(comparisons[f"{arm}-A"]),
             }
             for arm in ("B", "C")
         },
@@ -674,8 +754,8 @@ def _render_report(
         "",
         "## 14. Main results",
         "",
-        "| arm | runs | accuracy mean | token ratio mean | invalid mean | forward calls/tokens | optimizer calls/tokens | selected changed | token-priced USD |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| arm | runs | accuracy mean | token ratio mean | invalid mean | unsafe runs | forward calls/tokens | optimizer calls/tokens | selected changed | token-priced USD |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for arm in ("A", "B", "C", "D"):
         value = absolute[arm]
@@ -683,6 +763,7 @@ def _render_report(
             f"| {arm} | {value['runs']} | {value['metrics']['accuracy']['mean']:.6f} | "
             f"{value['metrics']['forward_token_ratio']['mean']:.6f} | "
             f"{value['metrics']['invalid_rate']['mean']:.6f} | "
+            f"{value['runs_with_invalid_output']} | "
             f"{value['forward_calls']}/{value['forward_tokens']} | "
             f"{value['optimizer_calls']}/{value['optimizer_tokens']} | "
             f"{value['selected_artifact_changed_runs']} | "
@@ -723,7 +804,9 @@ def _render_report(
             "",
             "## 20. Failure analysis",
             "",
-            "All main infrastructure gates passed. Historical GEPA and empty-response failures remain preserved separately and are not efficacy evidence.",
+            "All main infrastructure gates passed. Scientific safety failures remain in every paired statistic and do not erase quality or efficiency evidence.",
+            "",
+            f"SAFETY: **{'PASSED' if analysis['safety_passed'] else 'FAILED'}**; runs with any invalid output by arm: `{analysis['runs_with_invalid_output_by_arm']}`.",
             "",
             "## 21. Episode dataset quality",
             "",
@@ -748,25 +831,39 @@ def finalize_main_experiment(report: Mapping[str, Any]) -> dict[str, Any]:
     analysis = analyze_main_experiment(report)
     audit = audit_candidate_trajectories(report)
     if not audit["ready_for_episode_export"]:
-        status = "RETURN_TO_CONTROL_PLANE"
+        status = "RETURN_TO_CONTROL_PLANE_FOR_TRAJECTORY_PROVENANCE"
         reason = (
             "Main execution and statistics completed, but Prompt-19 episode export is "
             "blocked by missing proposal-level candidate trajectory provenance."
         )
     else:
-        status = "PROCEED_TO_PROMPT_19"
+        status = "MAIN_COMPLETE_CONTINUE_PROMPT18_R3"
         reason = "Main execution, statistics, and candidate trajectory provenance passed."
     decision = {
-        "schema_version": "recursive-opt-experiment-decision/v1",
+        "schema_version": "recursive-opt-experiment-decision/v2",
         "status": status,
         "reason": reason,
         "control_plane": "validated",
         "trace_engine": "effective"
-        if any(analysis["interpretation"]["B"].values())
+        if any(
+            analysis["interpretation"]["B"][name]
+            for name in ("quality_success", "efficiency_success")
+        )
         else "uncertain",
         "gepa_engine": "effective"
-        if any(analysis["interpretation"]["C"].values())
+        if any(
+            analysis["interpretation"]["C"][name]
+            for name in ("quality_success", "efficiency_success")
+        )
         else "uncertain",
+        "quality": {
+            arm: analysis["interpretation"][arm]["quality"] for arm in ("B", "C")
+        },
+        "efficiency": {
+            arm: analysis["interpretation"][arm]["efficiency"]
+            for arm in ("B", "C")
+        },
+        "safety": "passed" if analysis["safety_passed"] else "failed",
         "episode_dataset": "ready" if audit["ready_for_episode_export"] else "not ready",
         "smallest_required_extension": audit["smallest_required_extension"],
     }

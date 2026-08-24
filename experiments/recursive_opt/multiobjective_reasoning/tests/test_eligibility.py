@@ -290,7 +290,6 @@ def test_rejected_candidate_exercises_proposal_without_changing_selection() -> N
     }
     checks.update(
         proposal_path_exercised=True,
-        selection_changed=False,
         output_persistence_and_resume=True,
     )
     assert live._infrastructure_checks_pass(checks)
@@ -318,7 +317,18 @@ def test_accepted_candidate_exercises_proposal_and_changes_selection() -> None:
     assert live._selection_changed(optimized=True, artifact=accepted)
 
 
-def test_resume_runs_when_selection_is_unchanged(
+@pytest.mark.parametrize("status", ["error", "budget_exhausted"])
+def test_infrastructure_status_does_not_count_as_completed(status: str) -> None:
+    result = SimpleNamespace(
+        status=status,
+        evaluation=SimpleNamespace(status="error"),
+    )
+
+    assert live._execution_completed(result) is False
+    assert live._execution_completed(SimpleNamespace(status="success", evaluation=None)) is False
+
+
+def test_invalid_constraint_result_is_scientific_and_resumes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     raw = {
@@ -335,11 +345,14 @@ def test_resume_runs_when_selection_is_unchanged(
     }
     output = object()
     result = SimpleNamespace(
-        status="success",
-        valid=True,
+        status="invalid",
+        valid=False,
         error=None,
         artifact=copy.deepcopy(live.INITIAL_ARTIFACT),
-        evaluation=SimpleNamespace(metrics={"accuracy": 1.0}),
+        evaluation=SimpleNamespace(
+            status="constraint_failed",
+            metrics={"accuracy": 0.95, "invalid_rate": 0.05},
+        ),
         usage={
             "forward": {"calls": 1, "total_tokens": 10},
             "optimizer": {"calls": 1, "total_tokens": 5},
@@ -431,8 +444,11 @@ def test_resume_runs_when_selection_is_unchanged(
 
     assert calls == 2
     assert run["checks"]["proposal_path_exercised"] is True
-    assert run["checks"]["selection_changed"] is False
     assert run["checks"]["output_persistence_and_resume"] is True
+    assert run["execution_completed"] is True
+    assert run["scientific_feasible"] is False
+    assert run["safety_passed"] is False
+    assert run["scientific_outcomes"]["selection_changed"] is False
     assert run["passed"] is True
 
 
@@ -442,8 +458,8 @@ def test_pilot_keeps_real_proposals_and_selection_change_independent() -> None:
             "arm": arm,
             "checks": {
                 "proposal_path_exercised": True,
-                "selection_changed": False,
             },
+            "scientific_outcomes": {"selection_changed": False},
         }
         for arm in ("B", "C", "D")
     ]

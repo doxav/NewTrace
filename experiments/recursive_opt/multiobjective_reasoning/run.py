@@ -18,6 +18,7 @@ from .live import (
     run_pilot,
 )
 from .main_experiment import (
+    MAIN_LOCK_PATH,
     MAIN_REPORT_PATH,
     finalize_main_experiment,
     run_main_experiment,
@@ -137,7 +138,7 @@ def main() -> int:
             ci_head_sha=args.ci_head_sha,
             ci_url=args.ci_url,
         )
-        _write_json(PACKAGE_ROOT / "control_plane_lock_for_main.json", result)
+        _write_json(MAIN_LOCK_PATH, result)
         return 0
     if args.command == "micro-smoke":
         result = run_micro_smoke()
