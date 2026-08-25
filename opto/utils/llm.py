@@ -1,5 +1,4 @@
-from typing import List, Tuple, Dict, Any, Callable, Union
-import os
+from typing import List, Dict, Any, Callable, Union
 import time
 import json
 import os
@@ -155,7 +154,7 @@ class AutoGenLLM(AbstractModel):
         if config_list is None:
             try:
                 config_list = autogen.config_list_from_json("OAI_CONFIG_LIST")
-            except:
+            except Exception:
                 config_list = auto_construct_oai_config_list_from_env()
                 if len(config_list) > 0:
                     os.environ.update({"OAI_CONFIG_LIST": json.dumps(config_list)})
@@ -163,7 +162,9 @@ class AutoGenLLM(AbstractModel):
         if filter_dict is not None:
             config_list = autogen.filter_config(config_list, filter_dict)
 
-        factory = lambda *args, **kwargs: self._factory(config_list)
+        def factory(*_args: Any, **_kwargs: Any) -> Any:
+            """Construct the configured AutoGen provider client."""
+            return self._factory(config_list)
         super().__init__(factory, reset_freq)
 
     @classmethod
@@ -279,7 +280,8 @@ class LiteLLM(AbstractModel):
     """
 
     def __init__(self, model: Union[str, None] = None, reset_freq: Union[int, None] = None,
-                 cache=True, max_retries=10, base_delay=1.0) -> None:
+                 cache=True, max_retries=10, base_delay=1.0,
+                 retry_event_callback: Callable[[str, Union[str, None]], None] | None = None) -> None:
         if model is None:
             model = os.environ.get('TRACE_LITELLM_MODEL')
             if model is None:
@@ -288,11 +290,19 @@ class LiteLLM(AbstractModel):
 
         self.model_name = model
         self.cache = cache
-        factory = lambda: self._factory(self.model_name, max_retries=max_retries, base_delay=base_delay)  # an LLM instance uses a fixed model
+        def factory() -> Any:
+            """Construct one fixed-model LiteLLM provider client."""
+            return self._factory(
+                self.model_name,
+                max_retries=max_retries,
+                base_delay=base_delay,
+                retry_event_callback=retry_event_callback,
+            )
         super().__init__(factory, reset_freq)
 
     @classmethod
-    def _factory(cls, model_name: str, max_retries=10, base_delay=1.0):
+    def _factory(cls, model_name: str, max_retries=10, base_delay=1.0,
+                 retry_event_callback: Callable[[str, Union[str, None]], None] | None = None):
         import litellm
         if model_name.startswith('azure/'):  # azure model
             azure_token_provider_scope = os.environ.get('AZURE_TOKEN_PROVIDER_SCOPE', None)
@@ -304,13 +314,15 @@ class LiteLLM(AbstractModel):
                                              azure_ad_token_provider=credential, **kwargs),
                     max_retries=max_retries,
                     base_delay=base_delay,
-                    operation_name="LiteLLM_completion"
+                    operation_name="LiteLLM_completion",
+                    retry_event_callback=retry_event_callback,
                 )
         return lambda *args, **kwargs: retry_with_exponential_backoff(
             lambda: litellm.completion(model_name, *args, **kwargs),
             max_retries=max_retries,
             base_delay=base_delay,
-            operation_name="LiteLLM_completion"
+            operation_name="LiteLLM_completion",
+            retry_event_callback=retry_event_callback,
         )
 
     @property
@@ -341,7 +353,9 @@ class CustomLLM(AbstractModel):
 
         self.model_name = model
         self.cache = cache
-        factory = lambda: self._factory(base_url, server_api_key)  # an LLM instance uses a fixed model
+        def factory() -> Any:
+            """Construct one fixed-endpoint OpenAI-compatible client."""
+            return self._factory(base_url, server_api_key)
         super().__init__(factory, reset_freq)
 
     @classmethod

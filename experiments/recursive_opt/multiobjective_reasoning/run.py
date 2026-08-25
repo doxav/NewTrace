@@ -20,7 +20,9 @@ from .live import (
 from .main_experiment import (
     MAIN_LOCK_PATH,
     MAIN_REPORT_PATH,
+    TRANSPORT_STRESS_REPORT_PATH,
     finalize_main_experiment,
+    run_main_size_trace_transport_stress,
     run_main_experiment,
 )
 from .offline_contract import run_offline_contract
@@ -82,6 +84,7 @@ def main() -> int:
             "cost-forecast",
             "pilot",
             "main-lock",
+            "transport-stress",
             "main",
         ),
     )
@@ -140,6 +143,10 @@ def main() -> int:
         )
         _write_json(MAIN_LOCK_PATH, result)
         return 0
+    if args.command == "transport-stress":
+        result = run_main_size_trace_transport_stress()
+        _write_json(TRANSPORT_STRESS_REPORT_PATH, result)
+        return 0 if result["passed"] else 1
     if args.command == "micro-smoke":
         result = run_micro_smoke()
         _write_json(MICRO_REPORT_PATH, result)

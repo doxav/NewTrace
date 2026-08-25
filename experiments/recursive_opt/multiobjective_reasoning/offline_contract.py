@@ -211,12 +211,15 @@ def run_offline_contract() -> dict[str, Any]:
     assert_strict_output_evaluator()
     package_root = Path(__file__).resolve().parent
     repository_root = package_root.parents[2]
-    lock = json.loads(
-        (package_root / "control_plane_lock_after_empty_text_retry.json").read_text(
-            encoding="utf-8"
-        )
+    readiness = json.loads(
+        (
+            repository_root / "artifacts/control_plane_v2/prompt18_readiness.json"
+        ).read_text(encoding="utf-8")
     )
-    locked_control = lock["control_plane"]
+    locked_control = {
+        "runtime_tree_sha256": readiness["verified_runtime_tree_sha256"],
+        "registry_sha256": readiness["verified_registry_sha256"],
+    }
     readiness_spec = json.loads(
         (
             repository_root

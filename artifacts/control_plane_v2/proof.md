@@ -1,5 +1,24 @@
 # recursive-opt v2alpha semantic-closure proof
 
+## Live transport resilience proof
+
+Provider-free causal tests reproduce both observed messages as pre-fix
+non-retryable failures, then prove exact identical-request recovery, bounded
+three-attempt exhaustion, immediate application-error failure, causal-chain
+classification, explicit provider timeout propagation, environment invariance,
+one logical guarded usage attribution, deterministic Trace concurrency, and
+hard termination of an uncooperative child. The full local results are 225
+focused passes, 330 mandated passes with two accepted optional skips, 510 unit
+passes with three accepted optional skips, 40 Experiment-0 passes, and one
+clean-kernel notebook pass.
+
+Runtime footprint remains 8,850 lines without relaxing the historical gate.
+The pre-CI authoritative digests are runtime
+`420b5351063a56b0ad274a6c39b6aaa4dc95b9094434600e89ea79f3eccc8872`
+and registry
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+Readiness is false until the required Actions job passes the expanded workflow.
+
 ## Optimizer empty-text retry proof
 
 Six provider-free causal tests prove one shared optimizer text contract across

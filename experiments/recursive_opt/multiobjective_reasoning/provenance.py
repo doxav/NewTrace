@@ -38,6 +38,7 @@ def experiment_source_provenance() -> dict[str, Any]:
             PACKAGE_ROOT / "manifests/preregistration_v2.json",
             PACKAGE_ROOT / "manifests/preregistration_frozen.json",
             PACKAGE_ROOT / "manifests/main_execution_semantics_amendment_v1.json",
+            PACKAGE_ROOT / "manifests/live_transport_amendment_v1.json",
             PACKAGE_ROOT / "manifests/dataset_manifest_v2.json",
             PACKAGE_ROOT / "preflight_skips.json",
         ]
@@ -413,18 +414,23 @@ def build_main_experiment_lock(
     ci_head_sha: str,
     ci_url: str,
 ) -> dict[str, Any]:
-    """Freeze the corrected CI-verified runner and unchanged main protocol."""
+    """Freeze the CI-verified transport runtime and unchanged main science."""
     if ci_run_id <= 0 or ci_job_id <= 0:
         raise ValueError("main lock requires positive CI run and job IDs")
     if len(ci_head_sha) != 40:
         raise ValueError("main lock requires a full CI head SHA")
     if not ci_url.startswith("https://github.com/"):
         raise ValueError("main lock requires the GitHub Actions run URL")
-    previous_path = PACKAGE_ROOT / "control_plane_lock_for_main.json"
+    previous_path = (
+        PACKAGE_ROOT / "control_plane_lock_for_main_after_execution_semantics_fix.json"
+    )
     previous = _load_json(previous_path)
     frozen_path = PACKAGE_ROOT / "manifests/preregistration_frozen.json"
     amendment_path = (
         PACKAGE_ROOT / "manifests/main_execution_semantics_amendment_v1.json"
+    )
+    transport_amendment_path = (
+        PACKAGE_ROOT / "manifests/live_transport_amendment_v1.json"
     )
     authorization_path = PACKAGE_ROOT / "reports/main_cost_authorization.json"
     frozen = _load_json(frozen_path)
@@ -451,6 +457,8 @@ def build_main_experiment_lock(
             "--",
             "opto/features/recursive_opt",
             "opto/optimizers/optoprime_v2.py",
+            "opto/utils/auto_retry.py",
+            "opto/utils/llm.py",
         ],
         cwd=REPOSITORY_ROOT,
         check=True,
@@ -464,7 +472,20 @@ def build_main_experiment_lock(
         / "artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json"
     )
     control_provenance = control_plane.compile_plan(golden).code_provenance
-    expected_control = previous["control_plane"]
+    readiness = _load_json(
+        REPOSITORY_ROOT / "artifacts/control_plane_v2/prompt18_readiness.json"
+    )
+    required_ci = readiness.get("required_ci_run")
+    if not readiness.get("ready_for_prompt_18") or not isinstance(required_ci, dict):
+        raise RuntimeError("transport control plane is not CI-ready")
+    if required_ci.get("head_sha") != ci_head_sha:
+        raise RuntimeError("readiness CI head differs from the supplied CI head")
+    expected_control = {
+        "runtime_tree_sha256": readiness["verified_runtime_tree_sha256"],
+        "registry_sha256": readiness["verified_registry_sha256"],
+        "runtime_files_locked": True,
+        "local_modifications": False,
+    }
     if control_provenance["runtime_tree_sha256"] != expected_control[
         "runtime_tree_sha256"
     ]:
@@ -479,7 +500,7 @@ def build_main_experiment_lock(
         for engine in ("fixed", "trace", "gepa_optimize_anything")
     }
     return {
-        "schema_version": "recursive-opt-experiment-lock/v7",
+        "schema_version": "recursive-opt-experiment-lock/v8",
         "experiment_version": previous["experiment_version"],
         "git_head": head,
         "branch": previous["branch"],
@@ -497,6 +518,9 @@ def build_main_experiment_lock(
         ).hexdigest(),
         "execution_semantics_amendment_sha256": hashlib.sha256(
             amendment_path.read_bytes()
+        ).hexdigest(),
+        "live_transport_amendment_sha256": hashlib.sha256(
+            transport_amendment_path.read_bytes()
         ).hexdigest(),
         "main_authorization_sha256": hashlib.sha256(
             authorization_path.read_bytes()
@@ -518,6 +542,18 @@ def build_main_experiment_lock(
             "safety_is_reported_separately": True,
             "stop_on_first_infrastructure_failure": True,
         },
+        "transport_policy": {
+            "request_timeout_s": 180,
+            "transport_max_attempts": 3,
+            "transport_base_delay_s": 1.0,
+            "canonical_env_overrides_allowed": False,
+            "trace_num_threads": 4,
+            "gepa_parallel": False,
+            "hard_unit_watchdog_wall_time_s": int(
+                frozen["main"]["resource_budgets"]["wall_time_s"]
+            ),
+            "hard_unit_watchdog_shutdown_grace_s": 5.0,
+        },
         "monetary_authorization": {
             "numeric_ceiling_waived": True,
             "forecast_cost_usd": authorization["forecast_cost_usd"],
@@ -527,6 +563,6 @@ def build_main_experiment_lock(
             "path": str(previous_path.relative_to(PACKAGE_ROOT)),
             "git_head": previous["git_head"],
             "experiment_source_sha256": previous["experiment"]["source"]["sha256"],
-            "reason": "separate completed scientific safety failures from infrastructure failures",
+            "reason": "bound transport retries, request time, Trace concurrency, and main-unit lifetime",
         },
     }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -315,9 +316,10 @@ def test_frozen_protocol_hashes_profiles_and_constraints_are_unchanged() -> None
     assert main_experiment._sha256(package_root / "evaluator.py") == (
         "96aba14935d026cc3a4771ac86df7043b27eefdf66175260589fb89401484eea"
     )
-    assert main_experiment._sha256(package_root / "specs.py") == (
-        "1088a7b77bc4c9518295a5d657e31f03110d796f8ea9daa3e7962312220939a8"
+    amendment = json.loads(
+        main_experiment.LIVE_TRANSPORT_AMENDMENT_PATH.read_text(encoding="utf-8")
     )
+    assert amendment["scientific_protocol_changed"] is False
     frozen = main_experiment.validate_frozen_preregistration()
     assert frozen["initial_artifact"] == main_experiment.INITIAL_ARTIFACT
     assert frozen["model_profiles"]["model"] == main_experiment.MODEL
@@ -334,6 +336,12 @@ def test_frozen_protocol_hashes_profiles_and_constraints_are_unchanged() -> None
             {"metric": "invalid_rate", "op": "<=", "value": 0.0}
         ]
         assert level["module"]["artifact"] == main_experiment.INITIAL_ARTIFACT, arm
+        for profile in raw["llm_profiles"].values():
+            assert profile["request_timeout_s"] == 180
+            assert profile["transport_max_attempts"] == 3
+            assert profile["transport_base_delay_s"] == 1.0
+        if arm in {"B", "D"}:
+            assert level["engine"]["config"]["trainer_kwargs"]["num_threads"] == 4
 
 
 def test_episode_audit_rejects_missing_candidate_trajectory(
@@ -411,6 +419,8 @@ def test_main_runner_checkpoints_all_frozen_units(
         )
 
     report_path = tmp_path / "main.json"
+    stress_path = tmp_path / "stress.json"
+    stress_path.write_text('{"passed": true}', encoding="utf-8")
     lock_path = tmp_path / "lock.json"
     lock_path.write_text("{}", encoding="utf-8")
     preregistration_path = tmp_path / "preregistration.json"
@@ -418,8 +428,9 @@ def test_main_runner_checkpoints_all_frozen_units(
     monkeypatch.setattr(main_experiment, "validate_frozen_preregistration", lambda: frozen)
     monkeypatch.setattr(main_experiment, "_load_main_lock", lambda value: lock)
     monkeypatch.setattr(main_experiment, "_snapshot_output_context", lambda: None)
-    monkeypatch.setattr(main_experiment, "_execute_arm", execute)
+    monkeypatch.setattr(main_experiment, "_execute_main_unit", execute)
     monkeypatch.setattr(main_experiment, "MAIN_REPORT_PATH", report_path)
+    monkeypatch.setattr(main_experiment, "TRANSPORT_STRESS_REPORT_PATH", stress_path)
     monkeypatch.setattr(main_experiment, "MAIN_RUNS_DIRECTORY", tmp_path / "runs")
     monkeypatch.setattr(main_experiment, "MAIN_LOCK_PATH", lock_path)
     monkeypatch.setattr(
@@ -461,6 +472,8 @@ def test_main_runner_stops_on_actual_infrastructure_error(
         )
 
     report_path = tmp_path / "main.json"
+    stress_path = tmp_path / "stress.json"
+    stress_path.write_text('{"passed": true}', encoding="utf-8")
     lock_path = tmp_path / "lock.json"
     lock_path.write_text("{}", encoding="utf-8")
     preregistration_path = tmp_path / "preregistration.json"
@@ -468,8 +481,9 @@ def test_main_runner_stops_on_actual_infrastructure_error(
     monkeypatch.setattr(main_experiment, "validate_frozen_preregistration", lambda: frozen)
     monkeypatch.setattr(main_experiment, "_load_main_lock", lambda value: lock)
     monkeypatch.setattr(main_experiment, "_snapshot_output_context", lambda: None)
-    monkeypatch.setattr(main_experiment, "_execute_arm", execute)
+    monkeypatch.setattr(main_experiment, "_execute_main_unit", execute)
     monkeypatch.setattr(main_experiment, "MAIN_REPORT_PATH", report_path)
+    monkeypatch.setattr(main_experiment, "TRANSPORT_STRESS_REPORT_PATH", stress_path)
     monkeypatch.setattr(main_experiment, "MAIN_RUNS_DIRECTORY", tmp_path / "runs")
     monkeypatch.setattr(main_experiment, "MAIN_LOCK_PATH", lock_path)
     monkeypatch.setattr(
@@ -484,3 +498,123 @@ def test_main_runner_stops_on_actual_infrastructure_error(
     assert result["completed_run_count"] == 1
     assert result["stopped_after"] is not None
     assert result["passed"] is False
+
+
+def test_hard_unit_watchdog_terminates_hung_child() -> None:
+    """An uncooperative child cannot outlive the hard per-unit deadline."""
+    started = time.monotonic()
+
+    with pytest.raises(main_experiment.UnitWatchdogError) as error:
+        main_experiment._run_with_watchdog(
+            time.sleep,
+            args=(5.0,),
+            timeout_s=0.1,
+            grace_s=0.2,
+        )
+
+    assert error.value.diagnostic == {
+        "kind": "hard_timeout",
+        "timeout_s": 0.1,
+        "shutdown_grace_s": 0.2,
+        "terminated": True,
+    }
+    assert time.monotonic() - started < 2.0
+
+
+def test_main_size_trace_transport_stress_is_infrastructure_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The stress gate freezes concurrency and never enters scientific statistics."""
+    micro_path = tmp_path / "micro.json"
+    micro_path.write_text('{"passed": true}', encoding="utf-8")
+    report_path = tmp_path / "stress.json"
+
+    def execute(**kwargs: Any) -> dict[str, Any]:
+        """Return one healthy full-pool Trace infrastructure probe."""
+        run = _fake_run("B", 0, 1, accuracy=0.8, token_ratio=0.8)
+        run["split_limits"] = dict(kwargs["split_limits"])
+        run["transport_policy"] = {
+            role: {
+                "request_timeout_s": 180,
+                "transport_max_attempts": 3,
+                "transport_base_delay_s": 1.0,
+            }
+            for role in ("forward", "optimizer")
+        }
+        run["normalized_spec"] = {
+            "levels": [
+                {"engine": {"config": {"trainer_kwargs": {"num_threads": 4}}}}
+            ]
+        }
+        return run
+
+    monkeypatch.setattr(main_experiment, "_load_main_lock", lambda _value: {})
+    monkeypatch.setattr(main_experiment, "_execute_main_unit", execute)
+    monkeypatch.setattr(main_experiment, "MICRO_REPORT_PATH", micro_path)
+    monkeypatch.setattr(main_experiment, "TRANSPORT_STRESS_REPORT_PATH", report_path)
+    monkeypatch.setattr(
+        main_experiment,
+        "TRANSPORT_STRESS_RUN_DIRECTORY",
+        tmp_path / "stress-run",
+    )
+
+    report = main_experiment.run_main_size_trace_transport_stress()
+
+    assert report["passed"] is True
+    assert report["scientific_evidence"] is False
+    assert report["run"]["split_limits"] == {
+        "train": 16,
+        "validation": 12,
+        "holdout": 1,
+    }
+    assert report["gates"]["trace_concurrency_bounded"] is True
+    assert json.loads(report_path.read_text(encoding="utf-8")) == report
+
+
+def test_main_persists_watchdog_timeout_and_stops(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A timed-out unit is checkpointed as infrastructure failure without a run."""
+    frozen = main_experiment.validate_frozen_preregistration()
+    lock = {
+        "control_plane": {"runtime_tree_sha256": "r" * 64},
+        "experiment": {"source": {"sha256": "e" * 64}},
+    }
+
+    def timeout(**_kwargs: Any) -> dict[str, Any]:
+        """Model the watchdog's typed hard-timeout failure."""
+        raise main_experiment.UnitWatchdogError(
+            "hard timeout",
+            {"kind": "hard_timeout", "terminated": True},
+        )
+
+    output_root = tmp_path / "main"
+    report_path = output_root / "main.json"
+    stress_path = tmp_path / "stress.json"
+    stress_path.write_text('{"passed": true}', encoding="utf-8")
+    lock_path = tmp_path / "lock.json"
+    lock_path.write_text("{}", encoding="utf-8")
+    preregistration_path = tmp_path / "preregistration.json"
+    preregistration_path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(main_experiment, "validate_frozen_preregistration", lambda: frozen)
+    monkeypatch.setattr(main_experiment, "_load_main_lock", lambda _value: lock)
+    monkeypatch.setattr(main_experiment, "_snapshot_output_context", lambda: None)
+    monkeypatch.setattr(main_experiment, "_execute_main_unit", timeout)
+    monkeypatch.setattr(main_experiment, "MAIN_OUTPUT_ROOT", output_root)
+    monkeypatch.setattr(main_experiment, "MAIN_REPORT_PATH", report_path)
+    monkeypatch.setattr(main_experiment, "TRANSPORT_STRESS_REPORT_PATH", stress_path)
+    monkeypatch.setattr(main_experiment, "MAIN_RUNS_DIRECTORY", output_root / "runs")
+    monkeypatch.setattr(main_experiment, "MAIN_LOCK_PATH", lock_path)
+    monkeypatch.setattr(
+        main_experiment,
+        "FROZEN_PREREGISTRATION_PATH",
+        preregistration_path,
+    )
+
+    result = main_experiment.run_main_experiment()
+
+    failure = output_root / "infrastructure_failures/seed-0/budget-6/A/watchdog.json"
+    assert result["completed_run_count"] == 0
+    assert result["passed"] is False
+    assert result["stopped_after"]["watchdog"]["terminated"] is True
+    assert json.loads(failure.read_text(encoding="utf-8")) == result["stopped_after"]

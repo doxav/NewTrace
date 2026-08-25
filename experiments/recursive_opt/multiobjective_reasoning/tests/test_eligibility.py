@@ -335,14 +335,23 @@ def test_invalid_constraint_result_is_scientific_and_resumes(
         "budget": {},
         "runtime": {},
         "llm_profiles": {
-            "forward_primary": {
-                "request_params": {"reasoning": {"enabled": False}}
+                "forward_primary": {
+                    "request_params": {"reasoning": {"enabled": False}},
+                    "request_timeout_s": 180,
+                    "transport_max_attempts": 3,
+                    "transport_base_delay_s": 1.0,
+                },
+                "optimizer_primary": {
+                    "request_params": {"reasoning": {"effort": "low"}},
+                    "request_timeout_s": 180,
+                    "transport_max_attempts": 3,
+                    "transport_base_delay_s": 1.0,
+                },
             },
-            "optimizer_primary": {
-                "request_params": {"reasoning": {"effort": "low"}}
-            },
-        },
-    }
+            "levels": [
+                {"engine": {"config": {"engine": {"parallel": False}}}}
+            ],
+        }
     output = object()
     result = SimpleNamespace(
         status="invalid",
@@ -478,6 +487,12 @@ def test_pilot_retry_statistics_are_separate_and_metered_by_arm() -> None:
         {
             "arm": "B",
             "usage": {
+                "forward": {
+                    "transport_transient_failures": 1,
+                    "transport_retry_attempts": 1,
+                    "transport_recovered_requests": 1,
+                    "transport_connection_resets": 1,
+                },
                 "optimizer": {
                     "empty_text_responses": 1,
                     "semantic_retries": 1,
@@ -513,6 +528,12 @@ def test_pilot_retry_statistics_are_separate_and_metered_by_arm() -> None:
         "semantic_retry_completion_tokens": 6,
         "semantic_retry_total_tokens": 36,
         "semantic_retry_cost_usd": pytest.approx(0.03),
+        "transport_transient_failures": 1,
+        "transport_retry_attempts": 1,
+        "transport_recovered_requests": 1,
+        "transport_exhausted_requests": 0,
+        "transport_connection_resets": 1,
+        "transport_server_disconnects": 0,
     }
     assert statistics["C"]["empty_text_responses"] == 0
     assert statistics["C"]["semantic_retries"] == 0

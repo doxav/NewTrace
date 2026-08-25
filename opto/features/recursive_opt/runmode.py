@@ -23,18 +23,16 @@ from __future__ import annotations
 import os
 import re
 import sys
-from typing import Any, Mapping, MutableMapping, Optional
+from typing import Any, Callable, Mapping, MutableMapping, Optional
 
 from .budget import BudgetResource, budget_status, budgeted_llm
 
 _PREFLIGHTED_MODELS: set[str] = set()
 
-
 def have_key() -> bool:
     return bool(
         os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
     )
-
 
 def _env_flag(name: str, default: bool) -> bool:
     raw = os.environ.get(name)
@@ -42,16 +40,13 @@ def _env_flag(name: str, default: bool) -> bool:
         return default
     return raw.strip().lower() not in {"0", "false", "no", "off"}
 
-
 def _redact_secrets(text: str) -> str:
     text = re.sub(r"sk-[A-Za-z0-9_-]+", "sk-<redacted>", text)
     return re.sub(r"proj_[A-Za-z0-9_-]+", "proj_<redacted>", text)
 
-
 def uses_completion_token_param(model_name: str) -> bool:
     """Return True for models that reject the legacy ``max_tokens`` parameter."""
     return "gpt-5" in str(model_name).lower()
-
 
 class CompletionTokenCompatLLM:
     """Translate Trace optimizer token kwargs for GPT-5-style LiteLLM calls."""
@@ -69,7 +64,6 @@ class CompletionTokenCompatLLM:
             if "max_tokens" in kwargs and "max_completion_tokens" not in kwargs:
                 kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
         return self._llm(*args, **kwargs)
-
 
 class _RoleUsageLLM:
     """Thin runtime adapter that attributes provider-reported usage to one role."""
@@ -96,7 +90,6 @@ class _RoleUsageLLM:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._llm, name)
 
-
 def track_llm_usage(
     llm: Any,
     role: str,
@@ -108,7 +101,6 @@ def track_llm_usage(
     if not isinstance(sink, MutableMapping):
         raise TypeError("usage sink must be a mutable mapping")
     return _RoleUsageLLM(llm, role, sink)
-
 
 def _response_usage(response: Any) -> dict[str, float | int]:
     """Extract supported counters from a LiteLLM-style response object."""
@@ -131,7 +123,6 @@ def _response_usage(response: Any) -> dict[str, float | int]:
         usage[name] = amount
     return usage
 
-
 def _positive_float_env(name: str) -> Optional[float]:
     """Read an optional positive float environment variable."""
     raw = os.environ.get(name)
@@ -144,7 +135,6 @@ def _positive_float_env(name: str) -> Optional[float]:
     if value <= 0:
         raise ValueError(f"{name} must be positive, got {value}")
     return value
-
 
 def _positive_int_env(name: str) -> Optional[int]:
     """Read an optional positive integer environment variable."""
@@ -159,38 +149,20 @@ def _positive_int_env(name: str) -> Optional[int]:
         raise ValueError(f"{name} must be positive, got {value}")
     return value
 
-
-def make_live_llm(
-    model: Optional[str] = None,
-    *,
-    cache: bool = True,
-    max_retries: int = 10,
-    base_delay: float = 1.0,
-    request_timeout_s: Optional[float] = None,
-    budget_resource: Optional[BudgetResource] = "optimizer_llm_calls",
-    role: Optional[str] = None,
-    usage: Optional[MutableMapping[str, MutableMapping[str, float | int]]] = None,
-) -> Any:
-    """Create the LiteLLM backend used by recursive-opt live optimizers.
-
-    `budget_resource` defaults to optimizer proposal calls. Pass None for
-    preflight calls or other probes that should not consume recursive budget.
-    """
+def make_live_llm(model: Optional[str] = None, *, cache: bool = True, max_retries: int = 10, base_delay: float = 1.0, request_timeout_s: Optional[float] = None, allow_env_overrides: bool = True, retry_event_callback: Optional[Callable[[str, Optional[str]], None]] = None, budget_resource: Optional[BudgetResource] = "optimizer_llm_calls", role: Optional[str] = None, usage: Optional[MutableMapping[str, MutableMapping[str, float | int]]] = None) -> Any:
+    """Create the live backend; optional legacy environment overrides stay explicit."""
     from opto.utils.llm import LiteLLM
-
-    model_name = (
-        model
-        or os.environ.get("RECURSIVE_OPT_MODEL")
-        or os.environ.get("TRACE_LITELLM_MODEL")
-        or "gpt-5.4-nano"
-    )
-    llm = LiteLLM(
-        model=model_name,
-        cache=cache,
-        max_retries=_positive_int_env("RECURSIVE_OPT_LLM_MAX_RETRIES") or max_retries,
-        base_delay=_positive_float_env("RECURSIVE_OPT_LLM_BASE_DELAY_S") or base_delay,
-    )
-    timeout_s = request_timeout_s if request_timeout_s is not None else _positive_float_env("RECURSIVE_OPT_LLM_TIMEOUT_S")
+    model_name = model or os.environ.get("RECURSIVE_OPT_MODEL") or os.environ.get("TRACE_LITELLM_MODEL") or "gpt-5.4-nano"
+    if not isinstance(allow_env_overrides, bool):
+        raise TypeError("allow_env_overrides must be boolean")
+    resolved_max_retries = max_retries
+    resolved_base_delay = base_delay
+    timeout_s = request_timeout_s
+    if allow_env_overrides:
+        resolved_max_retries = _positive_int_env("RECURSIVE_OPT_LLM_MAX_RETRIES") or max_retries
+        resolved_base_delay = _positive_float_env("RECURSIVE_OPT_LLM_BASE_DELAY_S") or base_delay
+        timeout_s = request_timeout_s if request_timeout_s is not None else _positive_float_env("RECURSIVE_OPT_LLM_TIMEOUT_S")
+    llm = LiteLLM(model=model_name, cache=cache, max_retries=resolved_max_retries, base_delay=resolved_base_delay, retry_event_callback=retry_event_callback)
     if uses_completion_token_param(model_name) or timeout_s is not None:
         llm = CompletionTokenCompatLLM(llm, model_name, timeout_s)
     llm = budgeted_llm(llm, budget_resource)
@@ -199,7 +171,6 @@ def make_live_llm(
             raise ValueError("make_live_llm requires a usage sink when role is set")
         llm = track_llm_usage(llm, role, usage)
     return llm
-
 
 def preflight_model(model: Optional[str] = None) -> None:
     """Fail fast when the configured live LLM model/key cannot be used."""
@@ -235,7 +206,6 @@ def preflight_model(model: Optional[str] = None) -> None:
             "to defer provider errors to the optimizer call.\n"
         ) from exc
 
-
 def resolve_live(argv: Optional[list] = None) -> bool:
     """True iff ``--live`` AND an API key are present.
 
@@ -266,14 +236,12 @@ def resolve_live(argv: Optional[list] = None) -> bool:
             )
     return live
 
-
 def tracebench_mode() -> str:
     try:
         from .tracebench import real_mode_status
         return real_mode_status()
     except Exception:
         return "STUB (synthetic analytic scores — tests plumbing, NOT efficacy)"
-
 
 def trace_io_mode() -> str:
     """Return whether optional graph/telemetry trace backends are importable."""
@@ -287,7 +255,6 @@ def trace_io_mode() -> str:
         else "UNAVAILABLE (graph/OTEL/Sysmon backends are not importable)"
     )
 
-
 def _using_real_task_adapter() -> bool:
     """Return True when task scoring is backed by a registered real adapter."""
     try:
@@ -296,7 +263,6 @@ def _using_real_task_adapter() -> bool:
         return using_real_tasks()
     except Exception:
         return False
-
 
 def mode_banner(live: bool) -> str:
     bar = "=" * 72

@@ -9,6 +9,7 @@ import os
 import random
 import re
 import subprocess
+import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -41,13 +42,14 @@ _BLOCK_KEYS = {'surface': {'kind', 'targets'}, 'module': {'ref', 'config', 'arti
 _LEVEL_KEYS = {'id', 'depends_on', 'ordering_only', *_LEVEL_BLOCKS}
 _DATASET_REF_KEYS = {'ref', 'split', 'config'}
 _METRIC_KEYS = {'direction', 'source', 'aggregate_examples'}
-_PROFILE_KEYS = {'provider', 'model', 'resolved_model', 'api_key_ref', 'fallbacks', 'temperature', 'max_tokens', 'base_url', 'request_params'}
+_PROFILE_KEYS = {'provider', 'model', 'resolved_model', 'api_key_ref', 'fallbacks', 'temperature', 'max_tokens', 'base_url', 'request_params', 'request_timeout_s', 'transport_max_attempts', 'transport_base_delay_s'}
 _ROLE_KEYS = {'forward', 'optimizer', 'feedback', 'judge'}
 _ROLE_OVERRIDE_KEYS = {'profile', *_PROFILE_KEYS}
 _BINDING_KEYS = {'from', 'to', 'codec', 'ordering_only'}
 _VERSIONED_REF = re.compile('^[A-Za-z0-9_.-]+@[1-9][0-9]*$')
 _SECRET_KEYS = {'api_key', 'apikey', 'access_token', 'token', 'secret', 'password'}
 _REQUEST_IDENTITY_KEYS = _SECRET_KEYS | {'model', 'provider', 'credential_ref', 'api_key_ref', 'base_url'}
+_REQUEST_TIMEOUT_KEYS = {'timeout', 'request_timeout', 'request_timeout_s'}
 class _FrozenDict(dict):
     """JSON-serializable dictionary that rejects mutation after construction."""
     def _immutable(self, *_args: Any, **_kwargs: Any) -> None:
@@ -607,6 +609,7 @@ class _BudgetGuard:
         self.used = {'optimizer_llm_calls': 0, 'eval_llm_calls': 0, 'candidates': 0, 'candidates_reserved': 0, 'candidates_proposed': 0, 'candidates_evaluated': 0, 'evaluator_runs': 0, 'total_tokens': 0}
         self.optimizer_response_diagnostics: List[Dict[str, Any]] = []
         self.runtime_usage: MutableMapping[str, MutableMapping[str, float | int]] = {}
+        self.transport_diagnostics_lock = threading.Lock()
         self.started_at = time.monotonic()
         self.previous_wall_time_s = 0.0
 
@@ -1380,8 +1383,28 @@ def _make_guarded_role_client(profile: Mapping[str, Any], role: str, factory: Op
         client = factory(_freeze(_thaw(profile)), role)
     else:
         from .runmode import make_live_llm
-        client = make_live_llm(profile['resolved_model'], request_timeout_s=None, budget_resource=None)
+        client = make_live_llm(profile['resolved_model'], max_retries=profile['transport_max_attempts'], base_delay=profile['transport_base_delay_s'], request_timeout_s=profile['request_timeout_s'], allow_env_overrides=False, retry_event_callback=_transport_retry_recorder(role, usage, guard.transport_diagnostics_lock), budget_resource=None)
     return _GuardedRoleClient(client, role, usage, guard, profile.get('max_tokens'), profile.get('temperature'), profile['request_params'], profile['resolved_model'])
+def _transport_retry_recorder(role: str, usage: MutableMapping[str, MutableMapping[str, float | int]], lock: threading.Lock) -> Callable[[str, Optional[str]], None]:
+    """Return a thread-safe recorder for provider transport diagnostics."""
+    names = ('transport_transient_failures', 'transport_retry_attempts', 'transport_recovered_requests', 'transport_exhausted_requests', 'transport_connection_resets', 'transport_server_disconnects')
+    def record(event: str, failure_kind: Optional[str]) -> None:
+        """Record one bounded transport lifecycle event without error text."""
+        with lock:
+            totals = usage.setdefault(role, {})
+            for name in names:
+                totals.setdefault(name, 0)
+            if event == 'transient_failure':
+                totals['transport_transient_failures'] += 1
+                if failure_kind == 'connection_reset':
+                    totals['transport_connection_resets'] += 1
+                elif failure_kind == 'server_disconnected':
+                    totals['transport_server_disconnects'] += 1
+            elif event in {'retry', 'recovered', 'exhausted'}:
+                totals[{'retry': 'transport_retry_attempts', 'recovered': 'transport_recovered_requests', 'exhausted': 'transport_exhausted_requests'}[event]] += 1
+            else:
+                raise ValueError(f'unknown transport retry event {event!r}')
+    return record
 def _evaluate_example(module: Module, example: Any, context: Mapping[str, Any], evaluator: _EvaluatorEntry, guard: _BudgetGuard, metered_roles: set[str]) -> Tuple[EvaluationResult, Any]:
     """Run one explicit evaluator contract and return its exact output anchor."""
     guard.consume('evaluator_runs')
@@ -1932,7 +1955,7 @@ def _normalize_llm_profiles(spec: Dict[str, Any]) -> None:
     """Materialize exact provider models, secret refs, and fallbacks."""
     profiles: Dict[str, Dict[str, Any]] = {}
     for name, raw_profile in spec['llm_profiles'].items():
-        profile = {'provider': None, 'model': None, 'resolved_model': None, 'api_key_ref': None, 'fallbacks': [], 'temperature': None, 'max_tokens': None, 'base_url': None, 'request_params': {}, **_thaw(raw_profile)}
+        profile = {'provider': None, 'model': None, 'resolved_model': None, 'api_key_ref': None, 'fallbacks': [], 'temperature': None, 'max_tokens': None, 'base_url': None, 'request_params': {}, 'request_timeout_s': None, 'transport_max_attempts': 10, 'transport_base_delay_s': 1.0, **_thaw(raw_profile)}
         if profile['provider'] == 'openrouter':
             profile['model'] = profile['model'] or 'deepseek/deepseek-v4-flash-0731'
             profile['resolved_model'] = f"openrouter/{profile['model']}"
@@ -2113,10 +2136,21 @@ def _validate_profile(profile: Mapping[str, Any], path: str, profiles: Mapping[s
     max_tokens = profile['max_tokens']
     if max_tokens is not None and (not isinstance(max_tokens, int) or isinstance(max_tokens, bool) or max_tokens <= 0):
         raise ValueError(f'{path} max_tokens must be positive or null')
+    request_timeout_s = profile['request_timeout_s']
+    if request_timeout_s is not None and (not isinstance(request_timeout_s, (int, float)) or isinstance(request_timeout_s, bool) or request_timeout_s <= 0):
+        raise ValueError(f'{path} request_timeout_s must be positive or null')
+    transport_max_attempts = profile['transport_max_attempts']
+    if not isinstance(transport_max_attempts, int) or isinstance(transport_max_attempts, bool) or transport_max_attempts < 1:
+        raise ValueError(f'{path} transport_max_attempts must be a positive integer')
+    transport_base_delay_s = profile['transport_base_delay_s']
+    if not isinstance(transport_base_delay_s, (int, float)) or isinstance(transport_base_delay_s, bool) or transport_base_delay_s < 0:
+        raise ValueError(f'{path} transport_base_delay_s must be a non-negative number')
     if profile['base_url'] is not None:
         raise ValueError(f'{path} base_url is unsupported; configure the provider externally')
     if not isinstance(profile['request_params'], Mapping):
         raise TypeError(f'{path} request_params must be a mapping')
+    if request_timeout_s is not None and any(key.lower().replace('-', '_').replace(' ', '_') in _REQUEST_TIMEOUT_KEYS for key in profile['request_params']):
+        raise ValueError(f'{path}.request_params may not duplicate request_timeout_s')
     _validate_request_params(profile['request_params'], f'{path}.request_params')
 def _validate_request_params(value: Any, path: str) -> None:
     """Reject request controls that can replace normalized provider identity."""

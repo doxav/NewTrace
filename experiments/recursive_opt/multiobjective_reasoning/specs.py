@@ -14,6 +14,10 @@ from .evaluator import EVALUATOR_REF
 
 MODEL = "deepseek/deepseek-v4-flash-0731"
 RESOLVED_MODEL = "openrouter/deepseek/deepseek-v4-flash-0731"
+REQUEST_TIMEOUT_S = 180
+TRANSPORT_MAX_ATTEMPTS = 3
+TRANSPORT_BASE_DELAY_S = 1.0
+TRACE_NUM_THREADS = 4
 INITIAL_ARTIFACT = {
     "analysis_instruction": (
         "Reason carefully and concisely. Identify the operations needed, compute them, "
@@ -36,7 +40,7 @@ def _engine_config(engine: str, proposals: int, validation_gate: bool) -> dict[s
             "iterations": proposals + 1,
             "num_candidates": 1,
             "optimizer_kwargs": {},
-            "trainer_kwargs": {},
+            "trainer_kwargs": {"num_threads": TRACE_NUM_THREADS},
             "validation_gate": validation_gate,
         }
     if engine == "gepa_optimize_anything":
@@ -105,6 +109,9 @@ def build_spec(
                 "fallbacks": [],
                 "temperature": 0,
                 "max_tokens": 384,
+                "request_timeout_s": REQUEST_TIMEOUT_S,
+                "transport_max_attempts": TRANSPORT_MAX_ATTEMPTS,
+                "transport_base_delay_s": TRANSPORT_BASE_DELAY_S,
                 "request_params": {"reasoning": {"enabled": False}},
             },
             "optimizer_primary": {
@@ -115,6 +122,9 @@ def build_spec(
                 "fallbacks": [],
                 "temperature": 0,
                 "max_tokens": 8192,
+                "request_timeout_s": REQUEST_TIMEOUT_S,
+                "transport_max_attempts": TRANSPORT_MAX_ATTEMPTS,
+                "transport_base_delay_s": TRANSPORT_BASE_DELAY_S,
                 "request_params": {"reasoning": {"effort": "low"}},
             },
         },

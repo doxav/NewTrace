@@ -14,13 +14,21 @@ from .evaluator import EVALUATOR_EVENTS, clear_evaluator_events
 from .preflight import _load_json, _per_example_forward_usage, reliable_cost_usd
 from .provenance import experiment_source_provenance
 from .registration import assert_strict_output_evaluator, register_experiment_components
-from .specs import INITIAL_ARTIFACT, MODEL, build_spec
+from .specs import (
+    INITIAL_ARTIFACT,
+    MODEL,
+    REQUEST_TIMEOUT_S,
+    TRACE_NUM_THREADS,
+    TRANSPORT_BASE_DELAY_S,
+    TRANSPORT_MAX_ATTEMPTS,
+    build_spec,
+)
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
-CONTROL_PLANE_LOCK = PACKAGE_ROOT / "control_plane_lock_after_empty_text_retry.json"
-MICRO_REPORT_PATH = PACKAGE_ROOT / "reports/live_micro_smoke_after_empty_text_retry.json"
-MICRO_RUNS_DIRECTORY = PACKAGE_ROOT / "reports/micro_smoke_runs_after_empty_text_retry"
+CONTROL_PLANE_LOCK = PACKAGE_ROOT / "control_plane_lock_after_transport_resilience.json"
+MICRO_REPORT_PATH = PACKAGE_ROOT / "reports/live_micro_smoke_after_transport_resilience.json"
+MICRO_RUNS_DIRECTORY = PACKAGE_ROOT / "reports/micro_smoke_runs_after_transport_resilience"
 PILOT_REPORT_PATH = PACKAGE_ROOT / "reports/pilot_after_empty_text_retry.json"
 PILOT_RUNS_DIRECTORY = PACKAGE_ROOT / "reports/pilot_runs_after_empty_text_retry"
 COST_FORECAST_PATH = PACKAGE_ROOT / "reports/cost_forecast_after_empty_text_retry.json"
@@ -34,6 +42,9 @@ _OVERRIDE_ENVIRONMENT = (
     "RECURSIVE_OPT_LLM_PROFILES",
     "RECURSIVE_OPT_MODEL",
     "TRACE_LITELLM_MODEL",
+    "RECURSIVE_OPT_LLM_MAX_RETRIES",
+    "RECURSIVE_OPT_LLM_BASE_DELAY_S",
+    "RECURSIVE_OPT_LLM_TIMEOUT_S",
 )
 _RESUME_INFRASTRUCTURE_PREREQUISITES = (
     "execution_completed",
@@ -154,8 +165,8 @@ def _pilot_optimizer_gates(runs: list[Mapping[str, Any]]) -> dict[str, bool]:
 
 
 def _pilot_retry_statistics(runs: list[Mapping[str, Any]]) -> dict[str, dict[str, float | int]]:
-    """Aggregate metered semantic-response diagnostics by frozen pilot arm."""
-    names = (
+    """Aggregate semantic and transport diagnostics by frozen experiment arm."""
+    semantic_names = (
         "empty_text_responses",
         "semantic_retries",
         "semantic_retry_prompt_tokens",
@@ -163,12 +174,26 @@ def _pilot_retry_statistics(runs: list[Mapping[str, Any]]) -> dict[str, dict[str
         "semantic_retry_total_tokens",
         "semantic_retry_cost_usd",
     )
+    transport_names = (
+        "transport_transient_failures",
+        "transport_retry_attempts",
+        "transport_recovered_requests",
+        "transport_exhausted_requests",
+        "transport_connection_resets",
+        "transport_server_disconnects",
+    )
+    names = semantic_names + transport_names
     totals: dict[str, dict[str, float | int]] = {}
     for run in runs:
         target = totals.setdefault(str(run["arm"]), {name: 0 for name in names})
-        usage = run.get("usage", {}).get("optimizer", {})
-        for name in names:
-            target[name] += usage.get(name, 0)
+        usage = run.get("usage", {})
+        optimizer_usage = usage.get("optimizer", {})
+        for name in semantic_names:
+            target[name] += optimizer_usage.get(name, 0)
+        for role in ("forward", "optimizer"):
+            role_usage = usage.get(role, {})
+            for name in transport_names:
+                target[name] += role_usage.get(name, 0)
     return totals
 
 
@@ -240,6 +265,20 @@ def _execute_arm(
             ("optimizer", "optimizer_primary"),
         )
     }
+    transport_policy = {
+        role: {
+            name: raw["llm_profiles"][profile][name]
+            for name in (
+                "request_timeout_s",
+                "transport_max_attempts",
+                "transport_base_delay_s",
+            )
+        }
+        for role, profile in (
+            ("forward", "forward_primary"),
+            ("optimizer", "optimizer_primary"),
+        )
+    }
     checks = {
         "execution_completed": _execution_completed(result),
         "exact_model_available": actual_providers == ["openrouter"]
@@ -249,6 +288,27 @@ def _execute_arm(
             "forward": {"reasoning": {"enabled": False}},
             "optimizer": {"reasoning": {"effort": "low"}},
         },
+        "transport_policy_recorded": all(
+            values
+            == {
+                "request_timeout_s": REQUEST_TIMEOUT_S,
+                "transport_max_attempts": TRANSPORT_MAX_ATTEMPTS,
+                "transport_base_delay_s": TRANSPORT_BASE_DELAY_S,
+            }
+            for values in transport_policy.values()
+        ),
+        "execution_concurrency_recorded": (
+            engine != "trace"
+            or normalized["levels"][0]["engine"]["config"]["trainer_kwargs"].get(
+                "num_threads"
+            )
+            == TRACE_NUM_THREADS
+        )
+        and (
+            engine != "gepa_optimize_anything"
+            or normalized["levels"][0]["engine"]["config"]["engine"].get("parallel")
+            is False
+        ),
         "one_workflow_forward_per_evaluator": len(FORWARD_EVENTS)
         == len(EVALUATOR_EVENTS)
         and len(FORWARD_EVENTS) > 0,
@@ -341,6 +401,7 @@ def _execute_arm(
         "actual_models": actual_models,
         "selected_models": _jsonable(result.metadata.get("selected_models", {})),
         "request_params": request_parameters,
+        "transport_policy": transport_policy,
         "hidden_environment": hidden_environment,
         "spec_fingerprint": plan.fingerprint,
         "runtime_tree_sha256": plan.code_provenance["runtime_tree_sha256"],
@@ -381,7 +442,7 @@ def run_micro_smoke() -> dict[str, Any]:
         if not result["passed"]:
             break
     return {
-        "schema_version": "recursive-opt-live-micro-smoke/v3",
+        "schema_version": "recursive-opt-live-micro-smoke/v4",
         "task": task,
         "seed": 0,
         "arms": arms,

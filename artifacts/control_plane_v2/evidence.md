@@ -1,5 +1,22 @@
 # Control plane v2 implementation evidence
 
+## Live transport resilience hotfix — pre-CI (2026-08-25)
+
+Canonical profiles now own explicit request timeout and bounded transport
+attempt policy, ignore legacy transport environment overrides in v2, and
+classify the two observed reset/disconnect failures through causal exception
+chains. Experiment 0 freezes Trace at four workers and executes every main unit
+under a process-group watchdog. Scientific inputs and hypotheses are unchanged.
+
+Provider-free results are 225 focused passes, 330 mandated recursive passes
+with two accepted optional skips, 510 complete-unit passes with three accepted
+optional skips, 40 Experiment-0 passes including the full offline A/B/C/D
+contract, and one clean-kernel notebook pass. The runtime digest is
+`420b5351063a56b0ad274a6c39b6aaa4dc95b9094434600e89ea79f3eccc8872`;
+the registry digest remains
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+Required CI and Prompt-18 readiness remain false pending the external workflow.
+
 ## Optimizer empty-text semantic retry — CI verified (2026-08-24)
 
 The recursive-opt optimizer-role boundary now requires non-empty final text and

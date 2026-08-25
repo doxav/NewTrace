@@ -4,13 +4,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import multiprocessing
+import os
 import random
+import re
+import signal
 import statistics
+import time
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from .forecast import _priced_cost
 from .live import (
+    MICRO_REPORT_PATH,
     _execute_arm,
     _infrastructure_checks_pass,
     _pilot_optimizer_gates,
@@ -19,7 +25,15 @@ from .live import (
 from .preflight import _canonical_json, _load_json
 from .provenance import experiment_source_provenance
 from .registration import assert_strict_output_evaluator, register_experiment_components
-from .specs import INITIAL_ARTIFACT, MODEL, RESOLVED_MODEL
+from .specs import (
+    INITIAL_ARTIFACT,
+    MODEL,
+    REQUEST_TIMEOUT_S,
+    RESOLVED_MODEL,
+    TRACE_NUM_THREADS,
+    TRANSPORT_BASE_DELAY_S,
+    TRANSPORT_MAX_ATTEMPTS,
+)
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
@@ -28,18 +42,27 @@ FROZEN_PREREGISTRATION_PATH = PACKAGE_ROOT / "manifests/preregistration_frozen.j
 EXECUTION_SEMANTICS_AMENDMENT_PATH = (
     PACKAGE_ROOT / "manifests/main_execution_semantics_amendment_v1.json"
 )
+LIVE_TRANSPORT_AMENDMENT_PATH = (
+    PACKAGE_ROOT / "manifests/live_transport_amendment_v1.json"
+)
 MAIN_AUTHORIZATION_PATH = PACKAGE_ROOT / "reports/main_cost_authorization.json"
 MAIN_LOCK_PATH = (
-    PACKAGE_ROOT / "control_plane_lock_for_main_after_execution_semantics_fix.json"
+    PACKAGE_ROOT / "control_plane_lock_after_transport_resilience.json"
 )
 OUTPUT_ROOT = REPOSITORY_ROOT / "outputs/recursive_opt/experiment_0/experiment-0-v2"
-MAIN_OUTPUT_ROOT = OUTPUT_ROOT / "main_after_scientific_vs_infrastructure_gate_fix"
+MAIN_OUTPUT_ROOT = OUTPUT_ROOT / "main_after_transport_resilience_fix"
 MAIN_RUNS_DIRECTORY = MAIN_OUTPUT_ROOT / "runs"
 MAIN_REPORT_PATH = MAIN_OUTPUT_ROOT / "main.json"
 MAIN_ANALYSIS_PATH = MAIN_OUTPUT_ROOT / "analysis.json"
 MAIN_DECISION_PATH = MAIN_OUTPUT_ROOT / "decision.json"
 MAIN_REPORT_MARKDOWN_PATH = MAIN_OUTPUT_ROOT / "report.md"
 EPISODE_AUDIT_PATH = MAIN_OUTPUT_ROOT / "episode_trajectory_audit.json"
+TRANSPORT_STRESS_REPORT_PATH = (
+    PACKAGE_ROOT / "reports/main_size_trace_transport_stress.json"
+)
+TRANSPORT_STRESS_RUN_DIRECTORY = (
+    PACKAGE_ROOT / "reports/main_size_trace_transport_stress_run"
+)
 _METRICS = ("accuracy", "invalid_rate", "forward_token_ratio", "latency_s")
 _COMPARISONS = {
     "B-A": ("B", "A"),
@@ -47,6 +70,15 @@ _COMPARISONS = {
     "B-C": ("B", "C"),
     "D-B": ("D", "B"),
 }
+WATCHDOG_SHUTDOWN_GRACE_S = 5.0
+
+
+class UnitWatchdogError(RuntimeError):
+    """Report a failed or hard-timed-out isolated main unit."""
+
+    def __init__(self, message: str, diagnostic: Mapping[str, Any]) -> None:
+        super().__init__(message)
+        self.diagnostic = dict(diagnostic)
 
 
 def _sha256(path: Path) -> str:
@@ -63,6 +95,159 @@ def _write_json(path: Path, value: object) -> None:
         encoding="utf-8",
     )
     temporary.replace(path)
+
+
+def _safe_child_error(error: BaseException) -> dict[str, str]:
+    """Return one bounded credential-redacted child-process error."""
+    message = str(error).splitlines()[0] if str(error) else type(error).__name__
+    message = re.sub(r"sk-[A-Za-z0-9_-]+", "sk-<redacted>", message)
+    return {"error_type": type(error).__name__, "message": message[:1000]}
+
+
+def _watchdog_child(
+    target: Callable[..., Any],
+    args: tuple[Any, ...],
+    kwargs: Mapping[str, Any],
+    connection: Any,
+) -> None:
+    """Execute one callable in a new process group and return canonical JSON."""
+    try:
+        if hasattr(os, "setsid"):
+            os.setsid()
+        connection.send({"kind": "ready"})
+        result = target(*args, **dict(kwargs))
+        connection.send(
+            {"kind": "result", "json": json.dumps(result, sort_keys=True)}
+        )
+    except BaseException as error:
+        connection.send({"kind": "error", **_safe_child_error(error)})
+    finally:
+        connection.close()
+
+
+def _terminate_child(
+    process: multiprocessing.Process,
+    *,
+    process_group_ready: bool,
+    grace_s: float,
+) -> None:
+    """Terminate one child and its descendants without touching the parent group."""
+    if not process.is_alive():
+        process.join()
+        return
+    if process_group_ready and hasattr(os, "killpg"):
+        os.killpg(process.pid, signal.SIGTERM)
+    else:
+        process.terminate()
+    process.join(grace_s)
+    if process.is_alive():
+        if process_group_ready and hasattr(os, "killpg"):
+            os.killpg(process.pid, signal.SIGKILL)
+        else:
+            process.kill()
+        process.join(grace_s)
+    if process.is_alive():
+        raise RuntimeError("isolated unit process survived SIGKILL")
+
+
+def _run_with_watchdog(
+    target: Callable[..., Any],
+    *,
+    args: tuple[Any, ...] = (),
+    kwargs: Mapping[str, Any] | None = None,
+    timeout_s: float,
+    grace_s: float = WATCHDOG_SHUTDOWN_GRACE_S,
+) -> Any:
+    """Return one child result or terminate its process group at the hard deadline."""
+    if not isinstance(timeout_s, (int, float)) or isinstance(timeout_s, bool) or timeout_s <= 0:
+        raise ValueError("watchdog timeout_s must be positive")
+    if not isinstance(grace_s, (int, float)) or isinstance(grace_s, bool) or grace_s < 0:
+        raise ValueError("watchdog grace_s must be non-negative")
+    context = multiprocessing.get_context("spawn")
+    receive, send = context.Pipe(duplex=False)
+    process = context.Process(
+        target=_watchdog_child,
+        args=(target, args, dict(kwargs or {}), send),
+    )
+    process.start()
+    send.close()
+    deadline = time.monotonic() + float(timeout_s)
+    process_group_ready = False
+    try:
+        while time.monotonic() < deadline:
+            if receive.poll(min(0.1, max(0.0, deadline - time.monotonic()))):
+                try:
+                    payload = receive.recv()
+                except EOFError:
+                    break
+                kind = payload.get("kind")
+                if kind == "ready":
+                    process_group_ready = True
+                    continue
+                process.join(float(grace_s))
+                if process.is_alive():
+                    _terminate_child(
+                        process,
+                        process_group_ready=process_group_ready,
+                        grace_s=float(grace_s),
+                    )
+                    raise UnitWatchdogError(
+                        "isolated unit did not exit after returning a payload",
+                        {"kind": "lingering_child", "exitcode": process.exitcode},
+                    )
+                if kind == "result":
+                    return json.loads(payload["json"])
+                if kind == "error":
+                    raise UnitWatchdogError(
+                        f"isolated unit failed: {payload['error_type']}: {payload['message']}",
+                        payload,
+                    )
+                raise UnitWatchdogError(
+                    "isolated unit returned an unknown payload",
+                    {"kind": "invalid_payload"},
+                )
+            if not process.is_alive():
+                break
+        if not process.is_alive():
+            process.join()
+            raise UnitWatchdogError(
+                "isolated unit exited without a canonical result",
+                {"kind": "missing_result", "exitcode": process.exitcode},
+            )
+        _terminate_child(
+            process,
+            process_group_ready=process_group_ready,
+            grace_s=float(grace_s),
+        )
+        raise UnitWatchdogError(
+            f"isolated unit exceeded hard timeout of {float(timeout_s):g} seconds",
+            {
+                "kind": "hard_timeout",
+                "timeout_s": float(timeout_s),
+                "shutdown_grace_s": float(grace_s),
+                "terminated": True,
+            },
+        )
+    finally:
+        receive.close()
+
+
+def _execute_main_unit(**kwargs: Any) -> dict[str, Any]:
+    """Execute one main arm under the frozen hard per-unit watchdog."""
+    budget_limits = kwargs.get("budget_limits")
+    if not isinstance(budget_limits, Mapping):
+        raise TypeError("main unit requires budget_limits")
+    wall_time_s = budget_limits.get("wall_time_s")
+    if not isinstance(wall_time_s, (int, float)) or isinstance(wall_time_s, bool):
+        raise ValueError("main unit requires numeric wall_time_s")
+    result = _run_with_watchdog(
+        _execute_arm,
+        kwargs=kwargs,
+        timeout_s=float(wall_time_s),
+    )
+    if not isinstance(result, dict):
+        raise TypeError("isolated main unit must return a JSON object")
+    return result
 
 
 def _validate_hash_reference(parent: Path, reference: Mapping[str, Any]) -> None:
@@ -179,6 +364,10 @@ def _load_main_lock(frozen: Mapping[str, Any]) -> dict[str, Any]:
         EXECUTION_SEMANTICS_AMENDMENT_PATH
     ):
         raise RuntimeError("main lock does not match the execution-semantics amendment")
+    if lock.get("live_transport_amendment_sha256") != _sha256(
+        LIVE_TRANSPORT_AMENDMENT_PATH
+    ):
+        raise RuntimeError("main lock does not match the live-transport amendment")
     if lock.get("main_authorization_sha256") != _sha256(MAIN_AUTHORIZATION_PATH):
         raise RuntimeError("main lock does not match the user authorization")
     if lock["experiment"]["source"]["sha256"] != experiment_source_provenance()[
@@ -282,6 +471,7 @@ def _snapshot_output_context() -> None:
         "main_execution_semantics_amendment_v1.json": (
             EXECUTION_SEMANTICS_AMENDMENT_PATH
         ),
+        "live_transport_amendment_v1.json": LIVE_TRANSPORT_AMENDMENT_PATH,
         "control_plane_lock.json": MAIN_LOCK_PATH,
         "preflight_skips.json": PACKAGE_ROOT / "preflight_skips.json",
         "dataset_manifest.json": PACKAGE_ROOT / "manifests/dataset_manifest_v2.json",
@@ -289,9 +479,71 @@ def _snapshot_output_context() -> None:
         "cost_forecast.json": PACKAGE_ROOT
         / "reports/cost_forecast_after_empty_text_retry.json",
         "main_cost_authorization.json": MAIN_AUTHORIZATION_PATH,
+        "main_size_trace_transport_stress.json": TRANSPORT_STRESS_REPORT_PATH,
     }
     for name, source in sources.items():
         _write_json(MAIN_OUTPUT_ROOT / name, _load_json(source))
+
+
+def run_main_size_trace_transport_stress() -> dict[str, Any]:
+    """Exercise full train/validation Trace transport without scientific reuse."""
+    register_experiment_components()
+    assert_strict_output_evaluator()
+    frozen = validate_frozen_preregistration()
+    _load_main_lock(frozen)
+    micro = _load_json(MICRO_REPORT_PATH)
+    if not micro.get("passed"):
+        raise RuntimeError("transport stress requires a passing fresh A/B/C micro")
+    baseline = _load_json(PACKAGE_ROOT / "baseline_token_manifest.json")
+    baseline_tokens = {
+        str(row["sample_id"]): int(row["baseline_forward_tokens"])
+        for row in baseline["samples"]
+    }
+    run = _execute_main_unit(
+        arm="B",
+        task=str(frozen["task"]),
+        baseline_tokens=baseline_tokens,
+        seed=0,
+        proposals=1,
+        split_limits={"train": 16, "validation": 12, "holdout": 1},
+        budget_limits=frozen["main"]["resource_budgets"],
+        output_directory=TRANSPORT_STRESS_RUN_DIRECTORY,
+        control_plane_lock=MAIN_LOCK_PATH,
+    )
+    policy = run.get("transport_policy", {})
+    gates = {
+        "infrastructure_checks_pass": _infrastructure_checks_pass(run["checks"]),
+        "proposal_path_exercised": run["checks"]["proposal_path_exercised"],
+        "full_train_validation_used": run["split_limits"]
+        == {"train": 16, "validation": 12, "holdout": 1},
+        "transport_policy_visible": all(
+            values
+            == {
+                "request_timeout_s": REQUEST_TIMEOUT_S,
+                "transport_max_attempts": TRANSPORT_MAX_ATTEMPTS,
+                "transport_base_delay_s": TRANSPORT_BASE_DELAY_S,
+            }
+            for values in policy.values()
+        ),
+        "trace_concurrency_bounded": run["normalized_spec"]["levels"][0]["engine"][
+            "config"
+        ]["trainer_kwargs"]["num_threads"]
+        == TRACE_NUM_THREADS,
+        "accounting_consistent": run["checks"]["forward_calls_reconciled"]
+        and run["checks"]["forward_tokens_reconciled"],
+        "holdout_excluded_from_optimization": run["checks"][
+            "holdout_inaccessible_during_optimization"
+        ],
+    }
+    report = {
+        "schema_version": "recursive-opt-main-transport-stress/v1",
+        "scientific_evidence": False,
+        "run": run,
+        "gates": gates,
+        "passed": all(gates.values()),
+    }
+    _write_json(TRANSPORT_STRESS_REPORT_PATH, report)
+    return report
 
 
 def run_main_experiment() -> dict[str, Any]:
@@ -303,6 +555,9 @@ def run_main_experiment() -> dict[str, Any]:
     pilot = _load_json(PACKAGE_ROOT / "reports/pilot_after_empty_text_retry.json")
     if not pilot.get("passed"):
         raise RuntimeError("main experiment requires the complete passing pilot")
+    stress = _load_json(TRANSPORT_STRESS_REPORT_PATH)
+    if not stress.get("passed"):
+        raise RuntimeError("main experiment requires the passing transport stress gate")
     _snapshot_output_context()
     matrix = main_execution_matrix(frozen)
     existing: list[dict[str, Any]] = []
@@ -333,17 +588,38 @@ def run_main_experiment() -> dict[str, Any]:
         if key in by_key:
             run = by_key[key]
         else:
-            run = _execute_arm(
-                arm=arm,
-                task=task,
-                baseline_tokens=baseline_tokens,
-                seed=seed,
-                proposals=proposals,
-                split_limits=main["split_limits"],
-                budget_limits=main["resource_budgets"],
-                output_directory=MAIN_RUNS_DIRECTORY / key,
-                control_plane_lock=MAIN_LOCK_PATH,
-            )
+            try:
+                run = _execute_main_unit(
+                    arm=arm,
+                    task=task,
+                    baseline_tokens=baseline_tokens,
+                    seed=seed,
+                    proposals=proposals,
+                    split_limits=main["split_limits"],
+                    budget_limits=main["resource_budgets"],
+                    output_directory=MAIN_RUNS_DIRECTORY / key,
+                    control_plane_lock=MAIN_LOCK_PATH,
+                )
+            except UnitWatchdogError as error:
+                stopped_after = {
+                    "seed": seed,
+                    "proposal_budget": proposals,
+                    "arm": arm,
+                    "error": str(error),
+                    "watchdog": error.diagnostic,
+                }
+                _write_json(
+                    MAIN_OUTPUT_ROOT / "infrastructure_failures" / key / "watchdog.json",
+                    stopped_after,
+                )
+                progress = _progress_document(
+                    frozen=frozen,
+                    lock=lock,
+                    runs=runs,
+                    stopped_after=stopped_after,
+                )
+                _write_json(MAIN_REPORT_PATH, progress)
+                return progress
         runs.append(run)
         if not _infrastructure_checks_pass(run["checks"]):
             stopped_after = {

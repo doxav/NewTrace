@@ -35,4 +35,7 @@ jobs:
             tests/unit_tests/test_objectives.py \
             tests/unit_tests/test_evaluators_vector.py \
             tests/unit_tests/test_trainers_multiobjective.py \
-            tests/unit_tests/test_recursive_final_hardening.py
+            tests/unit_tests/test_recursive_final_hardening.py \
+            tests/unit_tests/test_recursive_transport.py \
+            experiments/recursive_opt/multiobjective_reasoning/tests
+          PYTHONPATH=. python -m experiments.recursive_opt.multiobjective_reasoning.run offline-contract

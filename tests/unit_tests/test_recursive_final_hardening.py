@@ -571,5 +571,5 @@ def test_readiness_uses_source_digests_without_sha_environment() -> None:
     else:
         assert readiness["required_ci_run"] is None
         assert readiness["blockers"] == [
-            "required recursive-opt v2 offline CI has not yet been observed for the optimizer empty-text retry hotfix"
+            "required recursive-opt v2 offline CI has not yet been observed for the live transport resilience hotfix"
         ]
