@@ -16,3 +16,12 @@ Local provider-free revalidation and required run `32856513753`, job
 `97829714487`, passed. The fresh live A/B/C micro, main-size Trace stress gate,
 and restarted 40-unit matrix remain sequenced after the versioned runtime/source
 lock and the final evidence-HEAD CI gate.
+
+The first post-lock A/B/C micro passed through OpenRouter with the frozen
+`deepseek/deepseek-v4-flash-0731` model. The subsequent stress gate stopped
+before any provider call because its newly spawned watchdog child did not
+initialize the Experiment-0 component registry. The parent had registered the
+components, but the `spawn` interpreter correctly started without that mutable
+process state. This is an experiment-runner watchdog initialization defect, not
+transport or scientific evidence. The micro and failed stress artifacts are
+preserved under `reports/pre_watchdog_child_registry_fix/`.

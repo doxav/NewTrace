@@ -19,6 +19,16 @@ from experiments.recursive_opt.multiobjective_reasoning.specs import build_spec
 from opto.features.recursive_opt import spec as control_plane
 
 
+def _registered_gsm8k_v2_is_available() -> bool:
+    """Report whether a spawned watchdog child initialized experiment registries."""
+    from opto.features.recursive_opt import spec as child_control_plane
+
+    return (
+        "recursive_experiments.dataset.gsm8k@2"
+        in child_control_plane._DATASET_REGISTRY
+    )
+
+
 def _fake_run(
     arm: str,
     seed: int,
@@ -519,6 +529,17 @@ def test_hard_unit_watchdog_terminates_hung_child() -> None:
         "terminated": True,
     }
     assert time.monotonic() - started < 2.0
+
+
+def test_watchdog_child_registers_experiment_components() -> None:
+    """A spawned main unit resolves Experiment-0 datasets without parent state."""
+    assert (
+        main_experiment._run_with_watchdog(
+            _registered_gsm8k_v2_is_available,
+            timeout_s=5.0,
+        )
+        is True
+    )
 
 
 def test_main_size_trace_transport_stress_is_infrastructure_only(

@@ -114,6 +114,7 @@ def _watchdog_child(
     try:
         if hasattr(os, "setsid"):
             os.setsid()
+        register_experiment_components()
         connection.send({"kind": "ready"})
         result = target(*args, **dict(kwargs))
         connection.send(
