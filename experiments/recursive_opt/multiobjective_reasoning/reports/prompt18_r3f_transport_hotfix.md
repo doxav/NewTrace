@@ -12,7 +12,7 @@ reasoning, request parameters, objective, hard constraint, arms, paired seeds,
 candidate budgets, and statistical rules are unchanged. No B/C/D main
 scientific outcome existed before the amendment.
 
-Local provider-free revalidation passed. The fresh live A/B/C micro, the
-main-size Trace stress gate, and the restarted 40-unit matrix remain forbidden
-until the implementation commit has a green required CI job and a versioned
-lock for the new runtime/source digests.
+Local provider-free revalidation and required run `32856513753`, job
+`97829714487`, passed. The fresh live A/B/C micro, main-size Trace stress gate,
+and restarted 40-unit matrix remain sequenced after the versioned runtime/source
+lock and the final evidence-HEAD CI gate.

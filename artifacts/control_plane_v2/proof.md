@@ -17,7 +17,11 @@ The pre-CI authoritative digests are runtime
 `420b5351063a56b0ad274a6c39b6aaa4dc95b9094434600e89ea79f3eccc8872`
 and registry
 `f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
-Readiness is false until the required Actions job passes the expanded workflow.
+Required Actions run `32856513753`, job `97829714487`, passed the expanded
+network-isolated workflow on `c6a109ca2aa2d5cf62074fd16b34570582092aa3`.
+The earlier run `32856225573` is retained as a test-dependency collection
+failure, not a runtime test failure. Readiness is true for the matching source
+digests.
 
 ## Optimizer empty-text retry proof
 

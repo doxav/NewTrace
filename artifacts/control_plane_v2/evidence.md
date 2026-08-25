@@ -1,6 +1,6 @@
 # Control plane v2 implementation evidence
 
-## Live transport resilience hotfix — pre-CI (2026-08-25)
+## Live transport resilience hotfix — CI verified (2026-08-25)
 
 Canonical profiles now own explicit request timeout and bounded transport
 attempt policy, ignore legacy transport environment overrides in v2, and
@@ -15,7 +15,10 @@ contract, and one clean-kernel notebook pass. The runtime digest is
 `420b5351063a56b0ad274a6c39b6aaa4dc95b9094434600e89ea79f3eccc8872`;
 the registry digest remains
 `f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
-Required CI and Prompt-18 readiness remain false pending the external workflow.
+The first workflow attempt exposed a missing test-only `datasets` extra before
+collection. Required run `32856513753`, job `97829714487`, then completed
+successfully on `c6a109ca2aa2d5cf62074fd16b34570582092aa3`; Prompt-18 readiness is true
+for the matching runtime and registry digests.
 
 ## Optimizer empty-text semantic retry — CI verified (2026-08-24)
 

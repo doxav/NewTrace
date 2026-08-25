@@ -93,7 +93,7 @@ terminates its process group after the frozen 7,200-second wall budget, with a
 fixed five-second shutdown grace. A timeout produces an infrastructure record
 and stops the matrix; it cannot create a candidate or scientific result.
 
-## Provider-free verification before CI
+## Provider-free and required-CI verification
 
 - transport/profile/watchdog and main-runner seams: 28 passed;
 - focused control-plane/objective matrix: 225 passed;
@@ -110,5 +110,13 @@ pre-CI runtime digest is
 `420b5351063a56b0ad274a6c39b6aaa4dc95b9094434600e89ea79f3eccc8872`;
 the registry digest remains
 `f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
-Readiness remains false until the required workflow is observed green for the
-committed implementation.
+The first expanded workflow run, `32856225573` / job `97828761794`, failed at
+collection because the newly included Experiment-0 tests lacked the existing
+`datasets==3.6.0` test extra. No runtime test executed in that failed job. The
+workflow retained its explicit `.[gepa]` installation, added `.[test]`, and
+cached only the exact pinned benchmark revisions before socket isolation.
+
+Required run `32856513753`, job `97829714487`, then completed successfully on
+`c6a109ca2aa2d5cf62074fd16b34570582092aa3` in 1m44s. The required test step
+ran sockets disabled and the standalone offline contract ran with
+`HF_HUB_OFFLINE=1`. Digest-based readiness is true for that implementation.
