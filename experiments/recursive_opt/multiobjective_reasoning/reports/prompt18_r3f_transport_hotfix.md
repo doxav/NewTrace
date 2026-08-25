@@ -25,3 +25,8 @@ components, but the `spawn` interpreter correctly started without that mutable
 process state. This is an experiment-runner watchdog initialization defect, not
 transport or scientific evidence. The micro and failed stress artifacts are
 preserved under `reports/pre_watchdog_child_registry_fix/`.
+
+The one-line child initialization correction and its real spawned-process test
+passed required run `32859241561`, job `97838818858`, on
+`5d162e3b04f4efd0b6534f5963c6ec701302830c`. The control-plane runtime digest
+remains unchanged; the new experiment source digest is locked separately.
