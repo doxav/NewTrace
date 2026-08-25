@@ -1,0 +1,157 @@
+{
+  "main_full_v2_pool": {
+    "assumed_candidate_budgets": [
+      6,
+      12
+    ],
+    "assumed_seeds": 5,
+    "projected_cost_usd": 1.0139590066666666,
+    "projected_tokens": {
+      "completion_tokens": 3320217.3333333335,
+      "prompt_tokens": 5203998.583333333,
+      "total_tokens": 8524215.916666666
+    },
+    "projected_tokens_by_arm": {
+      "A": {
+        "completion_tokens": 47542.083333333336,
+        "prompt_tokens": 97982.08333333334,
+        "total_tokens": 145524.1666666667
+      },
+      "B": {
+        "completion_tokens": 1453832.25,
+        "prompt_tokens": 2330922.75,
+        "total_tokens": 3784755.0
+      },
+      "C": {
+        "completion_tokens": 621816.0,
+        "prompt_tokens": 782271.75,
+        "total_tokens": 1404087.75
+      },
+      "D": {
+        "completion_tokens": 1197027.0,
+        "prompt_tokens": 1992822.0,
+        "total_tokens": 3189849.0
+      }
+    }
+  },
+  "main_monetary_ceiling_usd": null,
+  "main_run_authorized": false,
+  "main_stop_reason": "no explicit main-run monetary ceiling is acknowledged",
+  "method": "actual complete pilot usage, including semantic retries, scaled by frozen sample and proposal units",
+  "micro_smoke": {
+    "estimated_cost_usd_by_arm": {
+      "A": 0.00010025999999999999,
+      "B": 0.00219786,
+      "C": 0.00052832
+    },
+    "estimated_total_cost_usd": 0.00282644,
+    "measured_tokens_by_arm": {
+      "A": {
+        "completion_tokens": 313.0,
+        "prompt_tokens": 549.0,
+        "total_tokens": 862.0
+      },
+      "B": {
+        "completion_tokens": 8905.0,
+        "prompt_tokens": 7437.0,
+        "total_tokens": 16342.0
+      },
+      "C": {
+        "completion_tokens": 1920.0,
+        "prompt_tokens": 2284.0,
+        "total_tokens": 4204.0
+      }
+    }
+  },
+  "pilot": {
+    "complete": true,
+    "cost_usd": 0.10534112,
+    "retry_cost_usd_by_arm": {
+      "A": 0.0,
+      "B": 0.00339376,
+      "C": 0.00026104,
+      "D": 0.00143938
+    },
+    "retry_statistics_by_arm": {
+      "A": {
+        "empty_text_responses": 0,
+        "semantic_retries": 0,
+        "semantic_retry_completion_tokens": 0,
+        "semantic_retry_cost_usd": 0,
+        "semantic_retry_prompt_tokens": 0,
+        "semantic_retry_total_tokens": 0
+      },
+      "B": {
+        "empty_text_responses": 3,
+        "semantic_retries": 3,
+        "semantic_retry_completion_tokens": 13180,
+        "semantic_retry_cost_usd": 0,
+        "semantic_retry_prompt_tokens": 12767,
+        "semantic_retry_total_tokens": 25947
+      },
+      "C": {
+        "empty_text_responses": 1,
+        "semantic_retries": 1,
+        "semantic_retry_completion_tokens": 1164,
+        "semantic_retry_cost_usd": 0,
+        "semantic_retry_prompt_tokens": 644,
+        "semantic_retry_total_tokens": 1808
+      },
+      "D": {
+        "empty_text_responses": 2,
+        "semantic_retries": 2,
+        "semantic_retry_completion_tokens": 4089,
+        "semantic_retry_cost_usd": 0,
+        "semantic_retry_prompt_tokens": 8792,
+        "semantic_retry_total_tokens": 12881
+      }
+    },
+    "tokens": {
+      "completion_tokens": 344436.0,
+      "prompt_tokens": 541783.0,
+      "total_tokens": 886219.0
+    },
+    "tokens_by_arm": {
+      "A": {
+        "completion_tokens": 8777.0,
+        "prompt_tokens": 18089.0,
+        "total_tokens": 26866.0
+      },
+      "B": {
+        "completion_tokens": 149111.0,
+        "prompt_tokens": 239069.0,
+        "total_tokens": 388180.0
+      },
+      "C": {
+        "completion_tokens": 63776.0,
+        "prompt_tokens": 80233.0,
+        "total_tokens": 144009.0
+      },
+      "D": {
+        "completion_tokens": 122772.0,
+        "prompt_tokens": 204392.0,
+        "total_tokens": 327164.0
+      }
+    }
+  },
+  "pilot_forecast_complete": true,
+  "pricing": {
+    "cache_read_usd_per_million_tokens": 0.016,
+    "input_usd_per_million_tokens": 0.08,
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "output_usd_per_million_tokens": 0.18,
+    "provider": "openrouter",
+    "retrieved_at_utc": "2026-08-23T19:09:29Z",
+    "schema_version": "recursive-opt-provider-pricing/v1",
+    "source": "https://openrouter.ai/api/v1/models",
+    "source_model_id": "deepseek/deepseek-v4-flash-0731",
+    "source_per_token": {
+      "completion": "0.00000018",
+      "input_cache_read": "0.000000016",
+      "prompt": "0.00000008"
+    }
+  },
+  "recommended_ceiling_safety_margin_fraction": 0.2,
+  "recommended_main_cost_ceiling_usd": 1.2167508079999998,
+  "schema_version": "recursive-opt-cost-forecast/v3"
+}
