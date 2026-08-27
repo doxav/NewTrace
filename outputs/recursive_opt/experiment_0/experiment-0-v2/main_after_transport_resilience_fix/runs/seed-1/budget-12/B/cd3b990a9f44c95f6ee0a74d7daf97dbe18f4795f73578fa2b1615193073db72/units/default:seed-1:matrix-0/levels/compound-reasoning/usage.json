@@ -6,17 +6,11 @@
     "total_tokens": 0
   },
   "forward": {
-    "calls": 206,
-    "completion_tokens": 10376,
+    "calls": 568,
+    "completion_tokens": 33386,
     "cost_usd": 0.0,
-    "prompt_tokens": 28760,
-    "total_tokens": 39136,
-    "transport_connection_resets": 0,
-    "transport_exhausted_requests": 0,
-    "transport_recovered_requests": 4,
-    "transport_retry_attempts": 4,
-    "transport_server_disconnects": 0,
-    "transport_transient_failures": 4
+    "prompt_tokens": 83121,
+    "total_tokens": 116507
   },
   "judge": {
     "completion_tokens": 0,
@@ -25,22 +19,16 @@
     "total_tokens": 0
   },
   "optimizer": {
-    "calls": 4,
-    "completion_tokens": 12313,
+    "calls": 13,
+    "completion_tokens": 28421,
     "cost_usd": 0.0,
-    "empty_text_responses": 0,
-    "prompt_tokens": 15827,
-    "semantic_retries": 0,
-    "semantic_retry_completion_tokens": 0,
-    "semantic_retry_cost_usd": 0.0,
-    "semantic_retry_prompt_tokens": 0,
-    "semantic_retry_total_tokens": 0,
-    "total_tokens": 28140,
-    "transport_connection_resets": 0,
-    "transport_exhausted_requests": 1,
-    "transport_recovered_requests": 0,
-    "transport_retry_attempts": 2,
-    "transport_server_disconnects": 0,
-    "transport_transient_failures": 3
+    "empty_text_responses": 1,
+    "prompt_tokens": 52192,
+    "semantic_retries": 1,
+    "semantic_retry_completion_tokens": 4711,
+    "semantic_retry_cost_usd": 0,
+    "semantic_retry_prompt_tokens": 3737,
+    "semantic_retry_total_tokens": 8448,
+    "total_tokens": 80613
   }
 }

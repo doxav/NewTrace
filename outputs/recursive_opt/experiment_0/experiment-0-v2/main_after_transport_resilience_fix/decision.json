@@ -1,0 +1,19 @@
+{
+  "control_plane": "validated",
+  "efficiency": {
+    "B": "tied",
+    "C": "tied"
+  },
+  "episode_dataset": "not ready",
+  "gepa_engine": "uncertain",
+  "quality": {
+    "B": "tied",
+    "C": "tied"
+  },
+  "reason": "Main execution and statistics completed, but Prompt-19 episode export is blocked by missing proposal-level candidate trajectory provenance.",
+  "safety": "failed",
+  "schema_version": "recursive-opt-experiment-decision/v2",
+  "smallest_required_extension": "Persist one candidate_trajectory record per Trace and GEPA proposal with candidate artifact or hash, parent/seed relation, canonical evaluation, and selected/rejected status. The engine adapters must emit this provenance without changing proposal, evaluation, or selection behavior.",
+  "status": "RETURN_TO_CONTROL_PLANE_FOR_TRAJECTORY_PROVENANCE",
+  "trace_engine": "uncertain"
+}
