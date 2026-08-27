@@ -59,4 +59,13 @@ trajectory required by the existing episode-export audit.
   LangGraph deprecation warning
 - offline Experiment-0 A/B/C/D contract: passed
 - Ruff, JSON validation, diff check, and tracked credential scan: passed
-- readiness remains false until the required external CI job is observed green.
+
+## Required CI outcome
+
+- implementation commit: `6aa9da041861bf42a2931f2694b5af74076d9e6c`
+- run: `33094071518`
+- required job: `recursive-opt v2 offline (required)` (`98594256090`)
+- result: `completed / success`
+- URL: <https://github.com/doxav/NewTrace/actions/runs/33094071518>
+
+Digest-based readiness is restored for the CI-verified runtime.
