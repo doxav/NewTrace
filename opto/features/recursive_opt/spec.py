@@ -118,7 +118,6 @@ class RunResult:
     level_results: Tuple[Mapping[str, Any], ...] = ()
     portable: bool = True
     promotable: bool = True
-
     def to_dict(self) -> Dict[str, Any]:
         """Return the canonical result as plain JSON-compatible containers."""
         return {'unit_id': self.unit_id, 'plan_fingerprint': self.plan_fingerprint, 'spec_fingerprint': self.spec_fingerprint, 'engine': self.engine, 'module_ref': self.module_ref, 'status': self.status, 'valid': self.valid, 'evaluation': {'valid': self.evaluation.valid, 'status': self.evaluation.status, 'metrics': _thaw(self.evaluation.metrics), 'feedback': _thaw(self.evaluation.feedback), 'trace': _thaw(self.evaluation.trace), 'usage': _thaw(self.evaluation.usage), 'artifacts': _thaw(self.evaluation.artifacts), 'error': self.evaluation.error}, 'artifact': _thaw(self.artifact), 'lineage': _thaw(self.lineage), 'usage': _thaw(self.usage), 'budget': _thaw(self.budget), 'metadata': _thaw(self.metadata), 'error': self.error, 'level_results': _thaw(self.level_results), 'portable': self.portable, 'promotable': self.promotable}
@@ -130,7 +129,6 @@ class ExecutionPlan:
     fingerprint: str
     raw_spec: Mapping[str, Any]
     code_provenance: Mapping[str, Any]
-
     def explain(self) -> Dict[str, Any]:
         """Return a compact JSON explanation of this immutable plan."""
         return {'fingerprint': self.fingerprint, 'execution_units': len(self.units), 'engines': sorted({level.spec['engine']['name'] for unit in self.units for level in unit.levels}), 'module_refs': sorted({level.spec['module']['ref'] for unit in self.units for level in unit.levels}), 'level_ids': [level.level_id for level in self.units[0].levels], 'unit_ids': [unit.unit_id for unit in self.units]}
@@ -998,6 +996,7 @@ def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping
     gepa_resources = {**resources, '_reflection_lm': _gepa_reflection_client(prepared['clients'].get('optimizer')), '_budget_stopper': _GepaBudgetStopper(guard)}
     optimize_anything, config = _resolve_gepa(gepa_resources, config_values)
     gepa_result = optimize_anything(seed_candidate=seed_candidate, evaluator=gepa_evaluator, dataset=train, valset=validation, objective=spec['objective']['intent'], config=config)
+    gepa_history = gepa_result.to_dict() if callable(getattr(gepa_result, 'to_dict', None)) else {}
     best_candidate = _gepa_best_candidate(gepa_result)
     final_module = _build_level_module(prepared['bound_spec'], prepared['module_resources'])
     _restore_level_module(spec, final_module, _candidate_to_artifact(seed_artifact, best_candidate))
@@ -1005,7 +1004,7 @@ def _run_gepa_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping
     final_dataset = holdout or validation or train
     evaluation = _evaluate_dataset(final_module, final_dataset, prepared['final_context'], objective, evaluator, guard, prepared['metered_roles'], prepared['records'])
     artifact = _snapshot_level_module(spec, final_module)
-    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status='success' if evaluation.valid else 'invalid', valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'gepa_version': GEPA_VERSION, 'gepa_evaluations': evaluation_info, 'evaluator_records': prepared['records'], 'objective_projection': objective['config'].mode, 'gepa_holdout_externalized': True, 'gepa_budget_mapping': {'evaluator_runs': 'engine.max_metric_calls', 'candidates': 'engine.max_candidate_proposals', 'seed': 'engine.seed', 'wall_time_s': 'stop_callbacks', 'optimizer_llm_calls': 'wrapped reflection_lm', 'eval_llm_calls': 'wrapped evaluator roles', 'total_tokens': 'wrapped role clients'}, 'selected_models': _selected_role_models(prepared['clients']), 'optimizer_response_diagnostics': guard.optimizer_response_diagnostics}), error=evaluation.error)
+    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status='success' if evaluation.valid else 'invalid', valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'gepa_version': GEPA_VERSION, 'gepa_evaluations': evaluation_info, 'candidate_trajectory': [{'candidate_id': index, 'artifact': _candidate_to_artifact(seed_artifact, candidate), 'parent_id': gepa_history['parents'][index], 'evaluation': {'score': float(score)}, 'status': 'selected' if index == gepa_history['best_idx'] else 'rejected'} for index, (candidate, score) in enumerate(zip(gepa_history.get('candidates', []), gepa_history.get('val_aggregate_scores', [])))], 'evaluator_records': prepared['records'], 'objective_projection': objective['config'].mode, 'gepa_holdout_externalized': True, 'gepa_budget_mapping': {'evaluator_runs': 'engine.max_metric_calls', 'candidates': 'engine.max_candidate_proposals', 'seed': 'engine.seed', 'wall_time_s': 'stop_callbacks', 'optimizer_llm_calls': 'wrapped reflection_lm', 'eval_llm_calls': 'wrapped evaluator roles', 'total_tokens': 'wrapped role clients'}, 'selected_models': _selected_role_models(prepared['clients']), 'optimizer_response_diagnostics': guard.optimizer_response_diagnostics}), error=evaluation.error)
 def _candidate_to_artifact(seed_artifact: Mapping[str, Any], candidate: Any) -> Dict[str, Any]:
     """Convert GEPA text/component candidates back to the registered artifact."""
     components = seed_artifact.get('components')
@@ -1107,6 +1106,7 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
     validation = list(access.read('validation', phase='candidate_selection'))
     initial_artifact = _snapshot_level_module(spec, module)
     initial_validation: Optional[EvaluationResult] = None
+    trainer_result = None
     if fit and validation and spec['engine']['config']['validation_gate']:
         initial_validation = _evaluate_dataset(module, validation, prepared['fit_context'], objective, evaluator, guard, prepared['metered_roles'], prepared['records'])
     budget_exhausted: Optional[str] = None
@@ -1162,7 +1162,7 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
         budget_exhausted = _safe_error(error)
     artifact = _snapshot_level_module(spec, module)
     status = 'budget_exhausted' if budget_exhausted else 'success' if evaluation.valid else 'invalid'
-    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status=status, valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'module_capabilities': sorted(_module_entry(spec['module']['ref']).capabilities), 'objective_mode': objective['config'].mode, 'evaluator_records': prepared['records'], 'trace_optimize_path': fit, 'selected_models': _selected_role_models(prepared['clients']), 'budget_exhausted': budget_exhausted, 'optimizer_response_diagnostics': guard.optimizer_response_diagnostics}), error=evaluation.error)
+    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status=status, valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'module_capabilities': sorted(_module_entry(spec['module']['ref']).capabilities), 'objective_mode': objective['config'].mode, 'candidate_trajectory': [] if trainer_result is None else [{'candidate_id': index, 'artifact': _snapshot_level_module(spec, getattr(candidate_module, 'module', candidate_module)), 'seed_relation': 'trainer_base', 'evaluation': {'score': None if candidate.mean_score() is None else float(candidate.mean_score())}, 'status': 'selected' if _snapshot_level_module(spec, getattr(candidate_module, 'module', candidate_module)) == artifact else 'rejected'} for index, (_, candidate) in enumerate([item for item in getattr(getattr(trainer_result, 'memory', None), 'memory', []) or [] if isinstance(item, tuple) and len(item) == 2 and hasattr(item[1], 'get_module')]) for candidate_module in [candidate.get_module()]], 'evaluator_records': prepared['records'], 'trace_optimize_path': fit, 'selected_models': _selected_role_models(prepared['clients']), 'budget_exhausted': budget_exhausted, 'optimizer_response_diagnostics': guard.optimizer_response_diagnostics}), error=evaluation.error)
 class _EvaluatedModule(Module):
     """Attach registered evaluator results to real Trace parameter dependencies."""
 

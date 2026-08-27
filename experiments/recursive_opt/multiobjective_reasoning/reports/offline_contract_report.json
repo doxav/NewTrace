@@ -15,7 +15,7 @@
           "evaluator_runs": 8,
           "optimizer_llm_calls": 0,
           "total_tokens": 1862,
-          "wall_time_s": 0.017674
+          "wall_time_s": 0.022535
         },
         "candidates": 2,
         "eval_llm_calls": 80,
@@ -31,7 +31,7 @@
         "accuracy": 1.0,
         "forward_token_ratio": 0.4578513309035469,
         "invalid_rate": 0.0,
-        "latency_s": 5.201602471061051e-05
+        "latency_s": 7.308740168809891e-05
       },
       "observations": {
         "evaluator_count": 8,
@@ -111,8 +111,8 @@
           "eval_llm_calls": 56,
           "evaluator_runs": 28,
           "optimizer_llm_calls": 1,
-          "total_tokens": 8655,
-          "wall_time_s": 4.459817
+          "total_tokens": 8656,
+          "wall_time_s": 1.233088
         },
         "candidates": 2,
         "eval_llm_calls": 80,
@@ -128,7 +128,7 @@
         "accuracy": 1.0,
         "forward_token_ratio": 0.3440509037750985,
         "invalid_rate": 0.0,
-        "latency_s": 4.633798380382359e-05
+        "latency_s": 6.420776480808854e-05
       },
       "observations": {
         "evaluator_count": 28,
@@ -225,13 +225,13 @@
           "completion_tokens": 90,
           "cost_usd": 0.0,
           "empty_text_responses": 0,
-          "prompt_tokens": 3154,
+          "prompt_tokens": 3155,
           "semantic_retries": 0,
           "semantic_retry_completion_tokens": 0,
           "semantic_retry_cost_usd": 0,
           "semantic_retry_prompt_tokens": 0,
           "semantic_retry_total_tokens": 0,
-          "total_tokens": 3244
+          "total_tokens": 3245
         }
       },
       "valid": true
@@ -250,8 +250,8 @@
           "eval_llm_calls": 36,
           "evaluator_runs": 18,
           "optimizer_llm_calls": 1,
-          "total_tokens": 4582,
-          "wall_time_s": 0.035136
+          "total_tokens": 4581,
+          "wall_time_s": 0.048463
         },
         "candidates": 2,
         "eval_llm_calls": 80,
@@ -267,7 +267,7 @@
         "accuracy": 1.0,
         "forward_token_ratio": 0.39625596004038594,
         "invalid_rate": 0.0,
-        "latency_s": 4.9151378334499896e-05
+        "latency_s": 7.4746974860318e-05
       },
       "observations": {
         "evaluator_count": 18,
@@ -344,13 +344,13 @@
           "completion_tokens": 7,
           "cost_usd": 0.0,
           "empty_text_responses": 0,
-          "prompt_tokens": 665,
+          "prompt_tokens": 664,
           "semantic_retries": 0,
           "semantic_retry_completion_tokens": 0,
           "semantic_retry_cost_usd": 0,
           "semantic_retry_prompt_tokens": 0,
           "semantic_retry_total_tokens": 0,
-          "total_tokens": 672
+          "total_tokens": 671
         }
       },
       "valid": true
@@ -370,7 +370,7 @@
           "evaluator_runs": 19,
           "optimizer_llm_calls": 1,
           "total_tokens": 6589,
-          "wall_time_s": 0.094607
+          "wall_time_s": 0.106854
         },
         "candidates": 2,
         "eval_llm_calls": 80,
@@ -386,7 +386,7 @@
         "accuracy": 1.0,
         "forward_token_ratio": 0.34427694355810035,
         "invalid_rate": 0.0,
-        "latency_s": 5.224661435931921e-05
+        "latency_s": 6.618833867833018e-05
       },
       "observations": {
         "evaluator_count": 19,
@@ -587,11 +587,11 @@
   "plan_registry_sha256": {
     "A": "c7cd082c9e177180c448e11285bae9d23d53a4f48cfdeba886d7d6121d2d6d8b",
     "B": "4afb255433b86255efcd98b0446fa4f836cc1d5b9d9f161d116b9567409ace27",
-    "C": "69c3e46369da4c978a3d41b417d6bf6fb0dbb90e11148d0848c6bd8385ea8a80",
+    "C": "0eb8e65d5bf6b667988e836c5945b14a614600a6e65652150b14897d5c6dae26",
     "D": "4afb255433b86255efcd98b0446fa4f836cc1d5b9d9f161d116b9567409ace27"
   },
   "registry_sha256": "f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4",
-  "runtime_tree_sha256": "420b5351063a56b0ad274a6c39b6aaa4dc95b9094434600e89ea79f3eccc8872",
+  "runtime_tree_sha256": "89156f8abc7d198d439aaa923b9c154df48b14a97480363a29a25e34900d2877",
   "schema_version": "recursive-opt-offline-contract/v1",
   "task": "gsm8k"
 }

@@ -403,6 +403,42 @@ def test_episode_audit_accepts_complete_candidate_trajectory(
     assert audit["smallest_required_extension"] is None
 
 
+@pytest.mark.parametrize(
+    "trajectory",
+    [
+        [{"seed_relation": "P0", "evaluation": {}, "status": "selected"}],
+        [{"artifact_sha256": "a" * 64, "evaluation": {}, "status": "selected"}],
+        [{"artifact_sha256": "a" * 64, "seed_relation": "P0", "status": "selected"}],
+        [
+            {
+                "artifact_sha256": "a" * 64,
+                "seed_relation": "P0",
+                "evaluation": {},
+                "status": "unknown",
+            }
+        ],
+    ],
+)
+def test_episode_audit_rejects_incomplete_candidate_trajectory(
+    monkeypatch: pytest.MonkeyPatch,
+    trajectory: list[dict[str, Any]],
+) -> None:
+    """Every required proposal-provenance dimension is independently causal."""
+    runs = [run for run in _synthetic_main_runs() if run["arm"] in {"B", "C"}]
+    monkeypatch.setattr(
+        main_experiment,
+        "_persisted_level_result",
+        lambda run: (
+            main_experiment.REPOSITORY_ROOT / "result.json",
+            {"metadata": {"candidate_trajectory": trajectory}},
+        ),
+    )
+
+    audit = main_experiment.audit_candidate_trajectories({"runs": runs})
+
+    assert audit["ready_for_episode_export"] is False
+
+
 def test_main_runner_checkpoints_all_frozen_units(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

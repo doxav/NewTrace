@@ -257,6 +257,18 @@ def _output_data(output: Any) -> Any:
     return getattr(output, "data", output)
 
 
+def _assert_candidate_trajectory(value: Any) -> tuple[Mapping[str, Any], ...]:
+    """Require persisted proposal provenance without evaluating any candidate."""
+    assert isinstance(value, tuple) and value
+    for row in value:
+        assert isinstance(row.get("artifact"), Mapping)
+        assert "parent_id" in row or "seed_relation" in row
+        assert isinstance(row.get("evaluation"), Mapping)
+        assert row["status"] in {"selected", "rejected"}
+    assert any(row["status"] == "selected" for row in value)
+    return value
+
+
 def _bound_evaluator(
     output: Any, example: Any, _context: Mapping[str, Any]
 ) -> EvaluationResult:
@@ -1262,7 +1274,9 @@ def test_22i_optimizer_normal_text_does_not_retry() -> None:
     assert diagnostics[0]["content_present"] is True
 
 
-def test_22j_trace_real_optimizer_retries_empty_text_and_proposes() -> None:
+def test_22j_trace_real_optimizer_retries_empty_text_and_proposes(
+    tmp_path: Path,
+) -> None:
     def valid_proposal(*_args: Any, **kwargs: Any) -> Any:
         """Return a valid update for the exact runtime-generated parameter name."""
         prompt = "\n".join(message["content"] for message in kwargs["messages"])
@@ -1297,7 +1311,13 @@ def test_22j_trace_real_optimizer_retries_empty_text_and_proposes() -> None:
     }
     level["llm_roles"] = {"optimizer": "optimizer"}
     raw = _spec([level])
-    raw["runtime"] = {"offline": True, "test_mode": True, "seed": 7}
+    raw["runtime"] = {
+        "offline": True,
+        "test_mode": True,
+        "seed": 7,
+        "resume": True,
+    }
+    raw["outputs"] = {"directory": str(tmp_path)}
     raw["llm_profiles"] = {
         "optimizer": {
             "provider": "fake",
@@ -1323,7 +1343,7 @@ def test_22j_trace_real_optimizer_retries_empty_text_and_proposes() -> None:
         },
     )
 
-    assert result.valid and result.status == "success"
+    assert result.valid and result.status == "success", result.error
     assert result.artifact["components"]["planner"] == "correct"
     assert len(provider.requests) == 2
     assert provider.requests[0] == provider.requests[1]
@@ -1335,6 +1355,26 @@ def test_22j_trace_real_optimizer_retries_empty_text_and_proposes() -> None:
     assert result.budget["accounted"]["total_tokens"] == 22
     assert result.budget["accounted"]["candidates_proposed"] >= 1
     assert result.budget["accounted"]["candidates_evaluated"] >= 1
+    trajectory = _assert_candidate_trajectory(
+        result.metadata["candidate_trajectory"]
+    )
+    assert len(trajectory) == result.budget["accounted"]["candidates_proposed"]
+    assert any(
+        row["artifact"]["components"]["planner"] == "correct"
+        and row["status"] == "selected"
+        and isinstance(row["evaluation"].get("score"), float)
+        for row in trajectory
+    )
+
+    resumed = S.run_spec(
+        raw,
+        resources={
+            "llm_factory": lambda _profile, _role: provider,
+            "preflight_checker": lambda _model: None,
+        },
+    )
+    assert resumed.metadata["candidate_trajectory"] == trajectory
+    assert len(provider.requests) == 2
 
 
 def test_22k_direct_optoprime_v2_missing_text_is_explicit() -> None:
@@ -1480,6 +1520,20 @@ def test_22g_real_gepa_reflection_proposal_through_run_spec(
         if split == "holdout"
     )
     assert result.metadata["gepa_holdout_externalized"] is True
+    trajectory = _assert_candidate_trajectory(
+        result.metadata["candidate_trajectory"]
+    )
+    assert len(trajectory) >= 2
+    assert {
+        row["artifact"]["components"]["planner"] for row in trajectory
+    } >= {"wrong", "correct"}
+    assert any(
+        row["artifact"]["components"]["planner"] == "correct"
+        and row["status"] == "selected"
+        and isinstance(row["evaluation"].get("score"), float)
+        for row in trajectory
+    )
+    assert len(provider_calls) == 2
 
 
 def test_23_budget_is_enforced_before_evaluator_run() -> None:
