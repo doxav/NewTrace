@@ -139,17 +139,18 @@
     "opto/features/recursive_opt/capabilities.py": 404,
     "opto/features/recursive_opt/decisions.py": 444,
     "opto/features/recursive_opt/effects.py": 137,
-    "opto/features/recursive_opt/experiments.py": 249,
+    "opto/features/recursive_opt/experiments.py": 248,
     "opto/features/recursive_opt/inspect_utils.py": 116,
-    "opto/features/recursive_opt/levels.py": 915,
+    "opto/features/recursive_opt/levels.py": 931,
     "opto/features/recursive_opt/memory.py": 531,
-    "opto/features/recursive_opt/numeric_optimizers.py": 243,
+    "opto/features/recursive_opt/numeric_optimizers.py": 254,
     "opto/features/recursive_opt/optimize.py": 397,
     "opto/features/recursive_opt/progress.py": 184,
     "opto/features/recursive_opt/runmode.py": 328,
-    "opto/features/recursive_opt/spec.py": 2732,
-    "opto/features/recursive_opt/tracebench.py": 1327,
+    "opto/features/recursive_opt/spec.py": 2835,
+    "opto/features/recursive_opt/tracebench.py": 1330,
     "opto/features/recursive_opt/traces.py": 195
   },
-  "total_lines": 8850
+  "total_lines": 8982,
+  "note": "Informational inventory only. The line-count assertion was removed (D8): it constrained formatting rather than complexity and drove spec.py into a one-statement-per-function style."
 }

@@ -19,9 +19,8 @@ import statistics
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
-# Scores at or below this are treated as invalid candidates and excluded from
-# means (kept in sync with levels.DEFAULT_INVALID_FLOOR).
-_INVALID_FLOOR = -1.0
+# Scores at or below this are treated as invalid candidates and excluded from means.
+from .levels import DEFAULT_INVALID_FLOOR as _INVALID_FLOOR
 
 
 def seed_everything(seed: int) -> None:

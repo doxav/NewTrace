@@ -74,11 +74,14 @@ class _AskTellOptimizer(Optimizer):
     """
 
     def __init__(self, parameters, *, evaluate: Callable[[Dict[str, Any]], float],
-                 space: Dict[str, Any], max_trials: int = 16, **kwargs):
+                 space: Dict[str, Any], max_trials: int = 16, seed: int = 0, **kwargs):
         super().__init__(parameters)
         self._evaluate = evaluate
         self._space = space
         self._max_trials = int(max_trials)
+        # Explicit, reproducible search. Pass a different `seed` for a multi-seed sweep;
+        # leaving it to the ambient global RNG makes a result depend on execution order.
+        self.seed = int(seed)
         self._best: Optional[Tuple[float, Dict[str, Any]]] = None
         self._history: List[Tuple[Dict[str, Any], float]] = []
 
@@ -142,7 +145,15 @@ class OptunaOptimizer(_AskTellOptimizer):
             self._record(assignment, score)
             return score
 
-        study = optuna.create_study(direction="maximize")
+        # Seed the sampler. An unseeded TPE study makes every result depend on the
+        # ambient global RNG state, so the SAME search can succeed or fail purely
+        # because of what ran before it -- which is indefensible in a package whose
+        # purpose is reliable measurement, and which showed up as an order-dependent
+        # test failure. `seed` is settable for deliberate multi-seed sweeps.
+        study = optuna.create_study(
+            direction="maximize",
+            sampler=optuna.samplers.TPESampler(seed=self.seed),
+        )
         study.optimize(objective, n_trials=self._max_trials, show_progress_bar=False)
 
     def _deterministic_search(self) -> None:

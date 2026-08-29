@@ -1318,10 +1318,13 @@ def make_multiobjective_evaluator(task_ids, objectives, n_tasks: int = 4,
         except BudgetExceeded:
             raise
         except Exception as exc:
-            return (
-                {"accuracy": 0.0, "cost": 1.0},
-                f"[real_trace_bench_multiobjective] raised {type(exc).__name__}: {exc}",
-                -0.5,
-            )
+            # Do NOT convert a wiring/provider failure into a plausible-looking
+            # datapoint. Returning (accuracy=0, cost=1, scalar=-0.5) made broken
+            # runs indistinguishable from genuinely bad capabilities, which is
+            # exactly the "silent stub" trap this package claims to remove.
+            raise RuntimeError(
+                "[real_trace_bench_multiobjective] evaluation failed for family "
+                f"{family!r}: {type(exc).__name__}: {str(exc).splitlines()[0]}"
+            ) from exc
 
     return evaluate

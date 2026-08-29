@@ -138,6 +138,22 @@ CONFIG_ALLOWED_VALUES: Dict[str, Tuple[str, ...]] = {
 
 INVALID_CONFIG_SCORE = -1_000_000_000.0
 
+# Any score at or below this is an internal invalidity sentinel, never a real
+# benchmark score. Real scores live in [-1, 1] / [0, 1], so the halfway point is
+# an unambiguous separator that also catches -inf.
+INVALID_SCORE_THRESHOLD = INVALID_CONFIG_SCORE / 2.0
+
+
+def is_invalid_score(value) -> bool:
+    """Return whether a score is an invalidity sentinel rather than a measurement."""
+    import math
+
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return True
+    return not math.isfinite(score) or score <= INVALID_SCORE_THRESHOLD
+
 # Bounded fallback penalty for an invalid candidate when no scoring.clip is
 # configured. Must sort BELOW any real score (real scores are typically in
 # [-1, 1] or [0, 1]) while NOT destroying reported means the way -1e9 would.

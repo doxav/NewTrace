@@ -22,7 +22,7 @@ from opto.trace import bundle, node
 from opto.trace.containers import Map
 from opto.trace.modules import Module
 from opto.trainer.objectives import EvaluationResult, apply_minimize, normalize_evaluation_result, select_evaluation_result, satisfies_hard_constraints, to_scalar_score, weighted_scalarize
-from .levels import CapabilityArtifact, TimedGuide, RecursiveGuide, LevelConfig, MetaLevel, FamilyPolicyLevel, PriorInductionLevel, ComponentSpec, CodeArtifactLevel, DEFAULT_INVALID_FLOOR, best_config_from, register_config_values, validate_level_config
+from .levels import CapabilityArtifact, TimedGuide, RecursiveGuide, LevelConfig, MetaLevel, FamilyPolicyLevel, PriorInductionLevel, ComponentSpec, CodeArtifactLevel, DEFAULT_INVALID_FLOOR, best_config_from, is_invalid_score, register_config_values, validate_level_config
 from .memory import ArtifactRecord, MemoryLite
 from .budget import BudgetExceeded, RecursiveOptBudget, reset_budget, make_budget
 from .optimize import optimize
@@ -315,6 +315,19 @@ def compile_plan(raw_spec: Mapping[str, Any]) -> ExecutionPlan:
             evaluator = _evaluator_entry(level.spec['objective']['evaluator_ref'])
             if evaluator.mode != 'output' and not (normalized['runtime']['test_mode'] or 'legacy' in module.capabilities):
                 raise ValueError('portable canonical v2 requires an output evaluator')
+            if 'legacy' in module.capabilities and evaluator.mode == 'output':
+                # The legacy engine path scores through the level's own _final_eval and
+                # never consults the declared evaluator. Allowing an output-mode ref here
+                # produced a result stamped portable=True/promotable=True whose score came
+                # from an entirely different, undeclared code path -- the portability flag
+                # would be a statement about the declaration rather than about what ran.
+                raise ValueError(
+                    f"module {level.spec['module']['ref']!r} is a legacy compatibility module: it "
+                    'scores through its own final evaluation and ignores objective.evaluator_ref, '
+                    'so it must declare the matching legacy evaluator rather than an output '
+                    'evaluator. Declaring an output evaluator here would mark a non-reproducible '
+                    'result as portable.'
+                )
             engine = _engine_entry(level.spec['engine']['name'])
             compile_objective(level.spec['objective'], capabilities=engine.capabilities)
             for binding in level.spec['bindings']:
@@ -822,6 +835,22 @@ def _merge_usage(items: Iterable[Mapping[str, Any]]) -> Mapping[str, Any]:
                 target[name] = target.get(name, 0) + amount
     return _freeze(merged)
 
+def _resolve_search_size(trainer_kwargs: MutableMapping[str, Any], iterations: int, num_candidates: int) -> Tuple[int, int]:
+    """Consume iterations/num_candidates carried by trainer_kwargs, letting them win.
+
+    Per-level budget allocation legitimately writes these into ``trainer_kwargs``.
+    They were then forwarded to ``optimize`` a second time through ``**trainer_kwargs``,
+    which raises ``TypeError: got multiple values for keyword argument``. Removing them
+    here keeps one authoritative value instead of failing the level.
+    """
+    if 'iterations' in trainer_kwargs:
+        iterations = int(trainer_kwargs.pop('iterations'))
+    if 'num_candidates' in trainer_kwargs:
+        num_candidates = int(trainer_kwargs.pop('num_candidates'))
+    if iterations <= 0 or num_candidates <= 0:
+        raise ValueError('iterations and num_candidates must be positive')
+    return iterations, num_candidates
+
 def _run_fixed_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping[str, Any]) -> RunResult:
     """Evaluate a fixed registered module without fitting it."""
     return _run_module_engine(unit, level, resources, fit=False)
@@ -842,8 +871,8 @@ def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources:
     module = _build_level_module(canonical, {'memory': memory, **({'legacy_levels': resources['legacy_levels']} if 'legacy_levels' in resources else {})})
     reuse = reuse_priors(memory, module, legacy) if unit.spec['runtime']['reuse_priors'] else {'used_prior': False, 'tools': []}
     config = canonical['engine']['config']
-    iterations = int(config['iterations'])
-    num_candidates = int(config['num_candidates'])
+    trainer_kwargs = {**_thaw(unit.spec['runtime']['trainer_kwargs']), **_thaw(config['trainer_kwargs']), **_thaw(legacy.get('trainer_kwargs') or {})}
+    iterations, num_candidates = _resolve_search_size(trainer_kwargs, int(config['iterations']), int(config['num_candidates']))
     guard: _BudgetGuard = resources['_budget']
     should_fit = True
     try:
@@ -855,7 +884,6 @@ def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources:
         should_fit = False
     objective_config = legacy.get('objective_config')
     optimizer_kwargs = {**_thaw(config['optimizer_kwargs']), **_thaw(legacy.get('optimizer_kwargs') or {})}
-    trainer_kwargs = {**_thaw(unit.spec['runtime']['trainer_kwargs']), **_thaw(config['trainer_kwargs']), **_thaw(legacy.get('trainer_kwargs') or {})}
     if objective_config:
         trainer_kwargs['objective_config'] = _objective_config(objective_config)
     guide: Any = TimedGuide(RecursiveGuide()) if legacy.get('timed_guide') else RecursiveGuide()
@@ -1085,10 +1113,11 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
         trainer = resources.get('trainer', config['trainer'])
         evaluated_module = _EvaluatedModule(module, evaluator, objective, prepared['fit_context'], guard, prepared['metered_roles'], prepared['records'])
         trainer_kwargs = {**_thaw(config['trainer_kwargs']), 'objective_config': objective['config']}
+        fit_iterations, fit_candidates = _resolve_search_size(trainer_kwargs, config['iterations'], config['num_candidates'])
         if validation:
             trainer_kwargs.update({'validate_dataset': _trainer_dataset(validation), 'validate_guide': RecursiveGuide(), 'validate_exploration_candidates': bool(config['validation_gate'])})
         try:
-            trainer_result = optimize(evaluated_module, _trainer_dataset(train), guide=RecursiveGuide(), trainer=trainer, optimizer=optimizer, optimizer_kwargs=optimizer_kwargs, iterations=config['iterations'], num_candidates=config['num_candidates'], budget=RecursiveOptBudget(), allow_env_overrides=False, **trainer_kwargs)
+            trainer_result = optimize(evaluated_module, _trainer_dataset(train), guide=RecursiveGuide(), trainer=trainer, optimizer=optimizer, optimizer_kwargs=optimizer_kwargs, iterations=fit_iterations, num_candidates=fit_candidates, budget=RecursiveOptBudget(), allow_env_overrides=False, **trainer_kwargs)
             guard.record_candidate('proposed', len(getattr(getattr(trainer_result, 'memory', None), 'memory', []) or []))
         except BudgetExceeded as error:
             _restore_level_module(spec, module, initial_artifact)
@@ -1323,7 +1352,15 @@ def _evaluate_example(module: Module, example: Any, context: Mapping[str, Any], 
     return result, output
 def _evaluate_dataset(module: Module, dataset: Iterable[Any], context: Mapping[str, Any], objective: Mapping[str, Any], evaluator: _EvaluatorEntry, guard: _BudgetGuard, metered_roles: set[str], records: Optional[List[Dict[str, Any]]]=None) -> EvaluationResult:
     """Evaluate examples under the common guard and aggregate declared sources."""
-    examples = list(dataset) or [context['inputs']]
+    examples = list(dataset)
+    if not examples:
+        if context['phase'] == 'final_evaluation':
+            raise ValueError(
+                'final evaluation requires at least one example: every dataset split '
+                '(holdout, validation, train) is empty, so any reported score would '
+                'describe the module inputs rather than a measurement'
+            )
+        examples = [context['inputs']]
     results: List[EvaluationResult] = []
     for example in examples:
         result, _output = _evaluate_example(module, example, context, evaluator, guard, metered_roles)
@@ -1785,6 +1822,11 @@ def _normalize_level(raw_level: Mapping[str, Any], global_spec: Mapping[str, Any
     _reject_unknown_keys(raw_level, _LEVEL_KEYS, f'levels[{index}]')
     level_id = raw_level.get('id', f'level-{index}')
     defaults: Dict[str, Any] = {'surface': {'kind': 'module', 'targets': ['*']}, 'module': {'ref': None, 'config': {}, 'artifact': None, 'inputs': {}}, 'engine': {'name': 'trace', 'config': {}}, 'objective': {'evaluator_ref': 'recursive_opt.evaluator.module_output@1', 'intent': 'Maximize score.', 'metrics': {'score': {'direction': 'maximize', 'source': 'evaluation.metrics.score', 'aggregate_examples': 'mean'}}, 'selection': {'mode': 'scalar', 'score_key': 'score'}, 'hard_constraints': [], 'aggregation': {'mode': 'mean'}, 'feedback_channels': ['natural_language', 'trace']}, 'llm_roles': {role: None for role in sorted(_ROLE_KEYS)}, 'datasets': {'train': [], 'validation': [], 'holdout': []}, 'bindings': [], 'outputs': _thaw(global_spec['outputs'])}
+    # NOTE: `surface.kind` is DESCRIPTIVE metadata in the canonical path, not a
+    # dispatch key. `_build_level_module` selects behavior from `module.ref` alone;
+    # `surface.kind` is read only as a knowledge-retrieval scope label. Invariant 3
+    # ("no decorative fields") is satisfied by that documented consumer, not by
+    # behavior selection -- do not add dispatch on it without changing the ADR.
     level: Dict[str, Any] = {'id': level_id, 'depends_on': list(raw_level.get('depends_on') or []), 'ordering_only': bool(raw_level.get('ordering_only', False))}
     for block in _LEVEL_BLOCKS:
         level[block] = _merge_defaults(defaults[block], raw_level.get(block, {}), f'levels[{index}].{block}') if isinstance(defaults[block], dict) else _thaw(raw_level.get(block, defaults[block]))
@@ -2157,16 +2199,16 @@ def _validate_objective_semantics(objective: Mapping[str, Any], index: int) -> N
     for key in ('hard_constraints', 'feedback_channels'):
         if not isinstance(objective[key], list):
             raise TypeError(f'objective.{key} must be a list')
-    for index, constraint in enumerate(objective['hard_constraints']):
+    for constraint_index, constraint in enumerate(objective['hard_constraints']):
         if not isinstance(constraint, Mapping):
-            raise TypeError(f'objective.hard_constraints[{index}] must be a mapping')
-        _reject_unknown_keys(constraint, {'metric', 'op', 'value'}, f'objective.hard_constraints[{index}]')
+            raise TypeError(f'levels[{index}].objective.hard_constraints[{constraint_index}] must be a mapping')
+        _reject_unknown_keys(constraint, {'metric', 'op', 'value'}, f'levels[{index}].objective.hard_constraints[{constraint_index}]')
         if constraint.get('metric') not in metrics:
-            raise ValueError(f'hard constraint {index} must name a declared metric')
+            raise ValueError(f'levels[{index}] hard constraint {constraint_index} must name a declared metric')
         if constraint.get('op') not in {'<', '<=', '==', '!=', '>=', '>'}:
-            raise ValueError(f'hard constraint {index} has unsupported operator')
+            raise ValueError(f'levels[{index}] hard constraint {constraint_index} has unsupported operator')
         if not isinstance(constraint.get('value'), (int, float)):
-            raise TypeError(f'hard constraint {index} value must be numeric')
+            raise TypeError(f'levels[{index}] hard constraint {constraint_index} value must be numeric')
     if not isinstance(objective['aggregation'], Mapping):
         raise TypeError('objective.aggregation must be a mapping')
     _reject_unknown_keys(objective['aggregation'], {'mode', 'weights'}, 'objective.aggregation')
@@ -2274,6 +2316,14 @@ def validate_spec(spec: dict) -> dict:
 def compile_level(level_spec: dict, memory: MemoryLite, families: Dict[str, List[str]], scoring: Optional[dict]=None):
     """Compile one level dict into the matching existing level object."""
     surface = level_spec['surface']
+    # Enforce the causal-effect contract HERE rather than only in validate_spec.
+    # validate_spec is not on the run_spec path, so optimizing fields with no active
+    # causal path (e.g. batch_design/batch_size at inner_steps=0) used to run happily
+    # and return a flat score surface instead of an error naming the dead fields.
+    # _check_plumbing is a no-op when no task adapter is registered, so offline
+    # compilation is unaffected.
+    if surface in ('config', 'family_policy', 'prior'):
+        _check_plumbing(level_spec)
     score_config = level_spec.get('scoring', scoring)
     clip = _clip_bounds(score_config)
     floor = clip[0] if clip else DEFAULT_INVALID_FLOOR
@@ -2299,6 +2349,13 @@ def compile_level(level_spec: dict, memory: MemoryLite, families: Dict[str, List
     if surface == 'prior':
         fams = _resolve_families(level_spec, families)
         names = list(fams)
+        if len(names) < 2 and not level_spec.get('allow_degenerate_holdout'):
+            raise ValueError(
+                f"level {level_spec.get('id')!r}: the 'prior' surface measures HELD-OUT transfer, "
+                f"but only one family ({names}) is available, so the holdout would be the training "
+                "family itself. Supply at least two families, or set "
+                "allow_degenerate_holdout=True to accept a train-on-test measurement."
+            )
         train = {names[0]: fams[names[0]]}
         holdout = {n: fams[n] for n in names[1:]} or {names[0]: fams[names[0]]}
         return PriorInductionLevel(train, holdout, run_task=make_scored_task_runner(score_config), invalid_floor=floor, fields=tuple(level_spec.get('targets') or _DEFAULT_POLICY_FIELDS), memory=memory)
@@ -2367,6 +2424,18 @@ def run_spec(spec: dict, *, optimizer: Any=None, trainer: Optional[str]=None, bu
         return results
     assert capture is not None
     capture.pop('_global_step', None)
+    # A failing level never reaches the capture hook, so the legacy return shape used
+    # to come back WITHOUT 'results' and callers saw an opaque KeyError('results')
+    # instead of the real cause. Always return the documented keys, and surface the
+    # per-level errors so the actual failure is visible.
+    capture.setdefault('results', {})
+    capture.setdefault('levels', {})
+    final = results[0]
+    errors = [str(item['error']) for item in final.level_results if item.get('error')]
+    if not errors and final.error:
+        errors = [str(final.error)]
+    if errors:
+        capture['errors'] = errors
     memory = capture.get('memory')
     progress = capture.get('progress')
     if isinstance(memory, MemoryLite) and isinstance(progress, Mapping):
@@ -2434,6 +2503,32 @@ def _level_task_ids(level_spec: dict, families: Dict[str, List[str]]) -> List[st
     for tasks in selected.values():
         out.extend((str(task) for task in tasks))
     return out
+
+def scored_task_ids(level_spec: dict, families: Dict[str, List[str]]) -> List[str]:
+    """Return the exact task ids a level's FINAL score is averaged over.
+
+    This is deliberately different from :func:`_level_task_ids` (which reports every
+    task a level touches, for progress records). Two levels can touch the same tasks
+    but be *scored* on different subsets — most importantly ``family_policy`` scores
+    the mean over ALL families while ``prior`` scores the mean over the HELD-OUT
+    families only. Comparing those two numbers as if they measured the same thing is
+    the classic invalid meta-optimization comparison, so the scored set has to be
+    observable to any harness that reports a delta between arms.
+    """
+    surface = level_spec.get('surface')
+    if surface == 'config':
+        return [str(task) for task in _config_task_ids(level_spec, families)]
+    selected = _resolve_families(level_spec, families)
+    if surface == 'prior':
+        names = list(selected)
+        holdout = names[1:] or names[:1]
+        return [str(task) for name in holdout for task in selected[name]]
+    if surface == 'family_policy':
+        return [str(task) for tasks in selected.values() for task in tasks]
+    task = level_spec.get('task')
+    if task:
+        return [str(task)]
+    return [str(task) for tasks in selected.values() for task in tasks]
 
 def _dataset_for(level_spec: dict, families: Dict[str, List[str]], iterations: int) -> dict:
     fam = level_spec.get('family')
@@ -2609,6 +2704,14 @@ def make_scored_task_runner(scoring: Optional[dict]=None, *, raw_runner: Optiona
         raw_score, feedback = runner(level_cfg, task_id)
         score = float(raw_score)
         meta: Dict[str, Any] = {'mode': mode, 'raw_score': score}
+        if is_invalid_score(score):
+            # An adapter-level rejection (unusable trainer, missing trace backend,
+            # non-finite score) is INVALIDITY, not a measurement. Emitting the raw
+            # -1e9 sentinel here poisons every downstream mean, promotion gate and
+            # persisted family prior. Report the worst LEGAL score instead.
+            floor = clip[0] if clip is not None else DEFAULT_INVALID_FLOOR
+            meta.update({'invalid': True, 'score': float(floor)})
+            return (float(floor), f'{feedback} SCORE_NORMALIZATION_JSON={json.dumps(meta, sort_keys=True)}')
         if mode == 'relative_delta':
             key = str(task_id)
             if key not in baseline_cache:

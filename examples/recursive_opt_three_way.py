@@ -58,6 +58,11 @@ class ArmResult:
     curve: List[Dict[str, Any]] = field(default_factory=list)
     budget_used: Dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
+    # Exactly which task ids this arm's score is the mean over. Two arms whose
+    # scored sets differ are measuring different quantities and must never be
+    # subtracted from one another (see comparability check in promotion_decision).
+    scored_tasks: List[str] = field(default_factory=list)
+    scored_level: Optional[str] = None
 
     def ok(self) -> bool:
         return self.error is None and self.score is not None and math.isfinite(float(self.score))
@@ -169,6 +174,11 @@ def run_spec_arm(arm: str, spec: Dict[str, Any], seed: int, primary_level: Optio
         reset_budget(make_budget(budget_caps))
         out = run_spec(spec)
         lid = _resolve_primary_level(spec, primary_level)
+        scored = _scored_tasks_for(spec, lid)
+        if lid not in (out.get("results") or {}):
+            raise RuntimeError(
+                f"level {lid!r} produced no result: " + "; ".join(out.get("errors") or ["unknown error"])
+            )
         rec = out["results"][lid]
         memory = out["memory"]
         final = float(rec["score"])
@@ -177,7 +187,8 @@ def run_spec_arm(arm: str, spec: Dict[str, Any], seed: int, primary_level: Optio
         return ArmResult(arm=arm, seed=seed, score=final, best_score=best, best_unit=best_unit,
                          wall_s=float(rec.get("wall_s") or (time.time() - t0)),
                          artifact=str(rec.get("artifact", "")), artifact_id=rec.get("artifact_id"),
-                         curve=curve, budget_used=_budget_snapshot(curve))
+                         curve=curve, budget_used=_budget_snapshot(curve),
+                         scored_tasks=scored, scored_level=lid)
     except Exception as exc:
         return ArmResult(arm=arm, seed=seed, score=None, wall_s=time.time() - t0, error=_one_line(exc))
 
@@ -230,7 +241,8 @@ def run_initial_spec_arm(arm: str, spec: Dict[str, Any], seed: int, primary_leve
         }]
         return ArmResult(arm=arm, seed=seed, score=final, best_score=final, best_unit=0,
                          wall_s=time.time() - t0, artifact=_artifact_text(level, level_spec["surface"]),
-                         curve=curve, budget_used=_budget_snapshot(curve))
+                         curve=curve, budget_used=_budget_snapshot(curve),
+                         scored_tasks=_scored_tasks_for(spec, lid), scored_level=lid)
     except Exception as exc:
         return ArmResult(arm=arm, seed=seed, score=None, wall_s=time.time() - t0, error=_one_line(exc))
 
@@ -676,6 +688,17 @@ def promotion_decision(report: Dict[str, Any], *, min_support: int = 3,
     rec_std = _num(rec.get("std_final")) or 0.0
     rec_n, std_n = int(rec.get("n") or 0), int(std.get("n") or 0)
 
+    # HARD comparability gate, checked BEFORE any statistics. A lower confidence
+    # bound computed over two different measurement definitions is meaningless no
+    # matter how many seeds back it, so an incomparable pair can never be promoted.
+    comparability = summary.get("comparability") or {}
+    if comparability.get("known") and comparability.get("comparable") is False:
+        return {"action": "invalid_comparison", "name": name, "promote": False,
+                "reason": comparability.get("reason", "arms scored on different task sets"),
+                "delta_mean": _sub(rec_mean, std_mean),
+                "comparability": comparability,
+                "support": {"standard": std_n, "recursive": rec_n}}
+
     if std_mean is None or rec_mean is None:
         return {"action": "retest", "name": name, "promote": False,
                 "reason": "standard or recursive arm has no valid mean_final",
@@ -726,6 +749,45 @@ def promotion_decision(report: Dict[str, Any], *, min_support: int = 3,
             "verdict": summary.get("verdict"), "reason": reason}
 
 
+def _scored_tasks_for(spec: Dict[str, Any], level_id: str) -> List[str]:
+    """Return the task ids the named level's final score averages over (best effort)."""
+    try:
+        from opto.features.recursive_opt.spec import scored_task_ids
+        return list(scored_task_ids(_level_spec(spec, level_id), spec.get("families", {})))
+    except Exception:
+        return []
+
+
+def _comparability(rows: Sequence[ArmResult]) -> Dict[str, Any]:
+    """Check that standard and recursive scores are means over the SAME task set.
+
+    A delta between two arms is only a measurement of optimization quality if both
+    arms are scored on the same thing. When the scored sets differ, the delta also
+    contains the (arbitrary) offset between the two task sets, and can be large and
+    perfectly reproducible while no learning has occurred at all. That is not a
+    warning-level detail: it invalidates the comparison, so it is reported here and
+    enforced in promotion_decision.
+    """
+    sets = {}
+    for r in rows:
+        if r.arm in ("standard", "recursive") and r.scored_tasks:
+            sets.setdefault(r.arm, sorted(set(r.scored_tasks)))
+    std, rec = sets.get("standard"), sets.get("recursive")
+    if std is None or rec is None:
+        return {"known": False, "comparable": None,
+                "reason": "scored task ids unavailable for at least one arm",
+                "standard_tasks": std, "recursive_tasks": rec}
+    if std == rec:
+        return {"known": True, "comparable": True, "standard_tasks": std,
+                "recursive_tasks": rec, "reason": "both arms scored on the same task set"}
+    return {"known": True, "comparable": False, "standard_tasks": std, "recursive_tasks": rec,
+            "only_in_standard": sorted(set(std) - set(rec)),
+            "only_in_recursive": sorted(set(rec) - set(std)),
+            "reason": ("arms are scored on DIFFERENT task sets, so their difference is not a "
+                       "measure of optimization quality: it also contains the offset between "
+                       "the two task sets")}
+
+
 def _summarize(rows: Sequence[ArmResult]) -> Dict[str, Any]:
     by = {}
     for r in rows:
@@ -745,6 +807,7 @@ def _summarize(rows: Sequence[ArmResult]) -> Dict[str, Any]:
     verdict, why = _verdict(init, std, rec, std_b, rec_b, speed, rows)
     paired = _paired_delta(by)
     return {"arms": arms,
+            "comparability": _comparability(rows),
             "recursive_minus_standard_final": _sub(rec, std),
             "recursive_minus_standard_best": _sub(rec_b, std_b),
             "standard_gain_final": _sub(std, init), "recursive_gain_final": _sub(rec, init),

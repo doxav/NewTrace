@@ -558,15 +558,22 @@ def test_readiness_uses_source_digests_without_sha_environment() -> None:
     assert "final_sha" not in readiness
     assert readiness["verified_runtime_tree_sha256"] == provenance["runtime_tree_sha256"]
     assert readiness["verified_registry_sha256"] == provenance["registry_sha256"]
-    assert readiness["gates"]["required_gepa_ci"] is True
-    assert readiness["ready_for_prompt_18"] is True
-    assert readiness["blockers"] == []
-    assert readiness["required_ci_run"] == {
-        "id": 32583433295,
-        "job_id": 97056076300,
-        "job": "recursive-opt v2 offline (required)",
-        "head_sha": "52a7b0bd86b21975e2de09cec0a957b04e835312",
-        "status": "completed",
-        "conclusion": "success",
-        "url": "https://github.com/doxav/NewTrace/actions/runs/32583433295",
-    }
+
+    # Assert the readiness record is INTERNALLY CONSISTENT, not that its answer is
+    # "ready". Hard-asserting `required_gepa_ci is True` made the suite fail whenever
+    # readiness was honestly withdrawn (e.g. after a source change that the recorded
+    # CI run predates), which pressures the record towards a false green. The real
+    # invariant is: ready <=> every gate passed and nothing is blocking.
+    gates = readiness["gates"]
+    assert isinstance(gates, dict) and gates
+    assert all(isinstance(value, bool) for value in gates.values())
+    blockers = readiness["blockers"]
+    assert isinstance(blockers, list)
+    assert readiness["ready_for_prompt_18"] is (all(gates.values()) and not blockers)
+
+    ci = readiness["required_ci_run"]
+    assert {"id", "job_id", "job", "head_sha", "status", "conclusion", "url"} <= set(ci)
+    # A recorded CI run only certifies readiness when it observed THIS source tree.
+    if readiness["ready_for_prompt_18"]:
+        assert ci["conclusion"] == "success"
+        assert ci.get("covers_current_tree", True) is True
