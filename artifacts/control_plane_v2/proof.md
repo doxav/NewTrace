@@ -1,5 +1,69 @@
 # recursive-opt v2alpha semantic-closure proof
 
+## Live transport resilience proof
+
+Provider-free causal tests reproduce both observed messages as pre-fix
+non-retryable failures, then prove exact identical-request recovery, bounded
+three-attempt exhaustion, immediate application-error failure, causal-chain
+classification, explicit provider timeout propagation, environment invariance,
+one logical guarded usage attribution, deterministic Trace concurrency, and
+hard termination of an uncooperative child. The full local results are 225
+focused passes, 330 mandated passes with two accepted optional skips, 510 unit
+passes with three accepted optional skips, 40 Experiment-0 passes, and one
+clean-kernel notebook pass.
+
+Runtime footprint remains 8,850 lines without relaxing the historical gate.
+The pre-CI authoritative digests are runtime
+`420b5351063a56b0ad274a6c39b6aaa4dc95b9094434600e89ea79f3eccc8872`
+and registry
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+Required Actions run `32856513753`, job `97829714487`, passed the expanded
+network-isolated workflow on `c6a109ca2aa2d5cf62074fd16b34570582092aa3`.
+The earlier run `32856225573` is retained as a test-dependency collection
+failure, not a runtime test failure. Readiness is true for the matching source
+digests.
+
+## Optimizer empty-text retry proof
+
+Six provider-free causal tests prove one shared optimizer text contract across
+Trace and installed GEPA 0.1.4: empty/text succeeds after exactly two identical
+metered requests; empty/empty fails explicitly after two; normal text makes one
+call; real Trace and GEPA both propose and evaluate candidates after the retry;
+and direct `OptoPrimeV2` cannot reach `"TERMINATE" in None`.
+
+The full provider-free results are 212 focused passes, 317 mandated recursive
+passes with two accepted optional skips, 497 complete-unit passes with three
+accepted optional skips, 23 Experiment-0 passes including its full offline
+contract, and one clean-kernel notebook pass. Runtime footprint remains exactly
+8,850 recursive-opt lines through whitespace-only compaction; no footprint gate
+was relaxed. Runtime digest is
+`ba4836d9f43cffcd0271086932745b270d75478b5287a7d8100be4928b623cbc`
+and registry digest remains
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+Required Actions run `32669603929`, job `97268256178`, passed for implementation
+commit `d63746afbb88d6193cbfedf2932b256d9f33b6e4`; Prompt-18 readiness is true for
+the matching source digests.
+
+## GEPA reflection-protocol hotfix proof
+
+The provider-free installed-`gepa==0.1.4` test reaches a real reflective
+proposal through `run_spec`, GEPA's public `optimize_anything()`, the private
+text/chat adapter, `_GuardedRoleClient`, and a strict chat-only provider fake.
+It proves one optimizer call and one usage attribution, a changed selected
+artifact, candidate evaluation, and holdout externalization with sockets
+blocked. Required Actions run `32650995105` / job `97222458541` passed on
+`c1bf6a296d159b92d09ac29ee90556d2c1997a5d`.
+
+Relocked digests are runtime
+`37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e`
+and registry
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+The evidence-state run `32651342206` / job `97223324883` was also green. The
+live GEPA arm subsequently made one guarded reflection call and attributed
+1,584 optimizer tokens once without holdout leakage. Its changed proposal was
+evaluated but rejected, leaving the Experiment-0 micro gate false and preventing
+pilot execution.
+
 - Branch: `recursive_opt`
 - Baseline SHA: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`
 - Semantic-closure implementation SHA: `c92f0af4af3e72a12b0228dbed215f86f8c9475b`

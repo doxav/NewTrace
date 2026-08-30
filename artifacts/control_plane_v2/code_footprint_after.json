@@ -74,8 +74,8 @@
       "opto/features/recursive_opt/numeric_optimizers.py": 243,
       "opto/features/recursive_opt/optimize.py": 397,
       "opto/features/recursive_opt/progress.py": 184,
-      "opto/features/recursive_opt/runmode.py": 328,
-      "opto/features/recursive_opt/spec.py": 2732,
+      "opto/features/recursive_opt/runmode.py": 294,
+      "opto/features/recursive_opt/spec.py": 2766,
       "opto/features/recursive_opt/tracebench.py": 1327,
       "opto/features/recursive_opt/traces.py": 195
     },
@@ -133,6 +133,34 @@
       "opto/features/recursive_opt/spec.py"
     ]
   },
+  "gepa_0_1_4_reflection_protocol_hotfix": {
+    "starting_runtime_lines": 8850,
+    "after_runtime_lines": 8850,
+    "runtime_delta": 0,
+    "starting_spec_lines": 2732,
+    "after_spec_lines": 2732,
+    "spec_delta": 0,
+    "implementation_lines_added": 19,
+    "blank_separator_lines_removed": 19,
+    "production_scope": [
+      "opto/features/recursive_opt/spec.py"
+    ]
+  },
+  "live_transport_resilience_hotfix": {
+    "starting_runtime_lines": 8850,
+    "after_runtime_lines": 8850,
+    "runtime_delta": 0,
+    "starting_spec_lines": 2732,
+    "after_spec_lines": 2766,
+    "spec_delta": 34,
+    "production_scope": [
+      "opto/features/recursive_opt/runmode.py",
+      "opto/features/recursive_opt/spec.py",
+      "opto/utils/auto_retry.py",
+      "opto/utils/llm.py"
+    ],
+    "note": "Runtime additions are offset by separator-only compaction within runmode.py."
+  },
   "files": {
     "opto/features/recursive_opt/__init__.py": 245,
     "opto/features/recursive_opt/budget.py": 403,
@@ -141,17 +169,16 @@
     "opto/features/recursive_opt/effects.py": 137,
     "opto/features/recursive_opt/experiments.py": 248,
     "opto/features/recursive_opt/inspect_utils.py": 116,
-    "opto/features/recursive_opt/levels.py": 1015,
+    "opto/features/recursive_opt/levels.py": 1045,
     "opto/features/recursive_opt/measurement.py": 869,
     "opto/features/recursive_opt/memory.py": 531,
     "opto/features/recursive_opt/numeric_optimizers.py": 254,
     "opto/features/recursive_opt/optimize.py": 397,
     "opto/features/recursive_opt/progress.py": 184,
-    "opto/features/recursive_opt/runmode.py": 338,
-    "opto/features/recursive_opt/spec.py": 2835,
+    "opto/features/recursive_opt/runmode.py": 308,
+    "opto/features/recursive_opt/spec.py": 2874,
     "opto/features/recursive_opt/tracebench.py": 1358,
     "opto/features/recursive_opt/traces.py": 195
   },
-  "total_lines": 9973,
-  "note": "Informational inventory only. The line-count assertion was removed (D8): it constrained formatting rather than complexity and drove spec.py into a one-statement-per-function style."
+  "total_lines": 10012
 }

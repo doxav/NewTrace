@@ -545,7 +545,7 @@ def test_required_workflow_has_gepa_dependency_and_hardening_matrix() -> None:
 
 
 def test_readiness_uses_source_digests_without_sha_environment() -> None:
-    """A checkout verifies readiness provenance without a self-referential SHA."""
+    """A checkout verifies digests and the explicit pre/post-CI readiness state."""
     readiness = json.loads(
         Path("artifacts/control_plane_v2/prompt18_readiness.json").read_text()
     )
@@ -558,12 +558,10 @@ def test_readiness_uses_source_digests_without_sha_environment() -> None:
     assert "final_sha" not in readiness
     assert readiness["verified_runtime_tree_sha256"] == provenance["runtime_tree_sha256"]
     assert readiness["verified_registry_sha256"] == provenance["registry_sha256"]
-
-    # Assert the readiness record is INTERNALLY CONSISTENT, not that its answer is
-    # "ready". Hard-asserting `required_gepa_ci is True` made the suite fail whenever
-    # readiness was honestly withdrawn (e.g. after a source change that the recorded
-    # CI run predates), which pressures the record towards a false green. The real
-    # invariant is: ready <=> every gate passed and nothing is blocking.
+    # Assert the readiness record is INTERNALLY CONSISTENT rather than that its answer is
+    # "ready". Hard-asserting a fixed answer makes the suite fail whenever readiness is
+    # honestly withdrawn, which pressures the record towards a false green. The invariant
+    # that always holds is: ready <=> every gate passed and nothing is blocking.
     gates = readiness["gates"]
     assert isinstance(gates, dict) and gates
     assert all(isinstance(value, bool) for value in gates.values())
@@ -571,9 +569,15 @@ def test_readiness_uses_source_digests_without_sha_environment() -> None:
     assert isinstance(blockers, list)
     assert readiness["ready_for_prompt_18"] is (all(gates.values()) and not blockers)
 
-    ci = readiness["required_ci_run"]
-    assert {"id", "job_id", "job", "head_sha", "status", "conclusion", "url"} <= set(ci)
-    # A recorded CI run only certifies readiness when it observed THIS source tree.
+    run = readiness["required_ci_run"]
     if readiness["ready_for_prompt_18"]:
-        assert ci["conclusion"] == "success"
-        assert ci.get("covers_current_tree", True) is True
+        # A recorded CI run only certifies readiness when it is complete, green, and
+        # observed THIS source tree.
+        assert run["job"] == "recursive-opt v2 offline (required)"
+        assert run["status"] == "completed" and run["conclusion"] == "success"
+        assert isinstance(run["id"], int) and isinstance(run["job_id"], int)
+        assert len(run["head_sha"]) == 40
+        assert run["url"].endswith(str(run["id"]))
+        assert run.get("covers_current_tree", True) is True
+    else:
+        assert blockers, "a record that is not ready must say what is blocking it"

@@ -466,7 +466,7 @@ def test_empty_completion_raises_a_diagnosable_error_not_a_typeerror() -> None:
 
     response = SimpleNamespace(choices=[SimpleNamespace(
         message=SimpleNamespace(content=None), finish_reason="length")])
-    with pytest.raises(LLMEmptyResponseError, match="no content"):
+    with pytest.raises(LLMEmptyResponseError, match="no usable content"):
         extract_response_content(response, context="probe")
 
     # the finish_reason is the diagnostic that distinguishes the causes

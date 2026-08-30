@@ -1,0 +1,42 @@
+{
+  "schema_version": "recursive-opt-main-execution-semantics-amendment/v1",
+  "experiment_version": "experiment-0-v2",
+  "trigger": {
+    "arm": "A",
+    "candidate_budget": 6,
+    "evaluation_status": "constraint_failed",
+    "invalid_rate": 0.041666666666666664,
+    "result_status": "invalid",
+    "seed": 0,
+    "summary": "The first main fixed-P0 run failed scientific safety but was incorrectly treated as an infrastructure failure."
+  },
+  "frozen_inputs": {
+    "dataset_manifest_sha256": "3c2ca2924868dc4edd8bb717139e6bfaa7b20388f1fc773f595551e0936661ee",
+    "preregistration_sha256": "e6954f457132518e9d62f9d0ee2dd0f7d73b49669f3deb905ae481a609c8b8ee",
+    "safety_criterion": "all selected artifacts/runs have invalid_rate == 0"
+  },
+  "amendment": {
+    "execution_completed": "status success, or status invalid with evaluation status invalid or constraint_failed",
+    "infrastructure_stop_rule": "stop only when execution or another infrastructure gate fails",
+    "scientific_feasible": "result.valid",
+    "safety_passed": "invalid_rate == 0.0"
+  },
+  "unchanged": [
+    "task",
+    "dataset IDs and holdout IDs",
+    "P0 initial artifact",
+    "evaluator and extraction rules",
+    "model and request parameters",
+    "temperature and max_tokens",
+    "objective weights and invalid_rate <= 0 hard constraint",
+    "seeds, budgets, arms, pairing, bootstrap and success criteria"
+  ],
+  "preserved_pre_amendment_evidence": {
+    "baseline_p0_result_sha256": "fcabf0bee08d97d442060b392defa173952bcaa22c97f290369ea5aea1a65b06",
+    "main_a_result_sha256": "7df98c0849122fc3e571ea10bc42975afe6f3e2c60bdeb1b5bad2278aa5f750d",
+    "main_progress_sha256": "094ba2fbc32b6af6499617fa52c677e4a887085edfcbadda0fa67bed3c22d75d",
+    "classification": "scientific safety failure evidence remains valid; efficacy evidence is incomplete",
+    "optimized_main_outcomes_observed": false
+  },
+  "scientific_protocol_changed": false
+}

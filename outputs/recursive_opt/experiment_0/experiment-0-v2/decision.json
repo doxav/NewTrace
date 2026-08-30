@@ -1,0 +1,15 @@
+{
+  "schema_version": "recursive-opt-experiment-decision/v1",
+  "status": "FIX_EXPERIMENT_ONLY",
+  "reason": "Fixed P0 violated the frozen invalid_rate <= 0 hard constraint on the first complete holdout evaluation.",
+  "main_run_complete": false,
+  "completed_run_count": 1,
+  "planned_run_count": 40,
+  "control_plane": "validated for the completed unit",
+  "trace_engine": "not tested in main",
+  "gepa_engine": "not tested in main",
+  "validation_gate": "not tested in main",
+  "episode_dataset": "not produced",
+  "restart_allowed_under_frozen_v2": false,
+  "prospective_follow_up": "A separately versioned experiment amendment with a new independent holdout is required; do not redesign from this revealed holdout."
+}

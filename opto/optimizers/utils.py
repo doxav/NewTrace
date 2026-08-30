@@ -159,19 +159,24 @@ def extract_response_content(response: Any, *, context: str = "LLM") -> str:
         the causes that matter: ``length`` means the token budget was too small,
         ``content_filter`` means the request was refused.
     """
-    choices = getattr(response, "choices", None)
-    if not choices:
-        raise LLMEmptyResponseError(
-            f"{context} returned no choices; the provider produced no completion"
-        )
-    choice = choices[0]
-    content = getattr(getattr(choice, "message", None), "content", None)
-    if content is None:
+    # Some backends hand back the text directly rather than a completion object.
+    if isinstance(response, str):
+        content, finish_reason = response, None
+    else:
+        choices = getattr(response, "choices", None)
+        if not choices:
+            raise LLMEmptyResponseError(
+                f"{context} returned no choices; the provider produced no completion"
+            )
+        choice = choices[0]
+        content = getattr(getattr(choice, "message", None), "content", None)
         finish_reason = getattr(choice, "finish_reason", None)
+    # Whitespace-only content is as unusable as None, and reaches callers the same way.
+    if not isinstance(content, str) or not content.strip():
         detail = f" (finish_reason={finish_reason!r})" if finish_reason else ""
         raise LLMEmptyResponseError(
-            f"{context} returned a completion with no content{detail}. This usually means "
-            "the response was truncated at max_tokens before any text, was filtered, or "
-            "the provider shed load; retry or raise max_tokens."
+            f"{context} returned a completion with no usable content{detail}. This usually "
+            "means the response was truncated at max_tokens before any text, was filtered, "
+            "or the provider shed load; retry or raise max_tokens."
         )
     return content

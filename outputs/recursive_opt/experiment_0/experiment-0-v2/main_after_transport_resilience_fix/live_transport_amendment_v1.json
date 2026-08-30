@@ -1,0 +1,47 @@
+{
+  "execution_policy": {
+    "gepa_parallel": false,
+    "main_unit_hard_watchdog": "frozen wall_time_s plus 5 seconds shutdown grace in an isolated child process",
+    "trace_num_threads": 4
+  },
+  "experiment_version": "experiment-0-v2",
+  "preserved_pre_amendment_evidence": {
+    "completed_a_classification": "valid historical run excluded from the restarted paired statistics",
+    "incomplete_b_classification": "infrastructure failure evidence with no efficacy interpretation",
+    "optimized_main_outcomes_observed": false,
+    "stop_report": "reports/prompt18_r3e_main_restart_stop_decision.md"
+  },
+  "rationale": "Transport reliability, deterministic scheduling and hard deadline enforcement are infrastructure controls introduced prospectively before any B, C or D main efficacy result was observed.",
+  "schema_version": "recursive-opt-live-transport-amendment/v1",
+  "scientific_protocol_changed": false,
+  "transport_policy": {
+    "forward_primary": {
+      "request_timeout_s": 180,
+      "transport_base_delay_s": 1.0,
+      "transport_max_attempts": 3
+    },
+    "optimizer_primary": {
+      "request_timeout_s": 180,
+      "transport_base_delay_s": 1.0,
+      "transport_max_attempts": 3
+    }
+  },
+  "trigger": {
+    "arm": "B",
+    "candidate_budget": 6,
+    "observed_errors": [
+      "Connection reset by peer",
+      "Server disconnected without sending a response."
+    ],
+    "seed": 0,
+    "summary": "The first optimized unit of the R3E main restart produced no canonical result after transient transport failures and a blocked evaluator pool."
+  },
+  "unchanged": [
+    "scientific objective and success criteria",
+    "P0 initial artifact",
+    "task, dataset pools, holdout IDs and split limits",
+    "provider, model, request parameters, temperature, max_tokens and reasoning controls",
+    "paired seeds, candidate budgets, arms, arm order and statistics",
+    "invalid_rate <= 0 hard constraint and scientific safety semantics"
+  ]
+}

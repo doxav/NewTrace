@@ -1,0 +1,31 @@
+{
+  "schema_version": "recursive-opt-main-analysis/v1",
+  "complete": false,
+  "paired_statistics_performed": false,
+  "reason": "The frozen main run stopped after the first fixed-baseline unit violated invalid_rate <= 0.",
+  "completed_run_count": 1,
+  "planned_run_count": 40,
+  "descriptive_result": {
+    "arm": "A",
+    "candidate_budget": 6,
+    "seed": 0,
+    "accuracy": 0.9166666666666666,
+    "invalid_rate": 0.041666666666666664,
+    "forward_token_ratio": 1.072793249592918,
+    "latency_s": 8.302135325041794,
+    "forward_calls": 48,
+    "evaluator_runs": 24,
+    "prompt_tokens": 8343,
+    "completion_tokens": 4642,
+    "total_tokens": 12985,
+    "token_priced_cost_usd": 0.001503,
+    "provider_reported_cost_usd": null
+  },
+  "invalid_sample": {
+    "id": "gsm8k:test:915",
+    "content_sha256": "926bb31a00a4f5f0eb2862e68b07028e65963f7f932537fd24179a66e6c059f0",
+    "expected": "23",
+    "extracted": "",
+    "raw_provider_text_persisted": false
+  }
+}

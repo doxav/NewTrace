@@ -1,0 +1,42 @@
+{
+  "engines": {
+    "gepa": {
+      "all_required_fields_recoverable": false,
+      "representative": {
+        "candidate_trajectory_records": 0,
+        "candidates_proposed": 60,
+        "persisted_result": "outputs/recursive_opt/experiment_0/experiment-0-v2/main_after_transport_resilience_fix/runs/seed-0/budget-6/C/dd2069bcc8d7a634bdf482dacb8bf99cd3d0135216e1754cc4e4107d20066fa9/units/default:seed-0:matrix-0/levels/compound-reasoning/result.json",
+        "proposal_budget": 6,
+        "recoverable": {
+          "artifact_or_hash": false,
+          "candidate_evaluation": false,
+          "parent_or_seed_relation": false,
+          "selected_or_rejected_status": false
+        },
+        "seed": 0
+      },
+      "runs_audited": 10
+    },
+    "trace": {
+      "all_required_fields_recoverable": false,
+      "representative": {
+        "candidate_trajectory_records": 0,
+        "candidates_proposed": 7,
+        "persisted_result": "outputs/recursive_opt/experiment_0/experiment-0-v2/main_after_transport_resilience_fix/runs/seed-0/budget-6/B/c8ae3cedf25154e302e6c54533bc1b2b9838d13bd904e7477c4b27e03f35ed3f/units/default:seed-0:matrix-0/levels/compound-reasoning/result.json",
+        "proposal_budget": 6,
+        "recoverable": {
+          "artifact_or_hash": false,
+          "candidate_evaluation": false,
+          "parent_or_seed_relation": false,
+          "selected_or_rejected_status": false
+        },
+        "seed": 0
+      },
+      "runs_audited": 10
+    }
+  },
+  "episodes_exported": false,
+  "ready_for_episode_export": false,
+  "schema_version": "recursive-opt-episode-trajectory-audit/v1",
+  "smallest_required_extension": "Persist one candidate_trajectory record per Trace and GEPA proposal with candidate artifact or hash, parent/seed relation, canonical evaluation, and selected/rejected status. The engine adapters must emit this provenance without changing proposal, evaluation, or selection behavior."
+}

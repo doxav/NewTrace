@@ -1,0 +1,148 @@
+{
+  "code_provenance": {
+    "entries": {
+      "codecs": [
+        {
+          "implementation_sha256": "10ddc7eb77b925aecd6c4d040cd6e1d3abde29f6772d2bf56c9e8733c8f4ea39",
+          "package_version": "0.2.0",
+          "python_module": "opto.features.recursive_opt.spec",
+          "qualified_name": "_artifact_to_prior",
+          "ref": "recursive_opt.codec.artifact_to_prior@1",
+          "source_file": "opto/features/recursive_opt/spec.py",
+          "source_sha256": "59add791eca2fe6ff2521a6ab8a347992d57b6bbf55584bf3e5626d5506d6e5c"
+        }
+      ],
+      "datasets": [
+        {
+          "implementation_sha256": "55dbc2cdddcddc3188bd2fb65ccd902820106f73b8e87d5ab6829aeb9d182d02",
+          "package_version": null,
+          "python_module": "experiments.recursive_opt.multiobjective_reasoning.datasets",
+          "qualified_name": "resolve_gsm8k_v2",
+          "ref": "recursive_experiments.dataset.gsm8k@2",
+          "source_file": "experiments/recursive_opt/multiobjective_reasoning/datasets.py",
+          "source_sha256": "d98e83081c6c89de2ed94cf72215d53aaf3513e314ecaad35376b37897464167"
+        }
+      ],
+      "engines": [
+        {
+          "implementation_sha256": "4bc0c92d178590a027eedc68606f14e26e262c172875e2a469ef05d230ff4c3a",
+          "package_version": "0.2.0",
+          "python_module": "opto.features.recursive_opt.spec",
+          "qualified_name": "_run_fixed_engine",
+          "ref": "fixed",
+          "source_file": "opto/features/recursive_opt/spec.py",
+          "source_sha256": "1e212b1d93af0bb28231032204449f2709e5637cc7536e839a18be7228e88175"
+        }
+      ],
+      "evaluators": [
+        {
+          "implementation_sha256": "8f108140752dc9f1a938c29dccde9f94c3dff518435dab8a42004aba0a2a8ecd",
+          "package_version": null,
+          "python_module": "experiments.recursive_opt.multiobjective_reasoning.evaluator",
+          "qualified_name": "exact_reasoning_evaluator",
+          "ref": "recursive_experiments.evaluator.exact_reasoning@1",
+          "source_file": "experiments/recursive_opt/multiobjective_reasoning/evaluator.py",
+          "source_sha256": "6cee2bf391fcd653b5636e0003710a244beb63ae256afa55cbe756b0d3370905"
+        }
+      ],
+      "modules": [
+        {
+          "implementation_sha256": "263abeeb4104e310cae8c645fda4a7d36343277cd887a2ebd7a7a7ded97d67d4",
+          "package_version": null,
+          "python_module": "experiments.recursive_opt.multiobjective_reasoning.components",
+          "qualified_name": "build_module",
+          "ref": "recursive_experiments.module.compound_reasoning@1",
+          "source_file": "experiments/recursive_opt/multiobjective_reasoning/components.py",
+          "source_sha256": "29ba89e6d443988f0d6dff1eac67c472c8814084c7a91285a2187c0cb851d756"
+        }
+      ]
+    },
+    "git_commit": "8077703218d087c8b458d029ca581ce7dcd745b6",
+    "git_dirty": false,
+    "registry_sha256": "c7cd082c9e177180c448e11285bae9d23d53a4f48cfdeba886d7d6121d2d6d8b",
+    "runtime_tree_sha256": "5b460d771ca0b0f9bd914b2c8330860e6f5771a8447d40e50db0d554986e0642"
+  },
+  "engines": [
+    "fixed"
+  ],
+  "execution_units": 1,
+  "fingerprint": "8d06a1522aa6fe5ecbfe67bca783391a40e9488ca0e91292257dc4a6629dbd48",
+  "level_ids": [
+    "compound-reasoning"
+  ],
+  "module_refs": [
+    "recursive_experiments.module.compound_reasoning@1"
+  ],
+  "test_overrides": {},
+  "unit_ids": [
+    "default:seed-1803:matrix-0"
+  ],
+  "units": [
+    {
+      "levels": [
+        {
+          "dataset_refs": {
+            "holdout": {
+              "inline_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "train": {
+              "config": {
+                "baseline_tokens": {},
+                "limit": 8
+              },
+              "ref": "recursive_experiments.dataset.gsm8k@2",
+              "split": "train"
+            },
+            "validation": {
+              "inline_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            }
+          },
+          "engine": "fixed",
+          "evaluator_ref": "recursive_experiments.evaluator.exact_reasoning@1",
+          "fingerprint": "680ea86f06d327e88a0c0871670a8924400f4199156755023470ddc932981ae3",
+          "id": "compound-reasoning",
+          "llm_roles": {
+            "feedback": null,
+            "forward": {
+              "api_key_ref": "env:OPENROUTER_API_KEY",
+              "base_url": null,
+              "fallbacks": [],
+              "max_tokens": 384,
+              "model": "deepseek/deepseek-v4-flash-0731",
+              "profile": "forward_primary",
+              "provider": "openrouter",
+              "request_params": {
+                "reasoning": {
+                  "enabled": false
+                }
+              },
+              "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+              "temperature": 0
+            },
+            "judge": null,
+            "optimizer": {
+              "api_key_ref": "env:OPENROUTER_API_KEY",
+              "base_url": null,
+              "fallbacks": [],
+              "max_tokens": 768,
+              "model": "deepseek/deepseek-v4-flash-0731",
+              "profile": "optimizer_primary",
+              "provider": "openrouter",
+              "request_params": {
+                "reasoning": {
+                  "enabled": true
+                }
+              },
+              "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+              "temperature": 0
+            }
+          },
+          "module_ref": "recursive_experiments.module.compound_reasoning@1"
+        }
+      ],
+      "matrix": {},
+      "seed": 1803,
+      "unit_id": "default:seed-1803:matrix-0"
+    }
+  ]
+}

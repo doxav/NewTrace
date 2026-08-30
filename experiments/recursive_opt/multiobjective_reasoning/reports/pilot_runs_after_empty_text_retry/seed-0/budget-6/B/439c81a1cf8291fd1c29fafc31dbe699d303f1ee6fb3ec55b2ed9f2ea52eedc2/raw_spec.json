@@ -1,0 +1,327 @@
+{
+  "budget": {
+    "candidates": 7,
+    "eval_llm_calls": 320,
+    "evaluator_runs": 160,
+    "on_exceed": "fail",
+    "optimizer_llm_calls": 24,
+    "total_tokens": 2000000,
+    "wall_time_s": 3600
+  },
+  "kind": "recursive_optimization",
+  "levels": [
+    {
+      "datasets": {
+        "holdout": {
+          "config": {
+            "baseline_tokens": {
+              "gsm8k:test:104": 583,
+              "gsm8k:test:1054": 487,
+              "gsm8k:test:1088": 792,
+              "gsm8k:test:1144": 553,
+              "gsm8k:test:1225": 724,
+              "gsm8k:test:1229": 500,
+              "gsm8k:test:218": 496,
+              "gsm8k:test:264": 372,
+              "gsm8k:test:286": 446,
+              "gsm8k:test:302": 396,
+              "gsm8k:test:35": 370,
+              "gsm8k:test:381": 512,
+              "gsm8k:test:383": 726,
+              "gsm8k:test:674": 436,
+              "gsm8k:test:685": 368,
+              "gsm8k:test:703": 445,
+              "gsm8k:test:735": 510,
+              "gsm8k:test:763": 762,
+              "gsm8k:test:864": 474,
+              "gsm8k:test:915": 394,
+              "gsm8k:test:927": 860,
+              "gsm8k:test:942": 426,
+              "gsm8k:test:97": 576,
+              "gsm8k:test:970": 315,
+              "gsm8k:train:1361": 415,
+              "gsm8k:train:2059": 518,
+              "gsm8k:train:2078": 422,
+              "gsm8k:train:2180": 764,
+              "gsm8k:train:2258": 410,
+              "gsm8k:train:2742": 472,
+              "gsm8k:train:2754": 430,
+              "gsm8k:train:3796": 284,
+              "gsm8k:train:3921": 586,
+              "gsm8k:train:40": 636,
+              "gsm8k:train:4145": 783,
+              "gsm8k:train:5121": 636,
+              "gsm8k:train:5480": 670,
+              "gsm8k:train:5728": 1061,
+              "gsm8k:train:5996": 490,
+              "gsm8k:train:6088": 318,
+              "gsm8k:train:6212": 450,
+              "gsm8k:train:6227": 414,
+              "gsm8k:train:6316": 556,
+              "gsm8k:train:6481": 480,
+              "gsm8k:train:6654": 492,
+              "gsm8k:train:6799": 1019,
+              "gsm8k:train:6891": 496,
+              "gsm8k:train:6918": 606,
+              "gsm8k:train:722": 595,
+              "gsm8k:train:74": 544,
+              "gsm8k:train:818": 640,
+              "gsm8k:train:82": 336
+            },
+            "limit": 8
+          },
+          "ref": "recursive_experiments.dataset.gsm8k@2",
+          "split": "holdout"
+        },
+        "train": {
+          "config": {
+            "baseline_tokens": {
+              "gsm8k:test:104": 583,
+              "gsm8k:test:1054": 487,
+              "gsm8k:test:1088": 792,
+              "gsm8k:test:1144": 553,
+              "gsm8k:test:1225": 724,
+              "gsm8k:test:1229": 500,
+              "gsm8k:test:218": 496,
+              "gsm8k:test:264": 372,
+              "gsm8k:test:286": 446,
+              "gsm8k:test:302": 396,
+              "gsm8k:test:35": 370,
+              "gsm8k:test:381": 512,
+              "gsm8k:test:383": 726,
+              "gsm8k:test:674": 436,
+              "gsm8k:test:685": 368,
+              "gsm8k:test:703": 445,
+              "gsm8k:test:735": 510,
+              "gsm8k:test:763": 762,
+              "gsm8k:test:864": 474,
+              "gsm8k:test:915": 394,
+              "gsm8k:test:927": 860,
+              "gsm8k:test:942": 426,
+              "gsm8k:test:97": 576,
+              "gsm8k:test:970": 315,
+              "gsm8k:train:1361": 415,
+              "gsm8k:train:2059": 518,
+              "gsm8k:train:2078": 422,
+              "gsm8k:train:2180": 764,
+              "gsm8k:train:2258": 410,
+              "gsm8k:train:2742": 472,
+              "gsm8k:train:2754": 430,
+              "gsm8k:train:3796": 284,
+              "gsm8k:train:3921": 586,
+              "gsm8k:train:40": 636,
+              "gsm8k:train:4145": 783,
+              "gsm8k:train:5121": 636,
+              "gsm8k:train:5480": 670,
+              "gsm8k:train:5728": 1061,
+              "gsm8k:train:5996": 490,
+              "gsm8k:train:6088": 318,
+              "gsm8k:train:6212": 450,
+              "gsm8k:train:6227": 414,
+              "gsm8k:train:6316": 556,
+              "gsm8k:train:6481": 480,
+              "gsm8k:train:6654": 492,
+              "gsm8k:train:6799": 1019,
+              "gsm8k:train:6891": 496,
+              "gsm8k:train:6918": 606,
+              "gsm8k:train:722": 595,
+              "gsm8k:train:74": 544,
+              "gsm8k:train:818": 640,
+              "gsm8k:train:82": 336
+            },
+            "limit": 4
+          },
+          "ref": "recursive_experiments.dataset.gsm8k@2",
+          "split": "train"
+        },
+        "validation": {
+          "config": {
+            "baseline_tokens": {
+              "gsm8k:test:104": 583,
+              "gsm8k:test:1054": 487,
+              "gsm8k:test:1088": 792,
+              "gsm8k:test:1144": 553,
+              "gsm8k:test:1225": 724,
+              "gsm8k:test:1229": 500,
+              "gsm8k:test:218": 496,
+              "gsm8k:test:264": 372,
+              "gsm8k:test:286": 446,
+              "gsm8k:test:302": 396,
+              "gsm8k:test:35": 370,
+              "gsm8k:test:381": 512,
+              "gsm8k:test:383": 726,
+              "gsm8k:test:674": 436,
+              "gsm8k:test:685": 368,
+              "gsm8k:test:703": 445,
+              "gsm8k:test:735": 510,
+              "gsm8k:test:763": 762,
+              "gsm8k:test:864": 474,
+              "gsm8k:test:915": 394,
+              "gsm8k:test:927": 860,
+              "gsm8k:test:942": 426,
+              "gsm8k:test:97": 576,
+              "gsm8k:test:970": 315,
+              "gsm8k:train:1361": 415,
+              "gsm8k:train:2059": 518,
+              "gsm8k:train:2078": 422,
+              "gsm8k:train:2180": 764,
+              "gsm8k:train:2258": 410,
+              "gsm8k:train:2742": 472,
+              "gsm8k:train:2754": 430,
+              "gsm8k:train:3796": 284,
+              "gsm8k:train:3921": 586,
+              "gsm8k:train:40": 636,
+              "gsm8k:train:4145": 783,
+              "gsm8k:train:5121": 636,
+              "gsm8k:train:5480": 670,
+              "gsm8k:train:5728": 1061,
+              "gsm8k:train:5996": 490,
+              "gsm8k:train:6088": 318,
+              "gsm8k:train:6212": 450,
+              "gsm8k:train:6227": 414,
+              "gsm8k:train:6316": 556,
+              "gsm8k:train:6481": 480,
+              "gsm8k:train:6654": 492,
+              "gsm8k:train:6799": 1019,
+              "gsm8k:train:6891": 496,
+              "gsm8k:train:6918": 606,
+              "gsm8k:train:722": 595,
+              "gsm8k:train:74": 544,
+              "gsm8k:train:818": 640,
+              "gsm8k:train:82": 336
+            },
+            "limit": 4
+          },
+          "ref": "recursive_experiments.dataset.gsm8k@2",
+          "split": "validation"
+        }
+      },
+      "engine": {
+        "config": {
+          "iterations": 7,
+          "num_candidates": 1,
+          "optimizer": "OptoPrimeV2",
+          "optimizer_kwargs": {},
+          "trainer": "PrioritySearch",
+          "trainer_kwargs": {},
+          "validation_gate": true
+        },
+        "name": "trace"
+      },
+      "id": "compound-reasoning",
+      "llm_roles": {
+        "feedback": null,
+        "forward": "forward_primary",
+        "judge": null,
+        "optimizer": "optimizer_primary"
+      },
+      "module": {
+        "artifact": {
+          "analysis_instruction": "Reason carefully and concisely. Identify the operations needed, compute them, and verify the result before handing analysis to the answer stage.",
+          "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the number after FINAL:."
+        },
+        "config": {
+          "analysis_instruction": "Reason carefully and concisely. Identify the operations needed, compute them, and verify the result before handing analysis to the answer stage.",
+          "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the number after FINAL:."
+        },
+        "inputs": {},
+        "ref": "recursive_experiments.module.compound_reasoning@1"
+      },
+      "objective": {
+        "evaluator_ref": "recursive_experiments.evaluator.exact_reasoning@1",
+        "feedback_channels": [
+          "natural_language",
+          "trace"
+        ],
+        "hard_constraints": [
+          {
+            "metric": "invalid_rate",
+            "op": "<=",
+            "value": 0.0
+          }
+        ],
+        "intent": "Maximize exact-answer accuracy while reducing forward tokens; never select an invalid answer.",
+        "metrics": {
+          "accuracy": {
+            "aggregate_examples": "mean",
+            "direction": "maximize",
+            "source": "evaluation.metrics.accuracy"
+          },
+          "forward_token_ratio": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.forward_token_ratio"
+          },
+          "invalid_rate": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.invalid_rate"
+          },
+          "latency_s": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.latency_s"
+          }
+        },
+        "selection": {
+          "mode": "weighted",
+          "weights": {
+            "accuracy": 1.0,
+            "forward_token_ratio": 0.1
+          }
+        }
+      },
+      "surface": {
+        "kind": "custom",
+        "targets": [
+          "analysis_instruction",
+          "answer_instruction"
+        ]
+      }
+    }
+  ],
+  "llm_profiles": {
+    "forward_primary": {
+      "api_key_ref": "env:OPENROUTER_API_KEY",
+      "fallbacks": [],
+      "max_tokens": 384,
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openrouter",
+      "request_params": {
+        "reasoning": {
+          "enabled": false
+        }
+      },
+      "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+      "temperature": 0
+    },
+    "optimizer_primary": {
+      "api_key_ref": "env:OPENROUTER_API_KEY",
+      "fallbacks": [],
+      "max_tokens": 8192,
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openrouter",
+      "request_params": {
+        "reasoning": {
+          "effort": "low"
+        }
+      },
+      "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731",
+      "temperature": 0
+    }
+  },
+  "outputs": {
+    "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/multiobjective_reasoning/reports/pilot_runs_after_empty_text_retry/seed-0/budget-6/B",
+    "format": "json",
+    "save_artifacts": true
+  },
+  "runtime": {
+    "offline": false,
+    "reproducible": true,
+    "resume": true,
+    "seed": 0,
+    "strict_refs": true,
+    "test_mode": false
+  },
+  "schema_version": "recursive-opt/v2alpha"
+}

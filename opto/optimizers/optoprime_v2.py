@@ -1,20 +1,17 @@
 import json
 from typing import Any, List, Dict, Union, Tuple, Optional
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from opto.optimizers.optoprime import OptoPrime, FunctionFeedback
 from opto.trace.utils import dedent
 from opto.optimizers.utils import truncate_expression, extract_xml_like_data, extract_response_content
 
-from opto.trace.nodes import ParameterNode, Node, MessageNode
-from opto.trace.propagators import TraceGraph, GraphPropagator
+from opto.trace.nodes import ParameterNode
+from opto.trace.propagators import GraphPropagator
 from opto.trace.propagators.propagators import Propagator
 
 from opto.utils.llm import AbstractModel, LLM
 from opto.optimizers.buffers import FIFOBuffer
 import copy
-import pickle
-import re
-from typing import Dict, Any
 
 
 class OptimizerPromptSymbolSet:
@@ -659,7 +656,7 @@ class OptoPrimeV2(OptoPrime):
             user_prompt: str,
             verbose: Union[bool, str] = False,
             max_tokens: int = 4096,
-    ):
+    ) -> str:
         """Call the LLM with a prompt and return the response."""
         if verbose not in (False, "output"):
             print("Prompt\n", system_prompt + user_prompt)
@@ -672,9 +669,8 @@ class OptoPrimeV2(OptoPrime):
         response_format = {"type": "json_object"} if self.use_json_object_format else None
 
         response = self.llm(messages=messages, max_tokens=max_tokens, response_format=response_format)
-
-        response = extract_response_content(response, context="OptoPrimeV2 proposal")
+        content = extract_response_content(response, context="OptoPrimeV2 proposal")
 
         if verbose:
-            print("LLM response:\n", response)
-        return response
+            print("LLM response:\n", content)
+        return content

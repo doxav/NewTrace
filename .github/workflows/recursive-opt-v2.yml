@@ -25,6 +25,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e '.[gepa]' pytest pytest-socket==0.7.0 nbclient==0.10.4 nbformat==5.10.4 ipykernel
+          python -m pip install -e '.[test]'
+      - name: Cache pinned Experiment-0 datasets before network isolation
+        run: |
+          python - <<'PY'
+          from datasets import load_dataset
+          load_dataset("openai/gsm8k", "main", split="train", revision="740312add88f781978c0658806c59bc2815b9866")
+          load_dataset("openai/gsm8k", "main", split="test", revision="740312add88f781978c0658806c59bc2815b9866")
+          load_dataset("hubert233/BigBenchExtraHard", split="object_counting", revision="442521cdc7195d9e0fdc5ba010b6fcbd902fcc00")
+          load_dataset("hubert233/BigBenchExtraHard", split="boolean_expressions", revision="442521cdc7195d9e0fdc5ba010b6fcbd902fcc00")
+          PY
       - name: Run spec, module, objective, knowledge, graph, and notebook contracts
         run: |
           PYTHONPATH=. pytest -q \
@@ -35,4 +45,7 @@ jobs:
             tests/unit_tests/test_objectives.py \
             tests/unit_tests/test_evaluators_vector.py \
             tests/unit_tests/test_trainers_multiobjective.py \
-            tests/unit_tests/test_recursive_final_hardening.py
+            tests/unit_tests/test_recursive_final_hardening.py \
+            tests/unit_tests/test_recursive_transport.py \
+            experiments/recursive_opt/multiobjective_reasoning/tests
+          HF_HUB_OFFLINE=1 PYTHONPATH=. python -m experiments.recursive_opt.multiobjective_reasoning.run offline-contract

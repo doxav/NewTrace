@@ -1,0 +1,4431 @@
+{
+  "calibration_sequence": [
+    "gsm8k"
+  ],
+  "cost_semantics": {
+    "pilot_cost_forecast_requirement": "deferred to and mandatory after live micro-smoke",
+    "unavailable_cost_representation": null,
+    "zero_with_nonzero_tokens_means_unavailable": true
+  },
+  "eligibility_subset": {
+    "holdout": 0,
+    "train": 8,
+    "validation": 8
+  },
+  "eligible_tasks": [
+    "gsm8k"
+  ],
+  "experiment_version": "experiment-0-v2",
+  "holdout_evaluator_invocations": 0,
+  "holdout_used_for_eligibility": false,
+  "near_eligible_tasks_from_v1": [
+    "gsm8k"
+  ],
+  "passed": true,
+  "schema_version": "recursive-opt-task-eligibility/v2",
+  "selected_task": "gsm8k",
+  "selection_ranking_basis": "forward_tokens_per_evaluated_example",
+  "task_results": {
+    "bbeh_boolean_expressions": {
+      "baseline_validation_accuracy": null,
+      "baseline_validation_invalid_rate": null,
+      "best_feasible_token_ratio": null,
+      "calibrated": false,
+      "cost_usd": null,
+      "efficiency_probe_ids": [],
+      "efficiency_signal": false,
+      "eligible": false,
+      "exclusion_reasons": [
+        "not_near_eligible_under_preserved_v1_evidence"
+      ],
+      "forward_tokens_per_evaluated_example": null,
+      "probes": {},
+      "quality_probe_ids": [],
+      "quality_signal": false,
+      "token_spread": null,
+      "validation_accuracy_spread": null
+    },
+    "bbeh_object_counting": {
+      "baseline_validation_accuracy": null,
+      "baseline_validation_invalid_rate": null,
+      "best_feasible_token_ratio": null,
+      "calibrated": false,
+      "cost_usd": null,
+      "efficiency_probe_ids": [],
+      "efficiency_signal": false,
+      "eligible": false,
+      "exclusion_reasons": [
+        "not_near_eligible_under_preserved_v1_evidence"
+      ],
+      "forward_tokens_per_evaluated_example": null,
+      "probes": {},
+      "quality_probe_ids": [],
+      "quality_signal": false,
+      "token_spread": null,
+      "validation_accuracy_spread": null
+    },
+    "gsm8k": {
+      "baseline_validation_accuracy": 0.875,
+      "baseline_validation_invalid_rate": 0.0,
+      "best_feasible_token_ratio": 0.5363252163413161,
+      "calibrated": true,
+      "checks": {
+        "baseline_validation_accuracy_range": true,
+        "baseline_validation_invalid_rate": true,
+        "disjoint_splits": true,
+        "informativeness": true,
+        "nonempty_splits": true
+      },
+      "cost_usd": null,
+      "efficiency_probe_ids": [],
+      "efficiency_signal": false,
+      "eligibility_subset_ids": {
+        "train": [
+          "gsm8k:train:6654",
+          "gsm8k:train:5121",
+          "gsm8k:train:2078",
+          "gsm8k:train:6212",
+          "gsm8k:train:6227",
+          "gsm8k:train:2059",
+          "gsm8k:train:2258",
+          "gsm8k:train:1361"
+        ],
+        "validation": [
+          "gsm8k:train:6918",
+          "gsm8k:train:74",
+          "gsm8k:train:3921",
+          "gsm8k:train:5728",
+          "gsm8k:train:6316",
+          "gsm8k:train:818",
+          "gsm8k:train:6481",
+          "gsm8k:train:6891"
+        ]
+      },
+      "eligible": true,
+      "exclusion_reasons": [],
+      "forward_tokens_per_evaluated_example": 667.796875,
+      "probes": {
+        "P0": {
+          "artifact_fingerprint": "270b001d0017b631caceec5cf6115b901f84196be59ea74ba1a01ba63aefdda6",
+          "cost_usd": null,
+          "splits": {
+            "train": {
+              "budget": {
+                "accounted": {
+                  "candidates": 0,
+                  "candidates_evaluated": 0,
+                  "candidates_proposed": 0,
+                  "candidates_reserved": 0,
+                  "eval_llm_calls": 16,
+                  "evaluator_runs": 8,
+                  "optimizer_llm_calls": 0,
+                  "total_tokens": 3757,
+                  "wall_time_s": 60.493022
+                },
+                "candidates": 2,
+                "eval_llm_calls": 80,
+                "evaluator_runs": 40,
+                "exceeded": [],
+                "on_exceed": "fail",
+                "optimizer_llm_calls": 4,
+                "total_tokens": 60000,
+                "wall_time_s": 900
+              },
+              "cost_usd": null,
+              "evaluator_invocations": 8,
+              "evaluator_records": [
+                {
+                  "artifacts": [
+                    {
+                      "answer": "2",
+                      "expected": "360"
+                    },
+                    {
+                      "answer": "21",
+                      "expected": "21"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "14",
+                      "expected": "14"
+                    },
+                    {
+                      "answer": "9",
+                      "expected": "9"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "72",
+                      "expected": "72"
+                    },
+                    {
+                      "answer": "132",
+                      "expected": "132"
+                    }
+                  ],
+                  "error": null,
+                  "feedback": [
+                    "Expected answer: 360. Produced answer: 2.",
+                    "Expected answer: 21. Produced answer: 21.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 14. Produced answer: 14.",
+                    "Expected answer: 9. Produced answer: 9.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 72. Produced answer: 72.",
+                    "Expected answer: 132. Produced answer: 132."
+                  ],
+                  "metrics": {
+                    "accuracy": 0.875,
+                    "forward_token_ratio": 1.0,
+                    "invalid_rate": 0.0,
+                    "latency_s": 7.559541640264797
+                  },
+                  "status": "ok",
+                  "trace": [
+                    {
+                      "output_identity": 128061679963888,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6654",
+                      "workflow_call": 1
+                    },
+                    {
+                      "output_identity": 128061673942784,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:5121",
+                      "workflow_call": 2
+                    },
+                    {
+                      "output_identity": 128061673939424,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2078",
+                      "workflow_call": 3
+                    },
+                    {
+                      "output_identity": 128061676155488,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6212",
+                      "workflow_call": 4
+                    },
+                    {
+                      "output_identity": 128061673936112,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6227",
+                      "workflow_call": 5
+                    },
+                    {
+                      "output_identity": 128061673940720,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2059",
+                      "workflow_call": 6
+                    },
+                    {
+                      "output_identity": 128061672465728,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2258",
+                      "workflow_call": 7
+                    },
+                    {
+                      "output_identity": 128061672464576,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:1361",
+                      "workflow_call": 8
+                    }
+                  ],
+                  "usage": {
+                    "feedback": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "forward": {
+                      "calls": 16,
+                      "completion_tokens": 1175,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 2582,
+                      "total_tokens": 3757
+                    },
+                    "judge": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "optimizer": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    }
+                  },
+                  "valid": true
+                }
+              ],
+              "metrics": {
+                "accuracy": 0.875,
+                "forward_token_ratio": 1.0,
+                "invalid_rate": 0.0,
+                "latency_s": 7.559541640264797
+              },
+              "per_example_forward_usage": [
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6654",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 169,
+                    "prompt_tokens": 323,
+                    "total_tokens": 492
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:5121",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 235,
+                    "prompt_tokens": 401,
+                    "total_tokens": 636
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2078",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 128,
+                    "prompt_tokens": 294,
+                    "total_tokens": 422
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6212",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 130,
+                    "prompt_tokens": 320,
+                    "total_tokens": 450
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6227",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 113,
+                    "prompt_tokens": 301,
+                    "total_tokens": 414
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2059",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 174,
+                    "prompt_tokens": 344,
+                    "total_tokens": 518
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2258",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 129,
+                    "prompt_tokens": 281,
+                    "total_tokens": 410
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:1361",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 97,
+                    "prompt_tokens": 318,
+                    "total_tokens": 415
+                  }
+                }
+              ],
+              "provider_calls": [
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                }
+              ],
+              "sample_count": 8,
+              "status": "success",
+              "usage": {
+                "feedback": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "forward": {
+                  "calls": 16,
+                  "completion_tokens": 1175,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 2582,
+                  "total_tokens": 3757
+                },
+                "judge": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "optimizer": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                }
+              },
+              "valid": true,
+              "workflow_forwards": 8
+            },
+            "validation": {
+              "budget": {
+                "accounted": {
+                  "candidates": 0,
+                  "candidates_evaluated": 0,
+                  "candidates_proposed": 0,
+                  "candidates_reserved": 0,
+                  "eval_llm_calls": 16,
+                  "evaluator_runs": 8,
+                  "optimizer_llm_calls": 0,
+                  "total_tokens": 4969,
+                  "wall_time_s": 53.771289
+                },
+                "candidates": 2,
+                "eval_llm_calls": 80,
+                "evaluator_runs": 40,
+                "exceeded": [],
+                "on_exceed": "fail",
+                "optimizer_llm_calls": 4,
+                "total_tokens": 60000,
+                "wall_time_s": 900
+              },
+              "cost_usd": null,
+              "evaluator_invocations": 8,
+              "evaluator_records": [
+                {
+                  "artifacts": [
+                    {
+                      "answer": "33",
+                      "expected": "33"
+                    },
+                    {
+                      "answer": "28",
+                      "expected": "28"
+                    },
+                    {
+                      "answer": "3.875",
+                      "expected": "4"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "15525",
+                      "expected": "15525"
+                    },
+                    {
+                      "answer": "2",
+                      "expected": "2"
+                    },
+                    {
+                      "answer": "1152",
+                      "expected": "1152"
+                    },
+                    {
+                      "answer": "24",
+                      "expected": "24"
+                    }
+                  ],
+                  "error": null,
+                  "feedback": [
+                    "Expected answer: 33. Produced answer: 33.",
+                    "Expected answer: 28. Produced answer: 28.",
+                    "Expected answer: 4. Produced answer: 3.875.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 15525. Produced answer: 15525.",
+                    "Expected answer: 2. Produced answer: 2.",
+                    "Expected answer: 1152. Produced answer: 1152.",
+                    "Expected answer: 24. Produced answer: 24."
+                  ],
+                  "metrics": {
+                    "accuracy": 0.875,
+                    "forward_token_ratio": 1.0,
+                    "invalid_rate": 0.0,
+                    "latency_s": 6.719676429609535
+                  },
+                  "status": "ok",
+                  "trace": [
+                    {
+                      "output_identity": 128061672471968,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6918",
+                      "workflow_call": 1
+                    },
+                    {
+                      "output_identity": 128061678148144,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:74",
+                      "workflow_call": 2
+                    },
+                    {
+                      "output_identity": 128061672461504,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:3921",
+                      "workflow_call": 3
+                    },
+                    {
+                      "output_identity": 128061672466208,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:5728",
+                      "workflow_call": 4
+                    },
+                    {
+                      "output_identity": 128061674973200,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6316",
+                      "workflow_call": 5
+                    },
+                    {
+                      "output_identity": 128061674974208,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:818",
+                      "workflow_call": 6
+                    },
+                    {
+                      "output_identity": 128061673942208,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6481",
+                      "workflow_call": 7
+                    },
+                    {
+                      "output_identity": 128061674965472,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6891",
+                      "workflow_call": 8
+                    }
+                  ],
+                  "usage": {
+                    "feedback": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "forward": {
+                      "calls": 16,
+                      "completion_tokens": 1624,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 3345,
+                      "total_tokens": 4969
+                    },
+                    "judge": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "optimizer": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    }
+                  },
+                  "valid": true
+                }
+              ],
+              "metrics": {
+                "accuracy": 0.875,
+                "forward_token_ratio": 1.0,
+                "invalid_rate": 0.0,
+                "latency_s": 6.719676429609535
+              },
+              "per_example_forward_usage": [
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6918",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 205,
+                    "prompt_tokens": 401,
+                    "total_tokens": 606
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:74",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 176,
+                    "prompt_tokens": 368,
+                    "total_tokens": 544
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:3921",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 154,
+                    "prompt_tokens": 432,
+                    "total_tokens": 586
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:5728",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 490,
+                    "prompt_tokens": 571,
+                    "total_tokens": 1061
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6316",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 189,
+                    "prompt_tokens": 367,
+                    "total_tokens": 556
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:818",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 153,
+                    "prompt_tokens": 487,
+                    "total_tokens": 640
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6481",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 142,
+                    "prompt_tokens": 338,
+                    "total_tokens": 480
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6891",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 115,
+                    "prompt_tokens": 381,
+                    "total_tokens": 496
+                  }
+                }
+              ],
+              "provider_calls": [
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                }
+              ],
+              "sample_count": 8,
+              "status": "success",
+              "usage": {
+                "feedback": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "forward": {
+                  "calls": 16,
+                  "completion_tokens": 1624,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 3345,
+                  "total_tokens": 4969
+                },
+                "judge": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "optimizer": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                }
+              },
+              "valid": true,
+              "workflow_forwards": 8
+            }
+          }
+        },
+        "P1": {
+          "artifact_fingerprint": "aa70585ac88a9c5335b3bd7545a9c57c93a31de514ca76ccb8ff2f6544197c6b",
+          "cost_usd": null,
+          "splits": {
+            "train": {
+              "budget": {
+                "accounted": {
+                  "candidates": 0,
+                  "candidates_evaluated": 0,
+                  "candidates_proposed": 0,
+                  "candidates_reserved": 0,
+                  "eval_llm_calls": 16,
+                  "evaluator_runs": 8,
+                  "optimizer_llm_calls": 0,
+                  "total_tokens": 2054,
+                  "wall_time_s": 46.783751
+                },
+                "candidates": 2,
+                "eval_llm_calls": 80,
+                "evaluator_runs": 40,
+                "exceeded": [],
+                "on_exceed": "fail",
+                "optimizer_llm_calls": 4,
+                "total_tokens": 60000,
+                "wall_time_s": 900
+              },
+              "cost_usd": null,
+              "evaluator_invocations": 8,
+              "evaluator_records": [
+                {
+                  "artifacts": [
+                    {
+                      "answer": "2",
+                      "expected": "360"
+                    },
+                    {
+                      "answer": "21",
+                      "expected": "21"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "14",
+                      "expected": "14"
+                    },
+                    {
+                      "answer": "9",
+                      "expected": "9"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "72",
+                      "expected": "72"
+                    },
+                    {
+                      "answer": "132",
+                      "expected": "132"
+                    }
+                  ],
+                  "error": null,
+                  "feedback": [
+                    "Expected answer: 360. Produced answer: 2.",
+                    "Expected answer: 21. Produced answer: 21.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 14. Produced answer: 14.",
+                    "Expected answer: 9. Produced answer: 9.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 72. Produced answer: 72.",
+                    "Expected answer: 132. Produced answer: 132."
+                  ],
+                  "metrics": {
+                    "accuracy": 0.875,
+                    "forward_token_ratio": 1.0,
+                    "invalid_rate": 0.0,
+                    "latency_s": 5.845790211460553
+                  },
+                  "status": "ok",
+                  "trace": [
+                    {
+                      "output_identity": 128061673946912,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6654",
+                      "workflow_call": 1
+                    },
+                    {
+                      "output_identity": 128061679606752,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:5121",
+                      "workflow_call": 2
+                    },
+                    {
+                      "output_identity": 128061672507920,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2078",
+                      "workflow_call": 3
+                    },
+                    {
+                      "output_identity": 128061672518768,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6212",
+                      "workflow_call": 4
+                    },
+                    {
+                      "output_identity": 128061672511808,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6227",
+                      "workflow_call": 5
+                    },
+                    {
+                      "output_identity": 128061673945712,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2059",
+                      "workflow_call": 6
+                    },
+                    {
+                      "output_identity": 128061672461696,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2258",
+                      "workflow_call": 7
+                    },
+                    {
+                      "output_identity": 128061672512624,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:1361",
+                      "workflow_call": 8
+                    }
+                  ],
+                  "usage": {
+                    "feedback": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "forward": {
+                      "calls": 16,
+                      "completion_tokens": 492,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 1562,
+                      "total_tokens": 2054
+                    },
+                    "judge": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "optimizer": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    }
+                  },
+                  "valid": true
+                }
+              ],
+              "metrics": {
+                "accuracy": 0.875,
+                "forward_token_ratio": 1.0,
+                "invalid_rate": 0.0,
+                "latency_s": 5.845790211460553
+              },
+              "per_example_forward_usage": [
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6654",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 10,
+                    "prompt_tokens": 130,
+                    "total_tokens": 140
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:5121",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 126,
+                    "prompt_tokens": 258,
+                    "total_tokens": 384
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2078",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 41,
+                    "prompt_tokens": 174,
+                    "total_tokens": 215
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6212",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 49,
+                    "prompt_tokens": 205,
+                    "total_tokens": 254
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6227",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 46,
+                    "prompt_tokens": 200,
+                    "total_tokens": 246
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2059",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 101,
+                    "prompt_tokens": 238,
+                    "total_tokens": 339
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2258",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 44,
+                    "prompt_tokens": 162,
+                    "total_tokens": 206
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:1361",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 75,
+                    "prompt_tokens": 195,
+                    "total_tokens": 270
+                  }
+                }
+              ],
+              "provider_calls": [
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                }
+              ],
+              "sample_count": 8,
+              "status": "success",
+              "usage": {
+                "feedback": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "forward": {
+                  "calls": 16,
+                  "completion_tokens": 492,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 1562,
+                  "total_tokens": 2054
+                },
+                "judge": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "optimizer": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                }
+              },
+              "valid": true,
+              "workflow_forwards": 8
+            },
+            "validation": {
+              "budget": {
+                "accounted": {
+                  "candidates": 0,
+                  "candidates_evaluated": 0,
+                  "candidates_proposed": 0,
+                  "candidates_reserved": 0,
+                  "eval_llm_calls": 16,
+                  "evaluator_runs": 8,
+                  "optimizer_llm_calls": 0,
+                  "total_tokens": 2665,
+                  "wall_time_s": 38.387582
+                },
+                "candidates": 2,
+                "eval_llm_calls": 80,
+                "evaluator_runs": 40,
+                "exceeded": [],
+                "on_exceed": "fail",
+                "optimizer_llm_calls": 4,
+                "total_tokens": 60000,
+                "wall_time_s": 900
+              },
+              "cost_usd": null,
+              "evaluator_invocations": 8,
+              "evaluator_records": [
+                {
+                  "artifacts": [
+                    {
+                      "answer": "33",
+                      "expected": "33"
+                    },
+                    {
+                      "answer": "28",
+                      "expected": "28"
+                    },
+                    {
+                      "answer": "3.875",
+                      "expected": "4"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "15525",
+                      "expected": "15525"
+                    },
+                    {
+                      "answer": "2",
+                      "expected": "2"
+                    },
+                    {
+                      "answer": "1152",
+                      "expected": "1152"
+                    },
+                    {
+                      "answer": "12",
+                      "expected": "24"
+                    }
+                  ],
+                  "error": null,
+                  "feedback": [
+                    "Expected answer: 33. Produced answer: 33.",
+                    "Expected answer: 28. Produced answer: 28.",
+                    "Expected answer: 4. Produced answer: 3.875.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 15525. Produced answer: 15525.",
+                    "Expected answer: 2. Produced answer: 2.",
+                    "Expected answer: 1152. Produced answer: 1152.",
+                    "Expected answer: 24. Produced answer: 12."
+                  ],
+                  "metrics": {
+                    "accuracy": 0.75,
+                    "forward_token_ratio": 1.0,
+                    "invalid_rate": 0.0,
+                    "latency_s": 4.796116488374537
+                  },
+                  "status": "ok",
+                  "trace": [
+                    {
+                      "output_identity": 128061673943744,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6918",
+                      "workflow_call": 1
+                    },
+                    {
+                      "output_identity": 128061674974592,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:74",
+                      "workflow_call": 2
+                    },
+                    {
+                      "output_identity": 128061673945040,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:3921",
+                      "workflow_call": 3
+                    },
+                    {
+                      "output_identity": 128061673944896,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:5728",
+                      "workflow_call": 4
+                    },
+                    {
+                      "output_identity": 128061672519776,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6316",
+                      "workflow_call": 5
+                    },
+                    {
+                      "output_identity": 128061673936304,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:818",
+                      "workflow_call": 6
+                    },
+                    {
+                      "output_identity": 128061672509360,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6481",
+                      "workflow_call": 7
+                    },
+                    {
+                      "output_identity": 128061672512000,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6891",
+                      "workflow_call": 8
+                    }
+                  ],
+                  "usage": {
+                    "feedback": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "forward": {
+                      "calls": 16,
+                      "completion_tokens": 564,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 2101,
+                      "total_tokens": 2665
+                    },
+                    "judge": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "optimizer": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    }
+                  },
+                  "valid": true
+                }
+              ],
+              "metrics": {
+                "accuracy": 0.75,
+                "forward_token_ratio": 1.0,
+                "invalid_rate": 0.0,
+                "latency_s": 4.796116488374537
+              },
+              "per_example_forward_usage": [
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6918",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 166,
+                    "prompt_tokens": 329,
+                    "total_tokens": 495
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:74",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 85,
+                    "prompt_tokens": 240,
+                    "total_tokens": 325
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:3921",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 62,
+                    "prompt_tokens": 303,
+                    "total_tokens": 365
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:5728",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 57,
+                    "prompt_tokens": 201,
+                    "total_tokens": 258
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6316",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 29,
+                    "prompt_tokens": 171,
+                    "total_tokens": 200
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:818",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 44,
+                    "prompt_tokens": 343,
+                    "total_tokens": 387
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6481",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 100,
+                    "prompt_tokens": 261,
+                    "total_tokens": 361
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6891",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 21,
+                    "prompt_tokens": 253,
+                    "total_tokens": 274
+                  }
+                }
+              ],
+              "provider_calls": [
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                }
+              ],
+              "sample_count": 8,
+              "status": "success",
+              "usage": {
+                "feedback": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "forward": {
+                  "calls": 16,
+                  "completion_tokens": 564,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 2101,
+                  "total_tokens": 2665
+                },
+                "judge": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "optimizer": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                }
+              },
+              "valid": true,
+              "workflow_forwards": 8
+            }
+          }
+        },
+        "P2": {
+          "artifact_fingerprint": "c0f11434abbb6c7509bebbdee855152007147d874fe5c274c8e1bf65fe3893f4",
+          "cost_usd": null,
+          "splits": {
+            "train": {
+              "budget": {
+                "accounted": {
+                  "candidates": 0,
+                  "candidates_evaluated": 0,
+                  "candidates_proposed": 0,
+                  "candidates_reserved": 0,
+                  "eval_llm_calls": 16,
+                  "evaluator_runs": 8,
+                  "optimizer_llm_calls": 0,
+                  "total_tokens": 4912,
+                  "wall_time_s": 64.91045
+                },
+                "candidates": 2,
+                "eval_llm_calls": 80,
+                "evaluator_runs": 40,
+                "exceeded": [],
+                "on_exceed": "fail",
+                "optimizer_llm_calls": 4,
+                "total_tokens": 60000,
+                "wall_time_s": 900
+              },
+              "cost_usd": null,
+              "evaluator_invocations": 8,
+              "evaluator_records": [
+                {
+                  "artifacts": [
+                    {
+                      "answer": "2",
+                      "expected": "360"
+                    },
+                    {
+                      "answer": "21",
+                      "expected": "21"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "14",
+                      "expected": "14"
+                    },
+                    {
+                      "answer": "9",
+                      "expected": "9"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "72",
+                      "expected": "72"
+                    },
+                    {
+                      "answer": "132",
+                      "expected": "132"
+                    }
+                  ],
+                  "error": null,
+                  "feedback": [
+                    "Expected answer: 360. Produced answer: 2.",
+                    "Expected answer: 21. Produced answer: 21.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 14. Produced answer: 14.",
+                    "Expected answer: 9. Produced answer: 9.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 72. Produced answer: 72.",
+                    "Expected answer: 132. Produced answer: 132."
+                  ],
+                  "metrics": {
+                    "accuracy": 0.875,
+                    "forward_token_ratio": 1.0,
+                    "invalid_rate": 0.0,
+                    "latency_s": 8.111574261667556
+                  },
+                  "status": "ok",
+                  "trace": [
+                    {
+                      "output_identity": 128061672520832,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6654",
+                      "workflow_call": 1
+                    },
+                    {
+                      "output_identity": 128061674966288,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:5121",
+                      "workflow_call": 2
+                    },
+                    {
+                      "output_identity": 128061672975456,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2078",
+                      "workflow_call": 3
+                    },
+                    {
+                      "output_identity": 128061672972672,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6212",
+                      "workflow_call": 4
+                    },
+                    {
+                      "output_identity": 128061672513632,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6227",
+                      "workflow_call": 5
+                    },
+                    {
+                      "output_identity": 128061672509840,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2059",
+                      "workflow_call": 6
+                    },
+                    {
+                      "output_identity": 128061673304912,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2258",
+                      "workflow_call": 7
+                    },
+                    {
+                      "output_identity": 128061672976032,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:1361",
+                      "workflow_call": 8
+                    }
+                  ],
+                  "usage": {
+                    "feedback": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "forward": {
+                      "calls": 16,
+                      "completion_tokens": 1924,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 2988,
+                      "total_tokens": 4912
+                    },
+                    "judge": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "optimizer": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    }
+                  },
+                  "valid": true
+                }
+              ],
+              "metrics": {
+                "accuracy": 0.875,
+                "forward_token_ratio": 1.0,
+                "invalid_rate": 0.0,
+                "latency_s": 8.111574261667556
+              },
+              "per_example_forward_usage": [
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6654",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 255,
+                    "prompt_tokens": 358,
+                    "total_tokens": 613
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:5121",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 479,
+                    "prompt_tokens": 532,
+                    "total_tokens": 1011
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2078",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 164,
+                    "prompt_tokens": 304,
+                    "total_tokens": 468
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6212",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 218,
+                    "prompt_tokens": 383,
+                    "total_tokens": 601
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6227",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 182,
+                    "prompt_tokens": 344,
+                    "total_tokens": 526
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2059",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 194,
+                    "prompt_tokens": 338,
+                    "total_tokens": 532
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2258",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 152,
+                    "prompt_tokens": 278,
+                    "total_tokens": 430
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:1361",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 280,
+                    "prompt_tokens": 451,
+                    "total_tokens": 731
+                  }
+                }
+              ],
+              "provider_calls": [
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                }
+              ],
+              "sample_count": 8,
+              "status": "success",
+              "usage": {
+                "feedback": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "forward": {
+                  "calls": 16,
+                  "completion_tokens": 1924,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 2988,
+                  "total_tokens": 4912
+                },
+                "judge": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "optimizer": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                }
+              },
+              "valid": true,
+              "workflow_forwards": 8
+            },
+            "validation": {
+              "budget": {
+                "accounted": {
+                  "candidates": 0,
+                  "candidates_evaluated": 0,
+                  "candidates_proposed": 0,
+                  "candidates_reserved": 0,
+                  "eval_llm_calls": 16,
+                  "evaluator_runs": 8,
+                  "optimizer_llm_calls": 0,
+                  "total_tokens": 6550,
+                  "wall_time_s": 93.782396
+                },
+                "candidates": 2,
+                "eval_llm_calls": 80,
+                "evaluator_runs": 40,
+                "exceeded": [],
+                "on_exceed": "fail",
+                "optimizer_llm_calls": 4,
+                "total_tokens": 60000,
+                "wall_time_s": 900
+              },
+              "cost_usd": null,
+              "evaluator_invocations": 8,
+              "evaluator_records": [
+                {
+                  "artifacts": [
+                    {
+                      "answer": "33",
+                      "expected": "33"
+                    },
+                    {
+                      "answer": "28",
+                      "expected": "28"
+                    },
+                    {
+                      "answer": "3.875",
+                      "expected": "4"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "15525",
+                      "expected": "15525"
+                    },
+                    {
+                      "answer": "2",
+                      "expected": "2"
+                    },
+                    {
+                      "answer": "1152",
+                      "expected": "1152"
+                    },
+                    {
+                      "answer": "24",
+                      "expected": "24"
+                    }
+                  ],
+                  "error": null,
+                  "feedback": [
+                    "Expected answer: 33. Produced answer: 33.",
+                    "Expected answer: 28. Produced answer: 28.",
+                    "Expected answer: 4. Produced answer: 3.875.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 15525. Produced answer: 15525.",
+                    "Expected answer: 2. Produced answer: 2.",
+                    "Expected answer: 1152. Produced answer: 1152.",
+                    "Expected answer: 24. Produced answer: 24."
+                  ],
+                  "metrics": {
+                    "accuracy": 0.875,
+                    "forward_token_ratio": 1.0,
+                    "invalid_rate": 0.0,
+                    "latency_s": 11.720828890771372
+                  },
+                  "status": "ok",
+                  "trace": [
+                    {
+                      "output_identity": 128061672965616,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6918",
+                      "workflow_call": 1
+                    },
+                    {
+                      "output_identity": 128061674973920,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:74",
+                      "workflow_call": 2
+                    },
+                    {
+                      "output_identity": 128061672964848,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:3921",
+                      "workflow_call": 3
+                    },
+                    {
+                      "output_identity": 128061672978336,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:5728",
+                      "workflow_call": 4
+                    },
+                    {
+                      "output_identity": 128061673944704,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6316",
+                      "workflow_call": 5
+                    },
+                    {
+                      "output_identity": 128061673943504,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:818",
+                      "workflow_call": 6
+                    },
+                    {
+                      "output_identity": 128061672520112,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6481",
+                      "workflow_call": 7
+                    },
+                    {
+                      "output_identity": 128061672978288,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6891",
+                      "workflow_call": 8
+                    }
+                  ],
+                  "usage": {
+                    "feedback": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "forward": {
+                      "calls": 16,
+                      "completion_tokens": 2606,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 3944,
+                      "total_tokens": 6550
+                    },
+                    "judge": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "optimizer": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    }
+                  },
+                  "valid": true
+                }
+              ],
+              "metrics": {
+                "accuracy": 0.875,
+                "forward_token_ratio": 1.0,
+                "invalid_rate": 0.0,
+                "latency_s": 11.720828890771372
+              },
+              "per_example_forward_usage": [
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6918",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 383,
+                    "prompt_tokens": 504,
+                    "total_tokens": 887
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:74",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 184,
+                    "prompt_tokens": 350,
+                    "total_tokens": 534
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:3921",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 392,
+                    "prompt_tokens": 607,
+                    "total_tokens": 999
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:5728",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 262,
+                    "prompt_tokens": 414,
+                    "total_tokens": 676
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6316",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 469,
+                    "prompt_tokens": 543,
+                    "total_tokens": 1012
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:818",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 213,
+                    "prompt_tokens": 519,
+                    "total_tokens": 732
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6481",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 433,
+                    "prompt_tokens": 531,
+                    "total_tokens": 964
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6891",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 270,
+                    "prompt_tokens": 476,
+                    "total_tokens": 746
+                  }
+                }
+              ],
+              "provider_calls": [
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                }
+              ],
+              "sample_count": 8,
+              "status": "success",
+              "usage": {
+                "feedback": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "forward": {
+                  "calls": 16,
+                  "completion_tokens": 2606,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 3944,
+                  "total_tokens": 6550
+                },
+                "judge": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "optimizer": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                }
+              },
+              "valid": true,
+              "workflow_forwards": 8
+            }
+          }
+        },
+        "P3": {
+          "artifact_fingerprint": "3d1235c3a4641529133020f604d67480fdf7a309d28a22fd2802acc268a18a92",
+          "cost_usd": null,
+          "splits": {
+            "train": {
+              "budget": {
+                "accounted": {
+                  "candidates": 0,
+                  "candidates_evaluated": 0,
+                  "candidates_proposed": 0,
+                  "candidates_reserved": 0,
+                  "eval_llm_calls": 16,
+                  "evaluator_runs": 8,
+                  "optimizer_llm_calls": 0,
+                  "total_tokens": 8397,
+                  "wall_time_s": 139.357514
+                },
+                "candidates": 2,
+                "eval_llm_calls": 80,
+                "evaluator_runs": 40,
+                "exceeded": [],
+                "on_exceed": "fail",
+                "optimizer_llm_calls": 4,
+                "total_tokens": 60000,
+                "wall_time_s": 900
+              },
+              "cost_usd": null,
+              "evaluator_invocations": 8,
+              "evaluator_records": [
+                {
+                  "artifacts": [
+                    {
+                      "answer": "2",
+                      "expected": "360"
+                    },
+                    {
+                      "answer": "21",
+                      "expected": "21"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "3",
+                      "expected": "14"
+                    },
+                    {
+                      "answer": "9",
+                      "expected": "9"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "72",
+                      "expected": "72"
+                    },
+                    {
+                      "answer": "132",
+                      "expected": "132"
+                    }
+                  ],
+                  "error": null,
+                  "feedback": [
+                    "Expected answer: 360. Produced answer: 2.",
+                    "Expected answer: 21. Produced answer: 21.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 14. Produced answer: 3.",
+                    "Expected answer: 9. Produced answer: 9.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 72. Produced answer: 72.",
+                    "Expected answer: 132. Produced answer: 132."
+                  ],
+                  "metrics": {
+                    "accuracy": 0.75,
+                    "forward_token_ratio": 1.0,
+                    "invalid_rate": 0.0,
+                    "latency_s": 17.41771878003783
+                  },
+                  "status": "ok",
+                  "trace": [
+                    {
+                      "output_identity": 128061673938560,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6654",
+                      "workflow_call": 1
+                    },
+                    {
+                      "output_identity": 128061674973248,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:5121",
+                      "workflow_call": 2
+                    },
+                    {
+                      "output_identity": 128061673304720,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2078",
+                      "workflow_call": 3
+                    },
+                    {
+                      "output_identity": 128061673293920,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6212",
+                      "workflow_call": 4
+                    },
+                    {
+                      "output_identity": 128061672980016,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6227",
+                      "workflow_call": 5
+                    },
+                    {
+                      "output_identity": 128061673295168,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2059",
+                      "workflow_call": 6
+                    },
+                    {
+                      "output_identity": 128061671537840,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:2258",
+                      "workflow_call": 7
+                    },
+                    {
+                      "output_identity": 128061673293776,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:1361",
+                      "workflow_call": 8
+                    }
+                  ],
+                  "usage": {
+                    "feedback": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "forward": {
+                      "calls": 16,
+                      "completion_tokens": 4057,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 4340,
+                      "total_tokens": 8397
+                    },
+                    "judge": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "optimizer": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    }
+                  },
+                  "valid": true
+                }
+              ],
+              "metrics": {
+                "accuracy": 0.75,
+                "forward_token_ratio": 1.0,
+                "invalid_rate": 0.0,
+                "latency_s": 17.41771878003783
+              },
+              "per_example_forward_usage": [
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6654",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 465,
+                    "prompt_tokens": 532,
+                    "total_tokens": 997
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:5121",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 479,
+                    "prompt_tokens": 483,
+                    "total_tokens": 962
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2078",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 417,
+                    "prompt_tokens": 507,
+                    "total_tokens": 924
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6212",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 768,
+                    "prompt_tokens": 568,
+                    "total_tokens": 1336
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6227",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 427,
+                    "prompt_tokens": 555,
+                    "total_tokens": 982
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2059",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 574,
+                    "prompt_tokens": 548,
+                    "total_tokens": 1122
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:2258",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 224,
+                    "prompt_tokens": 318,
+                    "total_tokens": 542
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:1361",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 703,
+                    "prompt_tokens": 829,
+                    "total_tokens": 1532
+                  }
+                }
+              ],
+              "provider_calls": [
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                }
+              ],
+              "sample_count": 8,
+              "status": "success",
+              "usage": {
+                "feedback": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "forward": {
+                  "calls": 16,
+                  "completion_tokens": 4057,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 4340,
+                  "total_tokens": 8397
+                },
+                "judge": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "optimizer": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                }
+              },
+              "valid": true,
+              "workflow_forwards": 8
+            },
+            "validation": {
+              "budget": {
+                "accounted": {
+                  "candidates": 0,
+                  "candidates_evaluated": 0,
+                  "candidates_proposed": 0,
+                  "candidates_reserved": 0,
+                  "eval_llm_calls": 16,
+                  "evaluator_runs": 8,
+                  "optimizer_llm_calls": 0,
+                  "total_tokens": 9435,
+                  "wall_time_s": 120.618465
+                },
+                "candidates": 2,
+                "eval_llm_calls": 80,
+                "evaluator_runs": 40,
+                "exceeded": [],
+                "on_exceed": "fail",
+                "optimizer_llm_calls": 4,
+                "total_tokens": 60000,
+                "wall_time_s": 900
+              },
+              "cost_usd": null,
+              "evaluator_invocations": 8,
+              "evaluator_records": [
+                {
+                  "artifacts": [
+                    {
+                      "answer": "30",
+                      "expected": "33"
+                    },
+                    {
+                      "answer": "28",
+                      "expected": "28"
+                    },
+                    {
+                      "answer": "3.875",
+                      "expected": "4"
+                    },
+                    {
+                      "answer": "6",
+                      "expected": "6"
+                    },
+                    {
+                      "answer": "15525",
+                      "expected": "15525"
+                    },
+                    {
+                      "answer": "2",
+                      "expected": "2"
+                    },
+                    {
+                      "answer": "1152",
+                      "expected": "1152"
+                    },
+                    {
+                      "answer": "254",
+                      "expected": "24"
+                    }
+                  ],
+                  "error": null,
+                  "feedback": [
+                    "Expected answer: 33. Produced answer: 30.",
+                    "Expected answer: 28. Produced answer: 28.",
+                    "Expected answer: 4. Produced answer: 3.875.",
+                    "Expected answer: 6. Produced answer: 6.",
+                    "Expected answer: 15525. Produced answer: 15525.",
+                    "Expected answer: 2. Produced answer: 2.",
+                    "Expected answer: 1152. Produced answer: 1152.",
+                    "Expected answer: 24. Produced answer: 254."
+                  ],
+                  "metrics": {
+                    "accuracy": 0.625,
+                    "forward_token_ratio": 1.0,
+                    "invalid_rate": 0.0,
+                    "latency_s": 15.075169690608163
+                  },
+                  "status": "ok",
+                  "trace": [
+                    {
+                      "output_identity": 128061673299488,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6918",
+                      "workflow_call": 1
+                    },
+                    {
+                      "output_identity": 128061672509888,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:74",
+                      "workflow_call": 2
+                    },
+                    {
+                      "output_identity": 128061673300976,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:3921",
+                      "workflow_call": 3
+                    },
+                    {
+                      "output_identity": 128061673945904,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:5728",
+                      "workflow_call": 4
+                    },
+                    {
+                      "output_identity": 128061672972288,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6316",
+                      "workflow_call": 5
+                    },
+                    {
+                      "output_identity": 128061672519632,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:818",
+                      "workflow_call": 6
+                    },
+                    {
+                      "output_identity": 128061679963120,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6481",
+                      "workflow_call": 7
+                    },
+                    {
+                      "output_identity": 128061673306544,
+                      "provider_calls": [
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        },
+                        {
+                          "actual_model": "deepseek/deepseek-v4-flash-0731",
+                          "actual_provider": "openrouter",
+                          "cache_hit": null
+                        }
+                      ],
+                      "sample_id": "gsm8k:train:6891",
+                      "workflow_call": 8
+                    }
+                  ],
+                  "usage": {
+                    "feedback": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "forward": {
+                      "calls": 16,
+                      "completion_tokens": 4682,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 4753,
+                      "total_tokens": 9435
+                    },
+                    "judge": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    },
+                    "optimizer": {
+                      "completion_tokens": 0,
+                      "cost_usd": 0.0,
+                      "prompt_tokens": 0,
+                      "total_tokens": 0
+                    }
+                  },
+                  "valid": true
+                }
+              ],
+              "metrics": {
+                "accuracy": 0.625,
+                "forward_token_ratio": 1.0,
+                "invalid_rate": 0.0,
+                "latency_s": 15.075169690608163
+              },
+              "per_example_forward_usage": [
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6918",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 768,
+                    "prompt_tokens": 573,
+                    "total_tokens": 1341
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:74",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 445,
+                    "prompt_tokens": 495,
+                    "total_tokens": 940
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:3921",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 483,
+                    "prompt_tokens": 657,
+                    "total_tokens": 1140
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:5728",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 520,
+                    "prompt_tokens": 558,
+                    "total_tokens": 1078
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6316",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 478,
+                    "prompt_tokens": 556,
+                    "total_tokens": 1034
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:818",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 473,
+                    "prompt_tokens": 695,
+                    "total_tokens": 1168
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6481",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 747,
+                    "prompt_tokens": 576,
+                    "total_tokens": 1323
+                  }
+                },
+                {
+                  "provider_calls": [
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    },
+                    {
+                      "actual_model": "deepseek/deepseek-v4-flash-0731",
+                      "actual_provider": "openrouter",
+                      "cache_hit": null
+                    }
+                  ],
+                  "sample_id": "gsm8k:train:6891",
+                  "usage": {
+                    "calls": 2,
+                    "completion_tokens": 768,
+                    "prompt_tokens": 643,
+                    "total_tokens": 1411
+                  }
+                }
+              ],
+              "provider_calls": [
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                },
+                {
+                  "actual_model": "deepseek/deepseek-v4-flash-0731",
+                  "actual_provider": "openrouter",
+                  "cache_hit": null
+                }
+              ],
+              "sample_count": 8,
+              "status": "success",
+              "usage": {
+                "feedback": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "forward": {
+                  "calls": 16,
+                  "completion_tokens": 4682,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 4753,
+                  "total_tokens": 9435
+                },
+                "judge": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "optimizer": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                }
+              },
+              "valid": true,
+              "workflow_forwards": 8
+            }
+          }
+        }
+      },
+      "quality_probe_ids": [
+        "P1",
+        "P3"
+      ],
+      "quality_signal": true,
+      "token_spread": 846.25,
+      "validation_accuracy_spread": 0.25
+    }
+  },
+  "v1_evidence_sha256": "be2bfd894191000d270e132d3c5ddc02d4a79ae20f594783d201233779114d25"
+}

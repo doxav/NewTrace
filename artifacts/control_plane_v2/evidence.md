@@ -1,5 +1,64 @@
 # Control plane v2 implementation evidence
 
+## Live transport resilience hotfix — CI verified (2026-08-25)
+
+Canonical profiles now own explicit request timeout and bounded transport
+attempt policy, ignore legacy transport environment overrides in v2, and
+classify the two observed reset/disconnect failures through causal exception
+chains. Experiment 0 freezes Trace at four workers and executes every main unit
+under a process-group watchdog. Scientific inputs and hypotheses are unchanged.
+
+Provider-free results are 225 focused passes, 330 mandated recursive passes
+with two accepted optional skips, 510 complete-unit passes with three accepted
+optional skips, 40 Experiment-0 passes including the full offline A/B/C/D
+contract, and one clean-kernel notebook pass. The runtime digest is
+`420b5351063a56b0ad274a6c39b6aaa4dc95b9094434600e89ea79f3eccc8872`;
+the registry digest remains
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+The first workflow attempt exposed a missing test-only `datasets` extra before
+collection. Required run `32856513753`, job `97829714487`, then completed
+successfully on `c6a109ca2aa2d5cf62074fd16b34570582092aa3`; Prompt-18 readiness is true
+for the matching runtime and registry digests.
+
+## Optimizer empty-text semantic retry — CI verified (2026-08-24)
+
+The recursive-opt optimizer-role boundary now requires non-empty final text and
+retries the identical request once through the same guarded client. Trace and
+GEPA share this adapter; all retry calls and tokens remain metered, reasoning
+text is never used as final output, and direct `OptoPrimeV2` raises an explicit
+missing-text error. The Experiment-0 scientific protocol is unchanged.
+
+Provider-free causal seams passed **6 tests**. The network-blocked focused
+matrix passed **212 tests**; the mandated regression passed **317 tests with 2
+optional skips**; the complete unit suite passed **497 tests with 3 optional
+skips**; Experiment-0 passed **23 tests**, including its full 20-assertion
+offline contract; and the clean-kernel notebook passed. Ruff, diff checking,
+and credential scanning passed. No Trace, GEPA, or Experiment-0 test skipped.
+
+The new runtime digest is
+`ba4836d9f43cffcd0271086932745b270d75478b5287a7d8100be4928b623cbc`.
+The registry digest remains
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+Required Actions run `32669603929`, job `97268256178`, completed successfully
+for `d63746afbb88d6193cbfedf2932b256d9f33b6e4`; digest-based readiness is now
+true for that implementation.
+
+## GEPA 0.1.4 reflection protocol relock (2026-08-23)
+
+The GEPA engine now adapts its text reflection callable to the existing guarded
+optimizer chat client without bypassing accounting, budgets, request parameters,
+or model fallback. The authoritative runtime digest is
+`37072c1364a02c277a677bf43ad8132a32a9f233488c80cd2b6bf1a7e344f33e`;
+the unchanged registry digest is
+`f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4`.
+Required Actions run `32650995105`, job `97222458541`, completed successfully
+on implementation commit `c1bf6a296d159b92d09ac29ee90556d2c1997a5d`.
+The subsequent evidence-state run `32651342206`, job `97223324883`, also
+completed successfully. Live Experiment-0 C then reached one real GEPA
+reflection and attributed its usage once; the experiment remained stopped
+because the reflected candidate was rejected and the frozen micro gate did not
+pass.
+
 Original implementation baseline: `6fc278a398709fe79a0fc9be22bae99bffd8cba6`
 
 Semantic-closure baseline: `21a0ad3d2f4f835ce2ffb1eef18c36a622265418`

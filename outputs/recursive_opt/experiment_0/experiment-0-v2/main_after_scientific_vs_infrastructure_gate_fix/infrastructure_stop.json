@@ -1,0 +1,38 @@
+{
+  "schema_version": "recursive-opt-main-infrastructure-stop/v1",
+  "status": "BLOCKED_INFRASTRUCTURE",
+  "completed_canonical_units": 1,
+  "planned_units": 40,
+  "completed_unit": {
+    "arm": "A",
+    "candidate_budget": 6,
+    "main_progress_sha256": "c34e49db775cce3a1c1eb068086eb4f667f3bb93a971232f18b8a890fd62ffae",
+    "result_sha256": "884e2904aafe07475689ada67c4372bf8592d982df7cb36c2daf273dacfe0df0",
+    "safety_passed": true,
+    "seed": 0
+  },
+  "failed_unit": {
+    "arm": "B",
+    "candidate_budget": 6,
+    "canonical_result_persisted": false,
+    "errors": [
+      "OpenrouterException - [Errno 104] Connection reset by peer",
+      "OpenrouterException - Server disconnected without sending a response."
+    ],
+    "failure_class": "provider_transport_and_uncancellable_worker_hang",
+    "seed": 0,
+    "spec_fingerprint": "3a841bb1e2ab6166d3d190a4bdbb8c55125ed252d2cc7d4e2884b885937fff4b"
+  },
+  "matrix_analysis_performed": false,
+  "candidate_trajectory_audit_performed": false,
+  "evidence_policy": "Do not statistically combine this incomplete matrix with a future restart.",
+  "control_plane_lock_sha256": "f83320fe8f1fcae5c2f0c3f4a0ae808956d84caa9263863b2d263d87471475de",
+  "required_ci": {
+    "implementation_run_id": 32773567177,
+    "implementation_job_id": 97579313398,
+    "final_head_run_id": 32773729820,
+    "final_head_job_id": 97579836564,
+    "status": "completed",
+    "conclusion": "success"
+  }
+}

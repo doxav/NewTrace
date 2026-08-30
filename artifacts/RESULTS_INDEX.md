@@ -1,6 +1,13 @@
 # recursive_opt — which results are current
 
-*Last updated 2026-08-30.* One page, so no one has to guess which numbers still hold.
+*Last updated 2026-08-30, after merging `origin/recursive_opt`.* One page, so no one has to
+guess which numbers still hold.
+
+> **Two lines of work were merged here.** This audit (measurement certification, 16 defect
+> fixes) and parallel remote work on Experiment 0 (GEPA reflection adapter, transport
+> hardening, empty-text handling, a frozen main run). Where both fixed the same bug — the
+> optimizer's empty provider response — the implementations were combined rather than one
+> discarded; see `opto/optimizers/utils.py::extract_response_content`.
 
 ## Read this first
 
@@ -21,7 +28,7 @@
 | `artifacts/RESULTS_INDEX.md` | ✅ **CURRENT** | This file. |
 | `examples/recursive_opt_use_cases_CURRENT_LIMITS.MD` | ⚠️ **SUPERSEDED** | Banner added. UC4 invalid; every delta below the resolution limit. Method still sound. |
 | `examples/notebook_outputs/**` (~90 run dirs) | ⚠️ **SUPERSEDED** | ~13 months of runs, all below the instrument's resolution. Keep as evidence, do not cite. |
-| `experiments/recursive_opt/multiobjective_reasoning/*` | ⚠️ **SUPERSEDED** | The GEPA blocker it reports is fixed; the experiment itself never ran. |
+| `experiments/recursive_opt/multiobjective_reasoning/*` | ◐ **PARTIAL** | The GEPA blocker it reports is fixed. A frozen main run was authorised 2026-08-24 and **started**, stopping on its first unit with `hard constraints not satisfied` (accuracy 22/24, invalid 1/24, zero optimizer calls) — see `reports/prompt18_r3_main_stop_decision.md`. Older `control_plane_blocker.json` is historical. |
 | `artifacts/control_plane_v2/*.md` | ◐ **PARTIAL** | Engineering claims hold. Efficacy claims do not — the plane never ran a recursive spec (D14). |
 | `artifacts/control_plane_v2/prompt18_readiness.json` | ✅ **CURRENT** | Honestly reports `ready_for_prompt_18: false` with blockers. |
 

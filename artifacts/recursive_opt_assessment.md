@@ -455,6 +455,15 @@ Nothing from the previous year of experiments can be re-run under the new contro
 
 ### 4.4 The current experiment
 
+> **Updated 2026-08-30 after merging `origin/recursive_opt`.** Parallel work on the remote has
+> moved this on considerably: the GEPA reflection adapter and the optimizer's empty-text
+> handling were both fixed there, transport was hardened, and a frozen Experiment-0 main run
+> was authorised and **started** on 2026-08-24. It stopped on its first unit (seed 0, budget 6,
+> arm A) with `hard constraints not satisfied` — accuracy 22/24, invalid rate 1/24, zero
+> optimizer calls. So the experiment is no longer "never started"; it is "started and stopped
+> at the first hard-constraint check". The paragraphs below describe the state as found at
+> `80777032` and are kept as the record of that point.
+
 `experiments/recursive_opt/multiobjective_reasoning/` contains the latest attempt. Its own report:
 
 ```

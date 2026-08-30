@@ -410,10 +410,28 @@ def test_d14_multilevel_recursive_spec_runs_end_to_end(_restore_adapter) -> None
 # D16 — the config surface silently truncated every multi-line artifact
 # --------------------------------------------------------------------------- #
 from opto.features.recursive_opt.levels import (  # noqa: E402
-    canonicalize_cfg_text, decode_cfg, encode_cfg,
+    canonicalize_cfg_text, config_values_scope, decode_cfg, encode_cfg,
 )
 
 _FIELDS = ("starting_artifact",)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_config_registry():
+    """Start from an UNPOLLUTED registry, then restore whatever was there.
+
+    CONFIG_ALLOWED_VALUES is a module global that specs mutate permanently (D17).
+    Snapshot-and-restore alone is not enough: by the time these tests run, an earlier
+    test may already have registered a `starting_artifact` menu, and the snapshot would
+    faithfully preserve that pollution. The free-text fields are therefore cleared for
+    the duration of each test.
+    """
+    from opto.features.recursive_opt.levels import CONFIG_ALLOWED_VALUES
+
+    with config_values_scope():
+        for free_text_field in ("starting_artifact", "initial_knowledge"):
+            CONFIG_ALLOWED_VALUES.pop(free_text_field, None)
+        yield
 
 
 @pytest.mark.parametrize("value", [
@@ -509,3 +527,52 @@ def test_d16b_enum_fields_still_validate() -> None:
                       ("batch_design",)).batch_design == "curriculum"
     with pytest.raises(ValueError, match="Invalid value for batch_design"):
         decode_cfg("batch_design: nonsense", LevelConfig(), ("batch_design",))
+
+
+# --------------------------------------------------------------------------- #
+# D17 — one spec's constraints must not restrict every later run in the process
+# --------------------------------------------------------------------------- #
+def test_d17_config_value_registry_is_scoped() -> None:
+    """`CONFIG_ALLOWED_VALUES` is a module global that `register_config_values` mutates.
+
+    A spec declaring `constraints: {starting_artifact: [...menu...]}` permanently
+    restricted every later run in the same process. A legitimate proposal outside the
+    leaked menu is then rejected as an invalid config and scored at the invalid floor,
+    which reads as a bad candidate rather than a harness fault.
+    """
+    from opto.features.recursive_opt.levels import (
+        CONFIG_ALLOWED_VALUES, register_config_values, validate_config_field)
+
+    with config_values_scope():
+        register_config_values("starting_artifact", ["Answer directly."])
+        assert CONFIG_ALLOWED_VALUES["starting_artifact"] == ("Answer directly.",)
+        with pytest.raises(ValueError):
+            validate_config_field("starting_artifact", "something else")
+
+    assert "starting_artifact" not in CONFIG_ALLOWED_VALUES
+    validate_config_field("starting_artifact", "def f():\n    return 1")
+
+
+def test_d17_run_spec_does_not_leak_constraints(_restore_adapter) -> None:
+    """A completed run must leave the registry as it found it."""
+    from opto.features.recursive_opt.levels import CONFIG_ALLOWED_VALUES
+
+    class _Adapter:
+        status = "offline"
+        PLUMBED_FIELDS = ("starting_artifact",)
+
+        def run_task(self, cfg, task_id):
+            return (0.5, "ok")
+
+    TB.register_task_adapter(_Adapter())
+    before = dict(CONFIG_ALLOWED_VALUES)
+    S.run_spec({
+        "families": {"f": ["t1"]},
+        "memory_root": tempfile.mkdtemp(),
+        "budget": {"candidates": 0, "on_exceed": "return_best"},
+        "levels": [{"id": "o1", "surface": "config", "family": "f",
+                    "targets": ["starting_artifact"],
+                    "constraints": {"starting_artifact": ["Answer directly."]},
+                    "iterations": 1, "num_candidates": 1}],
+    })
+    assert dict(CONFIG_ALLOWED_VALUES) == before, "the run leaked its constraints"

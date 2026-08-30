@@ -1,0 +1,388 @@
+{
+  "complete": true,
+  "identity": {
+    "levels": [
+      "e394dbc67f5da08cd9585773116c3eca51cd8914cd0c99599422e6ff1a11a724"
+    ],
+    "registry_sha256": "4afb255433b86255efcd98b0446fa4f836cc1d5b9d9f161d116b9567409ace27",
+    "runtime_tree_sha256": "420b5351063a56b0ad274a6c39b6aaa4dc95b9094434600e89ea79f3eccc8872",
+    "spec_fingerprint": "cd3b990a9f44c95f6ee0a74d7daf97dbe18f4795f73578fa2b1615193073db72",
+    "unit_id": "default:seed-1:matrix-0"
+  },
+  "result": {
+    "artifact": {},
+    "budget": {
+      "accounted": {
+        "candidates": 13,
+        "candidates_evaluated": 91,
+        "candidates_proposed": 0,
+        "candidates_reserved": 13,
+        "eval_llm_calls": 206,
+        "evaluator_runs": 103,
+        "optimizer_llm_calls": 5,
+        "total_tokens": 141009,
+        "wall_time_s": 1440.421741
+      },
+      "candidates": 13,
+      "eval_llm_calls": 2080,
+      "evaluator_runs": 1040,
+      "exceeded": [],
+      "on_exceed": "fail",
+      "optimizer_llm_calls": 48,
+      "total_tokens": 2000000,
+      "wall_time_s": 7200
+    },
+    "engine": "trace",
+    "error": "TransportRetryError: LiteLLM_completion: transient transport failure after 3 attempts: litellm.APIError: APIError: OpenrouterException - [Errno -3] Temporary failure in name resolution",
+    "evaluation": {
+      "artifacts": {},
+      "error": "TransportRetryError: LiteLLM_completion: transient transport failure after 3 attempts: litellm.APIError: APIError: OpenrouterException - [Errno -3] Temporary failure in name resolution",
+      "feedback": "execution failed",
+      "metrics": {},
+      "status": "error",
+      "trace": null,
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "calls": 206,
+          "completion_tokens": 10376,
+          "cost_usd": 0.0,
+          "prompt_tokens": 28760,
+          "total_tokens": 39136,
+          "transport_connection_resets": 0,
+          "transport_exhausted_requests": 0,
+          "transport_recovered_requests": 4,
+          "transport_retry_attempts": 4,
+          "transport_server_disconnects": 0,
+          "transport_transient_failures": 4
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "calls": 4,
+          "completion_tokens": 12313,
+          "cost_usd": 0.0,
+          "empty_text_responses": 0,
+          "prompt_tokens": 15827,
+          "semantic_retries": 0,
+          "semantic_retry_completion_tokens": 0,
+          "semantic_retry_cost_usd": 0.0,
+          "semantic_retry_prompt_tokens": 0,
+          "semantic_retry_total_tokens": 0,
+          "total_tokens": 28140,
+          "transport_connection_resets": 0,
+          "transport_exhausted_requests": 1,
+          "transport_recovered_requests": 0,
+          "transport_retry_attempts": 2,
+          "transport_server_disconnects": 0,
+          "transport_transient_failures": 3
+        }
+      },
+      "valid": false
+    },
+    "level_results": [
+      {
+        "artifact": {},
+        "budget": {
+          "accounted": {
+            "candidates": 13,
+            "candidates_evaluated": 91,
+            "candidates_proposed": 0,
+            "candidates_reserved": 13,
+            "eval_llm_calls": 206,
+            "evaluator_runs": 103,
+            "optimizer_llm_calls": 5,
+            "total_tokens": 141009,
+            "wall_time_s": 1440.420433
+          },
+          "candidates": 13,
+          "eval_llm_calls": 2080,
+          "evaluator_runs": 1040,
+          "exceeded": [],
+          "on_exceed": "fail",
+          "optimizer_llm_calls": 48,
+          "total_tokens": 2000000,
+          "wall_time_s": 7200
+        },
+        "engine": "trace",
+        "error": "TransportRetryError: LiteLLM_completion: transient transport failure after 3 attempts: litellm.APIError: APIError: OpenrouterException - [Errno -3] Temporary failure in name resolution",
+        "evaluation": {
+          "artifacts": {},
+          "error": "TransportRetryError: LiteLLM_completion: transient transport failure after 3 attempts: litellm.APIError: APIError: OpenrouterException - [Errno -3] Temporary failure in name resolution",
+          "feedback": "execution failed",
+          "metrics": {},
+          "status": "error",
+          "trace": null,
+          "usage": {
+            "feedback": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "forward": {
+              "calls": 206,
+              "completion_tokens": 10376,
+              "cost_usd": 0.0,
+              "prompt_tokens": 28760,
+              "total_tokens": 39136,
+              "transport_connection_resets": 0,
+              "transport_exhausted_requests": 0,
+              "transport_recovered_requests": 4,
+              "transport_retry_attempts": 4,
+              "transport_server_disconnects": 0,
+              "transport_transient_failures": 4
+            },
+            "judge": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "optimizer": {
+              "calls": 4,
+              "completion_tokens": 12313,
+              "cost_usd": 0.0,
+              "empty_text_responses": 0,
+              "prompt_tokens": 15827,
+              "semantic_retries": 0,
+              "semantic_retry_completion_tokens": 0,
+              "semantic_retry_cost_usd": 0.0,
+              "semantic_retry_prompt_tokens": 0,
+              "semantic_retry_total_tokens": 0,
+              "total_tokens": 28140,
+              "transport_connection_resets": 0,
+              "transport_exhausted_requests": 1,
+              "transport_recovered_requests": 0,
+              "transport_retry_attempts": 2,
+              "transport_server_disconnects": 0,
+              "transport_transient_failures": 3
+            }
+          },
+          "valid": false
+        },
+        "level_results": [],
+        "lineage": [],
+        "metadata": {
+          "level_id": "compound-reasoning",
+          "optimizer_response_diagnostics": [
+            {
+              "attempt": 1,
+              "completion_tokens": 2868,
+              "content_present": true,
+              "finish_reason": "stop",
+              "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+              "prompt_tokens": 4450,
+              "reasoning_present": true,
+              "reasoning_tokens": 2676
+            },
+            {
+              "attempt": 1,
+              "completion_tokens": 2576,
+              "content_present": true,
+              "finish_reason": "stop",
+              "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+              "prompt_tokens": 3825,
+              "reasoning_present": true,
+              "reasoning_tokens": 2271
+            },
+            {
+              "attempt": 1,
+              "completion_tokens": 5586,
+              "content_present": true,
+              "finish_reason": "stop",
+              "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+              "prompt_tokens": 3943,
+              "reasoning_present": true,
+              "reasoning_tokens": 5339
+            },
+            {
+              "attempt": 1,
+              "completion_tokens": 1283,
+              "content_present": true,
+              "finish_reason": "stop",
+              "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+              "prompt_tokens": 3609,
+              "reasoning_present": true,
+              "reasoning_tokens": 2
+            }
+          ]
+        },
+        "module_ref": "recursive_experiments.module.compound_reasoning@1",
+        "plan_fingerprint": "cd3b990a9f44c95f6ee0a74d7daf97dbe18f4795f73578fa2b1615193073db72",
+        "portable": true,
+        "promotable": false,
+        "spec_fingerprint": "cd3b990a9f44c95f6ee0a74d7daf97dbe18f4795f73578fa2b1615193073db72",
+        "status": "error",
+        "unit_id": "default:seed-1:matrix-0:compound-reasoning",
+        "usage": {
+          "feedback": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "forward": {
+            "calls": 206,
+            "completion_tokens": 10376,
+            "cost_usd": 0.0,
+            "prompt_tokens": 28760,
+            "total_tokens": 39136,
+            "transport_connection_resets": 0,
+            "transport_exhausted_requests": 0,
+            "transport_recovered_requests": 4,
+            "transport_retry_attempts": 4,
+            "transport_server_disconnects": 0,
+            "transport_transient_failures": 4
+          },
+          "judge": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "optimizer": {
+            "calls": 4,
+            "completion_tokens": 12313,
+            "cost_usd": 0.0,
+            "empty_text_responses": 0,
+            "prompt_tokens": 15827,
+            "semantic_retries": 0,
+            "semantic_retry_completion_tokens": 0,
+            "semantic_retry_cost_usd": 0.0,
+            "semantic_retry_prompt_tokens": 0,
+            "semantic_retry_total_tokens": 0,
+            "total_tokens": 28140,
+            "transport_connection_resets": 0,
+            "transport_exhausted_requests": 1,
+            "transport_recovered_requests": 0,
+            "transport_retry_attempts": 2,
+            "transport_server_disconnects": 0,
+            "transport_transient_failures": 3
+          }
+        },
+        "valid": false
+      }
+    ],
+    "lineage": [],
+    "metadata": {
+      "arm_id": "default",
+      "level_id": "compound-reasoning",
+      "level_ids": [
+        "compound-reasoning"
+      ],
+      "matrix": {},
+      "optimizer_response_diagnostics": [
+        {
+          "attempt": 1,
+          "completion_tokens": 2868,
+          "content_present": true,
+          "finish_reason": "stop",
+          "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+          "prompt_tokens": 4450,
+          "reasoning_present": true,
+          "reasoning_tokens": 2676
+        },
+        {
+          "attempt": 1,
+          "completion_tokens": 2576,
+          "content_present": true,
+          "finish_reason": "stop",
+          "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+          "prompt_tokens": 3825,
+          "reasoning_present": true,
+          "reasoning_tokens": 2271
+        },
+        {
+          "attempt": 1,
+          "completion_tokens": 5586,
+          "content_present": true,
+          "finish_reason": "stop",
+          "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+          "prompt_tokens": 3943,
+          "reasoning_present": true,
+          "reasoning_tokens": 5339
+        },
+        {
+          "attempt": 1,
+          "completion_tokens": 1283,
+          "content_present": true,
+          "finish_reason": "stop",
+          "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+          "prompt_tokens": 3609,
+          "reasoning_present": true,
+          "reasoning_tokens": 2
+        }
+      ],
+      "resolved_models": {
+        "compound-reasoning": {}
+      },
+      "seed": 1,
+      "test_overrides": {}
+    },
+    "module_ref": "recursive_experiments.module.compound_reasoning@1",
+    "plan_fingerprint": "cd3b990a9f44c95f6ee0a74d7daf97dbe18f4795f73578fa2b1615193073db72",
+    "portable": true,
+    "promotable": false,
+    "spec_fingerprint": "cd3b990a9f44c95f6ee0a74d7daf97dbe18f4795f73578fa2b1615193073db72",
+    "status": "error",
+    "unit_id": "default:seed-1:matrix-0",
+    "usage": {
+      "feedback": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "forward": {
+        "calls": 206,
+        "completion_tokens": 10376,
+        "cost_usd": 0.0,
+        "prompt_tokens": 28760,
+        "total_tokens": 39136,
+        "transport_connection_resets": 0,
+        "transport_exhausted_requests": 0,
+        "transport_recovered_requests": 4,
+        "transport_retry_attempts": 4,
+        "transport_server_disconnects": 0,
+        "transport_transient_failures": 4
+      },
+      "judge": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "optimizer": {
+        "calls": 4,
+        "completion_tokens": 12313,
+        "cost_usd": 0.0,
+        "empty_text_responses": 0,
+        "prompt_tokens": 15827,
+        "semantic_retries": 0,
+        "semantic_retry_completion_tokens": 0,
+        "semantic_retry_cost_usd": 0.0,
+        "semantic_retry_prompt_tokens": 0,
+        "semantic_retry_total_tokens": 0,
+        "total_tokens": 28140,
+        "transport_connection_resets": 0,
+        "transport_exhausted_requests": 1,
+        "transport_recovered_requests": 0,
+        "transport_retry_attempts": 2,
+        "transport_server_disconnects": 0,
+        "transport_transient_failures": 3
+      }
+    },
+    "valid": false
+  },
+  "result_sha256": "9a94f3f7d4cde59a4ab326f45713a90d06d5238d1357586127a822ed6a675a4b"
+}

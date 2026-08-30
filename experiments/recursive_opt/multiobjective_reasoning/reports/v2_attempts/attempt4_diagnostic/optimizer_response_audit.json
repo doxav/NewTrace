@@ -1,0 +1,23 @@
+{
+  "accounted": {
+    "candidates_evaluated": 2,
+    "candidates_proposed": 0,
+    "eval_llm_calls": 6,
+    "evaluator_runs": 3,
+    "optimizer_llm_calls": 1,
+    "total_tokens": 7000
+  },
+  "error": "TypeError: argument of type 'NoneType' is not iterable",
+  "optimizer_response": {
+    "completion_tokens": 2048,
+    "content_is_none": true,
+    "content_length": null,
+    "finish_reason": "length",
+    "prompt_tokens": 3652,
+    "reasoning_length_characters": 7723,
+    "reasoning_present": true,
+    "total_tokens": 5700
+  },
+  "privacy": "Prompts, final content, reasoning text, and credentials were not recorded.",
+  "status": "error"
+}

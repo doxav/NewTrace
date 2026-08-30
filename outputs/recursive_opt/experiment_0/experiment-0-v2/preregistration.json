@@ -1,0 +1,288 @@
+{
+  "amendment_basis": {
+    "permitted": true,
+    "reason": "v1 discovered a pre-optimizer measurement-design defect; no engine comparison or holdout-driven decision occurred; v1 remains preserved and reported",
+    "unchanged": [
+      "scientific purpose",
+      "module architecture",
+      "P0 initial artifact",
+      "P0-P3 manual probe texts",
+      "forward and optimizer model identities and reasoning modes",
+      "objective metrics and weights",
+      "hard invalidity constraint",
+      "A/B/C/D arms",
+      "validation-gate ablation",
+      "paired seed plan",
+      "eventual success criteria"
+    ],
+    "v1_evidence": {
+      "dataset_manifest": "v1/dataset_manifest.json",
+      "eligibility_report": "../reports/v1/task_eligibility.json",
+      "hashes": "v1/evidence_hashes.json",
+      "preregistration": "v1/preregistration.json"
+    }
+  },
+  "arms": {
+    "A": "fixed_baseline",
+    "B": "trace_optoprime_v2",
+    "C": "gepa_optimize_anything",
+    "D": "trace_without_validation_gate"
+  },
+  "bootstrap_seed": 1803,
+  "cache_policy": "provider-response caching disabled; no optimization memory shared across arms",
+  "candidate_tasks": [
+    "bbeh_object_counting",
+    "bbeh_boolean_expressions",
+    "gsm8k"
+  ],
+  "control_plane_lock": "../control_plane_lock.json",
+  "dataset_pools": {
+    "eligibility_subset": {
+      "holdout": 0,
+      "train": 8,
+      "validation": 8
+    },
+    "micro_smoke_subset": {
+      "holdout": 1,
+      "train": 1,
+      "validation": 1
+    },
+    "minimum_sizes": {
+      "holdout": 24,
+      "train": 16,
+      "validation": 12
+    },
+    "pilot_subset": {
+      "holdout": 8,
+      "train": 4,
+      "validation": 4
+    },
+    "selection_basis": "deterministic seeded permutation of pinned source rows; never model performance",
+    "selection_seed": 1803
+  },
+  "evaluator": {
+    "feedback_llm": false,
+    "judge_llm": false,
+    "mode": "output",
+    "one_workflow_forward_per_evaluator_example": true,
+    "ref": "recursive_experiments.evaluator.exact_reasoning@1"
+  },
+  "eventual_success_criteria": {
+    "efficiency_success": "lower 95% CI of paired accuracy delta >= -0.02 AND upper 95% CI of forward-token-ratio delta < 0",
+    "quality_success": "lower 95% CI of paired accuracy delta > 0",
+    "safety": "no selected artifact violates invalid_rate <= 0"
+  },
+  "experiment_version": "experiment-0-v2",
+  "fairness_primary": [
+    "evaluator-example executions",
+    "forward-model calls",
+    "forward-model tokens",
+    "maximum wall time"
+  ],
+  "harmful_proposal_definition": "candidate validation utility is below current validated utility or violates invalid_rate <= 0",
+  "main_monetary_ceiling_usd": null,
+  "main_run_policy": "pilot only until an explicit main-run monetary ceiling is acknowledged",
+  "manual_probes": {
+    "P0": {
+      "analysis_instruction": "Reason carefully and concisely. Identify the operations needed, compute them, and verify the result before handing analysis to the answer stage.",
+      "answer_instruction": "Use the supplied analysis to answer exactly. For multiple choice return the option token such as (A); for numeric tasks return only the number after FINAL:."
+    },
+    "P1": {
+      "analysis_instruction": "Find the answer directly with only the minimum necessary reasoning.",
+      "answer_instruction": "Return the exact answer in one FINAL: line and nothing else."
+    },
+    "P2": {
+      "analysis_instruction": "Solve step by step, check every operation, and independently verify the result.",
+      "answer_instruction": "Check the supplied reasoning, correct any mistake, then emit exactly FINAL: <answer>."
+    },
+    "P3": {
+      "analysis_instruction": "Produce an exhaustive derivation, enumerate alternatives, check each intermediate result twice, and explain every verification in detail before deciding.",
+      "answer_instruction": "Review the full derivation at length, discuss possible errors, and finish with exactly FINAL: <answer>."
+    }
+  },
+  "model_profiles": {
+    "forward": {
+      "max_tokens": 384,
+      "request_params": {
+        "reasoning": {
+          "enabled": false
+        }
+      },
+      "temperature": 0
+    },
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "optimizer": {
+      "max_tokens": 8192,
+      "request_params": {
+        "reasoning": {
+          "effort": "low"
+        }
+      },
+      "temperature": 0
+    },
+    "provider": "openrouter",
+    "resolved_model": "openrouter/deepseek/deepseek-v4-flash-0731"
+  },
+  "module": {
+    "extractor_trainable": false,
+    "ref": "recursive_experiments.module.compound_reasoning@1",
+    "targets": [
+      "analysis_instruction",
+      "answer_instruction"
+    ]
+  },
+  "objective": {
+    "hard_constraints": [
+      "invalid_rate <= 0"
+    ],
+    "metrics": {
+      "accuracy": "maximize",
+      "forward_token_ratio": "minimize",
+      "invalid_rate": "minimize",
+      "latency_s": "minimize_diagnostic_only"
+    },
+    "mode": "weighted",
+    "post_hoc_token_weight_grid": [
+      0.05,
+      0.1,
+      0.2
+    ],
+    "weights": {
+      "accuracy": 1.0,
+      "forward_token_ratio": 0.1
+    }
+  },
+  "operational_amendments": [
+    {
+      "cause": "The v1 768-token completion cap was exhausted by reasoning before the model emitted final suggestion content.",
+      "change": "Increase only optimizer max_tokens from 768 to 2048 while retaining reasoning.enabled=true.",
+      "evidence": "reports/v2_attempts/attempt2/live_micro_smoke.json",
+      "failure": "The optimizer response content was null and Trace stopped with TypeError before proposing a candidate.",
+      "source": "https://openrouter.ai/docs/guides/best-practices/reasoning-tokens",
+      "stage": "live micro-smoke attempt 2, before any optimizer proposal or engine comparison",
+      "unchanged": [
+        "model identity",
+        "reasoning enabled mode",
+        "forward profile",
+        "objective and gates",
+        "task and dataset pools",
+        "candidate and aggregate resource budgets"
+      ]
+    },
+    {
+      "cause": "OpenRouter model metadata reports high as this model's default reasoning effort; the high-effort trace exhausted the full completion budget before final content.",
+      "change": "Use the unambiguous model-supported reasoning object {effort: low}; OpenRouter infers that reasoning is enabled from effort. Attempt 5 proved that combining enabled=true with effort=low retained the exhausted default path. Attempt 6 proved that low effort alone still exhausted 2048 tokens, so the final per-call cap is 8192 while the aggregate stage budgets remain unchanged.",
+      "evidence": "reports/v2_attempts/attempt4_diagnostic/optimizer_response_audit.json",
+      "failure": "At max_tokens=2048 the optimizer response still had null content, completion_tokens=2048, reasoning present, and finish_reason=length.",
+      "sources": [
+        "https://openrouter.ai/api/v1/models",
+        "https://openrouter.ai/docs/guides/best-practices/reasoning-tokens"
+      ],
+      "stage": "live micro-smoke attempts 3, 5, and 6 and instrumented B-only diagnostic attempt 4, before any optimizer proposal or engine comparison",
+      "unchanged": [
+        "model identity",
+        "reasoning remains enabled",
+        "forward profile",
+        "objective and gates",
+        "task and dataset pools",
+        "candidate and aggregate resource budgets"
+      ]
+    }
+  ],
+  "pilot": {
+    "arm_order": {
+      "0": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "1": [
+        "C",
+        "D",
+        "A",
+        "B"
+      ],
+      "2": [
+        "B",
+        "A",
+        "D",
+        "C"
+      ]
+    },
+    "candidate_budgets": [
+      4,
+      6
+    ],
+    "paired_seeds": [
+      0,
+      1,
+      2
+    ]
+  },
+  "resource_budgets": {
+    "comparison_policy": "identical evaluator, forward-call, token, and wall-time ceilings within each stage; candidate lifecycle counts remain diagnostics",
+    "micro_smoke": {
+      "eval_llm_calls": 80,
+      "evaluator_runs": 40,
+      "total_tokens": 60000,
+      "wall_time_s": 900
+    },
+    "pilot": {
+      "eval_llm_calls": 320,
+      "evaluator_runs": 160,
+      "total_tokens": 2000000,
+      "wall_time_s": 3600
+    }
+  },
+  "schema_version": "recursive-opt-experiment-preregistration/v2",
+  "task_selection": {
+    "data_allowed": [
+      "train",
+      "validation"
+    ],
+    "eligibility_rule": {
+      "all_manual_probes_must_be_valid": false,
+      "baseline_validation_accuracy_max": 0.95,
+      "baseline_validation_accuracy_min": 0.2,
+      "baseline_validation_invalid_rate": 0.0,
+      "disjoint_splits_required": true,
+      "informativeness": {
+        "efficiency_signal": {
+          "maximum_baseline_token_ratio": 0.8,
+          "probe_invalid_rate": 0.0,
+          "validation_accuracy_noninferiority": -0.02
+        },
+        "operator": "quality_signal OR efficiency_signal",
+        "quality_signal": "at least one feasible non-baseline probe changes validation accuracy"
+      },
+      "nonempty_splits": [
+        "train",
+        "validation",
+        "holdout"
+      ],
+      "pilot_cost_within_forecast_required": true
+    },
+    "holdout_allowed": false,
+    "near_eligible_from_v1": {
+      "method": "mechanically classify from preserved v1 evidence; do not hard-code a task name",
+      "rule": "v1 passed baseline range, baseline invalidity, token variation, and split integrity and failed only accuracy spread, OR v1 already showed a feasible accuracy-preserving efficiency probe"
+    },
+    "ranking": [
+      "known monetary cost when available and comparable",
+      "mean forward tokens per evaluated example when monetary cost is unavailable",
+      "candidate_tasks order as final tie-break"
+    ]
+  },
+  "task_status": {
+    "bbeh_boolean_expressions": "high-difficulty stress candidate unless it passes v2 eligibility",
+    "bbeh_object_counting": "high-difficulty stress candidate unless it passes v2 eligibility",
+    "gsm8k": "primary candidate subject to mechanical near-eligible classification and v2 eligibility"
+  },
+  "title": "Cross-engine control-plane and optimizer-portability validation",
+  "v1_to_v2_task_names": {
+    "boolean_expressions": "bbeh_boolean_expressions",
+    "gsm8k": "gsm8k",
+    "object_counting": "bbeh_object_counting"
+  }
+}
