@@ -1,0 +1,39 @@
+{
+  "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+  "wall_s": 216.2842662334442,
+  "tasks": {
+    "gsm8k": {
+      "accuracy": 0.975,
+      "ci": [
+        0.8711834051199223,
+        0.9955732825922052
+      ],
+      "n": 40,
+      "invalid": 0,
+      "headroom": 0.025000000000000022,
+      "n_per_arm_5pp": 313
+    },
+    "bbeh_object_counting": {
+      "accuracy": 0.075,
+      "ci": [
+        0.025835556771858226,
+        0.19864530159097524
+      ],
+      "n": 40,
+      "invalid": 0,
+      "headroom": 0.925,
+      "n_per_arm_5pp": 564
+    },
+    "bbeh_boolean_expressions": {
+      "accuracy": 0.125,
+      "ci": [
+        0.05459419773541284,
+        0.26112420670238146
+      ],
+      "n": 40,
+      "invalid": 5,
+      "headroom": 0.875,
+      "n_per_arm_5pp": 800
+    }
+  }
+}
