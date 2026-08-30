@@ -1,0 +1,75 @@
+{
+  "internal:code_param": {
+    "live": true,
+    "spread": 1.0,
+    "baseline_score": 1.0,
+    "surface": "code",
+    "variants": [
+      {
+        "variant": "def _probe(*a, **k):\n    return None\n",
+        "score": 0.0
+      }
+    ],
+    "reason": "the score responds to a change in the trainable parameter"
+  },
+  "internal:multi_param": {
+    "live": true,
+    "spread": 4.5,
+    "baseline_score": -1.0,
+    "surface": "numeric",
+    "variants": [
+      {
+        "variant": "0.0",
+        "score": -2.0
+      },
+      {
+        "variant": "7.5",
+        "score": -5.5
+      }
+    ],
+    "reason": "the score responds to a change in the trainable parameter"
+  },
+  "internal:multiobjective_bbeh": {
+    "live": true,
+    "spread": 0.9999975104500001,
+    "baseline_score": 0.999993793375,
+    "surface": "prose",
+    "variants": [
+      {
+        "variant": "Answer directly.",
+        "score": -2.812800000018267e-06
+      },
+      {
+        "variant": "Plan step by step, then verify before replying.",
+        "score": -3.717074999998182e-06
+      }
+    ],
+    "reason": "the score responds to a change in the trainable parameter"
+  },
+  "llm4ad:optimization/online_bin_packing": {
+    "live": true,
+    "spread": 997908.2,
+    "baseline_score": -2091.8,
+    "surface": "code",
+    "variants": [
+      {
+        "variant": "def _probe(*a, **k):\n    return None\n",
+        "score": -1000000.0
+      }
+    ],
+    "reason": "the score responds to a change in the trainable parameter"
+  },
+  "veribench:binary_search": {
+    "live": true,
+    "spread": 0.1,
+    "baseline_score": 0.0,
+    "surface": "code",
+    "variants": [
+      {
+        "variant": "def _probe(*a, **k):\n    return None\n",
+        "score": 0.1
+      }
+    ],
+    "reason": "the score responds to a change in the trainable parameter"
+  }
+}

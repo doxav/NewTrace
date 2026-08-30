@@ -1,0 +1,61 @@
+{
+  "budget": {
+    "candidates": 12,
+    "eval_llm_calls": 200,
+    "on_exceed": "return_best",
+    "optimizer_llm_calls": 60,
+    "wall_time_s": 1200
+  },
+  "families": {
+    "gsm8k": [
+      "internal:multiobjective_gsm8k"
+    ],
+    "qasper": [
+      "hf:qasper"
+    ]
+  },
+  "levels": [
+    {
+      "constraints": {
+        "starting_artifact": [
+          "",
+          "Answer directly.",
+          "Plan step by step, then answer.",
+          "Plan step by step, then verify the answer before replying.",
+          "Use the provided context as evidence, reason briefly, then answer exactly."
+        ]
+      },
+      "families": [
+        "gsm8k",
+        "qasper"
+      ],
+      "family": "*",
+      "fixed": {
+        "credit_horizon": "step",
+        "optimizer": "OptoPrimeV2",
+        "trace_type": "internal",
+        "trainer": "PrioritySearch"
+      },
+      "id": "o3_prior",
+      "iterations": 2,
+      "surface": "prior",
+      "targets": [
+        "starting_artifact"
+      ]
+    }
+  ],
+  "memory_root": "/home/xav/code/Trace/artifacts/probe_2026/probe_b_out/uc4_corrected_same_holdout/initial_seed0",
+  "reuse_priors": false,
+  "run_id": "initial:seed0",
+  "scoring": {
+    "clip": [
+      -1.0,
+      1.0
+    ]
+  },
+  "tracebench": {
+    "inner_steps": 0,
+    "max_examples": 2,
+    "timeout_seconds": 120
+  }
+}

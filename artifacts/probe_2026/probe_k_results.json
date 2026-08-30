@@ -1,0 +1,77 @@
+{
+  "task": "llm4ad:optimization/online_bin_packing",
+  "evaluator": "deterministic (runs the candidate heuristic)",
+  "certified_noise_sd": 0.0,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "rows": [
+    {
+      "arm": "baseline",
+      "seed": 0,
+      "score": -2091.8,
+      "artifact": "starting_artifact: ",
+      "wall_s": 1.0,
+      "error": null
+    },
+    {
+      "arm": "optimized",
+      "seed": 0,
+      "score": -2087.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 1536.4,
+      "error": null
+    },
+    {
+      "arm": "baseline",
+      "seed": 1,
+      "score": -2091.8,
+      "artifact": "starting_artifact: ",
+      "wall_s": 0.5,
+      "error": null
+    },
+    {
+      "arm": "optimized",
+      "seed": 1,
+      "score": -2087.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 208.7,
+      "error": null
+    },
+    {
+      "arm": "baseline",
+      "seed": 2,
+      "score": -2091.8,
+      "artifact": "starting_artifact: ",
+      "wall_s": 0.6,
+      "error": null
+    },
+    {
+      "arm": "optimized",
+      "seed": 2,
+      "score": null,
+      "artifact": "",
+      "wall_s": 283.6,
+      "error": "RuntimeError: LLMEmptyResponseError: provider returned a completion with no content (finish_reason='stop')"
+    }
+  ],
+  "baseline_scores": {
+    "0": -2091.8,
+    "1": -2091.8,
+    "2": -2091.8
+  },
+  "optimized_scores": {
+    "0": -2087.0,
+    "1": -2087.0
+  },
+  "paired_deltas": [
+    4.800000000000182,
+    4.800000000000182
+  ],
+  "paired_mean": 4.800000000000182,
+  "n_paired": 2,
+  "improved_seeds": 2,
+  "wall_s": 2034.3
+}

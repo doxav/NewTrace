@@ -1,0 +1,26 @@
+{
+  "initial (empty)": {
+    "score": -0.94175,
+    "error_rate": 0.08333333333333333,
+    "tokens": 273.5,
+    "error_term": -0.08333333333333333,
+    "token_term": -0.2735,
+    "n_examples": 12
+  },
+  "optimizer best (terse)": {
+    "score": -0.16816666666666666,
+    "error_rate": 0.0,
+    "tokens": 162.66666666666666,
+    "error_term": -0.0,
+    "token_term": -0.16266666666666665,
+    "n_examples": 12
+  },
+  "optimizer alt (CoT)": {
+    "score": -0.19316666666666668,
+    "error_rate": 0.0,
+    "tokens": 200.25,
+    "error_term": -0.0,
+    "token_term": -0.20025,
+    "n_examples": 12
+  }
+}

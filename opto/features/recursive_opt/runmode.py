@@ -170,6 +170,7 @@ def make_live_llm(
     budget_resource: Optional[BudgetResource] = "optimizer_llm_calls",
     role: Optional[str] = None,
     usage: Optional[MutableMapping[str, MutableMapping[str, float | int]]] = None,
+    empty_response_retries: int = 2,
 ) -> Any:
     """Create the LiteLLM backend used by recursive-opt live optimizers.
 
@@ -193,6 +194,15 @@ def make_live_llm(
     timeout_s = request_timeout_s if request_timeout_s is not None else _positive_float_env("RECURSIVE_OPT_LLM_TIMEOUT_S")
     if uses_completion_token_param(model_name) or timeout_s is not None:
         llm = CompletionTokenCompatLLM(llm, model_name, timeout_s)
+    # LiteLLM's own max_retries covers HTTP-level failures, but an empty completion is a
+    # SUCCESSFUL call returning content=None, so it never reaches that retry and instead
+    # surfaces frames later inside the optimizer as a bare TypeError. Two experiment runs
+    # lost seeds to exactly that. Retry it here, where recovery is still possible.
+    if empty_response_retries > 0:
+        from .measurement import RetryingLLM
+
+        llm = RetryingLLM(llm, attempts=empty_response_retries + 1,
+                          backoff_s=base_delay)
     llm = budgeted_llm(llm, budget_resource)
     if role is not None:
         if usage is None:

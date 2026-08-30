@@ -1,0 +1,386 @@
+{
+  "llm4ad:optimization/online_bin_packing": {
+    "task_id": "llm4ad:optimization/online_bin_packing",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": null,
+    "liveness_spread": null,
+    "scores": [
+      -2093.4,
+      -2091.8
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -2092.6000000000004,
+    "noise_sd": 0.7999999999999545,
+    "mean_eval_seconds": 1.7601498365402222,
+    "quality_rate": -2092.6000000000004,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "too_noisy",
+    "reasons": [
+      "score is at its floor (-2092.600) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=0.8000 resolves only 1.0023 at n=5; target delta is 0.0500 (needs n=2010)"
+    ],
+    "usable": false,
+    "resolvable_at_5": 1.0023255991107645,
+    "resolvable_at_10": 0.7087512280880904
+  },
+  "llm4ad:optimization/admissible_set": {
+    "task_id": "llm4ad:optimization/admissible_set",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": true,
+    "liveness_spread": 998839.0,
+    "scores": [
+      -1161.0,
+      -1161.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -1161.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 4.249380469322205,
+    "quality_rate": -1161.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "certified",
+    "reasons": [
+      "deterministic evaluator (noise 0.0) that responds to its parameter (spread 9.988e+05) \u2014 resolves any effect size at n=1",
+      "score is at its floor (-1161.000) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=0.0000 resolves 0.0000 at n=5"
+    ],
+    "usable": true,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "llm4ad:optimization/qap_construct": {
+    "task_id": "llm4ad:optimization/qap_construct",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": null,
+    "liveness_spread": null,
+    "scores": [
+      -6196911.625,
+      -6138278.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -6167594.8125,
+    "noise_sd": 29316.8125,
+    "mean_eval_seconds": 0.2744612693786621,
+    "quality_rate": -6167594.8125,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "too_noisy",
+    "reasons": [
+      "score is at its floor (-6167594.812) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=29316.8125 resolves only 36731.2396 at n=5; target delta is 0.0500 (needs n=2698367920162)"
+    ],
+    "usable": false,
+    "resolvable_at_5": 36731.23956635265,
+    "resolvable_at_10": 25972.90857875558
+  },
+  "llm4ad:optimization/ovrp_construct": {
+    "task_id": "llm4ad:optimization/ovrp_construct",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": null,
+    "liveness_spread": null,
+    "scores": [
+      -1000000.0,
+      -28.62412790950092
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -500014.31206395477,
+    "noise_sd": 499985.68793604523,
+    "mean_eval_seconds": 0.28230369091033936,
+    "quality_rate": -500014.31206395477,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned the failure sentinel -1e+06 (1/2 repeats) \u2014 the candidate never ran"
+    ],
+    "usable": false,
+    "resolvable_at_5": 626435.5677591659,
+    "resolvable_at_10": 442956.8379389512
+  },
+  "llm4ad:optimization/co_bench/bp_1d_co_bench": {
+    "task_id": "llm4ad:optimization/co_bench/bp_1d_co_bench",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": false,
+    "liveness_spread": 0.0,
+    "scores": [
+      -1000000.0,
+      -1000000.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -1000000.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 6.429158329963684,
+    "quality_rate": -1000000.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned the failure sentinel -1e+06 (2/2 repeats) \u2014 the candidate never ran"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "llm4ad:optimization/co_bench/assignment_problem_co_bench": {
+    "task_id": "llm4ad:optimization/co_bench/assignment_problem_co_bench",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": false,
+    "liveness_spread": 0.0,
+    "scores": [
+      -1000000.0,
+      -1000000.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -1000000.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 16.113494634628296,
+    "quality_rate": -1000000.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned the failure sentinel -1e+06 (2/2 repeats) \u2014 the candidate never ran"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "llm4ad:optimization/co_bench/set_partitioning_co_bench": {
+    "task_id": "llm4ad:optimization/co_bench/set_partitioning_co_bench",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": false,
+    "liveness_spread": 0.0,
+    "scores": [
+      -1000000.0,
+      -1000000.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -1000000.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 50.02397358417511,
+    "quality_rate": -1000000.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned the failure sentinel -1e+06 (2/2 repeats) \u2014 the candidate never ran"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "llm4ad:optimization/co_bench/travelling_salesman_problem_co_bench": {
+    "task_id": "llm4ad:optimization/co_bench/travelling_salesman_problem_co_bench",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": false,
+    "liveness_spread": 0.0,
+    "scores": [
+      -1000000.0,
+      -1000000.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -1000000.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 5.48850953578949,
+    "quality_rate": -1000000.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned the failure sentinel -1e+06 (2/2 repeats) \u2014 the candidate never ran"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "llm4ad:optimization/co_bench/job_shop_scheduling_co_bench": {
+    "task_id": "llm4ad:optimization/co_bench/job_shop_scheduling_co_bench",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": false,
+    "liveness_spread": 0.0,
+    "scores": [
+      -1000000.0,
+      -1000000.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -1000000.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 4.157591342926025,
+    "quality_rate": -1000000.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned the failure sentinel -1e+06 (2/2 repeats) \u2014 the candidate never ran"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "llm4ad:optimization/co_bench/maximal_independent_set_co_bench": {
+    "task_id": "llm4ad:optimization/co_bench/maximal_independent_set_co_bench",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": false,
+    "liveness_spread": 0.0,
+    "scores": [
+      -1000000.0,
+      -1000000.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -1000000.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 45.135024309158325,
+    "quality_rate": -1000000.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned the failure sentinel -1e+06 (2/2 repeats) \u2014 the candidate never ran"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  }
+}

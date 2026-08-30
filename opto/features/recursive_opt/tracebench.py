@@ -384,8 +384,20 @@ class TraceBenchTaskAdapter:
         inner_candidates: int = 1,
         allowed_inner_trainers: Optional[Tuple[str, ...]] = None,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
+        eval_temperature: Optional[float] = None,
+        eval_max_tokens: Optional[int] = None,
+        eval_request_timeout: Optional[float] = None,
     ) -> None:
         self.tasks_root = Path(tasks_root) if tasks_root is not None else default_tasks_root()
+        # Evaluation sampling bounds. `learner.call_llm` passes no temperature/max_tokens/
+        # timeout, so an unbounded evaluation samples at the provider default (~1.0) and
+        # can fail to terminate. Pinning these cut the measured noise floor 3.2x on
+        # internal:multiobjective_gsm8k (sd 0.0415 -> 0.0131). They apply to EVALUATION
+        # only; optimizer proposals keep their own sampling, because diversity is wanted
+        # when generating candidates and unwanted when measuring them.
+        self.eval_temperature = eval_temperature
+        self.eval_max_tokens = eval_max_tokens
+        self.eval_request_timeout = eval_request_timeout
         self.eval_kwargs = dict(eval_kwargs or {})
         self.optimizer_kwargs = dict(optimizer_kwargs or {})
         self.max_examples = max_examples
@@ -455,6 +467,9 @@ class TraceBenchTaskAdapter:
             inner_candidates=_positive_int_config(config, "inner_candidates", 1),
             allowed_inner_trainers=allowed,
             optimizer_kwargs=optimizer_kwargs,
+            eval_temperature=config.get("eval_temperature"),
+            eval_max_tokens=config.get("eval_max_tokens"),
+            eval_request_timeout=config.get("eval_request_timeout"),
         )
 
     def _trainer_budget_feedback(self, cfg: LevelConfig, task_id: str) -> Optional[Tuple[float, str]]:
@@ -493,6 +508,18 @@ class TraceBenchTaskAdapter:
             eval_kwargs.setdefault("model", model_name)
         return eval_kwargs
 
+    def _bind_eval_bounds(self, bundle: Dict[str, Any]) -> None:
+        """Apply the configured evaluation sampling bounds to a bundle's LLM."""
+        if all(v is None for v in (self.eval_temperature, self.eval_max_tokens,
+                                   self.eval_request_timeout)):
+            return
+        from .measurement import BoundedEvalLLM
+
+        param = bundle.get("param")
+        if param is not None and hasattr(param, "llm") and not isinstance(param.llm, BoundedEvalLLM):
+            param.llm = BoundedEvalLLM(param.llm, self.eval_temperature,
+                                       self.eval_max_tokens, self.eval_request_timeout)
+
     def _load_bundle(self, task_id: str, *, fresh: bool = False) -> Dict[str, Any]:
         from trace_bench.registry import load_task_bundle
 
@@ -506,6 +533,7 @@ class TraceBenchTaskAdapter:
         if not fresh and cache_key in self._cache:
             return self._cache[cache_key]
         bundle = load_task_bundle(normalized, self.tasks_root, eval_kwargs=eval_kwargs)
+        self._bind_eval_bounds(bundle)
         if not fresh:
             self._cache[cache_key] = bundle
         return bundle

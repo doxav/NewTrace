@@ -1,3 +1,11 @@
+> **Scope note added 2026-08-30.** The engineering claims in this ADR hold: the normalization,
+> fingerprinting, holdout gating, budget accounting and resume identity all work and are tested.
+> The *efficacy* claims do not follow from them — at the time of writing, the control plane could
+> not execute a multi-level (i.e. recursive) spec at all: `optimize()` was passed `num_candidates`
+> twice and raised `TypeError` (defect D14, a regression introduced by this migration). No
+> experiment had been run through it. See `artifacts/recursive_opt_assessment.md` §4 and §6, and
+> `artifacts/RESULTS_INDEX.md`.
+
 # ADR: recursive-opt control plane v2alpha
 
 - Status: accepted; completion-audit correction committed at `05dabf68e77ef2b9c59a8fc20c68bf4f8d2c1eaf`

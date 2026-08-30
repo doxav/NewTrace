@@ -11,6 +11,7 @@ from opto.trace.nodes import ParameterNode, Node, MessageNode
 from opto.trace.propagators import TraceGraph, GraphPropagator
 from opto.trace.propagators.propagators import Propagator
 from opto.optimizers.optimizer import Optimizer
+from opto.optimizers.utils import extract_response_content
 from opto.optimizers.buffers import FIFOBuffer
 from opto.utils.llm import AbstractModel, LLM
 
@@ -936,7 +937,7 @@ class OptoPrime(Optimizer):
         except Exception:
             response = self.llm(messages=messages, max_tokens=max_tokens)
 
-        response = response.choices[0].message.content
+        response = extract_response_content(response, context="OptoPrime proposal")
 
         if verbose:
             print("LLM response:\n", response)

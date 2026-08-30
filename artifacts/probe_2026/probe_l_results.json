@@ -1,0 +1,242 @@
+{
+  "internal:multi_param": {
+    "1": {
+      "verdict": "certified",
+      "mean": -1.0,
+      "sd": 0.0,
+      "scores": [
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "failures": 0
+    },
+    "8": {
+      "verdict": "certified",
+      "mean": -1.0,
+      "sd": 0.0,
+      "scores": [
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "failures": 0
+    }
+  },
+  "internal:code_param": {
+    "1": {
+      "verdict": "saturated",
+      "mean": 1.0,
+      "sd": 0.0,
+      "scores": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "failures": 0
+    },
+    "8": {
+      "verdict": "saturated",
+      "mean": 1.0,
+      "sd": 0.0,
+      "scores": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "failures": 0
+    }
+  },
+  "llm4ad:optimization/online_bin_packing": {
+    "1": {
+      "verdict": "certified",
+      "mean": -2091.8,
+      "sd": 0.0,
+      "scores": [
+        -2091.8,
+        -2091.8,
+        -2091.8,
+        -2091.8,
+        -2091.8,
+        -2091.8
+      ],
+      "failures": 0
+    },
+    "8": {
+      "verdict": "certified",
+      "mean": -2092.666666666667,
+      "sd": 4.405552052681754,
+      "scores": [
+        -2091.4,
+        -2096.4,
+        -2098.0,
+        -2090.4,
+        -2084.8,
+        -2095.0
+      ],
+      "failures": 0
+    }
+  },
+  "llm4ad:optimization/admissible_set": {
+    "1": {
+      "verdict": "certified",
+      "mean": -1161.0,
+      "sd": 0.0,
+      "scores": [
+        -1161.0,
+        -1161.0,
+        -1161.0,
+        -1161.0,
+        -1161.0,
+        -1161.0
+      ],
+      "failures": 0
+    },
+    "8": {
+      "verdict": "certified",
+      "mean": -1161.0,
+      "sd": 0.0,
+      "scores": [
+        -1161.0,
+        -1161.0,
+        -1161.0,
+        -1161.0,
+        -1161.0,
+        -1161.0
+      ],
+      "failures": 0
+    }
+  },
+  "veribench:binary_search": {
+    "1": {
+      "verdict": "degenerate",
+      "mean": 0.0,
+      "sd": 0.0,
+      "scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "failures": 0
+    },
+    "8": {
+      "verdict": "degenerate",
+      "mean": 0.0,
+      "sd": 0.0,
+      "scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "failures": 0
+    }
+  },
+  "veribench:bubble_sort": {
+    "1": {
+      "verdict": "degenerate",
+      "mean": 0.0,
+      "sd": 0.0,
+      "scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "failures": 0
+    },
+    "8": {
+      "verdict": "degenerate",
+      "mean": 0.0,
+      "sd": 0.0,
+      "scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "failures": 0
+    }
+  },
+  "veribench:merge_sort": {
+    "1": {
+      "verdict": "degenerate",
+      "mean": 0.0,
+      "sd": 0.0,
+      "scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "failures": 0
+    },
+    "8": {
+      "verdict": "degenerate",
+      "mean": 0.0,
+      "sd": 0.0,
+      "scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "failures": 0
+    }
+  },
+  "internal:multiobjective_gsm8k": {
+    "1": {
+      "verdict": "too_noisy",
+      "mean": -0.6605,
+      "sd": 0.5296555484463464,
+      "scores": [
+        -0.9395,
+        -0.184,
+        -0.20500000000000002,
+        -0.245,
+        -1.657,
+        -0.7324999999999999
+      ],
+      "failures": 0
+    },
+    "8": {
+      "verdict": "too_noisy",
+      "mean": -0.6496666666666667,
+      "sd": 0.32344109029139895,
+      "scores": [
+        -0.6695,
+        -0.9295,
+        -0.20600000000000002,
+        -0.93,
+        -0.218,
+        -0.9450000000000001
+      ],
+      "failures": 0
+    }
+  }
+}

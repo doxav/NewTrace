@@ -254,22 +254,106 @@ class ArtifactLevel(Module):
 # O1+ — META level: forward() runs the level below; params = below's config
 # =========================================================================== #
 def encode_cfg(cfg: "LevelConfig", fields: Tuple[str, ...]) -> str:
-    """Serialize selected config fields as ``key: value`` lines (the trainable text)."""
+    """Serialize selected config fields as ``key: value`` lines (the trainable text).
+
+    Values containing a newline are JSON-encoded onto a single line. The format is
+    line-oriented, so a raw multi-line value used to survive encoding and then be
+    silently truncated at its first newline by :func:`decode_cfg` — destroying any code
+    or multi-paragraph prompt the optimizer proposed while still reporting the score it
+    earned. Single-line values are emitted unchanged, so existing configs are untouched.
+    """
+    import json as _json
+
     d = cfg.to_dict()
-    return "\n".join(f"{k}: {d[k]}" for k in fields)
+    lines = []
+    for k in fields:
+        value = d[k]
+        if isinstance(value, str) and "\n" in value:
+            lines.append(f"{k}: {_json.dumps(value)}")
+        else:
+            lines.append(f"{k}: {value}")
+    return "\n".join(lines)
+
+
+def _config_field_names() -> frozenset:
+    """Every LevelConfig attribute name, used to tell a new key from a continuation."""
+    return frozenset(f.name for f in dataclasses.fields(LevelConfig))
+
+
+def _split_config_entries(text: str) -> List[Tuple[str, str]]:
+    """Split config text into ``(key, value)`` pairs, keeping multi-line values whole.
+
+    The format is line-oriented, but the optimizer writes free-form text: a proposed
+    prompt or a code artifact spans several lines, and only the first carries a
+    ``key:`` prefix. Parsing purely line-by-line silently discarded everything after
+    that first line — destroying the artifact while still reporting the score it had
+    earned, so the two described different things.
+
+    Three shapes are accepted:
+
+    * ``key: value`` on one line;
+    * ``key: "json\\nencoded"`` as emitted by :func:`encode_cfg`;
+    * ``key: |`` followed by an indented block, or simply a value whose continuation
+      lines carry no recognised ``key:`` prefix — which is what an LLM actually writes.
+    """
+    import json as _json
+
+    import re as _re
+
+    known = _config_field_names()
+    # A bare `identifier:` at column 0 is a KEY, even when we do not recognise it.
+    # Unknown keys are dropped (optimizers routinely invent fields such as
+    # `learning_rate:`), whereas indented text and prose without a key prefix are
+    # continuations of the value above. Getting this wrong in either direction either
+    # swallows a stray key into an artifact or truncates the artifact itself.
+    key_line = _re.compile(r"^([A-Za-z_]\w*):(.*)$")
+    entries: List[Tuple[str, List[str]]] = []
+    for raw_line in str(text).splitlines():
+        match = key_line.match(raw_line)
+        if match:
+            key, tail = match.group(1), match.group(2)
+            if key in known:
+                entries.append((key, [tail.strip()]))
+            # else: an invented field -> drop the line entirely
+            continue
+        if entries:
+            entries[-1][1].append(raw_line)
+
+    out: List[Tuple[str, str]] = []
+    for key, parts in entries:
+        first, rest = parts[0], parts[1:]
+        if first in ("|", "|-", ">"):          # explicit YAML-style block
+            out.append((key, textwrap.dedent("\n".join(rest)).strip("\n")))
+            continue
+        if rest:                                # implicit continuation lines
+            out.append((key, "\n".join([first, *rest]).strip("\n")))
+            continue
+        if len(first) >= 2 and first[0] == '"' and first[-1] == '"':
+            try:
+                decoded = _json.loads(first)
+            except ValueError:
+                decoded = None
+            if isinstance(decoded, str):
+                out.append((key, decoded))
+                continue
+        out.append((key, first))
+    return out
 
 
 def decode_cfg(text: str, base_cfg: "LevelConfig", fields: Tuple[str, ...]) -> "LevelConfig":
-    """Parse ``key: value`` lines back into a LevelConfig (typed, validated).
+    """Parse ``key: value`` entries back into a LevelConfig (typed, validated).
 
     Shared by MetaLevel (O1), FamilyPolicyLevel (O2) and PriorInductionLevel (O3)
     so there is exactly one config (de)serialisation contract.
     """
     cfg = copy.deepcopy(base_cfg)
-    for line in str(text).splitlines():
-        if ":" not in line:
+    for k, v in _split_config_entries(text):
+        if k in fields and hasattr(cfg, k) and "\n" in v:
+            # Multi-line values are only meaningful for free-text fields; the typed
+            # parsing below would reject them anyway.
+            validate_config_field(k, v)
+            setattr(cfg, k, v)
             continue
-        k, v = (s.strip() for s in line.split(":", 1))
         if k in fields and hasattr(cfg, k):
             cur = getattr(cfg, k)
             # LLM-generated configs commonly wrap an enum/string value in quotes

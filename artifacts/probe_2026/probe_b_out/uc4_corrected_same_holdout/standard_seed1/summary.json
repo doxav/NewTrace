@@ -1,0 +1,30 @@
+{
+  "levels": {
+    "o3_prior": {
+      "artifact_id": "*:prior:0:69349",
+      "best_objective_at": {
+        "level_step": 3,
+        "score": 0.12338976812661023
+      },
+      "best_problem_at": {
+        "level_step": 1,
+        "score": 0.09694412662090009
+      },
+      "executed_steps": 4,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 4,
+      "scores": {
+        "objective_score": 0.1726315789473684,
+        "problem_score": 0.1726315789473684
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "internal:multiobjective_gsm8k",
+        "hf:qasper"
+      ],
+      "validated_candidates": 11
+    }
+  },
+  "run_id": "standard:seed1"
+}

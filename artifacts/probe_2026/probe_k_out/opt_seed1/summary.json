@@ -1,0 +1,29 @@
+{
+  "levels": {
+    "o0": {
+      "artifact_id": "packing:config:0:35402",
+      "best_objective_at": {
+        "level_step": 2,
+        "score": -2088.933333333333
+      },
+      "best_problem_at": {
+        "level_step": 1,
+        "score": -2091.6
+      },
+      "executed_steps": 3,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 3,
+      "scores": {
+        "objective_score": -2087.0,
+        "problem_score": -2087.0
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "llm4ad:optimization/online_bin_packing"
+      ],
+      "validated_candidates": 7
+    }
+  },
+  "run_id": "recursive_opt:default:seed-none:matrix-0"
+}

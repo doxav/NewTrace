@@ -1,0 +1,279 @@
+{
+  "internal:multiobjective_gsm8k": {
+    "task_id": "internal:multiobjective_gsm8k",
+    "model": null,
+    "max_examples": 4,
+    "repeats": 3,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "scores": [
+      -0.18275000000000002,
+      -0.24125000000000002,
+      -0.2595
+    ],
+    "failures": [],
+    "metric_keys": [
+      "error",
+      "reward",
+      "tokens_in",
+      "tokens_out"
+    ],
+    "mean_score": -0.22783333333333336,
+    "noise_sd": 0.03273780519352036,
+    "mean_eval_seconds": 56.65227246284485,
+    "quality_rate": 0.9166666666666666,
+    "quality_ci": [
+      0.6461140782014047,
+      0.9851352905492264
+    ],
+    "quality_metric": "error",
+    "verdict": "certified",
+    "reasons": [
+      "noise sd=0.0327 resolves 0.0410 at n=5"
+    ],
+    "usable": true,
+    "resolvable_at_5": 0.04101742525521083,
+    "resolvable_at_10": 0.02900369954477193
+  },
+  "hf:qasper": {
+    "task_id": "hf:qasper",
+    "model": null,
+    "max_examples": 4,
+    "repeats": 3,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "scores": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": 0.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 204.4171657562256,
+    "quality_rate": 0.02121212121212121,
+    "quality_ci": [
+      0.0,
+      0.2425007574992425
+    ],
+    "quality_metric": "score",
+    "verdict": "degenerate",
+    "reasons": [
+      "every repeat scored exactly 0.0 after 204.4s of real compute; suspect the evaluation bounds (max_tokens=512) are truncating answers, or the artifact does not fit this task's surface"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "internal:multiobjective_bbeh": {
+    "task_id": "internal:multiobjective_bbeh",
+    "model": null,
+    "max_examples": 4,
+    "repeats": 3,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "scores": [
+      -2.855025000014777e-06,
+      -2.4644999999767768e-06,
+      -2.8358999999644753e-06
+    ],
+    "failures": [],
+    "metric_keys": [
+      "accuracy",
+      "execution_time_s",
+      "reward"
+    ],
+    "mean_score": -2.718474999985343e-06,
+    "noise_sd": 1.7975708957506043e-07,
+    "mean_eval_seconds": 0.01665019989013672,
+    "quality_rate": 0.0,
+    "quality_ci": [
+      0.0,
+      0.2425007574992425
+    ],
+    "quality_metric": "accuracy",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned in 0.0167s \u2014 no model was called"
+    ],
+    "usable": false,
+    "resolvable_at_5": 2.2521891562842506e-07,
+    "resolvable_at_10": 1.5925382249234025e-07
+  },
+  "internal:multi_param": {
+    "task_id": "internal:multi_param",
+    "model": null,
+    "max_examples": 4,
+    "repeats": 3,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "scores": [],
+    "failures": [
+      "ExecutionError: ",
+      "ExecutionError: ",
+      "ExecutionError: "
+    ],
+    "metric_keys": [],
+    "mean_score": null,
+    "noise_sd": null,
+    "mean_eval_seconds": 0.006617069244384766,
+    "quality_rate": null,
+    "quality_ci": null,
+    "quality_metric": null,
+    "verdict": "broken",
+    "reasons": [
+      "every evaluation failed"
+    ],
+    "usable": false,
+    "resolvable_at_5": null,
+    "resolvable_at_10": null
+  },
+  "internal:code_param": {
+    "task_id": "internal:code_param",
+    "model": null,
+    "max_examples": 4,
+    "repeats": 3,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "scores": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": 0.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 0.006812493006388347,
+    "quality_rate": 0.0,
+    "quality_ci": [
+      0.0,
+      0.5615060804490177
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned in 0.0068s \u2014 no model was called"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "hf:drop": {
+    "task_id": "hf:drop",
+    "model": null,
+    "max_examples": 4,
+    "repeats": 3,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "scores": [
+      1.0,
+      0.75,
+      1.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": 0.9166666666666666,
+    "noise_sd": 0.11785113019775792,
+    "mean_eval_seconds": 122.52973159154256,
+    "quality_rate": 0.75,
+    "quality_ci": [
+      0.46768966087934005,
+      0.9110599603710386
+    ],
+    "quality_metric": "score",
+    "verdict": "too_noisy",
+    "reasons": [
+      "noise sd=0.1179 resolves only 0.1477 at n=5; target delta is 0.0500 (needs n=44)"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.1476565058516939,
+    "resolvable_at_10": 0.1044089165740439
+  },
+  "llm4ad:optimization/online_bin_packing": {
+    "task_id": "llm4ad:optimization/online_bin_packing",
+    "model": null,
+    "max_examples": 4,
+    "repeats": 3,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "scores": [
+      -1000000.0,
+      -1000000.0,
+      -1000000.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -1000000.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 0.16077653566996256,
+    "quality_rate": -1000000.0,
+    "quality_ci": [
+      0.0,
+      0.5615060804490177
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned the failure sentinel -1e+06 (3/3 repeats) \u2014 the candidate never ran"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "veribench:binary_search": {
+    "task_id": "veribench:binary_search",
+    "model": null,
+    "max_examples": 4,
+    "repeats": 3,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "scores": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": 0.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 0.824995756149292,
+    "quality_rate": 0.0,
+    "quality_ci": [
+      0.0,
+      0.5615060804490177
+    ],
+    "quality_metric": "score",
+    "verdict": "degenerate",
+    "reasons": [
+      "every repeat scored exactly 0.0 after 0.8s of real compute; suspect the evaluation bounds (max_tokens=512) are truncating answers, or the artifact does not fit this task's surface"
+    ],
+    "usable": false,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  }
+}

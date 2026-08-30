@@ -1,0 +1,1137 @@
+{
+  "name": "UC4_corrected_same_holdout",
+  "notes": "corrected UC4: both arms scored on the same held-out family",
+  "promotion": {
+    "action": "retest",
+    "delta_mean": -0.01772604588394064,
+    "name": "UC4_corrected_same_holdout",
+    "promote": false,
+    "reason": "support below min_support=3",
+    "support": {
+      "recursive": 1,
+      "standard": 2
+    }
+  },
+  "rows": [
+    {
+      "arm": "initial",
+      "artifact": "starting_artifact: ",
+      "artifact_id": null,
+      "best_score": 0.055059523809523815,
+      "best_unit": 0,
+      "budget_used": {
+        "candidates": 0,
+        "elapsed_s": 10.562270296999486,
+        "enabled": true,
+        "eval_llm_calls": 0,
+        "optimizer_llm_calls": 0
+      },
+      "curve": [
+        {
+          "best_so_far": 0.055059523809523815,
+          "budget": {
+            "candidates": 0,
+            "elapsed_s": 10.562258881000162,
+            "enabled": true,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 14.421676635742188,
+          "event": "initial_eval",
+          "global_step": 0,
+          "level_id": "o3_prior",
+          "score": 0.055059523809523815,
+          "unit": 0
+        }
+      ],
+      "error": null,
+      "score": 0.055059523809523815,
+      "scored_level": "o3_prior",
+      "scored_tasks": [
+        "hf:qasper"
+      ],
+      "seed": 0,
+      "wall_s": 14.4216890335083
+    },
+    {
+      "arm": "standard",
+      "artifact": "starting_artifact: ",
+      "artifact_id": "*:prior:0:76192",
+      "best_score": 0.19615384615384615,
+      "best_unit": 12,
+      "budget_used": {
+        "candidates": 12,
+        "elapsed_s": 335.3264151049989,
+        "enabled": false,
+        "eval_llm_calls": 200,
+        "optimizer_llm_calls": 60
+      },
+      "curve": [
+        {
+          "best_so_far": 0.12581965549321417,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 19.219195,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 19.219195,
+          "event": "trainer_metric",
+          "global_step": 0,
+          "level_id": "o3_prior",
+          "score": 0.12581965549321417,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12581965549321417,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 19.219323,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 19.219323,
+          "event": "trainer_metric",
+          "global_step": 0,
+          "level_id": "o3_prior",
+          "score": 0.10617690058479531,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12581965549321417,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 19.219703,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 19.219703,
+          "event": "trainer_metric",
+          "global_step": 0,
+          "level_id": "o3_prior",
+          "score": 0.10617690058479531,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12581965549321417,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 148.637606,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 148.637606,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o3_prior",
+          "score": 0.08202268833567825,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12581965549321417,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 148.637745,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 148.637745,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o3_prior",
+          "score": 0.09796560016954753,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12581965549321417,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 148.638015,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 148.638015,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o3_prior",
+          "score": 0.10617690058479531,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12581965549321417,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 148.638177,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 148.638177,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o3_prior",
+          "score": 0.08975429975429974,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12581965549321417,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 260.863179,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 4
+          },
+          "elapsed_s": 260.863179,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": 0.07387239466186835,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12581965549321417,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 260.863333,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 4
+          },
+          "elapsed_s": 260.863333,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": 0.11070112050375208,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12581965549321417,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 260.863847,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 4
+          },
+          "elapsed_s": 260.863847,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": 0.10395413355939671,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.1361721611721612,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 260.864175,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 4
+          },
+          "elapsed_s": 260.864175,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": 0.1361721611721612,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.1361721611721612,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 329.061421,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 6
+          },
+          "elapsed_s": 329.061421,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": 0.09287157498366631,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.1361721611721612,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 329.061616,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 6
+          },
+          "elapsed_s": 329.061616,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": 0.09608390975941286,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.1361721611721612,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 329.062155,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 6
+          },
+          "elapsed_s": 329.062155,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": 0.12304543409806568,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.1361721611721612,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 329.062485,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 6
+          },
+          "elapsed_s": 329.062485,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": 0.05223227752639518,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.19615384615384615,
+          "budget": {
+            "accounted": {
+              "candidates": 8,
+              "candidates_evaluated": 0,
+              "candidates_proposed": 0,
+              "candidates_reserved": 8,
+              "eval_llm_calls": 0,
+              "evaluator_runs": 0,
+              "optimizer_llm_calls": 0,
+              "total_tokens": 0,
+              "wall_time_s": 335.325164
+            },
+            "candidates": 12,
+            "eval_llm_calls": 200,
+            "evaluator_runs": null,
+            "exceeded": [],
+            "on_exceed": "return_best_valid",
+            "optimizer_llm_calls": 60,
+            "total_tokens": null,
+            "wall_time_s": 1200
+          },
+          "elapsed_s": null,
+          "event": "level_end",
+          "global_step": 4,
+          "level_id": "o3_prior",
+          "score": 0.19615384615384615,
+          "unit": 12
+        }
+      ],
+      "error": null,
+      "score": 0.19615384615384615,
+      "scored_level": "o3_prior",
+      "scored_tasks": [
+        "hf:qasper"
+      ],
+      "seed": 0,
+      "wall_s": 329.063183
+    },
+    {
+      "arm": "recursive",
+      "artifact": "",
+      "artifact_id": null,
+      "best_score": null,
+      "best_unit": null,
+      "budget_used": {},
+      "curve": [],
+      "error": "RuntimeError: level 'o3_prior' produced no result: TypeError: argument of type 'NoneType' is not iterable",
+      "score": null,
+      "scored_level": null,
+      "scored_tasks": [],
+      "seed": 0,
+      "wall_s": 242.33022236824036
+    },
+    {
+      "arm": "initial",
+      "artifact": "starting_artifact: ",
+      "artifact_id": null,
+      "best_score": 0.09716312056737589,
+      "best_unit": 0,
+      "budget_used": {
+        "candidates": 0,
+        "elapsed_s": 9.029049606000626,
+        "enabled": true,
+        "eval_llm_calls": 0,
+        "optimizer_llm_calls": 0
+      },
+      "curve": [
+        {
+          "best_so_far": 0.09716312056737589,
+          "budget": {
+            "candidates": 0,
+            "elapsed_s": 9.029035761999694,
+            "enabled": true,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 9.029483556747437,
+          "event": "initial_eval",
+          "global_step": 0,
+          "level_id": "o3_prior",
+          "score": 0.09716312056737589,
+          "unit": 0
+        }
+      ],
+      "error": null,
+      "score": 0.09716312056737589,
+      "scored_level": "o3_prior",
+      "scored_tasks": [
+        "hf:qasper"
+      ],
+      "seed": 1,
+      "wall_s": 9.029497623443604
+    },
+    {
+      "arm": "standard",
+      "artifact": "starting_artifact: Use the provided context as evidence, reason briefly, then answer exactly.",
+      "artifact_id": "*:prior:0:69349",
+      "best_score": 0.1726315789473684,
+      "best_unit": 12,
+      "budget_used": {
+        "candidates": 12,
+        "elapsed_s": 641.780787028998,
+        "enabled": false,
+        "eval_llm_calls": 200,
+        "optimizer_llm_calls": 60
+      },
+      "curve": [
+        {
+          "best_so_far": 0.08677274700292603,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 22.786431,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 22.786431,
+          "event": "trainer_metric",
+          "global_step": 0,
+          "level_id": "o3_prior",
+          "score": 0.08677274700292603,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.08677274700292603,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 22.786546,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 22.786546,
+          "event": "trainer_metric",
+          "global_step": 0,
+          "level_id": "o3_prior",
+          "score": 0.07164755534320752,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.08677274700292603,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 22.786877,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 22.786877,
+          "event": "trainer_metric",
+          "global_step": 0,
+          "level_id": "o3_prior",
+          "score": 0.07164755534320752,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.09694412662090009,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 166.848893,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 166.848893,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o3_prior",
+          "score": 0.09694412662090009,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.09694412662090009,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 166.849112,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 166.849112,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o3_prior",
+          "score": -0.19306008356519866,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.09694412662090009,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 166.849873,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 166.849873,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o3_prior",
+          "score": 0.07164755534320752,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.09694412662090009,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 166.850363,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 166.850363,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o3_prior",
+          "score": -0.4577677224736048,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.09694412662090009,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 240.468935,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 4
+          },
+          "elapsed_s": 240.468935,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": 0.08226755326402309,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.09694412662090009,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 240.46913,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 4
+          },
+          "elapsed_s": 240.46913,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": -0.09350316862061377,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.11722488038277512,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 240.469819,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 4
+          },
+          "elapsed_s": 240.469819,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": 0.11722488038277512,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.11722488038277512,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 240.470262,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 4
+          },
+          "elapsed_s": 240.470262,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": 0.105610661268556,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.11722488038277512,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 582.32427,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 6
+          },
+          "elapsed_s": 582.32427,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": 0.08739603252935249,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.11722488038277512,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 582.324426,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 6
+          },
+          "elapsed_s": 582.324426,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": -0.048066837186227764,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12338976812661023,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 582.324718,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 6
+          },
+          "elapsed_s": 582.324718,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": 0.12338976812661023,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.12338976812661023,
+          "budget": {
+            "candidates": 8,
+            "elapsed_s": 582.324895,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 6
+          },
+          "elapsed_s": 582.324895,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": 0.08824215711693026,
+          "unit": 8
+        },
+        {
+          "best_so_far": 0.1726315789473684,
+          "budget": {
+            "accounted": {
+              "candidates": 8,
+              "candidates_evaluated": 0,
+              "candidates_proposed": 0,
+              "candidates_reserved": 8,
+              "eval_llm_calls": 0,
+              "evaluator_runs": 0,
+              "optimizer_llm_calls": 0,
+              "total_tokens": 0,
+              "wall_time_s": 641.779941
+            },
+            "candidates": 12,
+            "eval_llm_calls": 200,
+            "evaluator_runs": null,
+            "exceeded": [],
+            "on_exceed": "return_best_valid",
+            "optimizer_llm_calls": 60,
+            "total_tokens": null,
+            "wall_time_s": 1200
+          },
+          "elapsed_s": null,
+          "event": "level_end",
+          "global_step": 4,
+          "level_id": "o3_prior",
+          "score": 0.1726315789473684,
+          "unit": 12
+        }
+      ],
+      "error": null,
+      "score": 0.1726315789473684,
+      "scored_level": "o3_prior",
+      "scored_tasks": [
+        "hf:qasper"
+      ],
+      "seed": 1,
+      "wall_s": 582.325339
+    },
+    {
+      "arm": "recursive",
+      "artifact": "starting_artifact: ",
+      "artifact_id": "*:prior:0:30010",
+      "best_score": 0.16666666666666666,
+      "best_unit": 12,
+      "budget_used": {
+        "candidates": 12,
+        "elapsed_s": 214.707699,
+        "enabled": false,
+        "eval_llm_calls": 200,
+        "optimizer_llm_calls": 60
+      },
+      "curve": [
+        {
+          "best_so_far": -0.0657036095422889,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 65.998105,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 65.998105,
+          "event": "trainer_metric",
+          "global_step": 0,
+          "level_id": "o2_policy",
+          "score": -0.0657036095422889,
+          "unit": 4
+        },
+        {
+          "best_so_far": -0.0657036095422889,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 65.99836,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 65.99836,
+          "event": "trainer_metric",
+          "global_step": 0,
+          "level_id": "o2_policy",
+          "score": -0.06816398916398918,
+          "unit": 4
+        },
+        {
+          "best_so_far": -0.0657036095422889,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 65.999616,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 65.999616,
+          "event": "trainer_metric",
+          "global_step": 0,
+          "level_id": "o2_policy",
+          "score": -0.06816398916398918,
+          "unit": 4
+        },
+        {
+          "best_so_far": -0.025067716857610473,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 214.70679,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 214.70679,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o2_policy",
+          "score": -0.025067716857610473,
+          "unit": 4
+        },
+        {
+          "best_so_far": -0.025067716857610473,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 214.707007,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 214.707007,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o2_policy",
+          "score": -0.05699206532133363,
+          "unit": 4
+        },
+        {
+          "best_so_far": -0.025067716857610473,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 214.707524,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 214.707524,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o2_policy",
+          "score": -0.06816398916398918,
+          "unit": 4
+        },
+        {
+          "best_so_far": -0.025067716857610473,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 214.707699,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 214.707699,
+          "event": "trainer_metric",
+          "global_step": 1,
+          "level_id": "o2_policy",
+          "score": -0.03464821763602252,
+          "unit": 4
+        },
+        {
+          "best_so_far": 0.08329228243021347,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 22.484396,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 22.484396,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": 0.08329228243021347,
+          "unit": 4
+        },
+        {
+          "best_so_far": 0.1662528963919232,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 22.484605,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 22.484605,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": 0.1662528963919232,
+          "unit": 4
+        },
+        {
+          "best_so_far": 0.1662528963919232,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 22.48559,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 22.48559,
+          "event": "trainer_metric",
+          "global_step": 2,
+          "level_id": "o3_prior",
+          "score": 0.1662528963919232,
+          "unit": 4
+        },
+        {
+          "best_so_far": 0.1662528963919232,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 119.926635,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 119.926635,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": 0.06258903133903133,
+          "unit": 4
+        },
+        {
+          "best_so_far": 0.1662528963919232,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 119.926767,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 119.926767,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": -0.14604021847070506,
+          "unit": 4
+        },
+        {
+          "best_so_far": 0.1662528963919232,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 119.927171,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 119.927171,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": 0.1662528963919232,
+          "unit": 4
+        },
+        {
+          "best_so_far": 0.1662528963919232,
+          "budget": {
+            "candidates": 4,
+            "elapsed_s": 119.927331,
+            "enabled": false,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 2
+          },
+          "elapsed_s": 119.927331,
+          "event": "trainer_metric",
+          "global_step": 3,
+          "level_id": "o3_prior",
+          "score": -0.4583333333333333,
+          "unit": 4
+        },
+        {
+          "best_so_far": -0.006346972176759419,
+          "budget": {
+            "accounted": {
+              "candidates": 4,
+              "candidates_evaluated": 0,
+              "candidates_proposed": 0,
+              "candidates_reserved": 4,
+              "eval_llm_calls": 0,
+              "evaluator_runs": 0,
+              "optimizer_llm_calls": 0,
+              "total_tokens": 0,
+              "wall_time_s": 240.712077
+            },
+            "candidates": 12,
+            "eval_llm_calls": 200,
+            "evaluator_runs": null,
+            "exceeded": [],
+            "on_exceed": "return_best_valid",
+            "optimizer_llm_calls": 60,
+            "total_tokens": null,
+            "wall_time_s": 1200
+          },
+          "elapsed_s": null,
+          "event": "level_end",
+          "global_step": 2,
+          "level_id": "o2_policy",
+          "score": -0.006346972176759419,
+          "unit": 12
+        },
+        {
+          "best_so_far": 0.16666666666666666,
+          "budget": {
+            "accounted": {
+              "candidates": 8,
+              "candidates_evaluated": 0,
+              "candidates_proposed": 0,
+              "candidates_reserved": 8,
+              "eval_llm_calls": 0,
+              "evaluator_runs": 0,
+              "optimizer_llm_calls": 0,
+              "total_tokens": 0,
+              "wall_time_s": 360.64194
+            },
+            "candidates": 12,
+            "eval_llm_calls": 200,
+            "evaluator_runs": null,
+            "exceeded": [],
+            "on_exceed": "return_best_valid",
+            "optimizer_llm_calls": 60,
+            "total_tokens": null,
+            "wall_time_s": 1200
+          },
+          "elapsed_s": null,
+          "event": "level_end",
+          "global_step": 4,
+          "level_id": "o3_prior",
+          "score": 0.16666666666666666,
+          "unit": 12
+        }
+      ],
+      "error": null,
+      "score": 0.16666666666666666,
+      "scored_level": "o3_prior",
+      "scored_tasks": [
+        "hf:qasper"
+      ],
+      "seed": 1,
+      "wall_s": 119.927681
+    },
+    {
+      "arm": "initial",
+      "artifact": "starting_artifact: ",
+      "artifact_id": null,
+      "best_score": 0.06335282651072124,
+      "best_unit": 0,
+      "budget_used": {
+        "candidates": 0,
+        "elapsed_s": 9.130364226999518,
+        "enabled": true,
+        "eval_llm_calls": 0,
+        "optimizer_llm_calls": 0
+      },
+      "curve": [
+        {
+          "best_so_far": 0.06335282651072124,
+          "budget": {
+            "candidates": 0,
+            "elapsed_s": 9.130356847999792,
+            "enabled": true,
+            "eval_llm_calls": 0,
+            "optimizer_llm_calls": 0
+          },
+          "elapsed_s": 9.130657196044922,
+          "event": "initial_eval",
+          "global_step": 0,
+          "level_id": "o3_prior",
+          "score": 0.06335282651072124,
+          "unit": 0
+        }
+      ],
+      "error": null,
+      "score": 0.06335282651072124,
+      "scored_level": "o3_prior",
+      "scored_tasks": [
+        "hf:qasper"
+      ],
+      "seed": 2,
+      "wall_s": 9.130666255950928
+    },
+    {
+      "arm": "standard",
+      "artifact": "",
+      "artifact_id": null,
+      "best_score": null,
+      "best_unit": null,
+      "budget_used": {},
+      "curve": [],
+      "error": "RuntimeError: level 'o3_prior' produced no result: TypeError: argument of type 'NoneType' is not iterable",
+      "score": null,
+      "scored_level": null,
+      "scored_tasks": [],
+      "seed": 2,
+      "wall_s": 217.18847846984863
+    },
+    {
+      "arm": "recursive",
+      "artifact": "",
+      "artifact_id": null,
+      "best_score": null,
+      "best_unit": null,
+      "budget_used": {},
+      "curve": [],
+      "error": "RuntimeError: level 'o3_prior' produced no result: TypeError: argument of type 'NoneType' is not iterable",
+      "score": null,
+      "scored_level": null,
+      "scored_tasks": [],
+      "seed": 2,
+      "wall_s": 140.49910473823547
+    }
+  ],
+  "summary": {
+    "arms": {
+      "initial": {
+        "errors": 0,
+        "mean_best": 0.07185849029587366,
+        "mean_best_unit": 0.0,
+        "mean_final": 0.07185849029587366,
+        "n": 3,
+        "std_final": 0.01821058213066408
+      },
+      "recursive": {
+        "errors": 2,
+        "mean_best": 0.16666666666666666,
+        "mean_best_unit": 12.0,
+        "mean_final": 0.16666666666666666,
+        "n": 1,
+        "std_final": 0.0
+      },
+      "standard": {
+        "errors": 1,
+        "mean_best": 0.1843927125506073,
+        "mean_best_unit": 12.0,
+        "mean_final": 0.1843927125506073,
+        "n": 2,
+        "std_final": 0.011761133603238869
+      }
+    },
+    "comparability": {
+      "comparable": true,
+      "known": true,
+      "reason": "both arms scored on the same task set",
+      "recursive_tasks": [
+        "hf:qasper"
+      ],
+      "standard_tasks": [
+        "hf:qasper"
+      ]
+    },
+    "paired_delta": {
+      "deltas": [
+        -0.005964912280701756
+      ],
+      "mean": -0.005964912280701756,
+      "n": 1,
+      "std": 0.0
+    },
+    "recursive_gain_final": 0.094808176370793,
+    "recursive_minus_standard_best": -0.01772604588394064,
+    "recursive_minus_standard_final": -0.01772604588394064,
+    "speed": {
+      "recursive_best_unit": 12,
+      "recursive_unit_to_standard_best": null,
+      "recursive_unit_to_standard_final": null,
+      "standard_best_unit": 12
+    },
+    "standard_gain_final": 0.11253422225473364,
+    "verdict": "no_win_check_design",
+    "why": "recursive did not beat standard; check: is the recursive arm structurally different (prior/extra level/numeric route)? budget starved? prior hurt? field inactive?"
+  }
+}

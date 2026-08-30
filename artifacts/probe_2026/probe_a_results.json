@@ -1,0 +1,76 @@
+{
+  "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+  "max_examples": 2,
+  "repeats": 3,
+  "inner_steps": 0,
+  "tasks": {
+    "internal:multiobjective_gsm8k": {
+      "per_prompt": {
+        "<empty>": {
+          "runs": [
+            -0.16449999999999998,
+            -0.21150000000000002,
+            -0.259
+          ],
+          "mean": -0.21166666666666667,
+          "within_stdev": 0.038579643452070544
+        },
+        "Answer directly.": {
+          "runs": [
+            -0.1545,
+            -0.23349999999999999,
+            -0.1995
+          ],
+          "mean": -0.19583333333333333,
+          "within_stdev": 0.032355662392986
+        },
+        "Plan step by step, then verify the answer before replying.": {
+          "runs": [
+            -0.1905,
+            -0.27349999999999997,
+            -0.22399999999999998
+          ],
+          "mean": -0.2293333333333333,
+          "within_stdev": 0.03409382479113905
+        }
+      },
+      "between_prompt_spread": 0.033499999999999974,
+      "mean_within_prompt_noise": 0.0350097102120652,
+      "pooled_mean": -0.21227777777777776
+    },
+    "hf:qasper": {
+      "per_prompt": {
+        "<empty>": {
+          "runs": [
+            0.08801874163319946,
+            0.5487804878048781,
+            0.10666666666666666
+          ],
+          "mean": 0.24782196536824808,
+          "within_stdev": 0.2129459406319565
+        },
+        "Answer directly.": {
+          "runs": [
+            0.0492831541218638,
+            0.071256038647343,
+            0.13942307692307693
+          ],
+          "mean": 0.08665408989742791,
+          "within_stdev": 0.03837643727929371
+        },
+        "Plan step by step, then verify the answer before replying.": {
+          "runs": [
+            0.06703296703296703,
+            0.11522198731501058,
+            0.16475409836065574
+          ],
+          "mean": 0.11566968423621111,
+          "within_stdev": 0.03989574080350587
+        }
+      },
+      "between_prompt_spread": 0.16116787547082018,
+      "mean_within_prompt_noise": 0.09707270623825202,
+      "pooled_mean": 0.15004857983396236
+    }
+  }
+}

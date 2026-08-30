@@ -1,3 +1,29 @@
+> # ⚠ SUPERSEDED — 2026-08-30
+>
+> **Do not cite the numbers in this file.** They were produced by an instrument that could
+> not resolve the effects they report, and the headline positive result is invalid.
+>
+> | claim in this file | status |
+> |---|---|
+> | **UC4 `+0.163`, "promote", the flagship result** | **INVALID.** The two arms were scored on *different task sets* (`o2_policy` = mean over gsm8k+qasper; `o3_prior` = qasper only). The delta equals `(qasper − gsm8k)/2` to four decimals — an arithmetic identity, not an effect. All arms also ended with byte-identical default artifacts, i.e. nothing was optimized. |
+> | UC1/UC2/UC5/UC8–UC14 deltas (±0.002 … ±0.163) | **UNRESOLVABLE.** At the budgets used, the instrument's own resolution limit was ≈0.24 at n=5. Every number in the table is smaller than that. |
+> | "same-level warm code restart is not robust" | **Unsupported** — the losses it rests on are inside the noise floor. |
+> | UC1 saturated; UC13 flat objective | **Still valid** — these were correctly diagnosed. |
+>
+> Root causes, all fixed since: unbounded evaluation sampling (14.6× resolution recovered),
+> an objective that blended a rare error term with a token count, a comparison gate that
+> never checked the two arms measured the same thing, and a config surface that truncated
+> every multi-line artifact at its first newline.
+>
+> **Current analysis:** `artifacts/recursive_opt_assessment.md` (§5 for the UC4 teardown,
+> §11–§14 for the corrected measurements). Raw data: `artifacts/probe_2026/`.
+>
+> This file is kept because its *method* — reliability gate before promotion gate, paired
+> seed deltas, refusing to read a promotion before a reliability check — was right, and
+> because it is the evidence trail for how the errors were found.
+
+---
+
 # recursive_opt use cases: current limits and root-cause analysis
 
 This report analyzes the latest live Stage-2 run:

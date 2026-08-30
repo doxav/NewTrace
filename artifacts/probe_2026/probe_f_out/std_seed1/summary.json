@@ -1,0 +1,29 @@
+{
+  "levels": {
+    "o1": {
+      "artifact_id": "reasoning:config:0:66917",
+      "best_objective_at": {
+        "level_step": 0,
+        "score": -0.36050000000000004
+      },
+      "best_problem_at": {
+        "level_step": 0,
+        "score": -0.374875
+      },
+      "executed_steps": 2,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 2,
+      "scores": {
+        "objective_score": -0.23375,
+        "problem_score": -0.23375
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "internal:multiobjective_gsm8k"
+      ],
+      "validated_candidates": 2
+    }
+  },
+  "run_id": "recursive_opt:default:seed-none:matrix-0"
+}

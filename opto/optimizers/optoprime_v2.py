@@ -3,7 +3,7 @@ from typing import Any, List, Dict, Union, Tuple, Optional
 from dataclasses import dataclass, asdict
 from opto.optimizers.optoprime import OptoPrime, FunctionFeedback
 from opto.trace.utils import dedent
-from opto.optimizers.utils import truncate_expression, extract_xml_like_data
+from opto.optimizers.utils import truncate_expression, extract_xml_like_data, extract_response_content
 
 from opto.trace.nodes import ParameterNode, Node, MessageNode
 from opto.trace.propagators import TraceGraph, GraphPropagator
@@ -673,7 +673,7 @@ class OptoPrimeV2(OptoPrime):
 
         response = self.llm(messages=messages, max_tokens=max_tokens, response_format=response_format)
 
-        response = response.choices[0].message.content
+        response = extract_response_content(response, context="OptoPrimeV2 proposal")
 
         if verbose:
             print("LLM response:\n", response)

@@ -134,3 +134,44 @@ def extract_xml_like_data(text: str, reasoning_tag: str = "reasoning",
             if var_name:  # Only require name to be non-empty, value can be empty
                 result['variables'][var_name] = var_value
     return result
+
+
+class LLMEmptyResponseError(RuntimeError):
+    """A provider returned a completion with no message content.
+
+    This is a normal provider outcome, not a programming error: the completion can be
+    truncated at ``max_tokens`` before any text is emitted, filtered, or dropped while
+    the provider is shedding load. Returning that ``None`` to callers produced
+    ``TypeError: argument of type 'NoneType' is not iterable`` several frames later, in
+    code that simply asked ``if "TERMINATE" in response``. The exception says what
+    happened and, where the provider reports it, why.
+    """
+
+
+def extract_response_content(response: Any, *, context: str = "LLM") -> str:
+    """Return a completion's message content, failing loudly if there is none.
+
+    Raises
+    ------
+    LLMEmptyResponseError
+        If the response carries no choices, or its first choice has no content. The
+        provider's ``finish_reason`` is included when present because it distinguishes
+        the causes that matter: ``length`` means the token budget was too small,
+        ``content_filter`` means the request was refused.
+    """
+    choices = getattr(response, "choices", None)
+    if not choices:
+        raise LLMEmptyResponseError(
+            f"{context} returned no choices; the provider produced no completion"
+        )
+    choice = choices[0]
+    content = getattr(getattr(choice, "message", None), "content", None)
+    if content is None:
+        finish_reason = getattr(choice, "finish_reason", None)
+        detail = f" (finish_reason={finish_reason!r})" if finish_reason else ""
+        raise LLMEmptyResponseError(
+            f"{context} returned a completion with no content{detail}. This usually means "
+            "the response was truncated at max_tokens before any text, was filtered, or "
+            "the provider shed load; retry or raise max_tokens."
+        )
+    return content

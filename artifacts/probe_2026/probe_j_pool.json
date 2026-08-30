@@ -1,0 +1,397 @@
+{
+  "llm4ad:optimization/online_bin_packing": {
+    "task_id": "llm4ad:optimization/online_bin_packing",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": null,
+    "liveness_spread": null,
+    "scores": [
+      -2103.2,
+      -2091.8
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -2097.5,
+    "noise_sd": 5.699999999999818,
+    "mean_eval_seconds": 1.559000015258789,
+    "quality_rate": -2097.5,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "certified",
+    "reasons": [
+      "score is at its floor (-2097.500) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=5.7 resolves 7.142 at n=5, target 20.98 (1% of |score|)"
+    ],
+    "usable": true,
+    "resolvable_at_5": 7.141569893664375,
+    "resolvable_at_10": 5.049852500127771
+  },
+  "llm4ad:optimization/admissible_set": {
+    "task_id": "llm4ad:optimization/admissible_set",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": true,
+    "liveness_spread": 998839.0,
+    "scores": [
+      -1161.0,
+      -1161.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -1161.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 3.429343342781067,
+    "quality_rate": -1161.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "certified",
+    "reasons": [
+      "deterministic evaluator (noise 0.0) that responds to its parameter (spread 9.988e+05) \u2014 resolves any effect size at n=1",
+      "score is at its floor (-1161.000) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=0 resolves 0 at n=5, target 11.61 (1% of |score|)"
+    ],
+    "usable": true,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "llm4ad:optimization/qap_construct": {
+    "task_id": "llm4ad:optimization/qap_construct",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": null,
+    "liveness_spread": null,
+    "scores": [
+      -1000000.0,
+      -6138278.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -3569139.0,
+    "noise_sd": 2569139.0,
+    "mean_eval_seconds": 0.29030144214630127,
+    "quality_rate": -6155700.6875,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned the failure sentinel -1e+06 (1/2 repeats) \u2014 the candidate never ran"
+    ],
+    "usable": false,
+    "resolvable_at_5": 3218892.234217471,
+    "resolvable_at_10": 2276100.5267238906
+  },
+  "llm4ad:optimization/ovrp_construct": {
+    "task_id": "llm4ad:optimization/ovrp_construct",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": null,
+    "liveness_spread": null,
+    "scores": [
+      -1000000.0,
+      -28.62412790950092
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -500014.31206395477,
+    "noise_sd": 499985.68793604523,
+    "mean_eval_seconds": 0.30133962631225586,
+    "quality_rate": -500014.31206395477,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "broken",
+    "reasons": [
+      "evaluation returned the failure sentinel -1e+06 (1/2 repeats) \u2014 the candidate never ran"
+    ],
+    "usable": false,
+    "resolvable_at_5": 626435.5677591659,
+    "resolvable_at_10": 442956.8379389512
+  },
+  "internal:multi_param": {
+    "task_id": "internal:multi_param",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "numeric",
+    "calls_llm": false,
+    "live": true,
+    "liveness_spread": 4.5,
+    "scores": [
+      -1.0,
+      -1.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": -1.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 0.007634401321411133,
+    "quality_rate": -1.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "certified",
+    "reasons": [
+      "deterministic evaluator (noise 0.0) that responds to its parameter (spread 4.5) \u2014 resolves any effect size at n=1",
+      "score is at its floor (-1.000) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=0 resolves 0 at n=5, target 0.05"
+    ],
+    "usable": true,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "veribench:binary_search": {
+    "task_id": "veribench:binary_search",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": true,
+    "liveness_spread": 0.1,
+    "scores": [
+      0.0,
+      0.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": 0.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 1.2785062789916992,
+    "quality_rate": 0.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "certified",
+    "reasons": [
+      "deterministic evaluator (noise 0.0) that responds to its parameter (spread 0.1) \u2014 resolves any effect size at n=1",
+      "score is at its floor (0.000) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=0 resolves 0 at n=5, target 0.05"
+    ],
+    "usable": true,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "veribench:bubble_sort": {
+    "task_id": "veribench:bubble_sort",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": true,
+    "liveness_spread": 0.1,
+    "scores": [
+      0.0,
+      0.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": 0.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 1.3388527631759644,
+    "quality_rate": 0.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "certified",
+    "reasons": [
+      "deterministic evaluator (noise 0.0) that responds to its parameter (spread 0.1) \u2014 resolves any effect size at n=1",
+      "score is at its floor (0.000) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=0 resolves 0 at n=5, target 0.05"
+    ],
+    "usable": true,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "veribench:merge_sort": {
+    "task_id": "veribench:merge_sort",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": true,
+    "liveness_spread": 0.1,
+    "scores": [
+      0.0,
+      0.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": 0.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 1.3512152433395386,
+    "quality_rate": 0.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "certified",
+    "reasons": [
+      "deterministic evaluator (noise 0.0) that responds to its parameter (spread 0.1) \u2014 resolves any effect size at n=1",
+      "score is at its floor (0.000) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=0 resolves 0 at n=5, target 0.05"
+    ],
+    "usable": true,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "veribench:quick_sort": {
+    "task_id": "veribench:quick_sort",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": true,
+    "liveness_spread": 0.1,
+    "scores": [
+      0.0,
+      0.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": 0.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 1.270453691482544,
+    "quality_rate": 0.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "certified",
+    "reasons": [
+      "deterministic evaluator (noise 0.0) that responds to its parameter (spread 0.1) \u2014 resolves any effect size at n=1",
+      "score is at its floor (0.000) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=0 resolves 0 at n=5, target 0.05"
+    ],
+    "usable": true,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  },
+  "veribench:edit_distance": {
+    "task_id": "veribench:edit_distance",
+    "model": null,
+    "max_examples": 2,
+    "repeats": 2,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "request_timeout": 60,
+    "surface": "code",
+    "calls_llm": false,
+    "live": true,
+    "liveness_spread": 0.1,
+    "scores": [
+      0.0,
+      0.0
+    ],
+    "failures": [],
+    "metric_keys": [
+      "reward",
+      "score"
+    ],
+    "mean_score": 0.0,
+    "noise_sd": 0.0,
+    "mean_eval_seconds": 1.0337539911270142,
+    "quality_rate": 0.0,
+    "quality_ci": [
+      0.0,
+      0.6576280471103807
+    ],
+    "quality_metric": "score",
+    "verdict": "certified",
+    "reasons": [
+      "deterministic evaluator (noise 0.0) that responds to its parameter (spread 0.1) \u2014 resolves any effect size at n=1",
+      "score is at its floor (0.000) but the evaluator responds \u2014 maximum headroom, every gain is unambiguous",
+      "noise sd=0 resolves 0 at n=5, target 0.05"
+    ],
+    "usable": true,
+    "resolvable_at_5": 0.0,
+    "resolvable_at_10": 0.0
+  }
+}

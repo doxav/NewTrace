@@ -1,0 +1,113 @@
+{
+  "task": "internal:multiobjective_gsm8k",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "rows": [
+    {
+      "arm": "initial",
+      "seed": 0,
+      "score": -0.6910000000000001,
+      "artifact": "starting_artifact: ",
+      "wall_s": 24.3,
+      "error": null
+    },
+    {
+      "arm": "standard",
+      "seed": 0,
+      "score": -0.161,
+      "artifact": "starting_artifact: def solve(input_str):\\n    return str(eval(input_str))",
+      "wall_s": 327.1,
+      "error": null
+    },
+    {
+      "arm": "initial",
+      "seed": 1,
+      "score": -0.24300000000000002,
+      "artifact": "starting_artifact: ",
+      "wall_s": 17.6,
+      "error": null
+    },
+    {
+      "arm": "standard",
+      "seed": 1,
+      "score": -0.23375,
+      "artifact": "starting_artifact: ",
+      "wall_s": 303.1,
+      "error": null
+    },
+    {
+      "arm": "initial",
+      "seed": 2,
+      "score": -0.23475000000000001,
+      "artifact": "starting_artifact: ",
+      "wall_s": 14.4,
+      "error": null
+    },
+    {
+      "arm": "standard",
+      "seed": 2,
+      "score": -0.1995,
+      "artifact": "starting_artifact: |",
+      "wall_s": 436.3,
+      "error": null
+    },
+    {
+      "arm": "initial",
+      "seed": 3,
+      "score": -0.2665,
+      "artifact": "starting_artifact: ",
+      "wall_s": 26.7,
+      "error": null
+    },
+    {
+      "arm": "standard",
+      "seed": 3,
+      "score": -0.13375,
+      "artifact": "starting_artifact: Reason carefully, then output only the final number and no other text.",
+      "wall_s": 191.0,
+      "error": null
+    },
+    {
+      "arm": "initial",
+      "seed": 4,
+      "score": -0.24625000000000002,
+      "artifact": "starting_artifact: ",
+      "wall_s": 14.9,
+      "error": null
+    },
+    {
+      "arm": "standard",
+      "seed": 4,
+      "score": null,
+      "artifact": "",
+      "wall_s": 196.8,
+      "error": "RuntimeError: LLMEmptyResponseError: provider returned a completion with no content (finish_reason='length')"
+    }
+  ],
+  "initial_mean": -0.33630000000000004,
+  "standard_mean": -0.182,
+  "paired_deltas": [
+    0.53,
+    0.009250000000000008,
+    0.035250000000000004,
+    0.13275
+  ],
+  "paired_mean": 0.1768125,
+  "paired_sd": 0.20904547763285863,
+  "n_paired": 4,
+  "resolution_at_n5": 0.041,
+  "artifacts_changed": [
+    "",
+    "starting_artifact: ",
+    "starting_artifact: Reason carefully, then output only the final number and no other text.",
+    "starting_artifact: def solve(input_str):\\n    return str(eval(input_str))",
+    "starting_artifact: |"
+  ],
+  "wall_s": 1555.3,
+  "exceeds_resolution": true
+}
