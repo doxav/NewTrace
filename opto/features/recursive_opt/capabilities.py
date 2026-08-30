@@ -309,43 +309,6 @@ def make_search_policy_evaluator(memory, base_eval: Callable, *, family: Optiona
 
 
 # --------------------------------------------------------------------------- #
-# C.3  Tinker integration: a stable RL/SFT family as an outer-loop testbed.
-# --------------------------------------------------------------------------- #
-class TinkerEnvAdapter:
-    """Adapt a Tinker task to the recursive (inner_runner) contract.
-
-    The recursive stack does not care whether the reward came from a unit test,
-    an LLM judge, or a Tinker rollout. This adapter exposes
-        run(cfg, family) -> (score, feedback)
-    by (a) materialising the artifact from cfg, (b) handing it to a Tinker
-    rollout/eval, (c) returning mean reward + a textual reward breakdown.
-
-    `tinker_client` is duck-typed: any object with
-        .rollout(policy_text, task) -> dict(reward=float, transcript=str)
-    works (real `tinker` SDK, or a local stub for smoke tests).
-    """
-
-    def __init__(self, tinker_client, task_sampler: Callable[[Any], List[Any]]):
-        self.client = tinker_client
-        self.task_sampler = task_sampler
-
-    def run(self, cfg, family: Any) -> Tuple[float, str]:
-        tasks = self.task_sampler(family)
-        rewards, transcripts = [], []
-        for t in tasks:
-            r = self.client.rollout(policy_text=cfg.starting_artifact, task=t)
-            rewards.append(float(r.get("reward", 0.0)))
-            transcripts.append(str(r.get("transcript", ""))[:200])
-        mean = sum(rewards) / max(len(rewards), 1)
-        fb = (
-            f"tinker mean_reward={mean:.3f} over {len(rewards)} rollouts; "
-            f"worst={min(rewards) if rewards else 0:.3f}. "
-            f"sample_transcript={transcripts[0] if transcripts else ''}"
-        )
-        return mean, fb
-
-
-# --------------------------------------------------------------------------- #
 # C.4  Human-in-the-loop optimization gate.
 # --------------------------------------------------------------------------- #
 class HITLGate:

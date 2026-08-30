@@ -1595,6 +1595,41 @@ def _build_legacy_level_module(spec: Mapping[str, Any], resources: Mapping[str, 
     level_module._control_plane_level = level
     level_module._control_plane_families = _thaw(config['families'])
     return level_module
+def _build_recursive_level(spec: Mapping[str, Any], resources: Mapping[str, Any]) -> Module:
+    """Build a recursive level (config / family_policy / prior) as a PORTABLE module.
+
+    Until now the only module that could carry a recursive level was
+    ``legacy_level@1``, whose evaluator runs in ``legacy_module`` mode, so every recursive
+    result was stamped ``portable=False, promotable=False``. The portable surface was
+    therefore limited to string equality, and the control plane could not express the
+    feature it exists to serve.
+
+    Almost nothing new is required: ``compile_level`` already builds the level, its
+    ``forward()`` already returns ``{"score", "feedback"}`` which
+    ``recursive_opt.evaluator.module_output@1`` already accepts, and its trainable
+    parameter is already one plain string. This entry just wires those together.
+    """
+    config = spec['module']['config']
+    level = _thaw(config['level'])
+    memory = resources.get('memory') or MemoryLite(root='./trace_memory')
+    module = compile_level(level, memory, _thaw(config['families']), _thaw(config.get('scoring')))
+    module._control_plane_level = level
+    module._control_plane_families = _thaw(config['families'])
+    return module
+
+def _validate_recursive_config(config: Mapping[str, Any]) -> None:
+    """Validate the portable recursive module configuration."""
+    if not isinstance(config, Mapping):
+        raise TypeError('recursive level config must be a mapping')
+    _reject_unknown_keys(config, {'level', 'families', 'scoring'}, 'module.config')
+    level, families = config.get('level'), config.get('families')
+    if not isinstance(level, Mapping) or not isinstance(families, Mapping):
+        raise TypeError('recursive level config requires level and families mappings')
+    if level.get('surface') not in {'config', 'family_policy', 'prior'}:
+        raise ValueError("portable recursive levels support surface config, family_policy or prior")
+    if _contains_callable(level) or _contains_callable(families):
+        raise ValueError('portable recursive levels cannot carry callables; use a registry ref')
+
 def _build_graph_module(spec: Mapping[str, Any], resources: Mapping[str, Any]) -> Module:
     """Build a graph module from an explicitly supplied executor resource."""
     from opto.features.graph import GraphAdapter, GraphExecutor
@@ -1653,23 +1688,26 @@ def _validate_graph_artifact(artifact: Mapping[str, Any]) -> None:
     """Validate the portable graph artifact without importing optional LangGraph."""
     from opto.features.graph import GraphAdapter
     GraphAdapter.validate_artifact(artifact)
-def _snapshot_legacy(module: Module) -> Dict[str, Any]:
-    """Snapshot the executable migrated level as portable text."""
+def _snapshot_level_text(module: Module) -> Dict[str, Any]:
+    """Snapshot any compiled level's single trainable text parameter.
+
+    Shared by the portable ``recursive_level@1`` and the migrated ``legacy_level@1``:
+    both wrap a level built by ``compile_level`` whose artifact is one string.
+    """
     if not hasattr(module, '_control_plane_level'):
-        raise TypeError('legacy artifact requires a migrated executable level')
-    level = module._control_plane_level
-    return {'text': _artifact_text(module, level['surface'])}
-def _restore_legacy(module: Module, artifact: Mapping[str, Any]) -> None:
-    """Restore an executable migrated level's text artifact."""
+        raise TypeError('level artifact requires a module built by compile_level')
+    return {'text': _artifact_text(module, module._control_plane_level['surface'])}
+def _restore_level_text(module: Module, artifact: Mapping[str, Any]) -> None:
+    """Restore a compiled level's trainable text exactly."""
     if not hasattr(module, '_control_plane_level'):
-        raise TypeError('legacy artifact requires a migrated executable level')
+        raise TypeError('level artifact requires a module built by compile_level')
     _seed_from_text(module, module._control_plane_level['surface'], str(artifact['text']))
-def _validate_legacy_artifact(artifact: Mapping[str, Any]) -> None:
-    """Validate the migrated legacy-level artifact shape."""
+def _validate_level_text_artifact(artifact: Mapping[str, Any]) -> None:
+    """Validate the one-string level artifact contract."""
     if not isinstance(artifact, Mapping) or set(artifact) != {'text'}:
-        raise ValueError("legacy artifact must contain only 'text'")
+        raise ValueError("level artifact must contain only 'text'")
     if not isinstance(artifact['text'], str):
-        raise TypeError('legacy artifact text must be a string')
+        raise TypeError('level artifact text must be a string')
 def _legacy_level_evaluator(module: Module, _dataset: Any, _context: Mapping[str, Any]) -> EvaluationResult:
     """Evaluate a migrated level through its existing final-evaluation helper."""
     level = module._control_plane_level
@@ -1789,7 +1827,8 @@ register_codec('recursive_opt.codec.component_dict@1', _component_dict, input_ty
 register_engine('fixed', EngineRegistryEntry(run=_run_fixed_engine, capabilities=frozenset({'scalar', 'weighted', 'pareto', 'trace_module', 'rich_trace'})))
 register_engine('trace', EngineRegistryEntry(run=_run_trace_engine, capabilities=frozenset({'scalar', 'weighted', 'pareto', 'trace_module', 'heterogeneous_parameters', 'rich_trace'})))
 register_engine('gepa_optimize_anything', EngineRegistryEntry(run=_run_gepa_engine, capabilities=frozenset({'scalar', 'weighted', 'trace_module', 'multi_component', 'rich_trace'})))
-register_module('recursive_opt.module.legacy_level@1', ModuleRegistryEntry(build=_build_legacy_level_module, snapshot=_snapshot_legacy, restore=_restore_legacy, validate_artifact=_validate_legacy_artifact, capabilities=frozenset({'legacy', 'json_snapshot', 'trace_module'}), validate_config=_validate_legacy_config))
+register_module('recursive_opt.module.recursive_level@1', ModuleRegistryEntry(build=_build_recursive_level, snapshot=_snapshot_level_text, restore=_restore_level_text, validate_artifact=_validate_level_text_artifact, capabilities=frozenset({'recursive', 'json_snapshot', 'trace_module'}), validate_config=_validate_recursive_config))
+register_module('recursive_opt.module.legacy_level@1', ModuleRegistryEntry(build=_build_legacy_level_module, snapshot=_snapshot_level_text, restore=_restore_level_text, validate_artifact=_validate_level_text_artifact, capabilities=frozenset({'legacy', 'json_snapshot', 'trace_module'}), validate_config=_validate_legacy_config))
 def migrate_legacy_spec(raw_spec: Mapping[str, Any]) -> Dict[str, Any]:
     """Migrate legacy or flat-v2 input into the canonical multilevel shape."""
     if not isinstance(raw_spec, Mapping):

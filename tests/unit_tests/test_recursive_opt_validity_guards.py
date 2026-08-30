@@ -576,3 +576,83 @@ def test_d17_run_spec_does_not_leak_constraints(_restore_adapter) -> None:
                     "iterations": 1, "num_candidates": 1}],
     })
     assert dict(CONFIG_ALLOWED_VALUES) == before, "the run leaked its constraints"
+
+
+# --------------------------------------------------------------------------- #
+# G1 — a recursive level must be expressible as a PORTABLE v2 spec
+# --------------------------------------------------------------------------- #
+def _recursive_spec(surface="config", families=None, memory_root=None):
+    families = families or {"f": ["t1"]}
+    level = {"id": "o1", "surface": surface, "family": "*" if surface != "config" else "f",
+             "targets": ["starting_artifact"]}
+    return {
+        "schema_version": S.SCHEMA_VERSION, "kind": S.SPEC_KIND,
+        "runtime": {"memory_root": memory_root or tempfile.mkdtemp()},
+        "budget": {"candidates": 0, "on_exceed": "return_best_valid"},
+        "levels": [{
+            "id": "o1",
+            "engine": {"name": "trace", "config": {"iterations": 1, "num_candidates": 1}},
+            "module": {"ref": "recursive_opt.module.recursive_level@1",
+                       "config": {"level": level, "families": families}},
+            "objective": {"evaluator_ref": "recursive_opt.evaluator.module_output@1",
+                          "metrics": {"score": {"direction": "maximize",
+                                                "source": "evaluation.metrics.score",
+                                                "aggregate_examples": "mean"}},
+                          "selection": {"mode": "scalar", "score_key": "score"}},
+            "datasets": {"train": [{"family": "f"}], "validation": [],
+                         "holdout": [{"family": "f"}]},
+        }],
+    }
+
+
+class _DetAdapter:
+    status = "deterministic"
+    PLUMBED_FIELDS = ("starting_artifact",)
+
+    def run_task(self, cfg, task_id):
+        return (0.9 if "verify" in str(cfg.starting_artifact).lower() else 0.4, f"[det] {task_id}")
+
+
+def test_g1_recursive_level_is_portable_and_promotable(_restore_adapter) -> None:
+    """Before this, the ONLY module that could carry a recursive level was
+    legacy_level@1, whose legacy_module evaluator forced portable=False. The portable
+    v2 surface was therefore limited to string equality (assessment section 4.2)."""
+    TB.register_task_adapter(_DetAdapter())
+    result = S.run_spec(_recursive_spec())
+
+    assert result.valid is True
+    assert result.portable is True
+    assert result.promotable is True
+    assert result.artifact["text"].startswith("starting_artifact:")
+
+
+@pytest.mark.parametrize("surface", ["config", "family_policy", "prior"])
+def test_g1_every_recursive_surface_compiles_portably(surface: str, _restore_adapter) -> None:
+    TB.register_task_adapter(_DetAdapter())
+    families = {"f": ["t1"], "g": ["t2"]}  # two families: a prior level needs a holdout (D4)
+    plan = S.compile_plan(_recursive_spec(surface, families))
+    assert plan.units
+
+
+def test_g1_portable_recursive_module_rejects_callables() -> None:
+    """A portable spec must stay JSON; a callable would make it unreproducible."""
+    with pytest.raises(ValueError, match="cannot carry callables"):
+        S._validate_recursive_config(
+            {"level": {"id": "o1", "surface": "config", "builder": lambda *a: None},
+             "families": {"f": ["t1"]}})
+
+
+def test_g1_portable_recursive_module_rejects_an_unsupported_surface() -> None:
+    with pytest.raises(ValueError, match="surface config, family_policy or prior"):
+        S._validate_recursive_config(
+            {"level": {"id": "o1", "surface": "code"}, "families": {"f": ["t1"]}})
+
+
+def test_g1_recursive_artifact_round_trips(_restore_adapter) -> None:
+    TB.register_task_adapter(_DetAdapter())
+    spec = _recursive_spec()
+    module = S.build_module(S.normalize_spec(spec), {"memory": MemoryLite(root=tempfile.mkdtemp())})
+    artifact = S._snapshot_level_text(module)
+    S._validate_level_text_artifact(artifact)
+    S._restore_level_text(module, {"text": "starting_artifact: verify twice"})
+    assert "verify twice" in S._snapshot_level_text(module)["text"]
