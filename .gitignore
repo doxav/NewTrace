@@ -170,5 +170,20 @@ OAI_CONFIG_LIST
 *.gv.pdf
 
 # jupyter book API output
-docs/api/*examples/notebooks/bbeh/
+docs/api/*
+examples/notebooks/bbeh/
 t6_m2_bbeh_2.ipynb
+
+# Local agent/tool configuration
+.claude/
+.codex
+
+# Local experiment run byproducts (see CLAUDE.md): not tracked project structure
+notebook_outputs/
+examples/notebook_outputs/recursive_opt_abc_probe/
+examples/notebooks/notebook_outputs/
+XP_recurse_2/
+examples/XP_recurse_2/
+examples/XP_1stattempt/
+examples/examples/
+memOLD/
