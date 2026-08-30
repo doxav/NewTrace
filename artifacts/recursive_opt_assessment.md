@@ -1400,3 +1400,55 @@ That is the strongest available evidence for the assessment's central claim: the
 difficulty here has never been the optimizer, it is that measuring an LLM optimization
 system correctly is genuinely hard, and every unexamined shortcut defaults to a
 false positive.
+
+---
+
+## 15. Experiment-0's first unit, re-run diagnostically
+
+The frozen main run of 2026-08-24 stopped on its first unit (seed 0, budget 6, arm A)
+against the hard constraint `invalid_rate <= 0`: one of 24 holdout samples
+(`gsm8k:test:915`, expected 23) produced an empty deterministic extraction. The run's own
+report had to record that *"the raw provider response text is not persisted, so the exact
+upstream formatting cause is unknown and is not inferred"* — an unanalysable stop.
+
+`evaluator.py` now persists a bounded excerpt of the raw text **when extraction fails**,
+so the next such stop is diagnosable. That changes the Experiment-0 source hash, and
+`_load_main_lock` therefore refuses to continue the frozen matrix — correctly. What
+follows is a **diagnostic replication, not a resumption**: same model profile
+(temperature 0, `max_tokens` 384, reasoning disabled), same 24-sample v2 holdout, run
+8-way parallel.
+
+```
+samples=24  evaluated=24  errors=0
+accuracy     : 24/24        (frozen run: 22/24)
+invalid_rate : 0/24         (frozen run: 1/24; hard constraint requires 0)
+truncated at max_tokens=384 : 0/24
+wall=31s     (the frozen sequential run took 199s)
+```
+
+`gsm8k:test:915` extracted correctly this time — `FINAL: 23 hours.`, 8 completion tokens.
+
+### 15.1 What this does and does not establish
+
+**My truncation hypothesis was wrong, and the data says so cleanly.** The longest answer
+across all 24 samples used **177** completion tokens against a 384 cap, and nothing hit
+`finish_reason='length'`. The 384-token budget was not the cause.
+
+**It does not show the failure is fixed.** 0/24 has a Wilson 95% interval of
+**(0.000, 0.138)**, and the frozen run's observed 1/24 = 0.042 sits inside it. One clean
+replication of a ~4% event is exactly what you would expect to see whether or not
+anything changed. Claiming the constraint now passes would repeat the error this whole
+document is about.
+
+**It is also not an exact code-path replication.** The probe drives the two-call workflow
+directly rather than through `CompoundReasoningModule`, so it reproduces the *prompts and
+model profile* but not the full harness.
+
+### 15.2 What would actually settle it
+
+The remaining candidate cause is a transient empty provider response — the same class as
+D11/D14 and the one the remote independently hardened. To distinguish "fixed" from "got
+lucky" you need enough samples to resolve a ~4% rate: at n=24 the interval spans 0-14%,
+so roughly **n ≈ 200 forward calls** for a ±2.5% estimate. That is cheap here (31 s per
+24 samples at 8-way parallelism, ~$0.002), and it is the measurement to run before
+re-freezing the lock and restarting the frozen matrix.

@@ -62,11 +62,11 @@ def test_fixed_temperature_injects_but_does_not_override() -> None:
         seen.update(kw)
         return "ok"
 
-    assert M.FixedTemperatureLLM(inner, 0.0)(messages=[]) == "ok"
+    assert M.BoundedEvalLLM(inner, 0.0)(messages=[]) == "ok"
     assert seen["temperature"] == 0.0
 
     seen.clear()
-    M.FixedTemperatureLLM(inner, 0.0)(messages=[], temperature=0.7)
+    M.BoundedEvalLLM(inner, 0.0)(messages=[], temperature=0.7)
     assert seen["temperature"] == 0.7, "an explicit temperature must win"
 
 
@@ -77,7 +77,7 @@ def test_fixed_temperature_is_transparent_and_optional() -> None:
         def __call__(self, **kw):
             return kw
 
-    wrapped = M.FixedTemperatureLLM(Inner(), None)
+    wrapped = M.BoundedEvalLLM(Inner(), None)
     assert wrapped.model_name == "m"
     assert "temperature" not in wrapped(messages=[]), "None must leave calls untouched"
 

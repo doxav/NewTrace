@@ -100,9 +100,6 @@ class BoundedEvalLLM:
         return getattr(self._inner, name)
 
 
-#: Backwards-compatible alias for the temperature-only wrapper.
-FixedTemperatureLLM = BoundedEvalLLM
-
 
 def wilson_interval(successes: int, trials: int, z: float = 1.96) -> Tuple[float, float]:
     """Return the Wilson score interval for a binomial rate.

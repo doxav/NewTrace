@@ -190,17 +190,6 @@ def register_config_values(field: str, values: Iterable[str], *, replace: bool =
     CONFIG_ALLOWED_VALUES[field] = tuple(dict.fromkeys((*existing, *normalized)))
 
 
-def snapshot_config_values() -> Dict[str, Tuple[str, ...]]:
-    """Copy the enum-value registry so a caller can restore it afterwards."""
-    return {field: tuple(values) for field, values in CONFIG_ALLOWED_VALUES.items()}
-
-
-def restore_config_values(snapshot: Dict[str, Tuple[str, ...]]) -> None:
-    """Restore a registry snapshot taken by :func:`snapshot_config_values`."""
-    CONFIG_ALLOWED_VALUES.clear()
-    CONFIG_ALLOWED_VALUES.update(snapshot)
-
-
 @contextlib.contextmanager
 def config_values_scope():
     """Scope ``register_config_values`` calls to a block.
@@ -212,11 +201,12 @@ def config_values_scope():
     rejected as an invalid config and scored at the invalid floor, which looks like a bad
     candidate rather than a harness fault.
     """
-    snapshot = snapshot_config_values()
+    snapshot = {field: tuple(values) for field, values in CONFIG_ALLOWED_VALUES.items()}
     try:
         yield
     finally:
-        restore_config_values(snapshot)
+        CONFIG_ALLOWED_VALUES.clear()
+        CONFIG_ALLOWED_VALUES.update(snapshot)
 
 
 def validate_config_field(field: str, value: Any) -> None:

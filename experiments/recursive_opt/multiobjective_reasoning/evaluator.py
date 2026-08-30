@@ -89,6 +89,13 @@ def exact_reasoning_evaluator(
             "workflow_call": int(data["workflow_call"]),
             "output_identity": id(output),
             "provider_calls": [dict(call["provider"]) for call in calls],
+            # Persist the raw text ONLY when extraction failed. The 2026-08-24 main run
+            # stopped on `invalid_rate <= 0` after one empty extraction, and its own
+            # report had to record that "the raw provider response text is not persisted,
+            # so the exact upstream formatting cause is unknown". An unanalysable stop
+            # costs a whole run; a bounded excerpt costs a few hundred bytes.
+            **({"invalid_raw_content": content[:2000],
+                "invalid_raw_length": len(content)} if invalid else {}),
         },
         usage={"forward": usage},
         artifacts={"answer": produced, "expected": expected},
