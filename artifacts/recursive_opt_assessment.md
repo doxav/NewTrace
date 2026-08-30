@@ -1452,3 +1452,90 @@ lucky" you need enough samples to resolve a ~4% rate: at n=24 the interval spans
 so roughly **n ≈ 200 forward calls** for a ±2.5% estimate. That is cheap here (31 s per
 24 samples at 8-way parallelism, ~$0.002), and it is the measurement to run before
 re-freezing the lock and restarting the frozen matrix.
+
+---
+
+## 16. Experiment-0: the measurement, and what it says about the design
+
+§15 left one question open — is the invalid extraction that stopped the frozen run a real
+defect, or a rare event? Probe N measured it: **246 evaluations, 492 forward calls, 818 s
+at 8-way parallelism, ~$0.01**, split to separate two causes that need different fixes.
+
+```
+                invalid            95% CI              accuracy
+A_holdout       0/96   = 0.0000    (0.0000, 0.0385)    95/96
+  (24 frozen holdout x 4 repeats)
+B_fresh         0/150  = 0.0000    (0.0000, 0.0250)    147/150
+  (150 fresh GSM8K test samples, disjoint from every frozen pool)
+POOLED          0/246  = 0.0000    (0.0000, 0.0154)    242/246 = 0.9837
+transport errors: 0
+```
+
+Part A's repeat structure found **0 samples always invalid** and **0 samples sometimes
+invalid** — so the failure is neither reliably sample-specific nor visibly transient at
+this rate.
+
+### 16.1 The stop was a rare event, not a defect
+
+The invalid rate is bounded below **1.54%**. The original 1-in-24 remains entirely
+consistent with that:
+
+| true rate | P(≥1 invalid in a 24-sample holdout) |
+|---:|---:|
+| 0.0154 | 0.311 |
+| 0.0100 | 0.214 |
+| 0.0050 | 0.113 |
+
+A single event in 24 was never evidence of a defect. It is what a low-but-nonzero rate
+looks like.
+
+### 16.2 …which makes the hard constraint unsatisfiable by construction
+
+`invalid_rate <= 0` is evaluated per unit, on 24 samples, across
+**5 seeds × 2 budgets × 4 arms = 40 units**:
+
+| true rate | P(one unit passes) | **P(all 40 units pass)** |
+|---:|---:|---:|
+| 0.0154 | 0.689 | **0.0000** |
+| 0.0100 | 0.786 | **0.0001** |
+| 0.0050 | 0.887 | **0.0081** |
+| 0.0020 | 0.953 | **0.1463** |
+
+Even at a rate of 0.2% — seven times better than the measured upper bound — the frozen
+matrix completes only 15% of the time. **The experiment was overwhelmingly likely to stop
+on a hard-constraint violation whatever the optimizer did.** That is a design property,
+not a result, and it is the actual reason the run halted.
+
+### 16.3 And the primary metric has almost no headroom
+
+Arm A — the *fixed baseline*, no optimizer — scores **242/246 = 98.4%** on GSM8K with this
+model. Total room for any optimizer to improve on: **1.6 percentage points**.
+
+Samples per arm needed to detect a gain, at 80% power:
+
+| gain | n per arm |
+|---:|---:|
+| +0.5 pp | 8,521 |
+| +1.0 pp | 1,747 |
+| +1.6 pp (to a perfect score) | 502 |
+
+The frozen design provides **120** observations per arm (24 holdout × 5 paired seeds) —
+roughly **15× short** for a +1 pp effect, and it cannot resolve anything smaller at all.
+
+### 16.4 What to change
+
+1. **Drop `invalid_rate <= 0`** for a rate the instrument can actually meet, e.g.
+   `invalid_rate <= 0.02` measured over the pooled holdout rather than per unit. A
+   zero-tolerance constraint on 24 samples is a coin flip dressed as a gate.
+2. **Change the task.** GSM8K at 98.4% is saturated for this model — the §12 finding
+   again. Pick a task where the baseline leaves room, and certify it first
+   (`measurement.certify_task`).
+3. **Size the holdout to the effect.** 500+ samples per arm to see a 1.6 pp gain, or
+   accept that only large effects are detectable and say so in the preregistration.
+4. Only then re-freeze the lock and restart the matrix.
+
+None of this reflects badly on the experiment's engineering, which is careful: the
+provenance locks, the frozen preregistration and the watchdog all did their jobs, and the
+stop-decision report is honest about what it could not determine. The gap is that no step
+asked whether the instrument could satisfy its own constraint or resolve its own effect —
+which is the same gap §5 found in UC4 and §11 found in the objective.

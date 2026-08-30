@@ -18,13 +18,15 @@ guess which numbers still hold.
 | Does the optimizer work at all? | It **changes artifacts and moves scores**. Whether it *improves* anything is unproven. | §13, §14.3 |
 | Can I trust `notebook_outputs/`? | **No.** Produced below the resolution limit. | §5, §7.1 |
 | Which tasks can I measure on? | **3** at realistic concurrency; **2** with a genuine zero floor. | §14.4, `probe_2026/probe_l_results.json` |
-| Is Experiment-0's blocking unit fixed? | **Unknown.** One clean replication (0/24) is consistent with the original 1/24; truncation is ruled out. | §15 |
+| Is Experiment-0's blocking unit fixed? | There was **nothing to fix**. Invalid rate is 0/246, bounded below 1.54%; the 1-in-24 was a rare event. | §16.1 |
+| Why did Experiment-0 stop, then? | `invalid_rate <= 0` on 24 samples per unit is **unsatisfiable across 40 units** — P(all pass) < 0.001 at the measured rate. | §16.2 |
+| Can Experiment-0 detect an optimizer effect? | **No.** Baseline is 98.4% (1.6 pp headroom); it has 120 observations per arm where ~1,750 are needed for +1 pp. | §16.3 |
 
 ## Status of every results file
 
 | file | status | note |
 |---|---|---|
-| `artifacts/recursive_opt_assessment.md` | ✅ **CURRENT** | The single source of truth, §0–§15. |
+| `artifacts/recursive_opt_assessment.md` | ✅ **CURRENT** | The single source of truth, §0–§16. |
 | `artifacts/probe_2026/*.json` | ✅ **CURRENT** | Raw data for §7, §11–§14. Probes A–K, 2026-08-29/30. |
 | `artifacts/RESULTS_INDEX.md` | ✅ **CURRENT** | This file. |
 | `examples/recursive_opt_use_cases_CURRENT_LIMITS.MD` | ⚠️ **SUPERSEDED** | Banner added. UC4 invalid; every delta below the resolution limit. Method still sound. |
