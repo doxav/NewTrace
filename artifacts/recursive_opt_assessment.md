@@ -1761,8 +1761,20 @@ excellent instruments, and they were being read through a broken menu.
 - **Retracted:** D18 as primarily "certification is not menu-conditional". That remains true and
   worth fixing, but it is *secondary*. The primary defect is that the menu was type-incompatible
   with the surface and nothing checked.
-- **Re-opened:** every null result on a code surface. Iteration 3, Probe K, and any UC4 arm scored
-  on a code surface were all run through an effective menu of size 1.
+- **Re-opened, precisely scoped.** I first wrote "every null on a code surface"; an audit of every
+  past probe's menu against its measured surface narrows that considerably. The defect only bites a
+  **menu-constrained** run whose menu is type-incompatible with the surface:
+
+  | probe | surface (measured) | menu | affected? |
+  |---|---|---|---|
+  | Iteration 3 (`probe_q`) | `code` / `numeric` | prose | **YES — effective size 1** |
+  | Probe K | `code` (`online_bin_packing`) | **none** (free-form LLM proposal) | no |
+  | Probes A, B, D, F | `prose` (`gsm8k` `system_prompt`, `qasper` `meta_instructions`) | prose | no |
+
+  Free-form proposal is unaffected because the optimiser sees the existing code and proposes code.
+  Prose menus on `gsm8k`/`qasper` are correct by construction — both are `prose`, `calls_llm=True`.
+  So **Iteration 3 is the only experiment invalidated by this defect.** Probe K stays retracted for
+  its own reason (concurrency noise), and the Probe A/B/D/F nulls stand on their noise floors.
 - **Unchanged:** UC4's `+0.163` remains an arithmetic identity (a different defect, §5.2).
 
 ### 19.4 The open structural question this exposes
