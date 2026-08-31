@@ -2725,7 +2725,11 @@ def _normalizer_rejected(feedback: str) -> bool:
         return False
 
 def score_spread(task_id: str, probes: Optional[List[dict]]=None, scoring: Optional[dict]=None) -> dict:
-    """Pre-flight diagnostic: prove the config->score surface is non-flat."""
+    """Pre-flight diagnostic: prove the config->score surface is non-flat.
+
+    Read ``effective_menu_size`` before ``flat``: when it is 1 the probes offered one
+    usable point, so ``flat`` describes the MENU, not the task.
+    """
     probes = probes or [{}, {'starting_artifact': 'Answer directly.'}, {'starting_artifact': 'Plan step by step, then verify the answer before replying.'}]
     runner = make_scored_task_runner(scoring)
     rows = []
