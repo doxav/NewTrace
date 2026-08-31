@@ -2721,7 +2721,7 @@ def _normalizer_rejected(feedback: str) -> bool:
         return False
     try:
         return bool(json.loads(str(feedback).split(marker, 1)[1].strip()).get('invalid'))
-    except ValueError:
+    except (ValueError, AttributeError):     # malformed, or not a JSON object
         return False
 
 def score_spread(task_id: str, probes: Optional[List[dict]]=None, scoring: Optional[dict]=None) -> dict:
