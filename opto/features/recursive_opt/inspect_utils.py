@@ -17,7 +17,7 @@ trained variable/code, plus the trace signal that drove the change.
 from __future__ import annotations
 
 import difflib
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 def param_snapshot(module) -> Dict[str, Any]:

@@ -2709,6 +2709,21 @@ def _check_plumbing(level_spec: dict) -> None:
     policy = level_spec.get('effect_policy') or {}
     check_field_effects(adapter, level_spec.get('targets') or [], required_effects=policy.get('required_effects'), allow_inactive=bool(level_spec.get('allow_inactive') or level_spec.get('allow_unplumbed') or policy.get('allow_inactive')))
 
+def _normalizer_rejected(feedback: str) -> bool:
+    """Whether the score normalizer replaced an invalid sentinel with its legal floor.
+
+    ``make_scored_task_runner`` deliberately reports the worst LEGAL score instead of
+    the raw -1e9 so one rejection cannot poison a downstream mean. That makes the
+    rejection invisible to a numeric threshold, so read the flag it leaves behind.
+    """
+    marker = 'SCORE_NORMALIZATION_JSON='
+    if marker not in str(feedback):
+        return False
+    try:
+        return bool(json.loads(str(feedback).split(marker, 1)[1].strip()).get('invalid'))
+    except ValueError:
+        return False
+
 def score_spread(task_id: str, probes: Optional[List[dict]]=None, scoring: Optional[dict]=None) -> dict:
     """Pre-flight diagnostic: prove the config->score surface is non-flat."""
     probes = probes or [{}, {'starting_artifact': 'Answer directly.'}, {'starting_artifact': 'Plan step by step, then verify the answer before replying.'}]
@@ -2716,24 +2731,29 @@ def score_spread(task_id: str, probes: Optional[List[dict]]=None, scoring: Optio
     rows = []
     for p in probes:
         try:
-            score, _ = runner(LevelConfig(**p), task_id)
+            score, note = runner(LevelConfig(**p), task_id)
             value = float(score)
             if not math.isfinite(value):
                 raise ValueError(f'non-finite score {value!r}')
-            rows.append({'probe': p, 'score': value})
+            rows.append({'probe': p, 'score': value, 'rejected': _normalizer_rejected(note)})
         except Exception as exc:
             rows.append({'probe': p, 'score': None, 'error': f'{type(exc).__name__}: {str(exc).splitlines()[0]}'})
 
     def is_invalid_probe(row: dict) -> bool:
         """Return whether a probe produced no usable score signal."""
-        if row.get('score') is None:
+        if row.get('score') is None or row.get('rejected'):
             return True
         score = float(row['score'])
         return not math.isfinite(score) or score <= -999999.0
     valid_scores = [float(row['score']) for row in rows if not is_invalid_probe(row)]
     invalid_probes = sum((1 for row in rows if is_invalid_probe(row)))
     valid_spread = max(valid_scores) - min(valid_scores) if valid_scores else 0.0
-    return {'task': task_id, 'rows': rows, 'spread': valid_spread, 'valid_spread': valid_spread, 'flat': valid_spread < 1e-09, 'failed_probes': invalid_probes, 'invalid_probes': invalid_probes, 'catastrophic': invalid_probes > 0}
+    # How many points the menu ACTUALLY offers. A menu collapses to one in two ways:
+    # candidates that do not fit the surface (they drop out as invalid) and candidates
+    # that are ranking-equivalent (they tie). No type check can see the second, but
+    # both show up here, and while this is 1 `flat` is a statement about the menu.
+    effective_menu_size = len(set(valid_scores))
+    return {'task': task_id, 'rows': rows, 'spread': valid_spread, 'valid_spread': valid_spread, 'flat': valid_spread < 1e-09, 'failed_probes': invalid_probes, 'invalid_probes': invalid_probes, 'catastrophic': invalid_probes > 0, 'effective_menu_size': effective_menu_size, 'menu_collapsed': effective_menu_size <= 1}
 
 def agentic_optimizer_factory(level_spec: dict, memory: MemoryLite, reused_tools: Optional[List[str]]=None):
     """Build an AgenticOptimizer factory wiring (declared + reused) tools."""
@@ -2761,11 +2781,6 @@ def agentic_optimizer_factory(level_spec: dict, memory: MemoryLite, reused_tools
         def __init__(self, parameters: list, **optimizer_kwargs: Any) -> None:
             super().__init__(parameters, **{**configured_kwargs, **optimizer_kwargs})
     return ConfiguredAgenticOptimizer
-
-def _memory_from_spec(spec: dict) -> MemoryLite:
-    """Create MemoryLite from spec-level prior-promotion controls."""
-    promotion = spec.get('prior_promotion') or {}
-    return MemoryLite(root=spec.get('memory_root', './trace_memory'), promotion_min_support=int(promotion.get('min_support', 3)), promote_priors=bool(promotion.get('enabled', True)), promotion_min_score=promotion.get('min_score'))
 
 def make_scored_task_runner(scoring: Optional[dict]=None, *, raw_runner: Optional[Callable[[LevelConfig, str], Tuple[float, str]]]=None) -> Callable[[LevelConfig, str], Tuple[float, str]]:
     """Wrap a task runner with optional spec-level score normalization."""

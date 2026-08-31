@@ -70,9 +70,10 @@ class _Param:
     ("You are a helpful assistant.", "Answer directly.", True),   # prose -> prose
     ("You are a helpful assistant.", "def f(x): return x", True),  # code in a prompt is fine
     ("", "Answer directly.", True),                      # unknown surface: never block
-    # executability controls the probe measured at -1e6 ------------------------
-    (BIN_PACKING, "import numpy as np\ndef priority(item, bins)\n    return 0\n", False),
-    (BIN_PACKING, "import numpy as np\ndef not_priority(item, bins):\n    return 0\n", False),
+    # deliberately NOT refused: broken or renamed code is a real optimizer proposal
+    # getting real benchmark feedback, not an inapplicable experiment config.
+    (BIN_PACKING, "import numpy as np\ndef priority(item, bins)\n    return 0\n", True),
+    (BIN_PACKING, "import numpy as np\ndef not_priority(item, bins):\n    return 0\n", True),
 ])
 def test_artifact_fits_surface(original: str, candidate: str, fits: bool) -> None:
     surface = M.detect_surface({"param": _Param(_WritableNode(original))})
@@ -87,7 +88,12 @@ def test_artifact_fits_surface_reason_is_typed_and_names_the_surface() -> None:
 
 
 def test_a_non_python_code_surface_is_not_judged_by_the_python_parser() -> None:
-    """Lean 4 parameters are `code` but must not be required to parse as Python."""
+    """Lean 4 parameters are `code` but must not be required to parse as Python.
+
+    With no Lean parser available the fallback is the kind check alone, and it
+    refuses whatever does not read as code: failing loudly on a valid Lean
+    candidate is recoverable, silently accepting prose is the bug being fixed.
+    """
     lean = "-- placeholder: Lean 4 translation pending\ntheorem t : True := by trivial"
     surface = M.detect_surface({"param": _Param(_WritableNode(lean))})
     assert M.artifact_fits_surface(surface, "theorem t : True := by simp") is None
@@ -196,6 +202,18 @@ def test_a_type_incompatible_menu_is_reported_as_collapsed_not_flat() -> None:
     assert out["effective_menu_size"] == 1
     assert out["menu_collapsed"] is True
     assert out["flat"] is True  # unchanged meaning, but now qualified by menu_collapsed
+
+
+def test_a_normalizer_floored_rejection_still_counts_as_invalid() -> None:
+    """`make_scored_task_runner` reports the worst LEGAL score (-1.0) instead of the
+    raw -1e9 so one rejection cannot poison a downstream mean. A numeric threshold
+    therefore cannot see the rejection, and effective_menu_size would over-count."""
+    out = _spread(lambda cfg: (INVALID_CONFIG_SCORE
+                               if str(getattr(cfg, "starting_artifact", "") or "") else -2091.8))
+    assert [row["score"] for row in out["rows"]] != [None, None, None]
+    assert any(row.get("rejected") for row in out["rows"]), "the floor must stay flagged"
+    assert out["invalid_probes"] == 2
+    assert out["effective_menu_size"] == 1 and out["menu_collapsed"] is True
 
 
 def test_ranking_equivalent_candidates_collapse_the_effective_menu() -> None:

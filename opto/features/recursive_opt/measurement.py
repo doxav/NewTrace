@@ -192,19 +192,17 @@ _SENTINEL_TOLERANCE = 1e-6
 _QUALITY_HIGHER = ("accuracy", "score", "pass_rate")
 _QUALITY_LOWER = ("error",)
 
-_CODE_MARKERS = ("def ", "class ", "import ", "from ", "return", "lambda", "--", "//", "#include")
+_CODE_MARKERS = ("def ", "class ", "import ", "from ", "return", "lambda", "--", "//", "#include",
+                 ":=")  # `:=` carries the Lean 4 surface, whose bodies need not contain a comment
 
 
 @dataclass(frozen=True)
 class TaskSurface:
     """What a task's trainable parameter actually is, and whether scoring calls a model.
 
-    Certification injected a PROSE probe ("Answer directly.") into every task. For a task
-    whose trainable parameter is Python source, a float, or Lean 4, that is not a probe -
-    it is corruption, and it made five healthy tasks look broken. Worse, the "no model was
-    called" heuristic flagged LLM-free evaluation as a defect when it is the correct and
-    desirable behaviour: a deterministic evaluator has no sampling noise at all, which
-    makes it the *best* available measurement surface, not the worst.
+    ``calls_llm=False`` is not a defect: a deterministic evaluator has no sampling
+    noise at all, which makes it the *best* measurement surface available, not the
+    worst. See ``artifact_fits_surface`` for what ``kind`` is used to prevent.
     """
 
     kind: str                 # 'prose' | 'code' | 'numeric' | 'unknown'
@@ -212,10 +210,37 @@ class TaskSurface:
     param_name: Optional[str] = None
     sample: str = ""
 
-    @property
-    def accepts_prose_probe(self) -> bool:
-        """Whether a prose artifact can legitimately be injected into this task."""
-        return self.kind == "prose"
+
+def trainable_node(param: Any) -> Any:
+    """Return the single node a bundle param exposes for optimization, or None.
+
+    THE one place that knows how a param hides its node. Three copies of this walk
+    existed (adapter seeding, surface detection, liveness perturbation) and disagreed,
+    which is how a surface check could be present in one and absent in another.
+    """
+    if param is None:
+        return None
+    if hasattr(param, "system_prompt"):
+        return param.system_prompt
+    getter = getattr(param, "parameters", None)
+    if callable(getter):
+        nodes = list(getter() or [])
+        if nodes:
+            return nodes[0]
+    return param if (hasattr(param, "_data") or hasattr(param, "data")) else None
+
+
+def classify_artifact(text: str) -> str:
+    """Classify a piece of artifact text as 'numeric', 'code', 'prose' or 'unknown'."""
+    stripped = str(text).strip()
+    try:
+        float(stripped)
+        return "numeric"
+    except (TypeError, ValueError):
+        pass
+    if any(marker in str(text) for marker in _CODE_MARKERS):
+        return "code"
+    return "prose" if stripped else "unknown"
 
 
 def detect_surface(bundle: Mapping[str, Any]) -> TaskSurface:
@@ -224,33 +249,40 @@ def detect_surface(bundle: Mapping[str, Any]) -> TaskSurface:
     if param is None:
         return TaskSurface("unknown", False)
     calls_llm = hasattr(param, "llm") or hasattr(param, "system_prompt")
-    if hasattr(param, "system_prompt"):
-        return TaskSurface("prose", calls_llm, "system_prompt",
-                           str(getattr(param.system_prompt, "data", ""))[:120])
-
-    node = None
-    getter = getattr(param, "parameters", None)
-    if callable(getter):
-        nodes = list(getter() or [])
-        node = nodes[0] if nodes else None
-    if node is None and hasattr(param, "data"):
-        node = param
+    node = trainable_node(param)
     if node is None:
         return TaskSurface("unknown", calls_llm)
-
     text = str(getattr(node, "data", ""))
-    name = getattr(node, "name", None)
-    stripped = text.strip()
-    try:
-        float(stripped)
-        return TaskSurface("numeric", calls_llm, name, text[:120])
-    except (TypeError, ValueError):
-        pass
-    if any(marker in text for marker in _CODE_MARKERS):
-        return TaskSurface("code", calls_llm, name, text[:120])
-    if stripped:
-        return TaskSurface("prose", calls_llm, name, text[:120])
-    return TaskSurface("unknown", calls_llm, name, text[:120])
+    if node is getattr(param, "system_prompt", None):
+        return TaskSurface("prose", calls_llm, "system_prompt", text[:120])
+    return TaskSurface(classify_artifact(text), calls_llm,
+                       getattr(node, "name", None), text[:120])
+
+
+def artifact_fits_surface(surface: TaskSurface, text: str) -> Optional[str]:
+    """Return None when ``text`` may replace this parameter, else a typed reason.
+
+    A candidate of the wrong KIND is corruption, not a probe: prose written over a
+    366-char ``priority(item, bins)`` does not score badly, it stops the program
+    running and scores the invalid sentinel, so a menu of such candidates has an
+    effective size of 1 and every arm searches a singleton space. ``code`` and
+    ``numeric`` parameters therefore require a candidate of their own kind, while
+    ``prose`` and ``unknown`` ones accept anything (a prompt may legitimately contain
+    code; an unreadable parameter is not ours to judge).
+
+    It stops at the category error deliberately: broken code, or code renaming the
+    function the benchmark calls, still goes through and still scores the sentinel,
+    because that is a real optimizer proposal getting real feedback. What it cannot
+    see - prose carrying a marker word like "return", or ranking-equivalent
+    candidates - is caught by ``score_spread``'s ``effective_menu_size``.
+    """
+    if not str(text).strip() or surface.kind in ("unknown", "prose"):
+        return None
+    kind = classify_artifact(text)
+    if kind != surface.kind:
+        return (f"surface_mismatch: a {kind} candidate cannot replace the "
+                f"{surface.kind} parameter {surface.param_name!r}")
+    return None
 
 
 def _quality_from_metrics(metrics: Dict[str, float]) -> Tuple[Optional[str], Optional[float]]:
@@ -291,14 +323,13 @@ def evaluate_once(
         )
         bundle = adapter._load_bundle(task_id, fresh=True)
         surface = detect_surface(bundle)
-        # Injecting prose into a code/numeric/Lean parameter is corruption, not a probe.
-        # `artifact=None` (the default) scores the bundle exactly as shipped, which is the
-        # only probe that is valid for every surface.
+        # `artifact=None` (the default) scores the bundle as shipped: the only probe
+        # valid for every surface. Anything else must fit the surface it replaces.
         if artifact:
-            if not surface.accepts_prose_probe:
+            refusal = artifact_fits_surface(surface, artifact)
+            if refusal is not None:
                 return {"valid": False, "task_id": task_id, "surface": surface.kind,
-                        "error": (f"refused to inject a prose artifact into a "
-                                  f"{surface.kind} parameter ({surface.param_name!r})"),
+                        "error": f"refused to inject this artifact: {refusal}",
                         "seconds": time.time() - started}
             adapter._apply_starting_artifact(bundle, LevelConfig(starting_artifact=artifact))
         param = bundle.get("param")
@@ -380,13 +411,7 @@ def probe_liveness(
             param = bundle.get("param")
             if temperature is not None and hasattr(param, "llm"):
                 param.llm = BoundedEvalLLM(param.llm, temperature, max_tokens, request_timeout)
-            node = None
-            getter = getattr(param, "parameters", None)
-            if callable(getter):
-                nodes = list(getter() or [])
-                node = nodes[0] if nodes else None
-            if node is None and hasattr(param, "data"):
-                node = param
+            node = trainable_node(param)
             if node is None:
                 continue
             node._data = variant
