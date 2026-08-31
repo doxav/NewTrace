@@ -27,6 +27,7 @@ from .provenance import experiment_source_provenance
 from .registration import assert_strict_output_evaluator, register_experiment_components
 from .specs import (
     INITIAL_ARTIFACT,
+    INVALID_RATE_GATE,
     MODEL,
     REQUEST_TIMEOUT_S,
     RESOLVED_MODEL,
@@ -41,6 +42,9 @@ REPOSITORY_ROOT = PACKAGE_ROOT.parents[2]
 FROZEN_PREREGISTRATION_PATH = PACKAGE_ROOT / "manifests/preregistration_frozen.json"
 EXECUTION_SEMANTICS_AMENDMENT_PATH = (
     PACKAGE_ROOT / "manifests/main_execution_semantics_amendment_v1.json"
+)
+INVALID_RATE_GATE_AMENDMENT_PATH = (
+    PACKAGE_ROOT / "manifests/invalid_rate_gate_amendment_v1.json"
 )
 LIVE_TRANSPORT_AMENDMENT_PATH = (
     PACKAGE_ROOT / "manifests/live_transport_amendment_v1.json"
@@ -312,6 +316,13 @@ def validate_frozen_preregistration() -> dict[str, Any]:
         "hard_constraints": ["invalid_rate <= 0"],
     }:
         raise RuntimeError("frozen main objective differs from Experiment 0")
+    # The preregistration is kept byte-identical; the gate it declares is superseded by an
+    # authorized amendment, so the runtime value must match that amendment rather than
+    # diverging from the record silently.
+    if _load_json(INVALID_RATE_GATE_AMENDMENT_PATH)["amendment"][
+        "hard_constraint_after"
+    ] != f"invalid_rate <= {INVALID_RATE_GATE:g}":
+        raise RuntimeError("runtime invalid-rate gate differs from the authorized amendment")
     matrix = frozen["main"]
     seeds = [int(value) for value in matrix["paired_seeds"]]
     budgets = [int(value) for value in matrix["candidate_budgets"]]

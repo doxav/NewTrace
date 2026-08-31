@@ -13,6 +13,12 @@ from .evaluator import EVALUATOR_REF
 
 
 MODEL = "deepseek/deepseek-v4-flash-0731"
+#: Per-unit invalid-extraction gate. NOT a quality target - invalid_rate is a reported
+#: minimise term in the objective. This exists only to stop a genuinely broken extractor:
+#: it allows 2 invalid per 24-sample unit, so at the measured rates false stops are
+#: negligible (P(all 40 units pass) = 0.99 at a true rate of 0.005) while a 50%-invalid
+#: extractor is caught with probability ~1. See manifests/invalid_rate_gate_amendment_v1.json.
+INVALID_RATE_GATE = 0.1
 RESOLVED_MODEL = "openrouter/deepseek/deepseek-v4-flash-0731"
 REQUEST_TIMEOUT_S = 180
 TRANSPORT_MAX_ATTEMPTS = 3
@@ -192,7 +198,7 @@ def build_spec(
                         "weights": {"accuracy": 1.0, "forward_token_ratio": 0.10},
                     },
                     "hard_constraints": [
-                        {"metric": "invalid_rate", "op": "<=", "value": 0.0}
+                        {"metric": "invalid_rate", "op": "<=", "value": INVALID_RATE_GATE}
                     ],
                     "feedback_channels": ["natural_language", "trace"],
                 },

@@ -51,6 +51,13 @@ def _sum_usage(calls: list[Mapping[str, Any]]) -> dict[str, float | int]:
 def exact_reasoning_evaluator(
     output: Any, example: Any, context: Mapping[str, Any]
 ) -> EvaluationResult:
+    """Score one sample; an invalid extraction counts as INCORRECT, not as absent.
+
+    The sample stays in the accuracy denominator. Excluding invalid samples instead
+    would let an optimizer raise measured accuracy by driving hard questions to invalid
+    output; keeping them makes that strategy strictly self-defeating. `invalid_rate` is
+    reported alongside accuracy so the two are never conflated.
+    """
     data = getattr(output, "data", output)
     item = getattr(example, "data", example)
     if not isinstance(data, Mapping) or not isinstance(item, Mapping):
