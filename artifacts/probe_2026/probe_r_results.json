@@ -1,0 +1,84 @@
+{
+  "tasks": {
+    "llm4ad:optimization/online_bin_packing": {
+      "surface_kind": "code",
+      "param_name": "__code:0",
+      "calls_llm": false,
+      "original_len": 366,
+      "prose_menu_destroys_param": [
+        {
+          "candidate": "Answer directly.",
+          "applied_returned": true,
+          "param_overwritten": true
+        },
+        {
+          "candidate": "Plan step by step, then verify the answer before replying.",
+          "applied_returned": true,
+          "param_overwritten": true
+        }
+      ],
+      "prose_menu_scores": [
+        -2091.8,
+        -1000000.0,
+        -1000000.0
+      ],
+      "prose_menu_effective_size": 1,
+      "code_menu_scores": {
+        "best_fit  (tightest)": -2091.8,
+        "worst_fit (loosest)": -5000.0,
+        "first_fit (low index)": -2099.4,
+        "last_fit  (high index)": -2099.4,
+        "almost_worst": -3477.8,
+        "exact_then_best": -2091.8,
+        "ratio": -2091.8,
+        "const (tie->first)": -2099.4
+      },
+      "code_menu_distinct": 4,
+      "code_menu_range": 2908.2,
+      "headroom": true
+    },
+    "llm4ad:optimization/admissible_set": {
+      "surface_kind": "code",
+      "param_name": "__code:14",
+      "calls_llm": false,
+      "original_len": 353,
+      "prose_menu_destroys_param": [
+        {
+          "candidate": "Answer directly.",
+          "applied_returned": true,
+          "param_overwritten": true
+        },
+        {
+          "candidate": "Plan step by step, then verify the answer before replying.",
+          "applied_returned": true,
+          "param_overwritten": true
+        }
+      ],
+      "prose_menu_scores": [
+        -1161.0,
+        -1000000.0,
+        -1000000.0
+      ],
+      "prose_menu_effective_size": 1,
+      "code_menu_scores": {
+        "baseline 0.0": -1161.0,
+        "sum": -1263.0,
+        "neg_sum": -1551.0,
+        "count_nonzero": -1161.0,
+        "weighted_idx": -1500.0,
+        "mod3": -1161.0
+      },
+      "code_menu_distinct": 4,
+      "code_menu_range": 390.0,
+      "headroom": true
+    }
+  },
+  "controls": {
+    "llm4ad:optimization/online_bin_packing": {
+      "raises": -1000000.0,
+      "syntax_err": -1000000.0,
+      "wrong_name": -1000000.0,
+      "original": -2091.8
+    }
+  }
+}

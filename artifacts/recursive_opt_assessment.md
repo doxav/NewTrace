@@ -1653,3 +1653,124 @@ pointed at a surface that is simultaneously live, unsaturated, and fairly budget
 3. **Declare the equalisation** — pick scored-level search parity, and report the compute ratio.
 4. **In-run replicate control** — always re-score the initial artifact n≥10 times per arm and
    publish the range next to the effect. Cheap, and it caught this one.
+
+---
+
+## §18 — When *can* recursion beat standard? Two win conditions
+
+On a held-out task, O3's output is a single config; standard's output is also a single config.
+The only difference is which data found it — O3 used *other* tasks, standard used the target
+itself. Standard has direct access to the objective, so **standard wins by default** and
+recursion needs a specific structural reason. There are exactly two, and they have *opposite*
+measurement requirements.
+
+**W1 — variance / bias-variance. REQUIRES NOISE.**
+Direct per-task optimisation fits the target's *noise* when the per-task budget is small and the
+score is noisy. A prior averaged over sibling tasks has lower variance. Recursion then wins on
+**quality at equal per-task budget**.
+→ On a deterministic, zero-noise task, direct optimisation *cannot overfit*, so **W1 is
+structurally impossible there**.
+
+**W2 — amortisation / compute. WORKS AT ZERO NOISE.**
+Even with zero noise: if standard needs 20 candidates to reach the optimum and a transferred
+prior arrives within 2, recursion wins on **total compute to reach quality Q across K tasks**.
+
+    standard = K·c_std      recursive = c_meta + K·c_rec      K* = c_meta / (c_std − c_rec)
+
+Requires a shared optimum and non-trivial search cost. Noise is *not* required.
+
+### 18.1 The trap this explains
+
+I had been selecting zero-noise surfaces to buy statistical power. **Those are exactly the
+surfaces on which W1 cannot exist.** Every null so far is consistent with having measured W1 where
+W1 is impossible by construction. The two requirements pull in opposite directions:
+
+| noise | measurement power | W1 possible? |
+|---|---|---|
+| near zero | high | **no** — nothing to overfit |
+| moderate/high | low (n ≥ 115) | yes |
+
+**Rule:** every experiment must state which win condition it tests. Testing W1 on a deterministic
+surface is a category error — and that is precisely what Iteration 3 did. Deterministic families
+should target **W2** and report break-even K*; noisy families target **W1** and must budget for
+the n the noise floor demands.
+
+---
+
+## §19 — Probe R: the menu is the instrument (root cause of every null so far)
+
+**This supersedes the "flat surface" diagnosis of §17.2, and it is the most consequential finding
+in this document.** Raw data: `artifacts/probe_2026/probe_r_results.json`.
+
+`TraceBenchTaskAdapter._apply_starting_artifact` (`tracebench.py:642`) writes the candidate text
+straight into the trainable node's `_data` — `param.system_prompt._data = text`, else
+`plist[0]._data = text`, else `param._data = text` — with **no surface check at all**, and
+returns `True`. `measurement.detect_surface` already computes the surface type correctly; the
+production path simply never consults it.
+
+Measured consequence on the two tasks Iteration 3 used:
+
+| task | surface | original param | prose candidate → |
+|---|---|---|---|
+| `online_bin_packing` | `code`, `calls_llm=False` | 366-char `priority()` | overwritten, **2/2**, score `−1e6` |
+| `admissible_set` | `code`, `calls_llm=False` | 353-char `priority()` | overwritten, **2/2**, score `−1e6` |
+| `internal:multi_param` | `numeric` | float `1.0` | overwritten by prose |
+| `internal:code_param` | `code` | `def f(x): return x` | overwritten by prose |
+
+The Iteration 3 menu was `["", "Answer directly.", "Plan step by step…"]`. The two prose entries
+destroyed the program and scored the sentinel; only the empty entry produced a valid score.
+**The effective menu size was 1.** Both arms searched a singleton space. No optimiser of any kind
+— recursive or standard — could have expressed a preference, and the "flat surfaces" were never
+flat.
+
+### 19.1 A menu collapses to size 1 in two independent ways
+
+**(a) Type-incompatible** — prose on a code/numeric surface; every candidate invalid. This is the
+same defect as the §14 certifier incident, where I injected prose into code/float/Lean parameters
+and made 5 healthy tasks look broken. I fixed it *in the certifier* via `detect_surface` and
+**never fixed it in the production path**. The bug was diagnosed and then half-fixed.
+
+**(b) Ranking-equivalent** — candidates that are monotone transforms of one another. My own first
+re-test fell into this: for `online_bin_packing` only the *argmax* matters, so `item - bins`,
+`-(bins - item)`, `1/(gap+eps)` and `-(gap**2)` are **the same heuristic** and scored identically
+(all −2091.8), which I briefly misread as the task being insensitive to code.
+
+### 19.2 With a valid menu, both surfaces are richly live
+
+Executability controls first (proving the candidate reaches the benchmark): `raises`,
+`syntax_err` and `wrong_name` all score `−1e6`; the original scores `−2091.8`.
+
+| `online_bin_packing` | score | | `admissible_set` | score |
+|---|---|---|---|---|
+| best_fit (tightest) | **−2091.8** | | baseline `0.0` | **−1161.0** |
+| exact_then_best | −2091.8 | | count_nonzero | −1161.0 |
+| ratio | −2091.8 | | mod3 | −1161.0 |
+| first/last_fit | −2099.4 | | sum | −1263.0 |
+| almost_worst | −3477.8 | | weighted_idx | −1500.0 |
+| worst_fit (loosest) | −5000.0 | | neg_sum | −1551.0 |
+| **distinct 4, range 2908.2** | | | **distinct 4, range 390.0** | |
+
+Both tasks are deterministic (`calls_llm=False`) and sequentially noise-free, giving effect sizes
+of 2908 and 390 against a noise floor of 0. That is enormous statistical power — these are
+excellent instruments, and they were being read through a broken menu.
+
+### 19.3 What this retracts and what it re-opens
+
+- **Retracted:** "`admissible_set` and `internal:code_param` are flat surfaces" (§17.2). They are
+  not. The menu was.
+- **Retracted:** D18 as primarily "certification is not menu-conditional". That remains true and
+  worth fixing, but it is *secondary*. The primary defect is that the menu was type-incompatible
+  with the surface and nothing checked.
+- **Re-opened:** every null result on a code surface. Iteration 3, Probe K, and any UC4 arm scored
+  on a code surface were all run through an effective menu of size 1.
+- **Unchanged:** UC4's `+0.163` remains an arithmetic identity (a different defect, §5.2).
+
+### 19.4 The open structural question this exposes
+
+On a *code* surface the artifact is a function with a task-specific signature —
+`priority(item, bins)` for bin packing, `priority(el, n, w)` for admissible set. **Such an
+artifact cannot transfer across tasks with different signatures.** So O3's "one transferable
+config" can only be the `LevelConfig` knobs (`batch_design`, `batch_size`, `credit_horizon`, …),
+not the artifact itself — and those are precisely the knobs whose causal effect `effects.py` was
+built to interrogate. Whether *any* of them carries transferable signal is now the pivotal
+question for the whole recursive program.
