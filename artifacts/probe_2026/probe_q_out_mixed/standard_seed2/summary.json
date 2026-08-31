@@ -1,0 +1,30 @@
+{
+  "levels": {
+    "o3_prior": {
+      "artifact_id": "*:prior:0:80985",
+      "best_objective_at": {
+        "level_step": 0,
+        "score": -1161.0
+      },
+      "best_problem_at": {
+        "level_step": 0,
+        "score": -1161.0
+      },
+      "executed_steps": 2,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 2,
+      "scores": {
+        "objective_score": -1161.0,
+        "problem_score": -1161.0
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "internal:multi_param",
+        "llm4ad:optimization/admissible_set"
+      ],
+      "validated_candidates": 2
+    }
+  },
+  "run_id": "recursive_opt:default:seed-none:matrix-0"
+}

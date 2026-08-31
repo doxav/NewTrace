@@ -1,0 +1,55 @@
+{
+  "levels": {
+    "o2_policy": {
+      "artifact_id": "*:family_policy:0:39332",
+      "best_objective_at": {
+        "level_step": 0,
+        "score": -581.0
+      },
+      "best_problem_at": {
+        "level_step": 0,
+        "score": -581.0
+      },
+      "executed_steps": 1,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 1,
+      "scores": {
+        "objective_score": -581.0,
+        "problem_score": -581.0
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "internal:multi_param",
+        "llm4ad:optimization/admissible_set"
+      ],
+      "validated_candidates": 0
+    },
+    "o3_prior": {
+      "artifact_id": "*:prior:0:44387",
+      "best_objective_at": {
+        "level_step": 0,
+        "score": -1161.0
+      },
+      "best_problem_at": {
+        "level_step": 0,
+        "score": -1161.0
+      },
+      "executed_steps": 1,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 1,
+      "scores": {
+        "objective_score": -1161.0,
+        "problem_score": -1161.0
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "internal:multi_param",
+        "llm4ad:optimization/admissible_set"
+      ],
+      "validated_candidates": 0
+    }
+  },
+  "run_id": "recursive_opt:default:seed-none:matrix-0"
+}

@@ -1,0 +1,74 @@
+{
+  "hypothesis": "packing",
+  "families": {
+    "a": [
+      "llm4ad:optimization/admissible_set"
+    ],
+    "b": [
+      "llm4ad:optimization/online_bin_packing"
+    ]
+  },
+  "scored_task_ids": [
+    "llm4ad:optimization/online_bin_packing"
+  ],
+  "rows": [
+    {
+      "arm": "standard",
+      "seed": 0,
+      "score": -2087.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 301.5,
+      "error": null
+    },
+    {
+      "arm": "recursive",
+      "seed": 0,
+      "score": -2089.6,
+      "artifact": "starting_artifact: ",
+      "wall_s": 8.7,
+      "error": null
+    },
+    {
+      "arm": "standard",
+      "seed": 1,
+      "score": -2087.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 138.8,
+      "error": null
+    },
+    {
+      "arm": "recursive",
+      "seed": 1,
+      "score": -2088.6,
+      "artifact": "starting_artifact: ",
+      "wall_s": 9.6,
+      "error": null
+    },
+    {
+      "arm": "standard",
+      "seed": 2,
+      "score": -2087.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 4668.0,
+      "error": null
+    },
+    {
+      "arm": "recursive",
+      "seed": 2,
+      "score": -2091.8,
+      "artifact": "starting_artifact: ",
+      "wall_s": 8.8,
+      "error": null
+    }
+  ],
+  "paired_deltas": [
+    -2.599999999999909,
+    -1.599999999999909,
+    -4.800000000000182
+  ],
+  "paired_mean": -3.0,
+  "paired_sd": 1.3366625103843506,
+  "n_paired": 3,
+  "artifacts_differ": false,
+  "wall_s": 5139.1
+}

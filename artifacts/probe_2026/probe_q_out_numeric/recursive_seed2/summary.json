@@ -1,0 +1,55 @@
+{
+  "levels": {
+    "o2_policy": {
+      "artifact_id": "*:family_policy:0:28440",
+      "best_objective_at": {
+        "level_step": 0,
+        "score": 0.0
+      },
+      "best_problem_at": {
+        "level_step": 0,
+        "score": 0.0
+      },
+      "executed_steps": 1,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 1,
+      "scores": {
+        "objective_score": 0.0,
+        "problem_score": 0.0
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "internal:multi_param",
+        "internal:code_param"
+      ],
+      "validated_candidates": 0
+    },
+    "o3_prior": {
+      "artifact_id": "*:prior:0:28459",
+      "best_objective_at": {
+        "level_step": 0,
+        "score": 1.0
+      },
+      "best_problem_at": {
+        "level_step": 0,
+        "score": 1.0
+      },
+      "executed_steps": 1,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 1,
+      "scores": {
+        "objective_score": 1.0,
+        "problem_score": 1.0
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "internal:multi_param",
+        "internal:code_param"
+      ],
+      "validated_candidates": 0
+    }
+  },
+  "run_id": "recursive_opt:default:seed-none:matrix-0"
+}

@@ -1,0 +1,74 @@
+{
+  "hypothesis": "numeric",
+  "families": {
+    "a": [
+      "internal:multi_param"
+    ],
+    "b": [
+      "internal:code_param"
+    ]
+  },
+  "scored_task_ids": [
+    "internal:code_param"
+  ],
+  "rows": [
+    {
+      "arm": "standard",
+      "seed": 0,
+      "score": 1.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 263.6,
+      "error": null
+    },
+    {
+      "arm": "recursive",
+      "seed": 0,
+      "score": 1.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 0.1,
+      "error": null
+    },
+    {
+      "arm": "standard",
+      "seed": 1,
+      "score": 1.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 4925.8,
+      "error": null
+    },
+    {
+      "arm": "recursive",
+      "seed": 1,
+      "score": 1.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 0.0,
+      "error": null
+    },
+    {
+      "arm": "standard",
+      "seed": 2,
+      "score": 1.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 96.6,
+      "error": null
+    },
+    {
+      "arm": "recursive",
+      "seed": 2,
+      "score": 1.0,
+      "artifact": "starting_artifact: ",
+      "wall_s": 0.1,
+      "error": null
+    }
+  ],
+  "paired_deltas": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "paired_mean": 0.0,
+  "paired_sd": 0.0,
+  "n_paired": 3,
+  "artifacts_differ": false,
+  "wall_s": 5289.8
+}

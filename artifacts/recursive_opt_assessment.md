@@ -1539,3 +1539,117 @@ provenance locks, the frozen preregistration and the watchdog all did their jobs
 stop-decision report is honest about what it could not determine. The gap is that no step
 asked whether the instrument could satisfy its own constraint or resolve its own effect —
 which is the same gap §5 found in UC4 and §11 found in the objective.
+
+---
+
+## §17 — Iteration 3: recursive vs standard on the zero-noise surfaces
+
+**Verdict: VOID.** Not "recursion does not help" — *no result*. The instrument could not have
+detected an effect, for four independent reasons. Raw numbers:
+`artifacts/probe_2026/iteration3_analysis.json`.
+
+Design: 3 hypotheses × 3 seeds × 2 arms, run as three concurrent processes. Both arms scored on
+the **same** level (`o3_prior`) — the fix for the D3 cross-metric defect that killed UC4. Standard =
+2 iterations at `o3`; recursive = 1 at `o2` + 1 at `o3`, warm-started (`reuse_priors`).
+
+| hypothesis | scored task | paired Δ | n | artifacts differ | verdict |
+|---|---|---|---|---|---|
+| numeric | `internal:code_param` | **0.0** | 3 | no | surface flat + saturated |
+| packing | `llm4ad:.../online_bin_packing` | **−3.0** | 3 | no | inside noise |
+| mixed | `llm4ad:.../admissible_set` | **0.0** | 3 | no | surface flat |
+
+### 17.1 The in-run replicate control — the one thing worth keeping
+
+The run produced a noise control for free that is stronger than anything measured so far. Every
+arm re-scored the *identical* default artifact (content `starting_artifact:`, empty) many times:
+
+| hypothesis | arm | replicates | distinct values | range | sd |
+|---|---|---|---|---|---|
+| packing | standard | 29 | 10 | **8.00** | 2.61 |
+| packing | recursive | 15 | 5 | 6.40 | 1.56 |
+| numeric | standard | 27 | **1** | 0.00 | 0.00 |
+| mixed | standard | 27 | **1** | 0.00 | 0.00 |
+
+The same bytes scored 29 times on `online_bin_packing` span **8.00 points**. The measured effect
+was **−3.0**. The effect is roughly one third of the spread the null produces on its own — and it
+is *negative*. This is an internal, same-run, same-concurrency control, and it independently
+confirms Probe L's external estimate (sd 4.41 at concurrency 8), which had forced the retraction
+of Probe K's +4.8.
+
+### 17.2 Why the other two hypotheses could never have shown anything
+
+`numeric` and `mixed` returned **one distinct value across 27 replicates**. That is not a quiet
+surface, it is a *flat* one: every candidate in the menu scores identically, so no optimizer of any
+kind — recursive or standard — can express a preference. A 0.0 delta here is arithmetic, not evidence.
+
+The two cases fail for *different* reasons, and the difference matters:
+
+- **`numeric` (`internal:code_param`) — process failure, mine.** Probe L already certified this task
+  `saturated` at both concurrency 1 and 8, and §12.4 already recorded it. I had a certified
+  instrument that rejects this surface and I did not run it before spending the compute.
+- **`mixed` (`llm4ad:.../admissible_set`) — instrument gap, D18.** Probe L certified this task
+  **`certified`** (live, quiet) at both concurrencies. It is nevertheless perfectly flat here.
+
+D18 is the more important of the two. `probe_liveness` establishes headroom by perturbing the task
+input and checking the score moves. The experiment perturbs something else entirely — the
+`starting_artifact` config knob — and with respect to *that* knob the surface is flat. **Certification
+is not menu-conditional: a task can be certified live and still have zero headroom for the specific
+knob the experiment varies.** Every "certified" verdict issued so far therefore carries an unstated
+qualifier, and none of them licenses an experiment that turns a different knob.
+
+### 17.3 The fairness flaw, and the real finding
+
+"Equal total budget" (`candidates: 4`) gave the standard arm **2 iterations at the scored level**
+and the recursive arm **1** — the recursive arm spent its other iteration on `o2`. The candidate
+counts confirm it: standard evaluated 12 prior-level candidates, recursive 5. This is a flaw in my
+probe design, and it is the genuinely interesting output of Iteration 3:
+
+> **You cannot hold total compute and scored-level search equal at the same time.** Equalise total
+> compute and the recursive arm is starved where it is measured; equalise scored-level search and
+> the recursive arm consumes strictly more compute, so any win is confounded with spend.
+
+Every future recursive-vs-standard comparison must state which of the two it equalises, and report
+the other. Neither UC4, Probe F, Probe K, nor this iteration did so.
+
+### 17.4 Defect reproduced live: invalid-config sentinel as a score
+
+12 candidates (6 in `packing`, 6 in `mixed`) were recorded with score **−1,000,000.0**. The
+`ART_MENU` entry `"The prior should generalise to held-out families…"` is prose, and prose is not
+decodable as config text on the prior surface, so it scores the invalid sentinel every time. Two
+consequences: (a) **one third of the standard arm's search budget was spent on a candidate that is
+invalid by construction**, and (b) the sentinel reaches `artifacts.jsonl` as a *score*. Selection
+took the max so it did not propagate here, but any mean over candidates would be destroyed by it —
+this is D1's failure mode surviving on a path the D1 fix did not cover. It is also the same error
+class as the prose-injection certifier bug of §14: putting prose on a non-prose surface.
+
+### 17.5 Against the previous results
+
+| result | claimed | correctly-measured noise | status |
+|---|---|---|---|
+| UC4 `o2→o3` | +0.163 | — (cross-metric identity) | **retracted** — `qasper − mean(gsm8k, qasper)` |
+| Probe F (gsm8k) | +0.217 | sd 0.32–0.53 (n=6) | **retracted** — inside noise |
+| Probe K (packing) | +4.8 | sd 3.15–4.41 @ concurrency 8 | **retracted** — inside noise |
+| Iteration 2 | — | — | killed at pre-flight |
+| **Iteration 3 (packing)** | **−3.0** | **range 8.00, sd 2.61 (in-run, n=29)** | **void** — inside noise, wrong sign, flat co-surfaces, unequal scored-level search |
+
+The pattern is now four for four: **every recursive gain measured so far has been smaller than the
+correctly-measured noise floor of its own surface**, and each was believed only because the noise
+floor was measured wrongly (or not at all) at the time. Iteration 3 is the first where the noise
+control came from *inside the same run*, which is why it was caught before it was claimed.
+
+**Standing status: there is still no measured evidence that recursive optimisation beats standard
+optimisation on any surface.** There is also none against it — the instrument has never yet been
+pointed at a surface that is simultaneously live, unsaturated, and fairly budgeted.
+
+### 17.6 What Iteration 4 must satisfy
+
+1. **Fix D18 — make headroom menu-conditional.** `certify_task` must probe liveness by varying the
+   *same knob the experiment will vary* (the candidate menu), not a generic input perturbation, and
+   reject any surface whose menu yields one distinct score. Until this lands, a `certified` verdict
+   does not license an experiment that turns a different knob. Re-certify against their menus before
+   reuse; `internal:code_param` was already `saturated` and should simply have been excluded.
+2. **Menu/surface type check** — refuse prose candidates on non-prose surfaces (reuse
+   `detect_surface`); no candidate may be invalid by construction.
+3. **Declare the equalisation** — pick scored-level search parity, and report the compute ratio.
+4. **In-run replicate control** — always re-score the initial artifact n≥10 times per arm and
+   publish the range next to the effect. Cheap, and it caught this one.

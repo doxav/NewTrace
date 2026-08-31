@@ -1,0 +1,55 @@
+{
+  "levels": {
+    "o2_policy": {
+      "artifact_id": "*:family_policy:0:50734",
+      "best_objective_at": {
+        "level_step": 0,
+        "score": -1626.4
+      },
+      "best_problem_at": {
+        "level_step": 0,
+        "score": -1626.4
+      },
+      "executed_steps": 1,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 1,
+      "scores": {
+        "objective_score": -1626.4,
+        "problem_score": -1626.4
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "llm4ad:optimization/admissible_set",
+        "llm4ad:optimization/online_bin_packing"
+      ],
+      "validated_candidates": 0
+    },
+    "o3_prior": {
+      "artifact_id": "*:prior:0:52530",
+      "best_objective_at": {
+        "level_step": 0,
+        "score": -2091.8
+      },
+      "best_problem_at": {
+        "level_step": 0,
+        "score": -2091.8
+      },
+      "executed_steps": 1,
+      "frontier": [],
+      "objective_mode": "scalar",
+      "planned_steps": 1,
+      "scores": {
+        "objective_score": -2089.6,
+        "problem_score": -2089.6
+      },
+      "selected_by": "objective",
+      "task_ids": [
+        "llm4ad:optimization/admissible_set",
+        "llm4ad:optimization/online_bin_packing"
+      ],
+      "validated_candidates": 0
+    }
+  },
+  "run_id": "recursive_opt:default:seed-none:matrix-0"
+}

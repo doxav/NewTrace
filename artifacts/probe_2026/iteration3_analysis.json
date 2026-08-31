@@ -1,0 +1,105 @@
+{
+  "iteration": 3,
+  "date": "2026-08-31",
+  "verdict": "VOID \u2014 instrument could not have detected an effect",
+  "hypotheses": {
+    "numeric": {
+      "scored_task": "internal:code_param",
+      "paired_mean_delta": 0.0,
+      "n_paired": 3,
+      "artifacts_differ": false,
+      "in_run_replicate_control": {
+        "standard": {
+          "n_replicates": 27,
+          "distinct": 1,
+          "range": 0.0,
+          "sd": 0.0,
+          "sentinel_scored_candidates": 0
+        },
+        "recursive": {
+          "n_replicates": 15,
+          "distinct": 1,
+          "range": 0.0,
+          "sd": 0.0,
+          "sentinel_scored_candidates": 0
+        }
+      },
+      "in_run_noise_range": 0.0,
+      "delta_inside_noise": true,
+      "surface_flat": true,
+      "scored_level_iterations": {
+        "standard": 2,
+        "recursive": 1
+      }
+    },
+    "packing": {
+      "scored_task": "llm4ad:optimization/online_bin_packing",
+      "paired_mean_delta": -3.0,
+      "n_paired": 3,
+      "artifacts_differ": false,
+      "in_run_replicate_control": {
+        "standard": {
+          "n_replicates": 29,
+          "distinct": 10,
+          "range": 8.0,
+          "sd": 2.609,
+          "sentinel_scored_candidates": 6
+        },
+        "recursive": {
+          "n_replicates": 15,
+          "distinct": 5,
+          "range": 6.4,
+          "sd": 1.555,
+          "sentinel_scored_candidates": 0
+        }
+      },
+      "in_run_noise_range": 8.0,
+      "delta_inside_noise": true,
+      "surface_flat": false,
+      "scored_level_iterations": {
+        "standard": 2,
+        "recursive": 1
+      }
+    },
+    "mixed": {
+      "scored_task": "llm4ad:optimization/admissible_set",
+      "paired_mean_delta": 0.0,
+      "n_paired": 3,
+      "artifacts_differ": false,
+      "in_run_replicate_control": {
+        "standard": {
+          "n_replicates": 27,
+          "distinct": 1,
+          "range": 0.0,
+          "sd": 0.0,
+          "sentinel_scored_candidates": 6
+        },
+        "recursive": {
+          "n_replicates": 15,
+          "distinct": 1,
+          "range": 0.0,
+          "sd": 0.0,
+          "sentinel_scored_candidates": 0
+        }
+      },
+      "in_run_noise_range": 0.0,
+      "delta_inside_noise": true,
+      "surface_flat": true,
+      "scored_level_iterations": {
+        "standard": 2,
+        "recursive": 1
+      }
+    }
+  },
+  "reasons_void": [
+    "A: two of three surfaces are degenerate \u2014 numeric (saturated at 1.0) and mixed (constant -1161.0) return one distinct value across 27 replicates, so a 0.0 delta is structural, not empirical.",
+    "B: on the one live surface (packing) the paired delta -3.0 is inside the SAME-RUN replicate range of the identical empty artifact (8.00 points, sd 2.61 over 29 re-scorings).",
+    "C: the arms did not receive equal search AT THE SCORED LEVEL \u2014 'equal total budget' gave standard 2 iterations at o3 and recursive 1 (it spent the other on o2). Design flaw in the probe, not a finding.",
+    "D: artifacts_differ=false on all three hypotheses \u2014 the selected artifact never moved from the default in either arm, which by the standing checklist voids the delta by itself."
+  ],
+  "defects_reproduced": [
+    "packing: invalid-config sentinel (-1e6) emitted as a candidate score",
+    "mixed: invalid-config sentinel (-1e6) emitted as a candidate score",
+    "D18: certification is not menu-conditional \u2014 admissible_set is certified live by probe_liveness (input perturbation) yet perfectly flat under the experiment's starting_artifact menu; internal:code_param was already certified saturated and should have been excluded by process."
+  ]
+}

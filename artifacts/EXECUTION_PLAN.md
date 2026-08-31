@@ -183,3 +183,31 @@ Recommended amendment:
 
 **This amendment changes a preregistered stopping rule and therefore requires the
 experiment owner's decision, not mine.** It is recorded here rather than applied.
+
+## Iteration 3 — recursive vs standard on the "zero-noise" surfaces — VOID
+
+3 hypotheses × 3 seeds × 2 arms, three concurrent processes, both arms scored on the same level
+(`o3_prior`). Result: numeric Δ=0.0, packing Δ=−3.0, mixed Δ=0.0; `artifacts_differ: false` on all three.
+
+**Not a kill of the hypothesis — a void run.** Standing checklist applied:
+
+| check | result |
+|---|---|
+| Did the artifact change? | **No** on all three → delta is not an effect |
+| Is the delta outside the noise floor? | **No** — in-run replicate range 8.00 vs Δ −3.0 |
+| Is the surface live and unsaturated? | **No** on 2 of 3 — one distinct value over 27 replicates |
+| Did both arms get equal search where scored? | **No** — standard 2 iterations at `o3`, recursive 1 |
+| Any candidate invalid by construction? | **Yes** — 12 candidates scored the −1e6 sentinel |
+
+**Kept from this iteration** (the value is entirely methodological):
+- **In-run replicate control.** Re-scoring the identical artifact 29× on `online_bin_packing` spans
+  8.00 points (sd 2.61). Free, same-run, same-concurrency; independently confirms Probe L's sd 4.41
+  and would have caught Probe K's retracted +4.8 before it was claimed. Make it standard in every arm.
+- **The budget-equalisation dilemma.** Total compute and scored-level search cannot both be held
+  equal. Every comparison must declare which it equalises and report the other.
+- **D18 (new, instrument gap).** Certification is not menu-conditional: `admissible_set` is
+  `certified` by `probe_liveness` yet flat under the experiment's actual knob. Certified ≠ has
+  headroom for *this* experiment.
+
+**Next (Iteration 4) blocked on D18.** Fix menu-conditional headroom first; re-certify candidate
+surfaces against their menus; then re-run with scored-level parity and the replicate control.
