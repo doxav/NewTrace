@@ -257,3 +257,25 @@ been fake numbers, so this stays out until it is right.
 evaluated* (not the artifact ledger), and classify a rejection by the normalizer's flag
 (`_normalizer_rejected`) rather than by numeric threshold. Until then `score_spread` remains the
 supported way to check a menu, and it must be run as a pre-flight.
+
+### The "3 pre-existing gepa failures" were not environmental — they were one command
+
+Quoted as a fixed baseline throughout this work and never tested. They were:
+`ModuleNotFoundError: No module named 'gepa.optimize_anything'` — the environment had
+**gepa 0.0.27** while the project's own extra pins **gepa==0.1.4** (`pyproject.toml:27`) and the
+tests assert `version("gepa") == GEPA_VERSION == "0.1.4"`.
+
+`pip install gepa==0.1.4` → **suite is 689 passed, 0 failed.**
+
+**Why the environment was pinned back, and why it is safe:** `dspy 3.2.1` declares
+`gepa[dspy]==0.0.27`, so pip reports a conflict on upgrade. That pin is over-strict metadata, not
+a real incompatibility — `dspy` still imports, `dspy.teleprompt.GEPA` still imports against gepa
+0.1.4, and nothing under `opto/` or `tests/` imports dspy at all.
+
+**Caveat worth carrying:** a fresh environment build that installs `dspy` after `trace-opt` will
+resolve gepa back to 0.0.27 and silently re-break these three tests. Pin `gepa==0.1.4` explicitly
+after installing dspy, or install dspy without its `gepa` extra.
+
+**Process lesson:** "pre-existing" and "environmental" are hypotheses, not classifications. I
+carried this one for the entire session without spending the one command that would have falsified
+it, and used it to justify a non-green suite in every status report.
