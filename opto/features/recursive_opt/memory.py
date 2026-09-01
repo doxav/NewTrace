@@ -21,7 +21,7 @@ import json
 import os
 import statistics
 import time
-from dataclasses import dataclass, field, asdict, replace
+from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 
@@ -175,15 +175,6 @@ class MemoryLite:
         with open(self._path(name), "a") as f:
             f.write(json.dumps(asdict(obj)) + "\n")
 
-    def _rewrite(self, name: str, objects: Iterable[Any]) -> None:
-        """Atomically rewrite one compact JSONL ledger after a status transition."""
-        path = self._path(name)
-        temporary = f"{path}.tmp"
-        with open(temporary, "w") as handle:
-            for obj in objects:
-                handle.write(json.dumps(asdict(obj)) + "\n")
-        os.replace(temporary, path)
-
     def _refresh(self) -> None:
         """Reload persisted memory written by traced/copy-isolated module calls."""
         self._episodes = self._load("episodes.jsonl", EpisodeTrace)
@@ -277,35 +268,6 @@ class MemoryLite:
         self._artifacts.append(rec)
         self._append("artifacts.jsonl", rec)
         return rec
-
-    def update_artifact_status(
-        self, artifact_id: str, status: str, *, reason: str
-    ) -> ArtifactRecord:
-        """Apply an explicit promotion/rollback status transition in MemoryLite."""
-        if status not in _ARTIFACT_STATUSES:
-            raise ValueError(f"artifact status must be one of {sorted(_ARTIFACT_STATUSES)}")
-        if not reason.strip():
-            raise ValueError("artifact status transition reason must be non-empty")
-        self._artifacts = self._load("artifacts.jsonl", ArtifactRecord)
-        updated: Optional[ArtifactRecord] = None
-        records: List[ArtifactRecord] = []
-        for artifact in self._artifacts:
-            if artifact.artifact_id == artifact_id:
-                if updated is not None:
-                    raise ValueError(f"duplicate artifact id {artifact_id!r}")
-                updated = replace(
-                    artifact,
-                    status=status,
-                    metrics={**artifact.metrics, "status_reason": reason},
-                )
-                records.append(updated)
-            else:
-                records.append(artifact)
-        if updated is None:
-            raise ValueError(f"unknown artifact id {artifact_id!r}")
-        self._artifacts = records
-        self._rewrite("artifacts.jsonl", records)
-        return updated
 
     def lineage(self, artifact_id: str) -> List[ArtifactRecord]:
         """Return the chain [root, ..., artifact_id] following parent links."""

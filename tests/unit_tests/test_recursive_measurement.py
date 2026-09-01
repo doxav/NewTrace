@@ -169,9 +169,12 @@ def test_detect_surface_survives_a_missing_param() -> None:
 
 
 @pytest.mark.parametrize("kind,ok", [("prose", True), ("code", False),
-                                     ("numeric", False), ("unknown", False)])
-def test_only_a_prose_surface_accepts_a_prose_probe(kind: str, ok: bool) -> None:
-    assert M.TaskSurface(kind, False).accepts_prose_probe is ok
+                                     ("numeric", False), ("unknown", True)])
+def test_only_a_prose_or_unjudgeable_surface_accepts_a_prose_probe(kind: str, ok: bool) -> None:
+    """`unknown` accepts on purpose: a parameter we cannot classify is not ours to
+    block, and refusing it would break prose menus that work today."""
+    surface = M.TaskSurface(kind, False, "p")
+    assert (M.artifact_fits_surface(surface, "Answer directly.") is None) is ok
 
 
 def test_evaluate_once_refuses_to_corrupt_a_non_prose_parameter(monkeypatch) -> None:
@@ -192,7 +195,8 @@ def test_evaluate_once_refuses_to_corrupt_a_non_prose_parameter(monkeypatch) -> 
     out = M.evaluate_once("internal:code_param", artifact="Answer directly.")
 
     assert out["valid"] is False
-    assert "refused to inject a prose artifact" in out["error"]
+    assert "refused to inject this artifact" in out["error"]
+    assert "surface_mismatch" in out["error"]
     assert out["surface"] == "code"
 
 

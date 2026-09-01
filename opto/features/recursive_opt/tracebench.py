@@ -23,7 +23,6 @@ is provided.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -181,19 +180,6 @@ def default_tasks_root() -> Path:
         return Path(REPO_ROOT) / "benchmarks" / "LLM4AD" / "benchmark_tasks"
     except Exception:
         return Path("benchmarks") / "LLM4AD" / "benchmark_tasks"
-
-
-def list_tasks(suite: str = None) -> List[str]:
-    if not HAVE_TB:
-        return [
-            "internal:code_param",
-            "internal:numeric_param",
-            "llm4ad:online_bin_packing_local",
-            "llm4ad:circle_packing",
-            "hf:GSM8K",
-            "hf:BBEH",
-        ]
-    return [spec.id for spec in discover_tasks(default_tasks_root(), bench=suite)]
 
 
 def _dataset_infos(dataset: Dict[str, Any]) -> List[Any]:
@@ -651,7 +637,16 @@ class TraceBenchTaskAdapter:
         each function" / variable docs) rather than concatenating it into the
         artifact being optimized. This keeps the optimized prompt clean and gives
         the optimizer the prior as documentation, where it is actually consumed.
+
+        The write is REFUSED when the candidate does not fit the surface it would
+        replace; it used to happen unconditionally and report success, so a prose menu
+        entry silently destroyed a Python ``priority()`` or a float. The reason is left
+        on the bundle as ``artifact_refusal`` so callers report it rather than score a
+        bundle that was never seeded.
         """
+        from .measurement import artifact_fits_surface, detect_surface
+
+        bundle.pop("artifact_refusal", None)          # never inherit a stale refusal
         text = str(getattr(cfg, "starting_artifact", "") or "").strip()
         knowledge = str(getattr(cfg, "initial_knowledge", "") or "").strip()
         param = bundle.get("param")
@@ -668,33 +663,21 @@ class TraceBenchTaskAdapter:
                 text = f"{text}\n{knowledge}".strip()
         if not text:
             return bool(knowledge)  # knowledge-only still counts as "seeded"
-        if hasattr(param, "system_prompt"):
-            param.system_prompt._data = text
-            return True
-        params = getattr(param, "parameters", None)
-        if callable(params):
-            plist = params()
-            if plist:
-                plist[0]._data = text
-                return True
-        if hasattr(param, "_data"):
-            param._data = text
-            return True
-        return False
+        if target_node is None or not hasattr(target_node, "_data"):
+            return False
+        refusal = artifact_fits_surface(detect_surface(bundle), text)
+        if refusal is not None:
+            bundle["artifact_refusal"] = refusal
+            return False
+        target_node._data = text
+        return True
 
     @staticmethod
     def _trainable_node(param):
         """Return the first trainable node of a bundle param, or None."""
-        if param is None:
-            return None
-        if hasattr(param, "system_prompt"):
-            return param.system_prompt
-        params = getattr(param, "parameters", None)
-        if callable(params):
-            plist = params()
-            if plist:
-                return plist[0]
-        return param if hasattr(param, "_data") else None
+        from .measurement import trainable_node
+
+        return trainable_node(param)
 
     def _order_by_batch_design(self, inputs, infos, cfg):
         """Order the inner-training examples per cfg.batch_design (the sampler).
@@ -783,6 +766,13 @@ class TraceBenchTaskAdapter:
             return trace_failure
         bundle = self._load_bundle(normalized, fresh=True)
         seeded = self._apply_starting_artifact(bundle, cfg)
+        if bundle.get("artifact_refusal"):
+            # Scoring the unseeded bundle would make every incompatible candidate tie
+            # at the default: the same singleton space, only quieter. Report it as an
+            # inapplicable config, as the budget and trace-backend guards above do.
+            return (INVALID_CONFIG_SCORE,
+                    f"[real_trace_bench:{normalized}] starting_artifact was not applied: "
+                    f"{bundle['artifact_refusal']}")
         # credit_horizon controls feedback summarization in _score_bundle_local.
         bundle["credit_horizon"] = str(getattr(cfg, "credit_horizon", "episode") or "episode")
         self._train_bundle(bundle, cfg)
@@ -829,9 +819,10 @@ class TraceBenchTaskAdapter:
                     bundle, LevelConfig(starting_artifact=text))
                 if not applied:
                     raise RuntimeError(
-                        f"O0 artifact is inactive for task {normalized!r}: it does not fit "
-                        "the task surface (prose on a code param?) or the bundle param "
-                        "exposes none of system_prompt/parameters()/_data."
+                        f"O0 artifact is inactive for task {normalized!r}: "
+                        + (bundle.get("artifact_refusal")
+                           or "the bundle param exposes none of "
+                              "system_prompt/parameters()/_data.")
                     )
             return _extract_response(bundle["param"], x)
 
@@ -982,8 +973,9 @@ def make_tracebench_artifact_evaluator(
         applied = adapter._apply_starting_artifact(bundle, LevelConfig(starting_artifact=text))
         if text.strip() and not applied:
             raise RuntimeError(
-                f"Artifact text is inactive for task {target!r}: the bundle param exposes "
-                "none of system_prompt/parameters()/_data."
+                f"Artifact text is inactive for task {target!r}: "
+                + (bundle.get("artifact_refusal")
+                   or "the bundle param exposes none of system_prompt/parameters()/_data.")
             )
         bundle["credit_horizon"] = str(credit_horizon or "episode")
         limit = int(max_examples or getattr(adapter, "max_examples", 1))
