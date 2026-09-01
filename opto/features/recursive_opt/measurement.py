@@ -262,19 +262,12 @@ def detect_surface(bundle: Mapping[str, Any]) -> TaskSurface:
 def artifact_fits_surface(surface: TaskSurface, text: str) -> Optional[str]:
     """Return None when ``text`` may replace this parameter, else a typed reason.
 
-    A candidate of the wrong KIND is corruption, not a probe: prose written over a
-    366-char ``priority(item, bins)`` does not score badly, it stops the program
-    running and scores the invalid sentinel, so a menu of such candidates has an
-    effective size of 1 and every arm searches a singleton space. ``code`` and
-    ``numeric`` parameters therefore require a candidate of their own kind, while
-    ``prose`` and ``unknown`` ones accept anything (a prompt may legitimately contain
-    code; an unreadable parameter is not ours to judge).
-
-    It stops at the category error deliberately: broken code, or code renaming the
-    function the benchmark calls, still goes through and still scores the sentinel,
-    because that is a real optimizer proposal getting real feedback. What it cannot
-    see - prose carrying a marker word like "return", or ranking-equivalent
-    candidates - is caught by ``score_spread``'s ``effective_menu_size``.
+    Wrong KIND is corruption, not a probe: prose over a ``priority(item, bins)`` does
+    not score badly, it stops the program running, so such a menu has effective size 1.
+    ``code``/``numeric`` params require their own kind; ``prose``/``unknown`` take any.
+    Broken or renamed code still passes through to score the sentinel -- that is a real
+    proposal getting real feedback. What this cannot see (prose containing "return",
+    ranking-equivalent candidates) is caught by ``score_spread.effective_menu_size``.
     """
     if not str(text).strip() or surface.kind in ("unknown", "prose"):
         return None

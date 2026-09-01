@@ -1786,3 +1786,150 @@ config" can only be the `LevelConfig` knobs (`batch_design`, `batch_size`, `cred
 not the artifact itself — and those are precisely the knobs whose causal effect `effects.py` was
 built to interrogate. Whether *any* of them carries transferable signal is now the pivotal
 question for the whole recursive program.
+
+---
+
+## §20 — The concurrent-strategy round: does recursion ever beat standard?
+
+Five strategies were launched in isolated worktrees, then three sharper ones after Probe R
+reframed the problem. Session limits killed several mid-run, so **§20.2 and §20.3 are my reading
+of raw data whose owning agent did not finish its own analysis** — they are reported with that
+caveat and the raw files are cited. Judged against `artifacts/CRITIC_PANEL.md`.
+
+### 20.1 The instrument is fixed (strategy 1 — complete, merged)
+
+`_apply_starting_artifact` now consults `measurement.artifact_fits_surface(surface, text)` and
+**refuses** a candidate of the wrong kind, returning a typed reason instead of corrupting the
+parameter. Verified end-to-end on the real tasks:
+
+| task | candidate | applied | param intact | score |
+|---|---|---|---|---|
+| `online_bin_packing` | `"Answer directly."` | **False** | **yes** | −2091.8 (baseline, not `−1e6`) |
+| `online_bin_packing` | `return (bins - item)` | True | overwritten | −5000.0 |
+| `internal:multi_param` | `"Answer directly."` | **False** | **yes** | −1.0 |
+| `internal:multi_param` | `2.5` | True | overwritten | −0.5 |
+
+Refuse rather than coerce or apply-and-flag: there is no honest way to turn `"Answer directly."`
+into a `priority()` function, and apply-and-flag is how we got here — the O0 call site's error
+text already read *"prose on a code param?"* while nothing computed it.
+
+Critically, a type check alone is **not sufficient**, and the fix does not pretend otherwise.
+`score_spread` now reports `effective_menu_size` / `menu_collapsed`, which catches both collapse
+modes from the output side, including the one no type check can see:
+
+| menu | effective size | collapsed | invalid |
+|---|---|---|---|
+| Iteration-3 prose | **1** | yes | 2 |
+| ranking-equivalent code (monotone transforms) | **1** | yes | 0 |
+| genuinely distinct code | 3 | no | 0 |
+
+**Panel:** passes architect (root cause + a backstop for the class it cannot type-check), red team
+(verified on real bundles, not mocks). **Remaining gap, unresolved:** `effective_menu_size` is
+*reported* by a diagnostic, not *enforced* by `run_spec`. An experiment that never calls
+`score_spread` can still run a collapsed menu. That is the next fix, and it is cheap.
+
+Two further defects surfaced in passing: `make_scored_task_runner` reports the worst *legal*
+score (−1.0) rather than the raw sentinel, which had made rejections invisible to the new metric
+(fixed); and **`examples/recursive_opt_example_A_learn_setup.py` has the same defect** — it
+optimises `starting_artifact` on a code task and a numeric task, so its O1 search was pure noise.
+A shipped example.
+
+I also restored `tracebench.list_tasks`, which the agent had deleted to buy line budget. Deletion
+was the wrong fix for the right observation: the function **fabricated a hardcoded six-task list**
+when Trace-Bench was absent. It now raises instead. Package: **9997 lines**.
+
+### 20.2 W2 on the routing family: a real win against a strawman (strategy 2 — partial)
+
+Raw: `RESULTS_W2_routing.md`, `PREREG_W2_routing.md`, `probe_[stuvwx]_*.json`.
+
+The precondition finally holds. Four tasks (`tsp/cvrp/ovrp/vrptw_construct`) train the *same*
+entry point `select_next_node`, a 9-candidate ranking-distinct menu is live on all four (ranges
+15–29, replicate range **0.0**), candidate rankings correlate across tasks (Spearman ρ 0.51–1.00,
+all six pairs positive), and `nearest` is the argmax on 4/4. `cvrp`/`ovrp` are ρ=1.00
+near-duplicates, so effective family size is **3, not 4**. **A shared optimum exists** — the first
+time in this project that has been true.
+
+Against an **uninformed** searcher (uniform draws from the menu), recursion wins decisively:
+q=1.000 at b=1 versus 0.569, giving break-even **K\* = 2.25–6.0**.
+
+**The panel rejects this as the headline.** The meta-learning and red-team views both fire: the
+`standard` arm is uniform random sampling, which is not an optimizer anyone would run. The agent
+saw this itself and wrote that whether "uninformed" describes a real optimizer "is the whole ball
+game" — then ran the control and died before analysing it.
+
+### 20.3 The control that inverts it (probe X — my reading of the raw data)
+
+A real LLM proposing code on the same family, n=12 per target, concurrency 6, evaluator replicate
+range **0.0**:
+
+| target | valid proposals | best q_norm | beats hand-written menu |
+|---|---|---|---|
+| `tsp_construct` | **1/12** | 0.957 | 0 |
+| `cvrp_construct` | 4/12 | 0.940 | 0 |
+| `vrptw_construct` | 6/12 | **1.383** | **5** |
+
+Two findings, pulling opposite ways. The LLM is *capable* — on `vrptw` it beat the entire
+hand-written menu on 5 of 12 samples. But its validity rate is 8–50%, so `E[candidates to reach
+Q=1.0]` is **infinite** for `tsp` and `cvrp`.
+
+And the decisive one:
+
+> **Cross-task artifact transfer: 0 executed out of 22.** Every LLM-generated heuristic scored
+> `−1e6` on every sibling task — `tsp` 0/10, `cvrp` 0/7, `vrptw` 0/5.
+
+This is §19.4's structural prediction, measured. The §20.2 win depends entirely on a menu of
+**hand-written `*args`-tolerant** heuristics, constructed to be cross-task valid. Autonomous code
+transfer fails at the *executability* step, before quality is measurable at all. For the realistic
+case, `c_rec` is undefined and **K\* is infinite**.
+
+### 20.4 Do the config knobs transfer instead? (strategy 3 — partial)
+
+If the artifact cannot transfer, O3 must transfer `LevelConfig` knobs. Measured across **13**
+deterministic llm4ad tasks (`probe_s_knobs_results.json`):
+
+**All 11 knobs — `batch_design`, `batch_size`, `credit_horizon`, `guide`, `initial_knowledge`,
+`memory_policy`, `num_epochs`, `num_threads`, `optimizer`, `trace_type`, `trainer` — moved the
+score on 0 of 13 tasks.** Max range 0.0 everywhere.
+
+**The panel does not accept this at face value**, and the probe's own structural data says why:
+`tasks_with_one_train_input: 13`. **Every one of these bundles exposes exactly one training
+example.** With one example, `batch_design` (ordering), `batch_size` and `credit_horizon` are
+*structurally* inert — they cannot do anything, on any implementation. Likewise `optimizer` and
+`trainer` cannot matter in a scoring-only probe where no optimisation runs.
+
+So the honest statement is narrower than "the knobs are decorative": **on this family the knobs
+are untestable, because the bundles are single-example.** Whether they carry signal on
+multi-example tasks (`gsm8k`, `qasper`) is untested. This does, however, kill the routing family
+as a venue for knob transfer, and it means every knob-based recursive result on single-example
+llm4ad bundles is uninterpretable.
+
+### 20.5 Verdict
+
+**Does recursion beat standard? On the best evidence available: not yet, and not on this family.**
+
+1. Where a shared optimum exists and candidates are hand-crafted to be portable, recursion wins
+   with K\* = 2.25–6.0 — but only against a searcher that does not read the code.
+2. Against a real LLM optimizer, the artifact transfer path is **0/22**. Recursion has nothing to
+   amortise.
+3. The alternative transfer path — config knobs — is **untestable** on this family because the
+   bundles are single-example.
+
+This is a much sharper negative than before, because for the first time the instrument was sound
+(§20.1), the precondition genuinely held (ρ 0.51–1.00, shared argmax), and the noise floor was
+0.0. The failure is not measurement error. It is that **a code artifact carrying a task-specific
+signature cannot transfer, and the config surface that could transfer is inert here.**
+
+### 20.6 What follows, by priority
+
+1. **Enforce `effective_menu_size` in `run_spec`**, not just report it in a diagnostic. Cheap;
+   closes the one gap the panel left open in §20.1.
+2. **Fix `examples/recursive_opt_example_A_learn_setup.py`** — a shipped example whose search is
+   noise.
+3. **Re-test the knobs on a multi-example surface** (`gsm8k`/`qasper`, both `prose`,
+   `calls_llm=True`). This is the only remaining path by which O3 could transfer anything, and it
+   is also where **W1** (which needs noise) is testable. Both open questions live on the same
+   surface, so one experiment answers both.
+4. **Signature-portable artifacts.** If autonomous transfer is wanted, the artifact must be made
+   portable by construction (a fixed `*args` calling convention across a family) — the property
+   the hand-written menu had and LLM output did not. That is a design change to the task family,
+   not a bug fix, and it should be a deliberate decision.

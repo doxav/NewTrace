@@ -1,0 +1,381 @@
+{
+  "max_examples": 4,
+  "inner_steps": 0,
+  "tasks": {
+    "llm4ad:optimization/qap_construct": {
+      "t1": {
+        "n_train_inputs_available": 1,
+        "n_train_inputs_used": 1,
+        "input_len_str": [
+          1
+        ],
+        "batch_design": {
+          "distinct_orders": 1,
+          "order_changes_vs_random": {
+            "random": false,
+            "failure_balanced": false,
+            "curriculum": false,
+            "diversity": false
+          }
+        },
+        "batch_size": {
+          "distinct_effective_batches": 1,
+          "effective_batch_sizes": {
+            "1": 1,
+            "2": 1,
+            "4": 1,
+            "8": 1
+          }
+        },
+        "credit_horizon": {
+          "distinct_feedback_strings_raw": 2,
+          "distinct_feedback_strings": 1,
+          "feedback_len": {
+            "episode": 168,
+            "step": 168,
+            "truncated": 168,
+            "full": 168
+          },
+          "public_evaluator_active": true,
+          "sample": "train_dataset: mean over 1 real example(s). TRACE_FEEDBACK_JSON={\"status\": \"ok\", \"phase\": \"evaluate\", \"score\": -6138278.0}\nAutonomous eval OK in 0.01s; score=-6138278.0"
+        }
+      },
+      "t2": {
+        "batch_design": {
+          "rows": {
+            "random": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.03
+            },
+            "failure_balanced": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.03
+            },
+            "curriculum": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.03
+            },
+            "diversity": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.04
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "batch_size": {
+          "rows": {
+            "1": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.03
+            },
+            "2": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.03
+            },
+            "4": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.03
+            },
+            "8": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.03
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "credit_horizon": {
+          "rows": {
+            "episode": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.03
+            },
+            "step": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.03
+            },
+            "truncated": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.03
+            },
+            "full": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "trace_type": {
+          "rows": {
+            "internal": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "otel": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 129,
+              "sec": 0.0
+            },
+            "sysmon": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 131,
+              "sec": 0.0
+            },
+            "hybrid": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 131,
+              "sec": 0.0
+            }
+          },
+          "n_valid": 1,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "memory_policy": {
+          "rows": {
+            "none": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "fifo": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "typed": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "retrieval": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "optimizer": {
+          "rows": {
+            "OptoPrime": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "OptoPrimeMulti": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "OPRO": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "TextGrad": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "trainer": {
+          "rows": {
+            "MinibatchAlgorithm": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "BeamsearchAlgorithm": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "UCBSearchAlgorithm": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "PrioritySearch": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "guide": {
+          "rows": {
+            "LLMJudge": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "ExactMatch": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "deterministic": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "num_threads": {
+          "rows": {
+            "1": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "2": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "4": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "8": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "num_epochs": {
+          "rows": {
+            "1": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "2": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "4": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "initial_knowledge": {
+          "rows": {
+            "": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 562,
+              "sec": 0.05
+            },
+            "Prefer tight fits.": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 588,
+              "sec": 0.05
+            },
+            "Prefer loose fits.": {
+              "score": -6138278.0,
+              "invalid": false,
+              "note_len": 588,
+              "sec": 0.05
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        }
+      }
+    }
+  }
+}

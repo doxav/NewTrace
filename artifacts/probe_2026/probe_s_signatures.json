@@ -1,0 +1,201 @@
+{
+  "llm4ad:optimization/tsp_gls_2O": {
+    "surface": "code",
+    "param_name": "__code:0",
+    "calls_llm": false,
+    "len": 1005,
+    "defs": [
+      {
+        "name": "update_edge_distance",
+        "args": "edge_distance: np.ndarray, local_opt_tour: np.ndarray, edge_n_used: np.ndarray"
+      }
+    ],
+    "source": "import numpy as np\ndef update_edge_distance(edge_distance: np.ndarray, local_opt_tour: np.ndarray, edge_n_used: np.ndarray) -> np.ndarray:\n    \"\"\"\n    Design a novel algorithm to update the distance matrix.\n\n    Args:\n    edge_distance: A matrix of the distance.\n    local_opt_tour: An array of the local optimal tour of IDs.\n    edge_n_used: A matrix of the number of each edge used during permutation.\n\n    Return:\n    updated_edge_distance: A matrix of the updated distance.\n    \"\"\"\n    updated_edge_distance = np.copy(edge_distance)\n\n    # Calculate combined importance and frequency factor\n    combined_factor = (1 / edge_n_used) + (1 / edge_n_used)\n\n    for i in range(len(local_opt_tour) - 1):\n        node1 = local_opt_tour[i]\n        node2 = local_opt_tour[i + 1]\n\n        update_factor = combined_factor[node1, node2]\n\n        updated_edge_distance[node1, node2] += update_factor\n        updated_edge_distance[node2, node1] = updated_edge_distance[node1, node2]\n\n    return updated_edge_distance"
+  },
+  "llm4ad:optimization/set_cover_construct": {
+    "surface": "code",
+    "param_name": "__code:1",
+    "calls_llm": false,
+    "len": 882,
+    "defs": [
+      {
+        "name": "select_next_subset",
+        "args": "selected_subsets: List[List[int]], remaining_subsets: List[List[int]], remaining_elements: List[int]"
+      }
+    ],
+    "source": "import numpy as np\ndef select_next_subset(selected_subsets: List[List[int]], remaining_subsets: List[List[int]], remaining_elements: List[int]) -> List[int] | None:\n    \"\"\"\n    A heuristic for the Set Covering Problem.\n\n    Args:\n        selected_subsets: List of already selected subsets.\n        remaining_subsets: List of remaining subsets to choose from.\n        remaining_elements: List of elements still to be covered.\n\n    Returns:\n        The next subset to select, or None if no subset can cover any remaining elements.\n    \"\"\"\n    max_covered = 0\n    best_subset = None\n\n    for subset in remaining_subsets:\n        # Calculate the number of uncovered elements this subset covers\n        covered = len(set(subset).intersection(remaining_elements))\n        if covered > max_covered:\n            max_covered = covered\n            best_subset = subset\n\n    return best_subset"
+  },
+  "llm4ad:optimization/tsp_construct": {
+    "surface": "code",
+    "param_name": "__code:2",
+    "calls_llm": false,
+    "len": 539,
+    "defs": [
+      {
+        "name": "select_next_node",
+        "args": "current_node: int, destination_node: int, unvisited_nodes: np.ndarray, distance_matrix: np.ndarray"
+      }
+    ],
+    "source": "import numpy as np\ndef select_next_node(current_node: int, destination_node: int, unvisited_nodes: np.ndarray, distance_matrix: np.ndarray) -> int: \n    \"\"\"\n    Design a novel algorithm to select the next node in each step.\n\n    Args:\n    current_node: ID of the current node.\n    destination_node: ID of the destination node.\n    unvisited_nodes: Array of IDs of unvisited nodes.\n    distance_matrix: Distance matrix of nodes.\n\n    Return:\n    ID of the next node to visit.\n    \"\"\"\n    next_node = unvisited_nodes[0]\n\n    return next_node"
+  },
+  "llm4ad:optimization/bp_2d_construct": {
+    "surface": "code",
+    "param_name": "__code:3",
+    "calls_llm": false,
+    "len": 1636,
+    "defs": [
+      {
+        "name": "determine_next_assignment",
+        "args": "remaining_items: List[Tuple[int, int]], point_matrices: List[List[List[int]]]"
+      }
+    ],
+    "source": "import numpy as np\ndef determine_next_assignment(remaining_items: List[Tuple[int, int]], point_matrices: List[List[List[int]]]) -> Tuple[Tuple[int, int], int]:\n    \"\"\"\n    A simple heuristic function to select the next item and bin for packing.\n\n    Args:\n        remaining_items: A list of tuples, where each tuple represents the (width, height) of an item.\n        point_matrices: A list of 2D matrices representing the occupied (1) and unoccupied (0) points in each bin.\n\n    Returns:\n        A tuple containing:\n        - The selected item (width, height).\n        - The selected bin index (or None if no bin is feasible).\n    \"\"\"\n    # Select the largest item (based on area) from the remaining items\n    selected_item = max(remaining_items, key=lambda item: item[0] * item[1])\n\n    # Try to find a feasible bin for the selected item\n    for bin_idx, point_matrix in enumerate(point_matrices):\n        bin_width = len(point_matrix)\n        bin_height = len(point_matrix[0]) if bin_width > 0 else 0\n        # Check if the item fits in the bin\n        if bin_width >= selected_item[0] and bin_height >= selected_item[1]:\n            # Check for a feasible position in the bin\n            for x in range(bin_width - selected_item[0] + 1):\n                for y in range(bin_height - selected_item[1] + 1):\n                    # Check if the area is unoccupied\n                    if all(point_matrix[x + dx][y + dy] == 0 for dx in range(selected_item[0]) for dy in range(selected_item[1])):\n                        return selected_item, bin_idx\n    # If no feasible bin is found, return None for the bin\n    return selected_item, None"
+  },
+  "llm4ad:optimization/online_bin_packing_2O": {
+    "surface": "code",
+    "param_name": "__code:4",
+    "calls_llm": false,
+    "len": 366,
+    "defs": [
+      {
+        "name": "priority",
+        "args": "item: float, bins: np.ndarray"
+      }
+    ],
+    "source": "import numpy as np\n\ndef priority(item: float, bins: np.ndarray) -> np.ndarray:\n    \"\"\"Returns priority with which we want to add item to each bin.\n    Args:\n        item: Size of item to be added to the bin.\n        bins: Array of capacities for each bin.\n    Return:\n        Array of same size as bins with priority score of each bin.\n    \"\"\"\n    return item - bins"
+  },
+  "llm4ad:optimization/cflp_construct": {
+    "surface": "code",
+    "param_name": "__code:5",
+    "calls_llm": false,
+    "len": 1711,
+    "defs": [
+      {
+        "name": "select_next_assignment",
+        "args": "assignments: List[List[int]], remaining_customers: List[int], remaining_capacities: List[int], customer_demands: List[int], assignment_costs: List[List[int]]"
+      }
+    ],
+    "source": "import numpy as np\n\ndef select_next_assignment(assignments: List[List[int]], remaining_customers: List[int], remaining_capacities: List[int], customer_demands: List[int], assignment_costs: List[List[int]]) -> Tuple[int, int]:\n    \"\"\"\n    Constructive heuristic for the Capacitated Facility Location Problem.\n    Assigns the next customer to the facility with the lowest cost that has sufficient capacity.\n\n    Args:\n        assignments: Current assignments of customers to facilities.\n        remaining_customers: List of customer indices not yet assigned.\n        remaining_capacities: Remaining capacities of facilities.\n        customer_demands: List of customer demands.\n        assignment_costs: 2D list of assignment costs (facility-to-customer).\n\n    Returns:\n        A tuple containing:\n        - The selected customer index.\n        - The selected facility index (or None if no feasible assignment exists).\n    \"\"\"\n    # Iterate over all remaining customers\n    for customer in remaining_customers:\n        # Iterate over all facilities to find the one with the lowest cost and sufficient capacity\n        min_cost = float('inf')\n        selected_facility = None\n\n        for facility in range(len(remaining_capacities)):\n            if remaining_capacities[facility] >= customer_demands[customer] and assignment_costs[facility][customer] < min_cost:\n                min_cost = assignment_costs[facility][customer]\n                selected_facility = facility\n\n        # If a feasible facility is found, return the customer and facility\n        if selected_facility is not None:\n            return customer, selected_facility\n\n    # If no feasible assignment is found, return None\n    return None, None"
+  },
+  "llm4ad:optimization/vrptw_construct": {
+    "surface": "code",
+    "param_name": "__code:6",
+    "calls_llm": false,
+    "len": 785,
+    "defs": [
+      {
+        "name": "select_next_node",
+        "args": "current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, current_time: np.ndarray,\\\n                        demands: np.ndarray, distance_matrix: np.ndarray, time_windows: np.ndarray"
+      }
+    ],
+    "source": "def select_next_node(current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, current_time: np.ndarray,\\\n                        demands: np.ndarray, distance_matrix: np.ndarray, time_windows: np.ndarray) -> int:\n    \"\"\"Design a novel algorithm to select the next node in each step.\n    Args:\n        current_node: ID of the current node.\n        depot: ID of the depot.\n        unvisited_nodes: Array of IDs of unvisited nodes.\n        rest_capacity: Rest capacity of vehicle\n        current_time: Current time\n        demands: Demands of nodes\n        distance_matrix: Distance matrix of nodes.\n        time_windows: Time windows of nodes.\n    Return:\n        ID of the next node to visit.\n    \"\"\"\n    next_node = unvisited_nodes[0]\n    return next_node"
+  },
+  "llm4ad:optimization/online_bin_packing": {
+    "surface": "code",
+    "param_name": "__code:7",
+    "calls_llm": false,
+    "len": 366,
+    "defs": [
+      {
+        "name": "priority",
+        "args": "item: float, bins: np.ndarray"
+      }
+    ],
+    "source": "import numpy as np\n\ndef priority(item: float, bins: np.ndarray) -> np.ndarray:\n    \"\"\"Returns priority with which we want to add item to each bin.\n    Args:\n        item: Size of item to be added to the bin.\n        bins: Array of capacities for each bin.\n    Return:\n        Array of same size as bins with priority score of each bin.\n    \"\"\"\n    return item - bins"
+  },
+  "llm4ad:optimization/knapsack_construct": {
+    "surface": "code",
+    "param_name": "__code:8",
+    "calls_llm": false,
+    "len": 954,
+    "defs": [
+      {
+        "name": "select_next_item",
+        "args": "remaining_capacity: int, remaining_items: List[Tuple[int, int, int]]"
+      }
+    ],
+    "source": "import numpy as np\n\ndef select_next_item(remaining_capacity: int, remaining_items: List[Tuple[int, int, int]]) -> Tuple[int, int, int] | None:\n    \"\"\"\n    Select the item with the highest value-to-weight ratio that fits in the remaining capacity.\n\n    Args:\n        remaining_capacity: The remaining capacity of the knapsack.\n        remaining_items: List of tuples containing (weight, value, index) of remaining items.\n\n    Returns:\n        The selected item as a tuple (weight, value, index), or None if no item fits.\n    \"\"\"\n    best_item = None\n    best_ratio = -1  # Initialize with a negative value to ensure any item will have a higher ratio\n\n    for item in remaining_items:\n        weight, value, index = item\n        if weight <= remaining_capacity:\n            ratio = value / weight  # Calculate value-to-weight ratio\n            if ratio > best_ratio:\n                best_ratio = ratio\n                best_item = item\n\n    return best_item"
+  },
+  "llm4ad:optimization/pymoo_moead": {
+    "error": "ModuleNotFoundError: No module named 'pymoo'",
+    "tb": "~~~~~~~~~~~~~~~~~^^^^^\n  File \"<frozen importlib._bootstrap_external>\", line 1023, in exec_module\n  File \"<frozen importlib._bootstrap>\", line 488, in _call_with_frames_removed\n  File \"/home/xav/code/Trace-Bench/benchmarks/LLM4AD/benchmark_tasks/optimization_pymoo_moead/__init__.py\", line 53, in <module>\n    from pymoo.algorithms.moo.moead import MOEAD\nModuleNotFoundError: No module named 'pymoo'\n"
+  },
+  "llm4ad:optimization/cvrp_construct": {
+    "surface": "code",
+    "param_name": "__code:9",
+    "calls_llm": false,
+    "len": 1010,
+    "defs": [
+      {
+        "name": "select_next_node",
+        "args": "current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, demands: np.ndarray, distance_matrix: np.ndarray"
+      }
+    ],
+    "source": "import numpy as np\ndef select_next_node(current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, demands: np.ndarray, distance_matrix: np.ndarray) -> int:\n    \"\"\"Design a novel algorithm to select the next node in each step.\n    Args:\n        current_node: ID of the current node.\n        depot: ID of the depot.\n        unvisited_nodes: Array of IDs of unvisited nodes.\n        rest_capacity: rest capacity of vehicle\n        demands: demands of nodes\n        distance_matrix: Distance matrix of nodes.\n    Return:\n        ID of the next node to visit.\n    \"\"\"\n    best_score = -1\n    next_node = -1\n\n    for node in unvisited_nodes:\n        demand = demands[node]\n        distance = distance_matrix[current_node][node]\n\n        if demand <= rest_capacity:\n            score = demand / distance if distance > 0 else float('inf')  # Avoid division by zero\n            if score > best_score:\n                best_score = score\n                next_node = node\n\n    return next_node"
+  },
+  "llm4ad:optimization/jssp_construct": {
+    "surface": "code",
+    "param_name": "__code:10",
+    "calls_llm": false,
+    "len": 662,
+    "defs": [
+      {
+        "name": "determine_next_operation",
+        "args": "current_status, feasible_operations"
+      }
+    ],
+    "source": "import numpy as np\n\ndef determine_next_operation(current_status, feasible_operations):\n    \"\"\"\n    Determine the next operation to schedule based on a greedy heuristic.\n\n    Args:\n        current_status: A dictionary representing the current status of each machine and job.\n        feasible_operations: A list of feasible operations that can be scheduled next.\n\n    Returns:\n        The next operation to schedule, represented as a tuple (job_id, machine_id, processing_time).\n    \"\"\"\n    # Simple greedy heuristic: choose the operation with the shortest processing time\n    next_operation = min(feasible_operations, key=lambda x: x[2])\n    return next_operation"
+  },
+  "llm4ad:optimization/bp_1d_construct": {
+    "surface": "code",
+    "param_name": "__code:11",
+    "calls_llm": false,
+    "len": 963,
+    "defs": [
+      {
+        "name": "determine_next_assignment",
+        "args": "remaining_items: List[int], remaining_capacities: List[int]"
+      }
+    ],
+    "source": "import numpy as np\n\ndef determine_next_assignment(remaining_items: List[int], remaining_capacities: List[int]) -> Tuple[int, Optional[int]]:\n    \"\"\"\n    Determine the next item and bin to pack based on a greedy heuristic.\n\n    Args:\n        remaining_items: A list of remaining item weights.\n        remaining_capacities: A list of remaining capacities of feasible bins.\n\n    Returns:\n        A tuple containing:\n        - The selected item to pack.\n        - The selected bin to pack the item into (or None if no feasible bin is found).\n    \"\"\"\n    # Iterate through items in their original order\n    for item in remaining_items:\n        # Iterate through bins to find the first feasible one\n        for bin_id, capacity in enumerate(remaining_capacities):\n            if item <= capacity:\n                return item, bin_id  # Return the selected item and bin\n    return remaining_items[0], None  # If no feasible bin is found, return the first item and no bin"
+  },
+  "llm4ad:optimization/admissible_set": {
+    "surface": "code",
+    "param_name": "__code:12",
+    "calls_llm": false,
+    "len": 353,
+    "defs": [
+      {
+        "name": "priority",
+        "args": "el: tuple[int, ...], n: int = 15, w: int = 10"
+      }
+    ],
+    "source": "import math\nimport numpy as np\n\ndef priority(el: tuple[int, ...], n: int = 15, w: int = 10) -> float:\n    \"\"\"Returns the priority with which we want to add `el` to the set.\n    Args:\n        el: the unique vector has the same number w of non-zero elements.\n        n : length of the vector.\n        w : number of non-zero elements.\n    \"\"\"\n    return 0."
+  },
+  "llm4ad:optimization/qap_construct": {
+    "surface": "code",
+    "param_name": "__code:13",
+    "calls_llm": false,
+    "len": 1006,
+    "defs": [
+      {
+        "name": "select_next_assignment",
+        "args": "current_assignment: List[int], flow_matrix: np.ndarray, distance_matrix: np.ndarray"
+      }
+    ],
+    "source": "import numpy as np\n\ndef select_next_assignment(current_assignment: List[int], flow_matrix: np.ndarray, distance_matrix: np.ndarray) -> List[int]:\n    \"\"\"\n    A heuristic for the Quadratic Assignment Problem.\n\n    Args:\n        current_assignment: Current assignment of facilities to locations (-1 means unassigned).\n        flow_matrix: Flow matrix between facilities.\n        distance_matrix: Distance matrix between locations.\n\n    Returns:\n        Updated assignment of facilities to locations.\n    \"\"\"\n    n_facilities = len(current_assignment)\n    \n    # Find the first unassigned facility and the first available location\n    for facility in range(n_facilities):\n        if current_assignment[facility] == -1:\n            # Find the first available location\n            for location in range(n_facilities):\n                if location not in current_assignment:\n                    current_assignment[facility] = location\n                    break\n            break\n    \n    return current_assignment"
+  },
+  "llm4ad:optimization/ovrp_construct": {
+    "surface": "code",
+    "param_name": "__code:14",
+    "calls_llm": false,
+    "len": 648,
+    "defs": [
+      {
+        "name": "select_next_node",
+        "args": "current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, demands: np.ndarray, distance_matrix: np.ndarray"
+      }
+    ],
+    "source": "import numpy as np\n\ndef select_next_node(current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, demands: np.ndarray, distance_matrix: np.ndarray) -> int:\n    \"\"\"Design a novel algorithm to select the next node in each step.\n    Args:\n        current_node: ID of the current node.\n        depot: ID of the depot.\n        unvisited_nodes: Array of IDs of unvisited nodes.\n        rest_capacity: rest capacity of vehicle\n        demands: demands of nodes\n        distance_matrix: Distance matrix of nodes.\n    Return:\n        ID of the next node to visit.\n    \"\"\"\n    next_node = unvisited_nodes[0]\n    return next_node"
+  }
+}

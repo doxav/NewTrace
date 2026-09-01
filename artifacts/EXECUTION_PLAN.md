@@ -211,3 +211,23 @@ experiment owner's decision, not mine.** It is recorded here rather than applied
 
 **Next (Iteration 4) blocked on D18.** Fix menu-conditional headroom first; re-certify candidate
 surfaces against their menus; then re-run with scored-level parity and the replicate control.
+
+## Concurrent-strategy round (§20) — instrument fixed, recursion still not beaten
+
+Eight strategies launched across two waves in isolated worktrees; session limits killed several
+mid-run. Outcomes, judged against `CRITIC_PANEL.md`:
+
+| strategy | outcome |
+|---|---|
+| Surface-aware artifact application | **MERGED.** Refuses wrong-kind candidates; `effective_menu_size` catches ranking-equivalence too. |
+| W2 amortisation on the routing family | **PARTIAL.** Shared optimum confirmed (ρ 0.51–1.00); K\*=2.25–6.0 vs an uninformed searcher only. |
+| LLM control (probe X) | **DECISIVE NEGATIVE.** Cross-task artifact transfer 0/22. |
+| Config-knob transfer | **UNTESTABLE HERE.** All 13 bundles are single-example, so batch/ordering knobs are structurally inert. |
+
+**Standing rule added:** every experiment must declare which win condition it tests (§18). W1 needs
+noise; W2 works at zero noise. Testing W1 on a deterministic surface is a category error.
+
+**Next, by priority:** (1) enforce `effective_menu_size` in `run_spec` rather than only reporting
+it; (2) fix `examples/recursive_opt_example_A_learn_setup.py`, whose O1 search is noise; (3) re-test
+knobs on a multi-example prose surface (`gsm8k`/`qasper`) — the only remaining transfer path, and
+the only place W1 is testable, so one experiment answers both.

@@ -1,0 +1,381 @@
+{
+  "max_examples": 4,
+  "inner_steps": 0,
+  "tasks": {
+    "llm4ad:optimization/set_cover_construct": {
+      "t1": {
+        "n_train_inputs_available": 1,
+        "n_train_inputs_used": 1,
+        "input_len_str": [
+          1
+        ],
+        "batch_design": {
+          "distinct_orders": 1,
+          "order_changes_vs_random": {
+            "random": false,
+            "failure_balanced": false,
+            "curriculum": false,
+            "diversity": false
+          }
+        },
+        "batch_size": {
+          "distinct_effective_batches": 1,
+          "effective_batch_sizes": {
+            "1": 1,
+            "2": 1,
+            "4": 1,
+            "8": 1
+          }
+        },
+        "credit_horizon": {
+          "distinct_feedback_strings_raw": 1,
+          "distinct_feedback_strings": 1,
+          "feedback_len": {
+            "episode": 164,
+            "step": 164,
+            "truncated": 164,
+            "full": 164
+          },
+          "public_evaluator_active": true,
+          "sample": "train_dataset: mean over 1 real example(s). TRACE_FEEDBACK_JSON={\"status\": \"ok\", \"phase\": \"evaluate\", \"score\": -13.8125}\nAutonomous eval OK in 0.01s; score=-13.8125"
+        }
+      },
+      "t2": {
+        "batch_design": {
+          "rows": {
+            "random": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            },
+            "failure_balanced": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            },
+            "curriculum": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "diversity": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "batch_size": {
+          "rows": {
+            "1": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "2": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "4": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "8": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "credit_horizon": {
+          "rows": {
+            "episode": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            },
+            "step": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            },
+            "truncated": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            },
+            "full": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "trace_type": {
+          "rows": {
+            "internal": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "otel": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 129,
+              "sec": 0.0
+            },
+            "sysmon": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 131,
+              "sec": 0.0
+            },
+            "hybrid": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 131,
+              "sec": 0.0
+            }
+          },
+          "n_valid": 1,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "memory_policy": {
+          "rows": {
+            "none": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            },
+            "fifo": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "typed": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "retrieval": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "optimizer": {
+          "rows": {
+            "OptoPrime": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "OptoPrimeMulti": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            },
+            "OPRO": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            },
+            "TextGrad": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "trainer": {
+          "rows": {
+            "MinibatchAlgorithm": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "BeamsearchAlgorithm": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            },
+            "UCBSearchAlgorithm": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "PrioritySearch": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "guide": {
+          "rows": {
+            "LLMJudge": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "ExactMatch": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "deterministic": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "num_threads": {
+          "rows": {
+            "1": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "2": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.03
+            },
+            "4": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "8": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "num_epochs": {
+          "rows": {
+            "1": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "2": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "4": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "initial_knowledge": {
+          "rows": {
+            "": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 564,
+              "sec": 0.02
+            },
+            "Prefer tight fits.": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 590,
+              "sec": 0.02
+            },
+            "Prefer loose fits.": {
+              "score": -13.8125,
+              "invalid": false,
+              "note_len": 590,
+              "sec": 0.03
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        }
+      }
+    }
+  }
+}

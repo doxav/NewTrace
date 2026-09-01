@@ -1,0 +1,219 @@
+{
+  "max_examples": 2,
+  "tasks": {
+    "llm4ad:optimization/tsp_construct": {
+      "surface": "code",
+      "param_name": "__code:0",
+      "calls_llm": false,
+      "original_score": -6.8239686184057184,
+      "original_wall_s": 0.05,
+      "scores": {
+        "nearest": -6.8239686184057184,
+        "farthest": -35.85450182978367,
+        "first_index": -6.8239686184057184,
+        "last_index": -35.85450182978367,
+        "median_dist": -27.26327520388778,
+        "second_nearest": -11.106410912155868,
+        "near3_lowid": -10.889695180528534,
+        "max_rowsum": -14.655761088719313,
+        "min_rowsum": -30.986766219989573
+      },
+      "wall_s": {
+        "nearest": 0.05,
+        "farthest": 0.05,
+        "first_index": 0.05,
+        "last_index": 0.04,
+        "median_dist": 0.08,
+        "second_nearest": 0.05,
+        "near3_lowid": 0.05,
+        "max_rowsum": 0.07,
+        "min_rowsum": 0.07
+      },
+      "controls": {
+        "raises": -1000000.0,
+        "syntax_err": -1000000.0,
+        "wrong_name": -1000000.0
+      },
+      "distinct": 7,
+      "range": 29.0305,
+      "headroom": true,
+      "best_candidate": "nearest",
+      "replicates": [
+        -6.8239686184057184,
+        -6.8239686184057184,
+        -6.8239686184057184
+      ],
+      "replicate_range": 0.0
+    },
+    "llm4ad:optimization/cvrp_construct": {
+      "surface": "code",
+      "param_name": "__code:17",
+      "calls_llm": false,
+      "original_score": -15.038005452835502,
+      "original_wall_s": 0.06,
+      "scores": {
+        "nearest": -13.610775714030819,
+        "farthest": -39.31034208387703,
+        "first_index": -29.07419348580601,
+        "last_index": -29.676456548389076,
+        "median_dist": -31.2145528922564,
+        "second_nearest": -17.457583642222524,
+        "near3_lowid": -16.55849188733925,
+        "max_rowsum": -20.057241608419332,
+        "min_rowsum": -32.429946245825974
+      },
+      "wall_s": {
+        "nearest": 0.05,
+        "farthest": 0.05,
+        "first_index": 0.05,
+        "last_index": 0.05,
+        "median_dist": 0.1,
+        "second_nearest": 0.05,
+        "near3_lowid": 0.06,
+        "max_rowsum": 0.07,
+        "min_rowsum": 0.07
+      },
+      "controls": {
+        "raises": -1000000.0,
+        "syntax_err": -1000000.0,
+        "wrong_name": -1000000.0
+      },
+      "distinct": 9,
+      "range": 25.6996,
+      "headroom": true,
+      "best_candidate": "nearest",
+      "replicates": [
+        -13.610775714030819,
+        -13.610775714030819,
+        -13.610775714030819
+      ],
+      "replicate_range": 0.0
+    },
+    "llm4ad:optimization/ovrp_construct": {
+      "surface": "code",
+      "param_name": "__code:34",
+      "calls_llm": false,
+      "original_score": -28.62412790950092,
+      "original_wall_s": 0.04,
+      "scores": {
+        "nearest": -12.722266334691547,
+        "farthest": -38.967400541162846,
+        "first_index": -28.62412790950092,
+        "last_index": -29.08613415045727,
+        "median_dist": -30.734761569291457,
+        "second_nearest": -16.7603480280289,
+        "near3_lowid": -16.10848301481576,
+        "max_rowsum": -19.500775648956537,
+        "min_rowsum": -31.613501114317298
+      },
+      "wall_s": {
+        "nearest": 0.05,
+        "farthest": 0.05,
+        "first_index": 0.05,
+        "last_index": 0.05,
+        "median_dist": 0.08,
+        "second_nearest": 0.05,
+        "near3_lowid": 0.06,
+        "max_rowsum": 0.07,
+        "min_rowsum": 0.07
+      },
+      "controls": {
+        "raises": -1000000.0,
+        "syntax_err": -1000000.0,
+        "wrong_name": -1000000.0
+      },
+      "distinct": 9,
+      "range": 26.2451,
+      "headroom": true,
+      "best_candidate": "nearest",
+      "replicates": [
+        -12.722266334691547,
+        -12.722266334691547,
+        -12.722266334691547
+      ],
+      "replicate_range": 0.0
+    },
+    "llm4ad:optimization/vrptw_construct": {
+      "surface": "code",
+      "param_name": "__code:51",
+      "calls_llm": false,
+      "original_score": -32.47105318440174,
+      "original_wall_s": 0.13,
+      "scores": {
+        "nearest": -26.47650755770893,
+        "farthest": -41.55259424870737,
+        "first_index": -32.47105318440174,
+        "last_index": -31.726794046295623,
+        "median_dist": -34.537477134844664,
+        "second_nearest": -30.994812807366223,
+        "near3_lowid": -28.77448401011114,
+        "max_rowsum": -33.20916984389389,
+        "min_rowsum": -29.64419063978575
+      },
+      "wall_s": {
+        "nearest": 0.14,
+        "farthest": 0.13,
+        "first_index": 0.14,
+        "last_index": 0.14,
+        "median_dist": 0.18,
+        "second_nearest": 0.14,
+        "near3_lowid": 0.15,
+        "max_rowsum": 0.16,
+        "min_rowsum": 0.15
+      },
+      "controls": {
+        "raises": -1000000.0,
+        "syntax_err": -1000000.0,
+        "wrong_name": -1000000.0
+      },
+      "distinct": 9,
+      "range": 15.0761,
+      "headroom": true,
+      "best_candidate": "nearest",
+      "replicates": [
+        -26.47650755770893,
+        -26.47650755770893,
+        -26.47650755770893
+      ],
+      "replicate_range": 0.0
+    }
+  },
+  "rank_corr": {
+    "tsp_construct vs cvrp_construct": {
+      "n": 9,
+      "rho": 0.798347516475217,
+      "argmax_x": "nearest",
+      "argmax_y": "nearest"
+    },
+    "tsp_construct vs ovrp_construct": {
+      "n": 9,
+      "rho": 0.798347516475217,
+      "argmax_x": "nearest",
+      "argmax_y": "nearest"
+    },
+    "tsp_construct vs vrptw_construct": {
+      "n": 9,
+      "rho": 0.5126231421577709,
+      "argmax_x": "nearest",
+      "argmax_y": "nearest"
+    },
+    "cvrp_construct vs ovrp_construct": {
+      "n": 9,
+      "rho": 1.0,
+      "argmax_x": "nearest",
+      "argmax_y": "nearest"
+    },
+    "cvrp_construct vs vrptw_construct": {
+      "n": 9,
+      "rho": 0.6833333333333333,
+      "argmax_x": "nearest",
+      "argmax_y": "nearest"
+    },
+    "ovrp_construct vs vrptw_construct": {
+      "n": 9,
+      "rho": 0.6833333333333333,
+      "argmax_x": "nearest",
+      "argmax_y": "nearest"
+    }
+  }
+}

@@ -182,6 +182,13 @@ def default_tasks_root() -> Path:
         return Path("benchmarks") / "LLM4AD" / "benchmark_tasks"
 
 
+def list_tasks(suite: str = None) -> List[str]:
+    """Enumerate Trace-Bench task ids; raises instead of fabricating a fallback list."""
+    if not HAVE_TB:  # a previous fallback returned six hardcoded, non-existent ids
+        raise RuntimeError("Trace-Bench is unavailable; cannot enumerate tasks")
+    return [spec.id for spec in discover_tasks(default_tasks_root(), bench=suite)]
+
+
 def _dataset_infos(dataset: Dict[str, Any]) -> List[Any]:
     return list(dataset.get("infos") or dataset.get("info") or [])
 

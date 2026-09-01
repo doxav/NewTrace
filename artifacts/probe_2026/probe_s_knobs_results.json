@@ -1,0 +1,291 @@
+{
+  "n_tasks": 13,
+  "tasks": [
+    "llm4ad:optimization/admissible_set",
+    "llm4ad:optimization/bp_1d_construct",
+    "llm4ad:optimization/bp_2d_construct",
+    "llm4ad:optimization/cflp_construct",
+    "llm4ad:optimization/cvrp_construct",
+    "llm4ad:optimization/jssp_construct",
+    "llm4ad:optimization/knapsack_construct",
+    "llm4ad:optimization/online_bin_packing",
+    "llm4ad:optimization/ovrp_construct",
+    "llm4ad:optimization/qap_construct",
+    "llm4ad:optimization/set_cover_construct",
+    "llm4ad:optimization/tsp_construct",
+    "llm4ad:optimization/vrptw_construct"
+  ],
+  "knobs": {
+    "batch_design": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [],
+      "verdict": "DECORATIVE (no score change on any task)"
+    },
+    "batch_size": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [],
+      "verdict": "DECORATIVE (no score change on any task)"
+    },
+    "credit_horizon": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [],
+      "verdict": "DECORATIVE (no score change on any task)"
+    },
+    "guide": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [],
+      "verdict": "DECORATIVE (no score change on any task)"
+    },
+    "initial_knowledge": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [],
+      "verdict": "DECORATIVE (no score change on any task)"
+    },
+    "memory_policy": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [],
+      "verdict": "DECORATIVE (no score change on any task)"
+    },
+    "num_epochs": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [],
+      "verdict": "DECORATIVE (no score change on any task)"
+    },
+    "num_threads": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [],
+      "verdict": "DECORATIVE (no score change on any task)"
+    },
+    "optimizer": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [],
+      "verdict": "DECORATIVE (no score change on any task)"
+    },
+    "trace_type": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [
+        "hybrid",
+        "otel",
+        "sysmon"
+      ],
+      "verdict": "DECORATIVE (no score change on any task)"
+    },
+    "trainer": {
+      "n_tasks_measured": 13,
+      "n_tasks_where_score_moved": 0,
+      "max_range_over_tasks": 0.0,
+      "values_yielding_invalid_sentinel": [],
+      "verdict": "DECORATIVE (no score change on any task)"
+    }
+  },
+  "t1_structural": {
+    "llm4ad:optimization/admissible_set": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 4,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/bp_1d_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 4,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/bp_2d_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 4,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/cflp_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 1,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/cvrp_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 2,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/jssp_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 3,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/knapsack_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 1,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/online_bin_packing": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 3,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/ovrp_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 2,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/qap_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 2,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/set_cover_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 1,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/tsp_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 4,
+      "public_evaluator_active": true
+    },
+    "llm4ad:optimization/vrptw_construct": {
+      "n_train_inputs": 1,
+      "batch_design_distinct_orders": 1,
+      "batch_size_distinct_batches": 1,
+      "batch_size_effective": {
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "8": 1
+      },
+      "credit_horizon_distinct_feedback": 1,
+      "credit_horizon_distinct_feedback_raw": 3,
+      "public_evaluator_active": true
+    }
+  },
+  "t1_summary": {
+    "tasks_with_one_train_input": 13,
+    "tasks_where_batch_design_changes_order": 0,
+    "tasks_where_batch_size_changes_batch": 0,
+    "tasks_where_credit_horizon_changes_feedback": 0
+  }
+}
