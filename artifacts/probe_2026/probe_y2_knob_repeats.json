@@ -1,0 +1,35 @@
+{
+  "batch_design": {
+    "per_value_mean": {
+      "random": 0.99997787,
+      "failure_balanced": 0.99994109,
+      "diversity": 0.99994461,
+      "curriculum": 0.99996851
+    },
+    "within_value_range_avg": 4.981211250001949e-05,
+    "between_value_mean_range": 3.6777138000099185e-05,
+    "ratio": 0.7383171713523452
+  },
+  "batch_size": {
+    "per_value_mean": {
+      "1": 0.99992394,
+      "2": 0.99989859,
+      "4": 0.99997587,
+      "8": 0.99997751,
+      "15": 0.99998677
+    },
+    "within_value_range_avg": 4.178749800007875e-05,
+    "between_value_mean_range": 8.818184400005702e-05,
+    "ratio": 2.110244647810473
+  },
+  "credit_horizon": {
+    "per_value_mean": {
+      "episode": 0.99998639,
+      "step": 0.9999813,
+      "none": 0.99998608
+    },
+    "within_value_range_avg": 1.0845960000005483e-05,
+    "between_value_mean_range": 5.086547999910707e-06,
+    "ratio": 0.4689808924159904
+  }
+}

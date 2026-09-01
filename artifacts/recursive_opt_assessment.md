@@ -1933,3 +1933,86 @@ signature cannot transfer, and the config surface that could transfer is inert h
    portable by construction (a fixed `*args` calling convention across a family) — the property
    the hand-written menu had and LLM output did not. That is a design change to the task family,
    not a bug fix, and it should be a deliberate decision.
+
+---
+
+## §21 — The config-knob transfer path is closed too (and the pool is the reason)
+
+§20.3 closed the *artifact* transfer path (0/22 executed cross-task). O3's only remaining way to
+transfer anything is the `LevelConfig` knobs. §20.4 could not test them because all 13 llm4ad
+bundles are single-example. So I asked the prior question: **is there any task in the pool where
+knobs can even function?**
+
+### 21.1 43 of 47 tasks expose exactly one training example
+
+| n_train_inputs | tasks |
+|---|---|
+| 1 | **43** |
+| 15 | 1 — `internal:multiobjective_bbeh` (`prose`, `calls_llm=False`) |
+| 10 | 1 — `internal:multiobjective_gsm8k` (`prose`, `calls_llm=True`) |
+| load error | 2 |
+
+With one example, `batch_design` (ordering), `batch_size` and `credit_horizon` are *structurally*
+inert — no implementation could make them matter. **This is a property of the task pool, not of
+the recursive layer**, and it silently voids any knob-based result on those 43 tasks.
+
+That leaves exactly one candidate venue: `multiobjective_bbeh`, the only task that is both
+multi-example and non-LLM-scored. (`gsm8k` is the other multi-example task and was already
+certified `too_noisy`.)
+
+### 21.2 That venue is saturated, and its noise floor eats every knob effect
+
+Replicate control, identical default config, n=10: **mean 0.999974, range 4.24e-05, sd 1.40e-05.**
+The metric is saturated at ~1.0 and the task is *not* bit-deterministic despite `calls_llm=False`.
+
+My first pass reported five knobs "LIVE". **That was a false positive of exactly the kind the
+panel's statistician view vetoes** — n=1 per knob value against a floor measured at n=10. Re-run
+with 5 repeats per value, comparing between-value spread to within-value spread:
+
+| knob | between | within | ratio | verdict |
+|---|---|---|---|---|
+| `batch_size` | 8.82e-05 | 4.18e-05 | **2.11** | marginal signal |
+| `batch_design` | 3.68e-05 | 4.98e-05 | 0.74 | **no signal** |
+| `credit_horizon` | 5.09e-06 | 1.09e-05 | 0.47 | **no signal** |
+| `memory_policy` | 1.75e-05 | — | <1 | inside noise |
+| `num_epochs` | 1.16e-05 | — | <1 | inside noise |
+| `trace_type` | *2.000* | — | — | **not an effect — see below** |
+
+`trace_type` appeared to have a range of **2.0**, four orders of magnitude above everything else.
+It is a sentinel artefact: `internal` scores 0.99995 while `otel`, `sysmon` and `hybrid` all
+return **−1.0**, the invalid floor. Three of four backends are simply unavailable. Caught by the
+red-team view's standing question — *is a sentinel hiding inside this mean?* — and it is the same
+D1 failure mode yet again, now in a third distinct code path.
+
+Only `batch_size` survives, with a monotone trend (batch 1 → 0.999924, batch 15 → 0.999987) that
+is plausibly real — more examples, better estimate. But the effect is **8.8e-05 on a metric
+saturated at 0.99998**. Nothing can be optimised, let alone transferred, at that scale.
+
+### 21.3 Verdict: both transfer paths are closed in the current pool
+
+| path | status | evidence |
+|---|---|---|
+| **artifact** (code) | closed | 0/22 LLM-generated heuristics execute on a sibling task (§20.3) |
+| **config knobs** | closed | 43/47 tasks single-example; the one usable venue is saturated with a noise floor above every effect |
+
+**This answers the original question — existing tasks, or new ones?** *None of the existing tasks
+is a good fit.* Not because the recursive layer is wrong, but because the pool cannot host the
+experiment: it is overwhelmingly single-example, largely saturated or single-instance, and its
+code artifacts are signature-bound.
+
+### 21.4 What a task would need to look like
+
+A venue capable of demonstrating recursive transfer must satisfy all five, and nothing in the pool
+does:
+
+1. **Multi-example** (≥ ~20 training examples) — otherwise the batch/ordering knobs cannot act.
+2. **Unsaturated** — headroom between baseline and ceiling, so improvement is expressible.
+3. **Noise floor well below the target effect**, measured *at the run's concurrency*.
+4. **A family with a shared optimum** — the routing family proved this is achievable
+   (Spearman ρ 0.51–1.00), so this is the one requirement already demonstrated.
+5. **A portable artifact** — a fixed calling convention across the family, so a transferred
+   artifact *executes*. This is the requirement LLM output failed 22 times out of 22, and making
+   it hold is a task-design decision, not a bug fix.
+
+Requirements 1–3 are properties of the benchmark; 4–5 are properties of the family. Building such
+a family is now the critical path for the whole recursive programme.
