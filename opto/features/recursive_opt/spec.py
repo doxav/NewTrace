@@ -2729,6 +2729,13 @@ def score_spread(task_id: str, probes: Optional[List[dict]]=None, scoring: Optio
 
     Read ``effective_menu_size`` before ``flat``: when it is 1 the probes offered one
     usable point, so ``flat`` describes the MENU, not the task.
+
+    TODO(menu-collapse): this is opt-in, so a run whose menu collapsed still reports a
+    clean null. Record effective_menu_size per level inside the run instead. A first
+    attempt was reverted (it read 3 where the truth was 1): count over the candidates
+    the LEVEL evaluated, not memory.artifact_history() which also holds the final prior
+    and per-family records, and detect rejections via the normalizer flag below rather
+    than by is_invalid_score() on the numeric score.
     """
     probes = probes or [{}, {'starting_artifact': 'Answer directly.'}, {'starting_artifact': 'Plan step by step, then verify the answer before replying.'}]
     runner = make_scored_task_runner(scoring)
@@ -2786,6 +2793,9 @@ def agentic_optimizer_factory(level_spec: dict, memory: MemoryLite, reused_tools
             super().__init__(parameters, **{**configured_kwargs, **optimizer_kwargs})
     return ConfiguredAgenticOptimizer
 
+# TODO(menu-collapse): this normalizes a rejection to the worst LEGAL score, which keeps one
+# bad candidate from poisoning a mean but also hides rejections from any is_invalid_score()
+# check downstream. Expose the rejection as a flag on the result, not only as a number.
 def make_scored_task_runner(scoring: Optional[dict]=None, *, raw_runner: Optional[Callable[[LevelConfig, str], Tuple[float, str]]]=None) -> Callable[[LevelConfig, str], Tuple[float, str]]:
     """Wrap a task runner with optional spec-level score normalization."""
     cfg = scoring or {}

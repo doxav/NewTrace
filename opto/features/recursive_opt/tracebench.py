@@ -632,6 +632,10 @@ class TraceBenchTaskAdapter:
             "task score remains the real benchmark score"
         )
 
+    # TODO(menu-collapse): the surface guard below stops a WRONG-KIND candidate, but not a
+    # RANKING-EQUIVALENT one -- for these heuristics only the argmax matters, so `item - bins`
+    # and `-(bins - item)` are the same candidate and a menu of them is effectively size 1.
+    # That is invisible here and only shows up as tied scores; see score_spread().
     def _apply_starting_artifact(self, bundle: Dict[str, Any], cfg: LevelConfig) -> bool:
         """Seed the bundle's trainable param from cfg before scoring.
 
