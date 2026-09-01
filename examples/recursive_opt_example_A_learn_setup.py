@@ -134,16 +134,31 @@ def run_offline(problem):
     level = build_level(problem, mem)
     guide = RecursiveGuide()
     best = (float("-inf"), None)
+    scores = []
     for cand in CANDIDATES:
         level.propose(**cand)  # write the candidate into the config node
         out = level.forward(problem)  # run the inner optimization with that config
         score, feedback = guide(problem, out, None)
+        scores.append(score)
         print(
             f"    {cand['trainer']:<20} bs={cand['batch_size']} "
             f"{cand['batch_design']:<16} -> score={score:.3f}"
         )
         if score > best[0]:
             best = (score, dict(cand))
+    # An inert search must not report a winner. This offline path runs at
+    # inner_steps=0, where the effects contract already declares batch_size and
+    # trainer inactive (see the [effects] line above) and where these bundles hold
+    # a single training example, so batch_size/batch_design cannot act either.
+    # Every candidate therefore ties, and "BEST" would be the first one by
+    # tie-break -- an arbitrary choice presented as a learned setup.
+    if len(set(scores)) == 1:
+        print(
+            f"    [inert] all {len(scores)} candidates scored {scores[0]:.3f}: this "
+            "search distinguished nothing. Re-run with inner_steps > 0 (and a "
+            "multi-example task) before reading any 'best' setup from it."
+        )
+        return (scores[0], None), mem
     return best, mem
 
 
@@ -176,5 +191,8 @@ if __name__ == "__main__":
             print(f"  optimized config:\n{cfg}")
         else:
             (score, cfg), mem = run_offline(p)
-            print(f"  BEST: score={score:.3f}  cfg={cfg}")
+            print(
+                f"  BEST: score={score:.3f}  cfg={cfg}" if cfg is not None
+                else f"  NO WINNER: score={score:.3f} for every candidate"
+            )
         print(f"  memory (M3 priors): {mem.summary()['priors']}")

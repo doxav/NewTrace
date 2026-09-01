@@ -2016,3 +2016,49 @@ does:
 
 Requirements 1–3 are properties of the benchmark; 4–5 are properties of the family. Building such
 a family is now the critical path for the whole recursive programme.
+
+---
+
+## §22 — The shipped example presented a tie-break as a learned result
+
+`examples/recursive_opt_example_A_learn_setup.py` is the demo of "learning the best setup". Run
+offline, on both of its problems:
+
+```
+BeamsearchAlgorithm  bs=4 failure_balanced -> score=-2091.800
+UCBSearchAlgorithm   bs=8 curriculum       -> score=-2091.800
+MinibatchAlgorithm   bs=1 random           -> score=-2091.800
+PrioritySearch       bs=4 diversity        -> score=-2091.800
+BEST: score=-2091.800  cfg={'batch_size': 4, ... 'trainer': 'BeamsearchAlgorithm'}
+```
+
+**All four candidates tie. The reported "BEST" was simply the first one** — an arbitrary
+tie-break presented as a learned setup. Same on `internal:multi_param` (−1.000 ×4).
+
+The reason is the union of two defects already established, and the example *prints it itself*:
+
+```
+[effects] proceeding with inactive fields:
+  {'batch_size': 'active only when inner_steps > 0 (trainer samples batches)',
+   'trainer':    'active only when inner_steps > 0'}
+```
+
+The offline path runs at `inner_steps=0`, and both bundles are single-example (§21.1), so
+`batch_size`/`batch_design` cannot act either. **`effects.py`'s causal-effect contract correctly
+detected this** — and the example passes `allow_inactive=True` to override it.
+
+That is worth stating plainly, because it answers the original question about whether the package
+hides a bogus mechanism. **The contract is real and it works. The demo bypasses it.** The most
+defensible component in the package was already telling the truth, and the headline example
+silenced it.
+
+**Fixed:** the offline search now detects that every candidate tied and refuses to name a winner:
+
+```
+[inert] all 4 candidates scored -2091.800: this search distinguished nothing.
+Re-run with inner_steps > 0 (and a multi-example task) before reading any 'best' setup from it.
+NO WINNER: score=-2091.800 for every candidate
+```
+
+This is the `effective_menu_size` principle (§20.1) applied at the example level: **an inert
+search must not report a winner.**
