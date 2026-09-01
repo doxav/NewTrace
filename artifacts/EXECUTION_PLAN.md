@@ -231,3 +231,29 @@ noise; W2 works at zero noise. Testing W1 on a deterministic surface is a catego
 it; (2) fix `examples/recursive_opt_example_A_learn_setup.py`, whose O1 search is noise; (3) re-test
 knobs on a multi-example prose surface (`gsm8k`/`qasper`) — the only remaining transfer path, and
 the only place W1 is testable, so one experiment answers both.
+
+### Attempted and REVERTED: `effective_menu_size` recorded per level in `run_spec`
+
+Added a two-line computation at `level_end` using
+`memory.artifact_history(family, surface)` filtered by `is_invalid_score`. Verified end-to-end
+and **reverted**, because it reports the wrong number:
+
+| menu | true effective size | metric reported |
+|---|---|---|
+| prose (Iteration-3) on a code surface | **1** | **3** |
+| 3 distinct code candidates | 3 | 4 |
+
+Two causes, both real:
+1. `make_scored_task_runner` normalises a rejection to the worst *legal* score (−1.0) rather than
+   the raw sentinel, so `is_invalid_score` does not see it. `score_spread` handles this with
+   `_normalizer_rejected`; the level path does not.
+2. `artifact_history(family, kind)` is the wrong population — it includes the final saved prior
+   and per-family records, not just the candidates evaluated in this level.
+
+A metric that under-reports collapse is worse than no metric in a project whose failures have all
+been fake numbers, so this stays out until it is right.
+
+**Correct design for next time:** count distinct scores over the *candidates the level actually
+evaluated* (not the artifact ledger), and classify a rejection by the normalizer's flag
+(`_normalizer_rejected`) rather than by numeric threshold. Until then `score_spread` remains the
+supported way to check a menu, and it must be run as a pre-flight.
