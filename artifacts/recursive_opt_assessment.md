@@ -1,3 +1,8 @@
+> **Status board: [`RESEARCH_LOG.md`](RESEARCH_LOG.md).** This file is the long-form
+> evidence trail — narrative, chronological, §0–§22. For *what is currently proved,
+> refuted, void or unexplored*, read the hypothesis ledger there first; it references
+> these sections by number.
+
 # `opto/features/recursive_opt` — a deep assessment
 
 *Analysis 2026-08-29/30. Branch `recursive_opt` @ `80777032`. 16 modules, 8,850 runtime lines as
