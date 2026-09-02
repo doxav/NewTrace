@@ -70,8 +70,17 @@ One row per experiment. `n` is usable paired observations, not runs attempted.
 | EXP-10 | 09-01 | Are config knobs live? | 13 llm4ad | 13 | 0/13 moved — single-example | H4 blocked |
 | EXP-11 | 09-01 | Knobs on a multi-example venue | bbeh | 5 rep | all inside replicate floor | H4 blocked |
 | EXP-12 | 09-02 | Paired seed-delta sd | qasper | **2 pairs** | sd 0.254 @ c=2 — *not yet usable* | in flight |
-| EXP-13 | 09-02 | Was seed 101's 0.5455 a find or noise? | qasper | 10+10 | *running* | pending |
+| EXP-13 | 09-02 | Was seed 101's 0.5455 a find or noise? | qasper | 6+6 | *running* — see note | pending |
 | EXP-14 | 09-02 | Backlog triage | 90 specs | — | 18 variants; **8 unrunnable** | see §5 |
+
+**EXP-13 note — environment, not design.** First attempt left evaluation UNBOUNDED: one item
+took 514 s and the full design projected to 10+ hours. That is the same unbounded-sampling defect
+that cost 14.6x resolution earlier. Rebuilt to match probe A exactly (`max_examples=2`,
+`inner_steps=0`, per-run `SIGALRM`) so the numbers are comparable to probe A's empty-prompt figures
+— and the very first bounded evaluation still exceeded probe A's own 150 s timeout. **The provider
+endpoint is materially slower today than on 2026-08-29**, with repeated LiteLLM errors. Re-running
+at n=6 per condition with a 480 s bound. Any qasper timing measured now is not comparable to
+probe A's.
 
 ### Retractions
 | claim | why it fell |

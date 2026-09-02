@@ -13,7 +13,7 @@ with load, which is the error that spoiled an earlier pair of runs.
 Decision rule, fixed before running: the find is real only if the found prompt's mean
 exceeds the empty prompt's mean by more than the pooled within-condition spread.
 """
-import json, statistics as st, sys, time
+import json, signal, statistics as st, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -22,14 +22,33 @@ from opto.features.recursive_opt.levels import LevelConfig         # noqa: E402
 from opto.features.recursive_opt.spec import make_scored_task_runner  # noqa: E402
 
 TASK = "hf:qasper"
-N = 10
+N = 6
+# Match probe A exactly. Its empty-prompt figures (0.088 / 0.549 / 0.107) are the numbers
+# this probe exists to compare against, and they were produced at max_examples=2. A first
+# attempt left evaluation UNBOUNDED: the first item alone took 514 s and the full design
+# would have taken 10+ hours -- the same unbounded-sampling defect that cost 14.6x
+# resolution earlier in this project.
+MAX_EXAMPLES = 2
+RUN_TIMEOUT_S = 480   # endpoint slower than on probe A's day; 150s now times out
+
+
+class _RunTimeout(Exception):
+    pass
+
+
+def _alarm(_sig, _frm):
+    raise _RunTimeout(f"evaluation exceeded {RUN_TIMEOUT_S}s")
+
+
+signal.signal(signal.SIGALRM, _alarm)
 FOUND = Path("/tmp/claude-1000/-home-xav-code-Trace/b9d97baf-4098-451b-9ede-8836c0e3ded6/"
              "scratchpad/found_prompt.txt").read_text()
 FOUND = FOUND.split("starting_artifact:", 1)[-1].strip()
 
 
 def main():
-    TB.ensure_default_task_adapter(require=True)
+    TB.register_task_adapter(TB.TraceBenchTaskAdapter(
+        max_examples=MAX_EXAMPLES, inner_steps=0, eval_kwargs={"timeout_seconds": 90}))
     runner = make_scored_task_runner(None)
     conditions = {"empty": "", "found": FOUND}
     scores = {k: [] for k in conditions}
@@ -37,17 +56,21 @@ def main():
     for i in range(N):
         for name, text in conditions.items():          # interleaved, not blocked
             t0 = time.time()
+            signal.alarm(RUN_TIMEOUT_S)
             try:
                 s = float(runner(LevelConfig(starting_artifact=text), TASK)[0])
             except Exception as exc:                    # pragma: no cover
                 s = None
                 print(f"  [{i}] {name}: ERROR {type(exc).__name__}: {exc}", flush=True)
+            finally:
+                signal.alarm(0)
             scores[name].append(s)
             order.append({"i": i, "condition": name, "score": s,
                           "wall_s": round(time.time() - t0, 1)})
             print(f"  [{i}] {name:6s} -> {s}", flush=True)
 
-    out = {"task": TASK, "n_per_condition": N, "design": "interleaved single process",
+    out = {"task": TASK, "n_per_condition": N, "max_examples": MAX_EXAMPLES,
+           "design": "interleaved single process; adapter matched to probe A",
            "found_prompt": FOUND, "order": order}
     for k, v in scores.items():
         ok = [x for x in v if x is not None]
