@@ -260,3 +260,31 @@ def test_probe_r_menu_is_no_longer_effectively_size_one() -> None:
     menu = ["", *PROSE]
     usable = [m for m in menu if not m or M.artifact_fits_surface(surface, m) is None]
     assert len(usable) == 1, "precondition: the Iteration 3 menu really was a singleton"
+
+
+def test_menu_check_kind_flags_surfaces_where_a_type_audit_is_vacuous():
+    """A prose menu audited by type alone always passes; the helper must say so.
+
+    Regression for a real error: a 106-spec audit reported "0 collapses" using
+    artifact_fits_surface on prose-surfaced specs, where it accepts every candidate
+    without inspecting it. The pass was vacuous and read exactly like a real one.
+    """
+    from opto.features.recursive_opt.measurement import (
+        TaskSurface, artifact_fits_surface, menu_check_kind,
+    )
+
+    prose = TaskSurface(kind="prose", calls_llm=True, param_name="system_prompt", sample="hi")
+    code = TaskSurface(kind="code", calls_llm=False, param_name="__code:0",
+                       sample="def f(x):\n    return x\n")
+
+    # the vacuity itself: prose accepts a candidate that is plainly not prose
+    assert artifact_fits_surface(prose, "def f(x):\n    return x\n") is None
+    assert artifact_fits_surface(code, "Answer directly.") is not None
+
+    assert menu_check_kind(prose) == "scores"
+    assert menu_check_kind(code) == "type"
+    for kind in ("unknown", "prose"):
+        surface = TaskSurface(kind=kind, calls_llm=True, param_name="p", sample="")
+        assert menu_check_kind(surface) == "scores", (
+            f"{kind} surfaces cannot be audited by type; must defer to score_spread"
+        )

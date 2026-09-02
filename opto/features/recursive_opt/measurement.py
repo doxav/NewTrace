@@ -259,6 +259,23 @@ def detect_surface(bundle: Mapping[str, Any]) -> TaskSurface:
                        getattr(node, "name", None), text[:120])
 
 
+def menu_check_kind(surface: "TaskSurface") -> str:
+    """Return which check can decide menu adequacy on this surface: 'type' or 'scores'.
+
+    ``artifact_fits_surface`` is a corruption guard, not a menu audit. It can only reject
+    a candidate whose KIND is wrong, so it is decisive on ``code``/``numeric`` surfaces and
+    silent on ``prose``/``unknown`` ones, where it accepts everything unread. Auditing a
+    prose menu with it therefore always reports zero collapses regardless of the menu --
+    a vacuous pass that reads exactly like a real one. This mistake has already been made
+    once on a 106-spec audit.
+
+    On a ``scores`` surface, menu adequacy is decided only by evaluating the candidates:
+    use ``spec.score_spread`` and read ``effective_menu_size``. That is also the only check
+    that catches RANKING-EQUIVALENT candidates, which no type check can see on any surface.
+    """
+    return "type" if surface.kind in ("code", "numeric") else "scores"
+
+
 def artifact_fits_surface(surface: TaskSurface, text: str) -> Optional[str]:
     """Return None when ``text`` may replace this parameter, else a typed reason.
 
@@ -269,6 +286,9 @@ def artifact_fits_surface(surface: TaskSurface, text: str) -> Optional[str]:
     proposal getting real feedback. What this cannot see (prose containing "return",
     ranking-equivalent candidates) is caught by ``score_spread.effective_menu_size``.
     """
+    # NOTE: on prose/unknown surfaces this returns "fits" WITHOUT inspecting the
+    # candidate, so auditing a menu with this function alone is vacuous there -- it can
+    # only ever report zero refusals. Call menu_check_kind() first; see its docstring.
     if not str(text).strip() or surface.kind in ("unknown", "prose"):
         return None
     kind = classify_artifact(text)

@@ -1,0 +1,62 @@
+{
+  "task": "hf:qasper (holdout of level o3_prior)",
+  "comparison": "paired (recursive - standard) per seed, both arms scored on o3_prior",
+  "concurrency": 2,
+  "concurrency_warning": "SD measured at concurrency 2. Runs were separate OS processes with separate memory roots and budget guards, but they shared one LLM endpoint; an SD is only valid for the concurrency it was measured at.",
+  "n_runs": 4,
+  "n_failed_runs": 0,
+  "run_error_rate": 0.0,
+  "error_kinds": {},
+  "n_pairs": 2,
+  "n_seeds_dropped_unpaired": 0,
+  "dropped": [],
+  "per_seed": [
+    {
+      "seed": 100,
+      "standard": 0.1925925925925926,
+      "recursive": 0.1827731092436975,
+      "delta": -0.009819483348895097,
+      "standard_artifact": "starting_artifact: ",
+      "recursive_artifact": "starting_artifact: "
+    },
+    {
+      "seed": 101,
+      "standard": 0.5454545454545454,
+      "recursive": 0.1769230769230769,
+      "delta": -0.3685314685314685,
+      "standard_artifact": "starting_artifact: General prior for transfer: solve reading-comprehension tasks by locating the relevant evidence in the text. For qasper specifically, questions come from scientific papers; answer using only information in the paper. Quote the exact sentence or phrase that supports the answer whenever the question expects an extractive answer. For yes/no questions, state yes/no and then the supporting quote. If the evidence is absent, return 'unanswerable'. Do not invent outside knowledge.",
+      "recursive_artifact": "starting_artifact: "
+    }
+  ],
+  "deltas": [
+    -0.009819483348895097,
+    -0.3685314685314685
+  ],
+  "sd_paired_delta": 0.25364767721548603,
+  "mean_paired_delta": -0.1891754759401818,
+  "mean_ci95": [
+    -0.5407067619130306,
+    0.16235581003266697
+  ],
+  "median_paired_delta": -0.1891754759401818,
+  "arm_means": {
+    "standard": 0.36902356902356903,
+    "recursive": 0.1798480930833872
+  },
+  "arm_sd": {
+    "standard": 0.24951107969141473,
+    "recursive": 0.004136597524071295
+  },
+  "required_n": {
+    "0.03": 562,
+    "0.05": 202,
+    "0.1": 51,
+    "0.163": 20
+  },
+  "resolvable_delta": {
+    "3": 0.41027409832048484,
+    "5": 0.3177969500351004,
+    "10": 0.2247163784102219,
+    "20": 0.1588984750175502
+  }
+}
