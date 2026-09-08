@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import gzip
 import io
 import json
 import math
@@ -15,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from artifacts.optimizer_discovery import benchmark as B
+from artifacts.optimizer_discovery.evidence import describe, environment
 from artifacts.optimizer_discovery.phase0 import _load_key, _safe
 from opto.features.recursive_opt import spec as control
 from opto.features.recursive_opt.measurement import (
@@ -79,18 +81,37 @@ def persist(path: Path, value: Any) -> None:
     """Atomically preserve immutable sanitized JSON; refuse conflicting replacement."""
     text = _safe(json.dumps(value, indent=2, allow_nan=False)) + "\n"
     path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists():
-        if path.read_text() != text:
+    if exists(path):
+        original = (
+            path.read_bytes()
+            if path.exists()
+            else gzip.decompress(path.with_suffix(path.suffix + ".gz").read_bytes())
+        )
+        if original.decode() != text:
             raise RuntimeError(f"refusing to overwrite completed evidence: {path.name}")
         return
+    payload = text.encode()
+    if len(payload) > 450000:
+        path = path.with_suffix(path.suffix + ".gz")
+        payload = gzip.compress(payload, mtime=0)
     temporary = path.with_suffix(path.suffix + ".pending")
-    temporary.write_text(text)
+    temporary.write_bytes(payload)
     os.replace(temporary, path)
 
 
+def exists(path: Path) -> bool:
+    """Recognize an ordinary or losslessly compressed immutable JSON record."""
+    return path.exists() or path.with_suffix(path.suffix + ".gz").exists()
+
+
 def read(path: Path) -> Any:
-    """Read a retained JSON artifact without interpreting generated code."""
-    return json.loads(path.read_text())
+    """Read ordinary or compressed JSON without interpreting generated code."""
+    payload = (
+        path.read_bytes()
+        if path.exists()
+        else gzip.decompress(path.with_suffix(path.suffix + ".gz").read_bytes())
+    )
+    return json.loads(payload)
 
 
 def preflight(path: Path = B.ROOT / "exp15/freeze.json") -> dict[str, Any]:
@@ -101,6 +122,8 @@ def preflight(path: Path = B.ROOT / "exp15/freeze.json") -> dict[str, Any]:
     for name, expected in frozen["files"].items():
         if B.source_hash(Path(name).read_text()) != expected:
             raise RuntimeError(f"confirmatory freeze mismatch: {name}")
+    if frozen.get("environment") != environment():
+        raise RuntimeError("confirmatory environment mismatch")
     if B.MANIFEST["status"] != "FROZEN_CONFIRMATORY":
         raise RuntimeError("manifest is not a confirmatory freeze")
     return frozen
@@ -364,6 +387,7 @@ class Experiment:
                         "error_type": type(error).__name__,
                         "error": _safe(str(error)),
                         "transient": transient,
+                        "possible_remote_completion_or_duplicate_billing": True,
                         "wall_s": time.monotonic() - started_at,
                         "logs": _safe(captured.getvalue())[:16000],
                     },
@@ -650,7 +674,7 @@ class Experiment:
         self.freeze_selections()
         for outer in self.seeds:
             path = self.root / str(outer) / "holdout.json"
-            if path.exists():
+            if exists(path):
                 continue
             selection = read(self.root / str(outer) / "selection.json")
             rows = {"opened_ns": time.time_ns()}
@@ -664,7 +688,7 @@ class Experiment:
         rows = []
         for outer in self.seeds:
             path = self.root / str(outer) / "holdout.json"
-            if not path.exists():
+            if not exists(path):
                 raise RuntimeError("analysis cannot omit missing outer seeds")
             raw = read(path)
             if (
@@ -680,6 +704,7 @@ class Experiment:
                 ):
                     raise RuntimeError("incomplete deployment trajectory")
                 row[arm] = {
+                    "description": describe([], raw[arm]),
                     "auc": B.aggregate(raw[arm], "auc"),
                     "final_regret": B.aggregate(raw[arm], "final_regret"),
                     "target_attainment": B.aggregate(raw[arm], "attained"),
@@ -752,6 +777,36 @@ class Experiment:
                 list(self.root.glob("*/A*/slot_*/attempt_*.json"))
             ),
             "usage": usage,
+            "per_arm": {
+                arm: {
+                    **describe(
+                        [
+                            read(p)
+                            for p in sorted(
+                                self.root.glob(f"*/{arm}/slot_*/response.json")
+                            )
+                        ],
+                        [
+                            r
+                            for outer in self.seeds
+                            for c in read(self.root / str(outer) / arm / "pool.json")
+                            if c["index"] >= 0
+                            for r in [*c["train"], *c["validation"]]
+                        ],
+                    ),
+                    "seed_selected": sum(
+                        read(self.root / str(s) / "selection.json")[arm]["index"] == -1
+                        for s in self.seeds
+                    ),
+                    "ineligible_candidates": sum(
+                        not c["eligible"]
+                        for s in self.seeds
+                        for c in read(self.root / str(s) / arm / "pool.json")
+                        if c["index"] >= 0
+                    ),
+                }
+                for arm in ("A1", "A2")
+            },
             "source_screen_invalid": sum(
                 p["source_status"] != "valid" for p in proposals
             ),

@@ -127,6 +127,9 @@ def test_production_trace_budgets_isolation_and_selection(
     before = len(calls)
     exp.generate(701, "A2")
     assert len(calls) == before
+    from artifacts.optimizer_discovery import evidence
+
+    assert evidence.verify(exp)["completed_responses"] == 4
     result = exp.analyze()
     assert len(result["per_seed"]) == 1
     assert result["contrasts"]["A2-A1"]["mean"] == 0
@@ -153,3 +156,68 @@ def test_paired_analysis_preserves_negative_values_and_all_seeds() -> None:
     assert E.paired([0, 0, 0, 0, 0])["interpretation"] == "no detectable difference"
     with pytest.raises(ValueError):
         E.paired([])
+
+
+def test_environment_freeze_checks_versions(tmp_path: Path, monkeypatch: Any) -> None:
+    """Configuration hashes alone cannot authorize a changed execution environment."""
+    monkeypatch.setitem(B.MANIFEST, "status", "FROZEN_CONFIRMATORY")
+    target = tmp_path / "freeze.json"
+    E.persist(target, {"files": {}, "environment": {"python": "impossible"}})
+    with pytest.raises(RuntimeError, match="environment"):
+        E.preflight(target)
+
+
+def test_descriptive_audit_preserves_invalidity_and_missing_usage() -> None:
+    """Missing usage stays missing; source failure is distinct from trajectory quality."""
+    from artifacts.optimizer_discovery import evidence
+
+    proposals = [
+        {
+            "source": B.SEED_SOURCE,
+            "source_status": "valid",
+            "usage": {"total_tokens": 9},
+        },
+        {"source": "def :", "source_status": "syntax_error", "usage": {}},
+    ]
+    trajectories = [
+        {
+            "valid": False,
+            "candidate_valid": False,
+            "fallback_used": False,
+            "execution_s": 0.2,
+            "proposal_attempts": [{"status": "timeout"}],
+            "metrics": None,
+        },
+    ]
+    result = evidence.describe(proposals, trajectories)
+    assert result["source_invalid_fraction"] == 0.5
+    assert result["usage"]["total_tokens"] == {
+        "reported_sum": 9,
+        "reported_responses": 1,
+        "missing_responses": 1,
+    }
+    assert result["usage"]["cost_usd"]["reported_sum"] is None
+    assert result["proposal_status_counts"] == {"timeout": 1}
+    assert result["trajectory_invalid_fraction"] == 1
+    assert result["source_complexity"][1]["ast_nodes"] is None
+
+
+def test_provider_metadata_filter_does_not_persist_unknown_fields() -> None:
+    """Only declared safe provider metadata may enter scientific artifacts."""
+    from artifacts.optimizer_discovery import evidence
+
+    assert evidence.safe_metadata(
+        {"id": "x", "provider_name": "p", "secret": "private"}
+    ) == {"id": "x", "provider_name": "p"}
+
+
+def test_large_evidence_packaging_preserves_exact_json(tmp_path: Path) -> None:
+    """Large scientific records compress losslessly and remain readable on resume."""
+    value = {"verbatim": "a" * 600000}
+    path = tmp_path / "large.json"
+    E.persist(path, value)
+    assert not path.exists() and path.with_suffix(".json.gz").exists()
+    assert E.read(path) == value and E.exists(path)
+    E.persist(path, value)
+    with pytest.raises(RuntimeError, match="overwrite"):
+        E.persist(path, {"different": True})
