@@ -1,0 +1,3843 @@
+{
+  "label": "pilot_default_8000_19",
+  "provider_status": "success",
+  "attempts": [
+    {
+      "attempt": 1,
+      "status": "success",
+      "wall_s": 208.416,
+      "logs": ""
+    }
+  ],
+  "evaluations": [
+    {
+      "seed": 0,
+      "unit_id": "default:seed-0:matrix-0",
+      "plan_fingerprint": "23c8088d0b567c34791ba167d3c8635ba62b27da3756a18460bc11ef667176ee",
+      "spec_fingerprint": "23c8088d0b567c34791ba167d3c8635ba62b27da3756a18460bc11ef667176ee",
+      "engine": "fixed",
+      "module_ref": "recursive_opt.module.reasoning_workflow@1",
+      "status": "success",
+      "valid": true,
+      "evaluation": {
+        "valid": true,
+        "status": "ok",
+        "metrics": {
+          "value": 0.3075877077226214
+        },
+        "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+        "trace": null,
+        "usage": {
+          "forward": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "optimizer": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "feedback": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "judge": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          }
+        },
+        "artifacts": [
+          {
+            "status": "valid",
+            "evaluations": [
+              {
+                "x": [
+                  3.4442185152504816,
+                  2.5795440294030243
+                ],
+                "value": 15.900458336401355
+              },
+              {
+                "x": [
+                  -4.833093698844404,
+                  -4.854400250751877
+                ],
+                "value": 53.85013036729257
+              },
+              {
+                "x": [
+                  4.341303186968068,
+                  4.945252332595032
+                ],
+                "value": 41.99205452568809
+              },
+              {
+                "x": [
+                  4.206123829876306,
+                  -3.440021410616408
+                ],
+                "value": 15.974883287137253
+              },
+              {
+                "x": [
+                  0.9448684091058723,
+                  -0.11168773764325213
+                ],
+                "value": 0.500547832036571
+              },
+              {
+                "x": [
+                  -1.521154919723001,
+                  1.4406307299123577
+                ],
+                "value": 12.47816258394134
+              },
+              {
+                "x": [
+                  1.826971025561562,
+                  -0.6669852499122193
+                ],
+                "value": 0.33978701306969744
+              },
+              {
+                "x": [
+                  1.8039997318178589,
+                  -0.7240769433059713
+                ],
+                "value": 0.3075877077226214
+              }
+            ],
+            "proposals": [
+              {
+                "status": "valid",
+                "point": [
+                  3.4442185152504816,
+                  2.5795440294030243
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  -4.833093698844404,
+                  -4.854400250751877
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  4.341303186968068,
+                  4.945252332595032
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  4.206123829876306,
+                  -3.440021410616408
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.9448684091058723,
+                  -0.11168773764325213
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  -1.521154919723001,
+                  1.4406307299123577
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  1.826971025561562,
+                  -0.6669852499122193
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  1.8039997318178589,
+                  -0.7240769433059713
+                ],
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "budget": 8,
+            "valid": true,
+            "evaluated_count": 8,
+            "best_value": 0.3075877077226214,
+            "behavior_signature": [
+              [
+                3.4442185152504816,
+                2.5795440294030243
+              ],
+              [
+                -4.833093698844404,
+                -4.854400250751877
+              ],
+              [
+                4.341303186968068,
+                4.945252332595032
+              ],
+              [
+                4.206123829876306,
+                -3.440021410616408
+              ],
+              [
+                0.9448684091058723,
+                -0.11168773764325213
+              ],
+              [
+                -1.521154919723001,
+                1.4406307299123577
+              ],
+              [
+                1.826971025561562,
+                -0.6669852499122193
+              ],
+              [
+                1.8039997318178589,
+                -0.7240769433059713
+              ]
+            ]
+          }
+        ],
+        "error": null
+      },
+      "artifact": {
+        "components": {
+          "optimizer": "import math\nimport random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    ranges = [highs[i] - lows[i] for i in range(d)]\n\n    if not history:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Normalize history to [0,1]^d\n    X = []\n    y = []\n    for h in history:\n        x = h['x']\n        X.append([(x[i] - lows[i]) / ranges[i] for i in range(d)])\n        y.append(h['value'])\n\n    n = len(X)\n    if n == 0:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Hyperparameters\n    if n > 1:\n        y_mean = sum(y) / n\n        y_var = sum((v - y_mean) ** 2 for v in y) / n\n        sigma_f = math.sqrt(y_var) if y_var > 0 else 1.0\n    else:\n        sigma_f = 1.0\n    noise = 1e-6\n    prior_mean = sum(y) / n\n\n    def kernel(x1, x2):\n        dist2 = sum((x1[i] - x2[i]) ** 2 for i in range(d))\n        return sigma_f ** 2 * math.exp(-0.5 * dist2)\n\n    # Build and invert covariance matrix\n    def invert_matrix(A):\n        m = len(A)\n        aug = [row[:] + [1.0 if i == j else 0.0 for j in range(m)]\n               for i, row in enumerate(A)]\n        for col in range(m):\n            pivot = max(range(col, m), key=lambda r: abs(aug[r][col]))\n            if abs(aug[pivot][col]) < 1e-12:\n                raise ValueError(\"Singular\")\n            if pivot != col:\n                aug[col], aug[pivot] = aug[pivot], aug[col]\n            pv = aug[col][col]\n            for j in range(col, 2 * m):\n                aug[col][j] /= pv\n            for r in range(m):\n                if r != col:\n                    factor = aug[r][col]\n                    if factor != 0:\n                        for j in range(col, 2 * m):\n                            aug[r][j] -= factor * aug[col][j]\n        return [row[m:] for row in aug]\n\n    K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n          for j in range(n)] for i in range(n)]\n\n    try:\n        K_inv = invert_matrix(K)\n    except ValueError:\n        noise = 1e-3\n        K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n              for j in range(n)] for i in range(n)]\n        K_inv = invert_matrix(K)\n\n    y_centered = [v - prior_mean for v in y]\n    alpha = [sum(K_inv[i][j] * y_centered[j] for j in range(n))\n             for i in range(n)]\n\n    best_y = min(y)\n    best_idx = y.index(best_y)\n    best_x_norm = X[best_idx]\n\n    # Generate candidate points\n    candidates = []\n    for _ in range(100):\n        candidates.append([rng.uniform(0, 1) for _ in range(d)])\n    for _ in range(20):\n        cand = [best_x_norm[i] + rng.gauss(0, 0.1) for i in range(d)]\n        cand = [min(1.0, max(0.0, c)) for c in cand]\n        candidates.append(cand)\n\n    best_ei = -1.0\n    best_cand = None\n\n    for cand in candidates:\n        k_vec = [kernel(X[i], cand) for i in range(n)]\n        mean = prior_mean + sum(k_vec[i] * alpha[i] for i in range(n))\n        k_cand = kernel(cand, cand)\n        K_inv_k = [sum(K_inv[i][j] * k_vec[j] for j in range(n))\n                   for i in range(n)]\n        var = k_cand - sum(k_vec[i] * K_inv_k[i] for i in range(n))\n        if var < 0:\n            var = 0.0\n        sigma = math.sqrt(var)\n        if sigma < 1e-12:\n            ei = 0.0\n        else:\n            z = (best_y - mean) / sigma\n            phi = math.exp(-0.5 * z * z) / math.sqrt(2 * math.pi)\n            Phi = 0.5 * (1.0 + math.erf(z / math.sqrt(2)))\n            ei = sigma * (z * Phi + phi)\n        if ei > best_ei:\n            best_ei = ei\n            best_cand = cand\n\n    if best_cand is None:\n        best_cand = [rng.uniform(0, 1) for _ in range(d)]\n\n    result = [lows[i] + best_cand[i] * ranges[i] for i in range(d)]\n    result = [min(highs[i], max(lows[i], result[i])) for i in range(d)]\n    return result\n"
+        }
+      },
+      "lineage": [],
+      "usage": {
+        "judge": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        },
+        "optimizer": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        },
+        "feedback": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        },
+        "forward": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        }
+      },
+      "budget": {
+        "optimizer_llm_calls": null,
+        "eval_llm_calls": null,
+        "candidates": null,
+        "evaluator_runs": null,
+        "wall_time_s": null,
+        "total_tokens": null,
+        "on_exceed": "return_best_valid",
+        "accounted": {
+          "optimizer_llm_calls": 0,
+          "eval_llm_calls": 0,
+          "candidates": 0,
+          "candidates_reserved": 0,
+          "candidates_proposed": 0,
+          "candidates_evaluated": 0,
+          "evaluator_runs": 1,
+          "total_tokens": 0,
+          "wall_time_s": 0.660098
+        },
+        "exceeded": []
+      },
+      "metadata": {
+        "level_id": "level-0",
+        "engine_capabilities": [
+          "pareto",
+          "rich_trace",
+          "scalar",
+          "trace_module",
+          "weighted"
+        ],
+        "module_capabilities": [
+          "json_snapshot",
+          "multi_component",
+          "trace_module"
+        ],
+        "objective_mode": "scalar",
+        "candidate_trajectory": [],
+        "evaluator_records": [
+          {
+            "valid": true,
+            "status": "ok",
+            "metrics": {
+              "value": 0.3075877077226214
+            },
+            "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+            "trace": null,
+            "usage": {
+              "forward": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "optimizer": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "feedback": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "judge": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              }
+            },
+            "artifacts": [
+              {
+                "status": "valid",
+                "evaluations": [
+                  {
+                    "x": [
+                      3.4442185152504816,
+                      2.5795440294030243
+                    ],
+                    "value": 15.900458336401355
+                  },
+                  {
+                    "x": [
+                      -4.833093698844404,
+                      -4.854400250751877
+                    ],
+                    "value": 53.85013036729257
+                  },
+                  {
+                    "x": [
+                      4.341303186968068,
+                      4.945252332595032
+                    ],
+                    "value": 41.99205452568809
+                  },
+                  {
+                    "x": [
+                      4.206123829876306,
+                      -3.440021410616408
+                    ],
+                    "value": 15.974883287137253
+                  },
+                  {
+                    "x": [
+                      0.9448684091058723,
+                      -0.11168773764325213
+                    ],
+                    "value": 0.500547832036571
+                  },
+                  {
+                    "x": [
+                      -1.521154919723001,
+                      1.4406307299123577
+                    ],
+                    "value": 12.47816258394134
+                  },
+                  {
+                    "x": [
+                      1.826971025561562,
+                      -0.6669852499122193
+                    ],
+                    "value": 0.33978701306969744
+                  },
+                  {
+                    "x": [
+                      1.8039997318178589,
+                      -0.7240769433059713
+                    ],
+                    "value": 0.3075877077226214
+                  }
+                ],
+                "proposals": [
+                  {
+                    "status": "valid",
+                    "point": [
+                      3.4442185152504816,
+                      2.5795440294030243
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      -4.833093698844404,
+                      -4.854400250751877
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.341303186968068,
+                      4.945252332595032
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.206123829876306,
+                      -3.440021410616408
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      0.9448684091058723,
+                      -0.11168773764325213
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      -1.521154919723001,
+                      1.4406307299123577
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      1.826971025561562,
+                      -0.6669852499122193
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      1.8039997318178589,
+                      -0.7240769433059713
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  }
+                ],
+                "budget": 8,
+                "valid": true,
+                "evaluated_count": 8,
+                "best_value": 0.3075877077226214,
+                "behavior_signature": [
+                  [
+                    3.4442185152504816,
+                    2.5795440294030243
+                  ],
+                  [
+                    -4.833093698844404,
+                    -4.854400250751877
+                  ],
+                  [
+                    4.341303186968068,
+                    4.945252332595032
+                  ],
+                  [
+                    4.206123829876306,
+                    -3.440021410616408
+                  ],
+                  [
+                    0.9448684091058723,
+                    -0.11168773764325213
+                  ],
+                  [
+                    -1.521154919723001,
+                    1.4406307299123577
+                  ],
+                  [
+                    1.826971025561562,
+                    -0.6669852499122193
+                  ],
+                  [
+                    1.8039997318178589,
+                    -0.7240769433059713
+                  ]
+                ]
+              }
+            ],
+            "error": null
+          }
+        ],
+        "trace_optimize_path": false,
+        "selected_models": {
+          "feedback": null,
+          "forward": null,
+          "judge": null,
+          "optimizer": null
+        },
+        "budget_exhausted": null,
+        "optimizer_response_diagnostics": [],
+        "menu_observations": [],
+        "menu_evidence": {
+          "declared_menu_size": null,
+          "evaluated_candidate_count": 0,
+          "evaluation_observation_count": 0,
+          "valid_candidate_count": 0,
+          "effective_menu_size": null,
+          "menu_collapsed": null,
+          "basis_of_equivalence": "unavailable",
+          "behavior_equivalence_known": false,
+          "common_example_count": 0
+        },
+        "level_ids": [
+          "level-0"
+        ],
+        "resolved_models": {
+          "level-0": {
+            "feedback": null,
+            "forward": null,
+            "judge": null,
+            "optimizer": null
+          }
+        },
+        "test_overrides": {},
+        "arm_id": "default",
+        "seed": 0,
+        "matrix": {}
+      },
+      "error": null,
+      "level_results": [
+        {
+          "unit_id": "default:seed-0:matrix-0:level-0",
+          "plan_fingerprint": "23c8088d0b567c34791ba167d3c8635ba62b27da3756a18460bc11ef667176ee",
+          "spec_fingerprint": "23c8088d0b567c34791ba167d3c8635ba62b27da3756a18460bc11ef667176ee",
+          "engine": "fixed",
+          "module_ref": "recursive_opt.module.reasoning_workflow@1",
+          "status": "success",
+          "valid": true,
+          "evaluation": {
+            "valid": true,
+            "status": "ok",
+            "metrics": {
+              "value": 0.3075877077226214
+            },
+            "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+            "trace": null,
+            "usage": {
+              "forward": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "optimizer": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "feedback": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "judge": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              }
+            },
+            "artifacts": [
+              {
+                "status": "valid",
+                "evaluations": [
+                  {
+                    "x": [
+                      3.4442185152504816,
+                      2.5795440294030243
+                    ],
+                    "value": 15.900458336401355
+                  },
+                  {
+                    "x": [
+                      -4.833093698844404,
+                      -4.854400250751877
+                    ],
+                    "value": 53.85013036729257
+                  },
+                  {
+                    "x": [
+                      4.341303186968068,
+                      4.945252332595032
+                    ],
+                    "value": 41.99205452568809
+                  },
+                  {
+                    "x": [
+                      4.206123829876306,
+                      -3.440021410616408
+                    ],
+                    "value": 15.974883287137253
+                  },
+                  {
+                    "x": [
+                      0.9448684091058723,
+                      -0.11168773764325213
+                    ],
+                    "value": 0.500547832036571
+                  },
+                  {
+                    "x": [
+                      -1.521154919723001,
+                      1.4406307299123577
+                    ],
+                    "value": 12.47816258394134
+                  },
+                  {
+                    "x": [
+                      1.826971025561562,
+                      -0.6669852499122193
+                    ],
+                    "value": 0.33978701306969744
+                  },
+                  {
+                    "x": [
+                      1.8039997318178589,
+                      -0.7240769433059713
+                    ],
+                    "value": 0.3075877077226214
+                  }
+                ],
+                "proposals": [
+                  {
+                    "status": "valid",
+                    "point": [
+                      3.4442185152504816,
+                      2.5795440294030243
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      -4.833093698844404,
+                      -4.854400250751877
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.341303186968068,
+                      4.945252332595032
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.206123829876306,
+                      -3.440021410616408
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      0.9448684091058723,
+                      -0.11168773764325213
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      -1.521154919723001,
+                      1.4406307299123577
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      1.826971025561562,
+                      -0.6669852499122193
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      1.8039997318178589,
+                      -0.7240769433059713
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  }
+                ],
+                "budget": 8,
+                "valid": true,
+                "evaluated_count": 8,
+                "best_value": 0.3075877077226214,
+                "behavior_signature": [
+                  [
+                    3.4442185152504816,
+                    2.5795440294030243
+                  ],
+                  [
+                    -4.833093698844404,
+                    -4.854400250751877
+                  ],
+                  [
+                    4.341303186968068,
+                    4.945252332595032
+                  ],
+                  [
+                    4.206123829876306,
+                    -3.440021410616408
+                  ],
+                  [
+                    0.9448684091058723,
+                    -0.11168773764325213
+                  ],
+                  [
+                    -1.521154919723001,
+                    1.4406307299123577
+                  ],
+                  [
+                    1.826971025561562,
+                    -0.6669852499122193
+                  ],
+                  [
+                    1.8039997318178589,
+                    -0.7240769433059713
+                  ]
+                ]
+              }
+            ],
+            "error": null
+          },
+          "artifact": {
+            "components": {
+              "optimizer": "import math\nimport random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    ranges = [highs[i] - lows[i] for i in range(d)]\n\n    if not history:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Normalize history to [0,1]^d\n    X = []\n    y = []\n    for h in history:\n        x = h['x']\n        X.append([(x[i] - lows[i]) / ranges[i] for i in range(d)])\n        y.append(h['value'])\n\n    n = len(X)\n    if n == 0:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Hyperparameters\n    if n > 1:\n        y_mean = sum(y) / n\n        y_var = sum((v - y_mean) ** 2 for v in y) / n\n        sigma_f = math.sqrt(y_var) if y_var > 0 else 1.0\n    else:\n        sigma_f = 1.0\n    noise = 1e-6\n    prior_mean = sum(y) / n\n\n    def kernel(x1, x2):\n        dist2 = sum((x1[i] - x2[i]) ** 2 for i in range(d))\n        return sigma_f ** 2 * math.exp(-0.5 * dist2)\n\n    # Build and invert covariance matrix\n    def invert_matrix(A):\n        m = len(A)\n        aug = [row[:] + [1.0 if i == j else 0.0 for j in range(m)]\n               for i, row in enumerate(A)]\n        for col in range(m):\n            pivot = max(range(col, m), key=lambda r: abs(aug[r][col]))\n            if abs(aug[pivot][col]) < 1e-12:\n                raise ValueError(\"Singular\")\n            if pivot != col:\n                aug[col], aug[pivot] = aug[pivot], aug[col]\n            pv = aug[col][col]\n            for j in range(col, 2 * m):\n                aug[col][j] /= pv\n            for r in range(m):\n                if r != col:\n                    factor = aug[r][col]\n                    if factor != 0:\n                        for j in range(col, 2 * m):\n                            aug[r][j] -= factor * aug[col][j]\n        return [row[m:] for row in aug]\n\n    K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n          for j in range(n)] for i in range(n)]\n\n    try:\n        K_inv = invert_matrix(K)\n    except ValueError:\n        noise = 1e-3\n        K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n              for j in range(n)] for i in range(n)]\n        K_inv = invert_matrix(K)\n\n    y_centered = [v - prior_mean for v in y]\n    alpha = [sum(K_inv[i][j] * y_centered[j] for j in range(n))\n             for i in range(n)]\n\n    best_y = min(y)\n    best_idx = y.index(best_y)\n    best_x_norm = X[best_idx]\n\n    # Generate candidate points\n    candidates = []\n    for _ in range(100):\n        candidates.append([rng.uniform(0, 1) for _ in range(d)])\n    for _ in range(20):\n        cand = [best_x_norm[i] + rng.gauss(0, 0.1) for i in range(d)]\n        cand = [min(1.0, max(0.0, c)) for c in cand]\n        candidates.append(cand)\n\n    best_ei = -1.0\n    best_cand = None\n\n    for cand in candidates:\n        k_vec = [kernel(X[i], cand) for i in range(n)]\n        mean = prior_mean + sum(k_vec[i] * alpha[i] for i in range(n))\n        k_cand = kernel(cand, cand)\n        K_inv_k = [sum(K_inv[i][j] * k_vec[j] for j in range(n))\n                   for i in range(n)]\n        var = k_cand - sum(k_vec[i] * K_inv_k[i] for i in range(n))\n        if var < 0:\n            var = 0.0\n        sigma = math.sqrt(var)\n        if sigma < 1e-12:\n            ei = 0.0\n        else:\n            z = (best_y - mean) / sigma\n            phi = math.exp(-0.5 * z * z) / math.sqrt(2 * math.pi)\n            Phi = 0.5 * (1.0 + math.erf(z / math.sqrt(2)))\n            ei = sigma * (z * Phi + phi)\n        if ei > best_ei:\n            best_ei = ei\n            best_cand = cand\n\n    if best_cand is None:\n        best_cand = [rng.uniform(0, 1) for _ in range(d)]\n\n    result = [lows[i] + best_cand[i] * ranges[i] for i in range(d)]\n    result = [min(highs[i], max(lows[i], result[i])) for i in range(d)]\n    return result\n"
+            }
+          },
+          "lineage": [],
+          "usage": {
+            "judge": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            },
+            "optimizer": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            },
+            "feedback": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            },
+            "forward": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            }
+          },
+          "budget": {
+            "optimizer_llm_calls": null,
+            "eval_llm_calls": null,
+            "candidates": null,
+            "evaluator_runs": null,
+            "wall_time_s": null,
+            "total_tokens": null,
+            "on_exceed": "return_best_valid",
+            "accounted": {
+              "optimizer_llm_calls": 0,
+              "eval_llm_calls": 0,
+              "candidates": 0,
+              "candidates_reserved": 0,
+              "candidates_proposed": 0,
+              "candidates_evaluated": 0,
+              "evaluator_runs": 1,
+              "total_tokens": 0,
+              "wall_time_s": 0.658309
+            },
+            "exceeded": []
+          },
+          "metadata": {
+            "level_id": "level-0",
+            "engine_capabilities": [
+              "pareto",
+              "rich_trace",
+              "scalar",
+              "trace_module",
+              "weighted"
+            ],
+            "module_capabilities": [
+              "json_snapshot",
+              "multi_component",
+              "trace_module"
+            ],
+            "objective_mode": "scalar",
+            "candidate_trajectory": [],
+            "evaluator_records": [
+              {
+                "valid": true,
+                "status": "ok",
+                "metrics": {
+                  "value": 0.3075877077226214
+                },
+                "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+                "trace": null,
+                "usage": {
+                  "forward": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  },
+                  "optimizer": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  },
+                  "feedback": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  },
+                  "judge": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  }
+                },
+                "artifacts": [
+                  {
+                    "status": "valid",
+                    "evaluations": [
+                      {
+                        "x": [
+                          3.4442185152504816,
+                          2.5795440294030243
+                        ],
+                        "value": 15.900458336401355
+                      },
+                      {
+                        "x": [
+                          -4.833093698844404,
+                          -4.854400250751877
+                        ],
+                        "value": 53.85013036729257
+                      },
+                      {
+                        "x": [
+                          4.341303186968068,
+                          4.945252332595032
+                        ],
+                        "value": 41.99205452568809
+                      },
+                      {
+                        "x": [
+                          4.206123829876306,
+                          -3.440021410616408
+                        ],
+                        "value": 15.974883287137253
+                      },
+                      {
+                        "x": [
+                          0.9448684091058723,
+                          -0.11168773764325213
+                        ],
+                        "value": 0.500547832036571
+                      },
+                      {
+                        "x": [
+                          -1.521154919723001,
+                          1.4406307299123577
+                        ],
+                        "value": 12.47816258394134
+                      },
+                      {
+                        "x": [
+                          1.826971025561562,
+                          -0.6669852499122193
+                        ],
+                        "value": 0.33978701306969744
+                      },
+                      {
+                        "x": [
+                          1.8039997318178589,
+                          -0.7240769433059713
+                        ],
+                        "value": 0.3075877077226214
+                      }
+                    ],
+                    "proposals": [
+                      {
+                        "status": "valid",
+                        "point": [
+                          3.4442185152504816,
+                          2.5795440294030243
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          -4.833093698844404,
+                          -4.854400250751877
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          4.341303186968068,
+                          4.945252332595032
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          4.206123829876306,
+                          -3.440021410616408
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          0.9448684091058723,
+                          -0.11168773764325213
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          -1.521154919723001,
+                          1.4406307299123577
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          1.826971025561562,
+                          -0.6669852499122193
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          1.8039997318178589,
+                          -0.7240769433059713
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      }
+                    ],
+                    "budget": 8,
+                    "valid": true,
+                    "evaluated_count": 8,
+                    "best_value": 0.3075877077226214,
+                    "behavior_signature": [
+                      [
+                        3.4442185152504816,
+                        2.5795440294030243
+                      ],
+                      [
+                        -4.833093698844404,
+                        -4.854400250751877
+                      ],
+                      [
+                        4.341303186968068,
+                        4.945252332595032
+                      ],
+                      [
+                        4.206123829876306,
+                        -3.440021410616408
+                      ],
+                      [
+                        0.9448684091058723,
+                        -0.11168773764325213
+                      ],
+                      [
+                        -1.521154919723001,
+                        1.4406307299123577
+                      ],
+                      [
+                        1.826971025561562,
+                        -0.6669852499122193
+                      ],
+                      [
+                        1.8039997318178589,
+                        -0.7240769433059713
+                      ]
+                    ]
+                  }
+                ],
+                "error": null
+              }
+            ],
+            "trace_optimize_path": false,
+            "selected_models": {
+              "feedback": null,
+              "forward": null,
+              "judge": null,
+              "optimizer": null
+            },
+            "budget_exhausted": null,
+            "optimizer_response_diagnostics": [],
+            "menu_observations": [],
+            "menu_evidence": {
+              "declared_menu_size": null,
+              "evaluated_candidate_count": 0,
+              "evaluation_observation_count": 0,
+              "valid_candidate_count": 0,
+              "effective_menu_size": null,
+              "menu_collapsed": null,
+              "basis_of_equivalence": "unavailable",
+              "behavior_equivalence_known": false,
+              "common_example_count": 0
+            }
+          },
+          "error": null,
+          "level_results": [],
+          "portable": true,
+          "promotable": true
+        }
+      ],
+      "portable": true,
+      "promotable": true
+    },
+    {
+      "seed": 1,
+      "unit_id": "default:seed-1:matrix-0",
+      "plan_fingerprint": "eededb47060fa2dc698f409f2688cbeb343714e11953f8387c7604a57e309221",
+      "spec_fingerprint": "eededb47060fa2dc698f409f2688cbeb343714e11953f8387c7604a57e309221",
+      "engine": "fixed",
+      "module_ref": "recursive_opt.module.reasoning_workflow@1",
+      "status": "success",
+      "valid": true,
+      "evaluation": {
+        "valid": true,
+        "status": "ok",
+        "metrics": {
+          "value": 0.21740805102870717
+        },
+        "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+        "trace": null,
+        "usage": {
+          "forward": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "optimizer": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "feedback": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "judge": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          }
+        },
+        "artifacts": [
+          {
+            "status": "valid",
+            "evaluations": [
+              {
+                "x": [
+                  -3.656357558875988,
+                  3.4743373693723267
+                ],
+                "value": 41.91737070581505
+              },
+              {
+                "x": [
+                  4.900015462028012,
+                  -3.4857989124344844
+                ],
+                "value": 20.80720856232127
+              },
+              {
+                "x": [
+                  5.0,
+                  -4.466512214094426
+                ],
+                "value": 27.874963037513048
+              },
+              {
+                "x": [
+                  4.71088277400143,
+                  4.617738174487725
+                ],
+                "value": 40.790322685232645
+              },
+              {
+                "x": [
+                  4.760075697466309,
+                  -0.4646001040837664
+                ],
+                "value": 12.402084502532594
+              },
+              {
+                "x": [
+                  2.4631303547566787,
+                  -1.0223570394529737
+                ],
+                "value": 1.5458636145716538
+              },
+              {
+                "x": [
+                  -1.7033500495223763,
+                  -2.769583268968149
+                ],
+                "value": 12.800993095309899
+              },
+              {
+                "x": [
+                  1.6578455386965674,
+                  -0.5240131251731333
+                ],
+                "value": 0.21740805102870717
+              }
+            ],
+            "proposals": [
+              {
+                "status": "valid",
+                "point": [
+                  -3.656357558875988,
+                  3.4743373693723267
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  4.900015462028012,
+                  -3.4857989124344844
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  5.0,
+                  -4.466512214094426
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  4.71088277400143,
+                  4.617738174487725
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  4.760075697466309,
+                  -0.4646001040837664
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  2.4631303547566787,
+                  -1.0223570394529737
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  -1.7033500495223763,
+                  -2.769583268968149
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  1.6578455386965674,
+                  -0.5240131251731333
+                ],
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "budget": 8,
+            "valid": true,
+            "evaluated_count": 8,
+            "best_value": 0.21740805102870717,
+            "behavior_signature": [
+              [
+                -3.656357558875988,
+                3.4743373693723267
+              ],
+              [
+                4.900015462028012,
+                -3.4857989124344844
+              ],
+              [
+                5.0,
+                -4.466512214094426
+              ],
+              [
+                4.71088277400143,
+                4.617738174487725
+              ],
+              [
+                4.760075697466309,
+                -0.4646001040837664
+              ],
+              [
+                2.4631303547566787,
+                -1.0223570394529737
+              ],
+              [
+                -1.7033500495223763,
+                -2.769583268968149
+              ],
+              [
+                1.6578455386965674,
+                -0.5240131251731333
+              ]
+            ]
+          }
+        ],
+        "error": null
+      },
+      "artifact": {
+        "components": {
+          "optimizer": "import math\nimport random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    ranges = [highs[i] - lows[i] for i in range(d)]\n\n    if not history:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Normalize history to [0,1]^d\n    X = []\n    y = []\n    for h in history:\n        x = h['x']\n        X.append([(x[i] - lows[i]) / ranges[i] for i in range(d)])\n        y.append(h['value'])\n\n    n = len(X)\n    if n == 0:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Hyperparameters\n    if n > 1:\n        y_mean = sum(y) / n\n        y_var = sum((v - y_mean) ** 2 for v in y) / n\n        sigma_f = math.sqrt(y_var) if y_var > 0 else 1.0\n    else:\n        sigma_f = 1.0\n    noise = 1e-6\n    prior_mean = sum(y) / n\n\n    def kernel(x1, x2):\n        dist2 = sum((x1[i] - x2[i]) ** 2 for i in range(d))\n        return sigma_f ** 2 * math.exp(-0.5 * dist2)\n\n    # Build and invert covariance matrix\n    def invert_matrix(A):\n        m = len(A)\n        aug = [row[:] + [1.0 if i == j else 0.0 for j in range(m)]\n               for i, row in enumerate(A)]\n        for col in range(m):\n            pivot = max(range(col, m), key=lambda r: abs(aug[r][col]))\n            if abs(aug[pivot][col]) < 1e-12:\n                raise ValueError(\"Singular\")\n            if pivot != col:\n                aug[col], aug[pivot] = aug[pivot], aug[col]\n            pv = aug[col][col]\n            for j in range(col, 2 * m):\n                aug[col][j] /= pv\n            for r in range(m):\n                if r != col:\n                    factor = aug[r][col]\n                    if factor != 0:\n                        for j in range(col, 2 * m):\n                            aug[r][j] -= factor * aug[col][j]\n        return [row[m:] for row in aug]\n\n    K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n          for j in range(n)] for i in range(n)]\n\n    try:\n        K_inv = invert_matrix(K)\n    except ValueError:\n        noise = 1e-3\n        K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n              for j in range(n)] for i in range(n)]\n        K_inv = invert_matrix(K)\n\n    y_centered = [v - prior_mean for v in y]\n    alpha = [sum(K_inv[i][j] * y_centered[j] for j in range(n))\n             for i in range(n)]\n\n    best_y = min(y)\n    best_idx = y.index(best_y)\n    best_x_norm = X[best_idx]\n\n    # Generate candidate points\n    candidates = []\n    for _ in range(100):\n        candidates.append([rng.uniform(0, 1) for _ in range(d)])\n    for _ in range(20):\n        cand = [best_x_norm[i] + rng.gauss(0, 0.1) for i in range(d)]\n        cand = [min(1.0, max(0.0, c)) for c in cand]\n        candidates.append(cand)\n\n    best_ei = -1.0\n    best_cand = None\n\n    for cand in candidates:\n        k_vec = [kernel(X[i], cand) for i in range(n)]\n        mean = prior_mean + sum(k_vec[i] * alpha[i] for i in range(n))\n        k_cand = kernel(cand, cand)\n        K_inv_k = [sum(K_inv[i][j] * k_vec[j] for j in range(n))\n                   for i in range(n)]\n        var = k_cand - sum(k_vec[i] * K_inv_k[i] for i in range(n))\n        if var < 0:\n            var = 0.0\n        sigma = math.sqrt(var)\n        if sigma < 1e-12:\n            ei = 0.0\n        else:\n            z = (best_y - mean) / sigma\n            phi = math.exp(-0.5 * z * z) / math.sqrt(2 * math.pi)\n            Phi = 0.5 * (1.0 + math.erf(z / math.sqrt(2)))\n            ei = sigma * (z * Phi + phi)\n        if ei > best_ei:\n            best_ei = ei\n            best_cand = cand\n\n    if best_cand is None:\n        best_cand = [rng.uniform(0, 1) for _ in range(d)]\n\n    result = [lows[i] + best_cand[i] * ranges[i] for i in range(d)]\n    result = [min(highs[i], max(lows[i], result[i])) for i in range(d)]\n    return result\n"
+        }
+      },
+      "lineage": [],
+      "usage": {
+        "judge": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        },
+        "optimizer": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        },
+        "feedback": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        },
+        "forward": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        }
+      },
+      "budget": {
+        "optimizer_llm_calls": null,
+        "eval_llm_calls": null,
+        "candidates": null,
+        "evaluator_runs": null,
+        "wall_time_s": null,
+        "total_tokens": null,
+        "on_exceed": "return_best_valid",
+        "accounted": {
+          "optimizer_llm_calls": 0,
+          "eval_llm_calls": 0,
+          "candidates": 0,
+          "candidates_reserved": 0,
+          "candidates_proposed": 0,
+          "candidates_evaluated": 0,
+          "evaluator_runs": 1,
+          "total_tokens": 0,
+          "wall_time_s": 0.982992
+        },
+        "exceeded": []
+      },
+      "metadata": {
+        "level_id": "level-0",
+        "engine_capabilities": [
+          "pareto",
+          "rich_trace",
+          "scalar",
+          "trace_module",
+          "weighted"
+        ],
+        "module_capabilities": [
+          "json_snapshot",
+          "multi_component",
+          "trace_module"
+        ],
+        "objective_mode": "scalar",
+        "candidate_trajectory": [],
+        "evaluator_records": [
+          {
+            "valid": true,
+            "status": "ok",
+            "metrics": {
+              "value": 0.21740805102870717
+            },
+            "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+            "trace": null,
+            "usage": {
+              "forward": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "optimizer": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "feedback": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "judge": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              }
+            },
+            "artifacts": [
+              {
+                "status": "valid",
+                "evaluations": [
+                  {
+                    "x": [
+                      -3.656357558875988,
+                      3.4743373693723267
+                    ],
+                    "value": 41.91737070581505
+                  },
+                  {
+                    "x": [
+                      4.900015462028012,
+                      -3.4857989124344844
+                    ],
+                    "value": 20.80720856232127
+                  },
+                  {
+                    "x": [
+                      5.0,
+                      -4.466512214094426
+                    ],
+                    "value": 27.874963037513048
+                  },
+                  {
+                    "x": [
+                      4.71088277400143,
+                      4.617738174487725
+                    ],
+                    "value": 40.790322685232645
+                  },
+                  {
+                    "x": [
+                      4.760075697466309,
+                      -0.4646001040837664
+                    ],
+                    "value": 12.402084502532594
+                  },
+                  {
+                    "x": [
+                      2.4631303547566787,
+                      -1.0223570394529737
+                    ],
+                    "value": 1.5458636145716538
+                  },
+                  {
+                    "x": [
+                      -1.7033500495223763,
+                      -2.769583268968149
+                    ],
+                    "value": 12.800993095309899
+                  },
+                  {
+                    "x": [
+                      1.6578455386965674,
+                      -0.5240131251731333
+                    ],
+                    "value": 0.21740805102870717
+                  }
+                ],
+                "proposals": [
+                  {
+                    "status": "valid",
+                    "point": [
+                      -3.656357558875988,
+                      3.4743373693723267
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.900015462028012,
+                      -3.4857989124344844
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      5.0,
+                      -4.466512214094426
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.71088277400143,
+                      4.617738174487725
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.760075697466309,
+                      -0.4646001040837664
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      2.4631303547566787,
+                      -1.0223570394529737
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      -1.7033500495223763,
+                      -2.769583268968149
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      1.6578455386965674,
+                      -0.5240131251731333
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  }
+                ],
+                "budget": 8,
+                "valid": true,
+                "evaluated_count": 8,
+                "best_value": 0.21740805102870717,
+                "behavior_signature": [
+                  [
+                    -3.656357558875988,
+                    3.4743373693723267
+                  ],
+                  [
+                    4.900015462028012,
+                    -3.4857989124344844
+                  ],
+                  [
+                    5.0,
+                    -4.466512214094426
+                  ],
+                  [
+                    4.71088277400143,
+                    4.617738174487725
+                  ],
+                  [
+                    4.760075697466309,
+                    -0.4646001040837664
+                  ],
+                  [
+                    2.4631303547566787,
+                    -1.0223570394529737
+                  ],
+                  [
+                    -1.7033500495223763,
+                    -2.769583268968149
+                  ],
+                  [
+                    1.6578455386965674,
+                    -0.5240131251731333
+                  ]
+                ]
+              }
+            ],
+            "error": null
+          }
+        ],
+        "trace_optimize_path": false,
+        "selected_models": {
+          "feedback": null,
+          "forward": null,
+          "judge": null,
+          "optimizer": null
+        },
+        "budget_exhausted": null,
+        "optimizer_response_diagnostics": [],
+        "menu_observations": [],
+        "menu_evidence": {
+          "declared_menu_size": null,
+          "evaluated_candidate_count": 0,
+          "evaluation_observation_count": 0,
+          "valid_candidate_count": 0,
+          "effective_menu_size": null,
+          "menu_collapsed": null,
+          "basis_of_equivalence": "unavailable",
+          "behavior_equivalence_known": false,
+          "common_example_count": 0
+        },
+        "level_ids": [
+          "level-0"
+        ],
+        "resolved_models": {
+          "level-0": {
+            "feedback": null,
+            "forward": null,
+            "judge": null,
+            "optimizer": null
+          }
+        },
+        "test_overrides": {},
+        "arm_id": "default",
+        "seed": 1,
+        "matrix": {}
+      },
+      "error": null,
+      "level_results": [
+        {
+          "unit_id": "default:seed-1:matrix-0:level-0",
+          "plan_fingerprint": "eededb47060fa2dc698f409f2688cbeb343714e11953f8387c7604a57e309221",
+          "spec_fingerprint": "eededb47060fa2dc698f409f2688cbeb343714e11953f8387c7604a57e309221",
+          "engine": "fixed",
+          "module_ref": "recursive_opt.module.reasoning_workflow@1",
+          "status": "success",
+          "valid": true,
+          "evaluation": {
+            "valid": true,
+            "status": "ok",
+            "metrics": {
+              "value": 0.21740805102870717
+            },
+            "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+            "trace": null,
+            "usage": {
+              "forward": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "optimizer": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "feedback": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "judge": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              }
+            },
+            "artifacts": [
+              {
+                "status": "valid",
+                "evaluations": [
+                  {
+                    "x": [
+                      -3.656357558875988,
+                      3.4743373693723267
+                    ],
+                    "value": 41.91737070581505
+                  },
+                  {
+                    "x": [
+                      4.900015462028012,
+                      -3.4857989124344844
+                    ],
+                    "value": 20.80720856232127
+                  },
+                  {
+                    "x": [
+                      5.0,
+                      -4.466512214094426
+                    ],
+                    "value": 27.874963037513048
+                  },
+                  {
+                    "x": [
+                      4.71088277400143,
+                      4.617738174487725
+                    ],
+                    "value": 40.790322685232645
+                  },
+                  {
+                    "x": [
+                      4.760075697466309,
+                      -0.4646001040837664
+                    ],
+                    "value": 12.402084502532594
+                  },
+                  {
+                    "x": [
+                      2.4631303547566787,
+                      -1.0223570394529737
+                    ],
+                    "value": 1.5458636145716538
+                  },
+                  {
+                    "x": [
+                      -1.7033500495223763,
+                      -2.769583268968149
+                    ],
+                    "value": 12.800993095309899
+                  },
+                  {
+                    "x": [
+                      1.6578455386965674,
+                      -0.5240131251731333
+                    ],
+                    "value": 0.21740805102870717
+                  }
+                ],
+                "proposals": [
+                  {
+                    "status": "valid",
+                    "point": [
+                      -3.656357558875988,
+                      3.4743373693723267
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.900015462028012,
+                      -3.4857989124344844
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      5.0,
+                      -4.466512214094426
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.71088277400143,
+                      4.617738174487725
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.760075697466309,
+                      -0.4646001040837664
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      2.4631303547566787,
+                      -1.0223570394529737
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      -1.7033500495223763,
+                      -2.769583268968149
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      1.6578455386965674,
+                      -0.5240131251731333
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  }
+                ],
+                "budget": 8,
+                "valid": true,
+                "evaluated_count": 8,
+                "best_value": 0.21740805102870717,
+                "behavior_signature": [
+                  [
+                    -3.656357558875988,
+                    3.4743373693723267
+                  ],
+                  [
+                    4.900015462028012,
+                    -3.4857989124344844
+                  ],
+                  [
+                    5.0,
+                    -4.466512214094426
+                  ],
+                  [
+                    4.71088277400143,
+                    4.617738174487725
+                  ],
+                  [
+                    4.760075697466309,
+                    -0.4646001040837664
+                  ],
+                  [
+                    2.4631303547566787,
+                    -1.0223570394529737
+                  ],
+                  [
+                    -1.7033500495223763,
+                    -2.769583268968149
+                  ],
+                  [
+                    1.6578455386965674,
+                    -0.5240131251731333
+                  ]
+                ]
+              }
+            ],
+            "error": null
+          },
+          "artifact": {
+            "components": {
+              "optimizer": "import math\nimport random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    ranges = [highs[i] - lows[i] for i in range(d)]\n\n    if not history:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Normalize history to [0,1]^d\n    X = []\n    y = []\n    for h in history:\n        x = h['x']\n        X.append([(x[i] - lows[i]) / ranges[i] for i in range(d)])\n        y.append(h['value'])\n\n    n = len(X)\n    if n == 0:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Hyperparameters\n    if n > 1:\n        y_mean = sum(y) / n\n        y_var = sum((v - y_mean) ** 2 for v in y) / n\n        sigma_f = math.sqrt(y_var) if y_var > 0 else 1.0\n    else:\n        sigma_f = 1.0\n    noise = 1e-6\n    prior_mean = sum(y) / n\n\n    def kernel(x1, x2):\n        dist2 = sum((x1[i] - x2[i]) ** 2 for i in range(d))\n        return sigma_f ** 2 * math.exp(-0.5 * dist2)\n\n    # Build and invert covariance matrix\n    def invert_matrix(A):\n        m = len(A)\n        aug = [row[:] + [1.0 if i == j else 0.0 for j in range(m)]\n               for i, row in enumerate(A)]\n        for col in range(m):\n            pivot = max(range(col, m), key=lambda r: abs(aug[r][col]))\n            if abs(aug[pivot][col]) < 1e-12:\n                raise ValueError(\"Singular\")\n            if pivot != col:\n                aug[col], aug[pivot] = aug[pivot], aug[col]\n            pv = aug[col][col]\n            for j in range(col, 2 * m):\n                aug[col][j] /= pv\n            for r in range(m):\n                if r != col:\n                    factor = aug[r][col]\n                    if factor != 0:\n                        for j in range(col, 2 * m):\n                            aug[r][j] -= factor * aug[col][j]\n        return [row[m:] for row in aug]\n\n    K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n          for j in range(n)] for i in range(n)]\n\n    try:\n        K_inv = invert_matrix(K)\n    except ValueError:\n        noise = 1e-3\n        K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n              for j in range(n)] for i in range(n)]\n        K_inv = invert_matrix(K)\n\n    y_centered = [v - prior_mean for v in y]\n    alpha = [sum(K_inv[i][j] * y_centered[j] for j in range(n))\n             for i in range(n)]\n\n    best_y = min(y)\n    best_idx = y.index(best_y)\n    best_x_norm = X[best_idx]\n\n    # Generate candidate points\n    candidates = []\n    for _ in range(100):\n        candidates.append([rng.uniform(0, 1) for _ in range(d)])\n    for _ in range(20):\n        cand = [best_x_norm[i] + rng.gauss(0, 0.1) for i in range(d)]\n        cand = [min(1.0, max(0.0, c)) for c in cand]\n        candidates.append(cand)\n\n    best_ei = -1.0\n    best_cand = None\n\n    for cand in candidates:\n        k_vec = [kernel(X[i], cand) for i in range(n)]\n        mean = prior_mean + sum(k_vec[i] * alpha[i] for i in range(n))\n        k_cand = kernel(cand, cand)\n        K_inv_k = [sum(K_inv[i][j] * k_vec[j] for j in range(n))\n                   for i in range(n)]\n        var = k_cand - sum(k_vec[i] * K_inv_k[i] for i in range(n))\n        if var < 0:\n            var = 0.0\n        sigma = math.sqrt(var)\n        if sigma < 1e-12:\n            ei = 0.0\n        else:\n            z = (best_y - mean) / sigma\n            phi = math.exp(-0.5 * z * z) / math.sqrt(2 * math.pi)\n            Phi = 0.5 * (1.0 + math.erf(z / math.sqrt(2)))\n            ei = sigma * (z * Phi + phi)\n        if ei > best_ei:\n            best_ei = ei\n            best_cand = cand\n\n    if best_cand is None:\n        best_cand = [rng.uniform(0, 1) for _ in range(d)]\n\n    result = [lows[i] + best_cand[i] * ranges[i] for i in range(d)]\n    result = [min(highs[i], max(lows[i], result[i])) for i in range(d)]\n    return result\n"
+            }
+          },
+          "lineage": [],
+          "usage": {
+            "judge": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            },
+            "optimizer": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            },
+            "feedback": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            },
+            "forward": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            }
+          },
+          "budget": {
+            "optimizer_llm_calls": null,
+            "eval_llm_calls": null,
+            "candidates": null,
+            "evaluator_runs": null,
+            "wall_time_s": null,
+            "total_tokens": null,
+            "on_exceed": "return_best_valid",
+            "accounted": {
+              "optimizer_llm_calls": 0,
+              "eval_llm_calls": 0,
+              "candidates": 0,
+              "candidates_reserved": 0,
+              "candidates_proposed": 0,
+              "candidates_evaluated": 0,
+              "evaluator_runs": 1,
+              "total_tokens": 0,
+              "wall_time_s": 0.981585
+            },
+            "exceeded": []
+          },
+          "metadata": {
+            "level_id": "level-0",
+            "engine_capabilities": [
+              "pareto",
+              "rich_trace",
+              "scalar",
+              "trace_module",
+              "weighted"
+            ],
+            "module_capabilities": [
+              "json_snapshot",
+              "multi_component",
+              "trace_module"
+            ],
+            "objective_mode": "scalar",
+            "candidate_trajectory": [],
+            "evaluator_records": [
+              {
+                "valid": true,
+                "status": "ok",
+                "metrics": {
+                  "value": 0.21740805102870717
+                },
+                "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+                "trace": null,
+                "usage": {
+                  "forward": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  },
+                  "optimizer": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  },
+                  "feedback": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  },
+                  "judge": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  }
+                },
+                "artifacts": [
+                  {
+                    "status": "valid",
+                    "evaluations": [
+                      {
+                        "x": [
+                          -3.656357558875988,
+                          3.4743373693723267
+                        ],
+                        "value": 41.91737070581505
+                      },
+                      {
+                        "x": [
+                          4.900015462028012,
+                          -3.4857989124344844
+                        ],
+                        "value": 20.80720856232127
+                      },
+                      {
+                        "x": [
+                          5.0,
+                          -4.466512214094426
+                        ],
+                        "value": 27.874963037513048
+                      },
+                      {
+                        "x": [
+                          4.71088277400143,
+                          4.617738174487725
+                        ],
+                        "value": 40.790322685232645
+                      },
+                      {
+                        "x": [
+                          4.760075697466309,
+                          -0.4646001040837664
+                        ],
+                        "value": 12.402084502532594
+                      },
+                      {
+                        "x": [
+                          2.4631303547566787,
+                          -1.0223570394529737
+                        ],
+                        "value": 1.5458636145716538
+                      },
+                      {
+                        "x": [
+                          -1.7033500495223763,
+                          -2.769583268968149
+                        ],
+                        "value": 12.800993095309899
+                      },
+                      {
+                        "x": [
+                          1.6578455386965674,
+                          -0.5240131251731333
+                        ],
+                        "value": 0.21740805102870717
+                      }
+                    ],
+                    "proposals": [
+                      {
+                        "status": "valid",
+                        "point": [
+                          -3.656357558875988,
+                          3.4743373693723267
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          4.900015462028012,
+                          -3.4857989124344844
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          5.0,
+                          -4.466512214094426
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          4.71088277400143,
+                          4.617738174487725
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          4.760075697466309,
+                          -0.4646001040837664
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          2.4631303547566787,
+                          -1.0223570394529737
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          -1.7033500495223763,
+                          -2.769583268968149
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          1.6578455386965674,
+                          -0.5240131251731333
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      }
+                    ],
+                    "budget": 8,
+                    "valid": true,
+                    "evaluated_count": 8,
+                    "best_value": 0.21740805102870717,
+                    "behavior_signature": [
+                      [
+                        -3.656357558875988,
+                        3.4743373693723267
+                      ],
+                      [
+                        4.900015462028012,
+                        -3.4857989124344844
+                      ],
+                      [
+                        5.0,
+                        -4.466512214094426
+                      ],
+                      [
+                        4.71088277400143,
+                        4.617738174487725
+                      ],
+                      [
+                        4.760075697466309,
+                        -0.4646001040837664
+                      ],
+                      [
+                        2.4631303547566787,
+                        -1.0223570394529737
+                      ],
+                      [
+                        -1.7033500495223763,
+                        -2.769583268968149
+                      ],
+                      [
+                        1.6578455386965674,
+                        -0.5240131251731333
+                      ]
+                    ]
+                  }
+                ],
+                "error": null
+              }
+            ],
+            "trace_optimize_path": false,
+            "selected_models": {
+              "feedback": null,
+              "forward": null,
+              "judge": null,
+              "optimizer": null
+            },
+            "budget_exhausted": null,
+            "optimizer_response_diagnostics": [],
+            "menu_observations": [],
+            "menu_evidence": {
+              "declared_menu_size": null,
+              "evaluated_candidate_count": 0,
+              "evaluation_observation_count": 0,
+              "valid_candidate_count": 0,
+              "effective_menu_size": null,
+              "menu_collapsed": null,
+              "basis_of_equivalence": "unavailable",
+              "behavior_equivalence_known": false,
+              "common_example_count": 0
+            }
+          },
+          "error": null,
+          "level_results": [],
+          "portable": true,
+          "promotable": true
+        }
+      ],
+      "portable": true,
+      "promotable": true
+    },
+    {
+      "seed": 2,
+      "unit_id": "default:seed-2:matrix-0",
+      "plan_fingerprint": "905a61e43d4c02fd3c9683dd4eb7720775787c34e404527b6255861aa8cc348f",
+      "spec_fingerprint": "905a61e43d4c02fd3c9683dd4eb7720775787c34e404527b6255861aa8cc348f",
+      "engine": "fixed",
+      "module_ref": "recursive_opt.module.reasoning_workflow@1",
+      "status": "success",
+      "valid": true,
+      "evaluation": {
+        "valid": true,
+        "status": "ok",
+        "metrics": {
+          "value": 0.21170890758795324
+        },
+        "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+        "trace": null,
+        "usage": {
+          "forward": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "optimizer": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "feedback": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "judge": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          }
+        },
+        "artifacts": [
+          {
+            "status": "valid",
+            "evaluations": [
+              {
+                "x": [
+                  4.560342718892494,
+                  4.478274870593493
+                ],
+                "value": 38.29322703900396
+              },
+              {
+                "x": [
+                  -4.7781753100919016,
+                  -4.394231963542027
+                ],
+                "value": 49.61932417330297
+              },
+              {
+                "x": [
+                  5.0,
+                  5.0
+                ],
+                "value": 47.125
+              },
+              {
+                "x": [
+                  3.9374167757647847,
+                  -2.0121110214613225
+                ],
+                "value": 8.815133157156133
+              },
+              {
+                "x": [
+                  -1.2683962792615846,
+                  2.701398359379902
+                ],
+                "value": 18.25447045452887
+              },
+              {
+                "x": [
+                  3.047195774128319,
+                  -0.45177929858384847
+                ],
+                "value": 3.3188482372978294
+              },
+              {
+                "x": [
+                  2.154894018808542,
+                  -0.28701874883026424
+                ],
+                "value": 1.0331848242101678
+              },
+              {
+                "x": [
+                  1.4959566920040999,
+                  -0.3611372822622956
+                ],
+                "value": 0.21170890758795324
+              }
+            ],
+            "proposals": [
+              {
+                "status": "valid",
+                "point": [
+                  4.560342718892494,
+                  4.478274870593493
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  -4.7781753100919016,
+                  -4.394231963542027
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  5.0,
+                  5.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  3.9374167757647847,
+                  -2.0121110214613225
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  -1.2683962792615846,
+                  2.701398359379902
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  3.047195774128319,
+                  -0.45177929858384847
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  2.154894018808542,
+                  -0.28701874883026424
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  1.4959566920040999,
+                  -0.3611372822622956
+                ],
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "budget": 8,
+            "valid": true,
+            "evaluated_count": 8,
+            "best_value": 0.21170890758795324,
+            "behavior_signature": [
+              [
+                4.560342718892494,
+                4.478274870593493
+              ],
+              [
+                -4.7781753100919016,
+                -4.394231963542027
+              ],
+              [
+                5.0,
+                5.0
+              ],
+              [
+                3.9374167757647847,
+                -2.0121110214613225
+              ],
+              [
+                -1.2683962792615846,
+                2.701398359379902
+              ],
+              [
+                3.047195774128319,
+                -0.45177929858384847
+              ],
+              [
+                2.154894018808542,
+                -0.28701874883026424
+              ],
+              [
+                1.4959566920040999,
+                -0.3611372822622956
+              ]
+            ]
+          }
+        ],
+        "error": null
+      },
+      "artifact": {
+        "components": {
+          "optimizer": "import math\nimport random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    ranges = [highs[i] - lows[i] for i in range(d)]\n\n    if not history:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Normalize history to [0,1]^d\n    X = []\n    y = []\n    for h in history:\n        x = h['x']\n        X.append([(x[i] - lows[i]) / ranges[i] for i in range(d)])\n        y.append(h['value'])\n\n    n = len(X)\n    if n == 0:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Hyperparameters\n    if n > 1:\n        y_mean = sum(y) / n\n        y_var = sum((v - y_mean) ** 2 for v in y) / n\n        sigma_f = math.sqrt(y_var) if y_var > 0 else 1.0\n    else:\n        sigma_f = 1.0\n    noise = 1e-6\n    prior_mean = sum(y) / n\n\n    def kernel(x1, x2):\n        dist2 = sum((x1[i] - x2[i]) ** 2 for i in range(d))\n        return sigma_f ** 2 * math.exp(-0.5 * dist2)\n\n    # Build and invert covariance matrix\n    def invert_matrix(A):\n        m = len(A)\n        aug = [row[:] + [1.0 if i == j else 0.0 for j in range(m)]\n               for i, row in enumerate(A)]\n        for col in range(m):\n            pivot = max(range(col, m), key=lambda r: abs(aug[r][col]))\n            if abs(aug[pivot][col]) < 1e-12:\n                raise ValueError(\"Singular\")\n            if pivot != col:\n                aug[col], aug[pivot] = aug[pivot], aug[col]\n            pv = aug[col][col]\n            for j in range(col, 2 * m):\n                aug[col][j] /= pv\n            for r in range(m):\n                if r != col:\n                    factor = aug[r][col]\n                    if factor != 0:\n                        for j in range(col, 2 * m):\n                            aug[r][j] -= factor * aug[col][j]\n        return [row[m:] for row in aug]\n\n    K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n          for j in range(n)] for i in range(n)]\n\n    try:\n        K_inv = invert_matrix(K)\n    except ValueError:\n        noise = 1e-3\n        K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n              for j in range(n)] for i in range(n)]\n        K_inv = invert_matrix(K)\n\n    y_centered = [v - prior_mean for v in y]\n    alpha = [sum(K_inv[i][j] * y_centered[j] for j in range(n))\n             for i in range(n)]\n\n    best_y = min(y)\n    best_idx = y.index(best_y)\n    best_x_norm = X[best_idx]\n\n    # Generate candidate points\n    candidates = []\n    for _ in range(100):\n        candidates.append([rng.uniform(0, 1) for _ in range(d)])\n    for _ in range(20):\n        cand = [best_x_norm[i] + rng.gauss(0, 0.1) for i in range(d)]\n        cand = [min(1.0, max(0.0, c)) for c in cand]\n        candidates.append(cand)\n\n    best_ei = -1.0\n    best_cand = None\n\n    for cand in candidates:\n        k_vec = [kernel(X[i], cand) for i in range(n)]\n        mean = prior_mean + sum(k_vec[i] * alpha[i] for i in range(n))\n        k_cand = kernel(cand, cand)\n        K_inv_k = [sum(K_inv[i][j] * k_vec[j] for j in range(n))\n                   for i in range(n)]\n        var = k_cand - sum(k_vec[i] * K_inv_k[i] for i in range(n))\n        if var < 0:\n            var = 0.0\n        sigma = math.sqrt(var)\n        if sigma < 1e-12:\n            ei = 0.0\n        else:\n            z = (best_y - mean) / sigma\n            phi = math.exp(-0.5 * z * z) / math.sqrt(2 * math.pi)\n            Phi = 0.5 * (1.0 + math.erf(z / math.sqrt(2)))\n            ei = sigma * (z * Phi + phi)\n        if ei > best_ei:\n            best_ei = ei\n            best_cand = cand\n\n    if best_cand is None:\n        best_cand = [rng.uniform(0, 1) for _ in range(d)]\n\n    result = [lows[i] + best_cand[i] * ranges[i] for i in range(d)]\n    result = [min(highs[i], max(lows[i], result[i])) for i in range(d)]\n    return result\n"
+        }
+      },
+      "lineage": [],
+      "usage": {
+        "judge": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        },
+        "optimizer": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        },
+        "feedback": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        },
+        "forward": {
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0,
+          "completion_tokens": 0
+        }
+      },
+      "budget": {
+        "optimizer_llm_calls": null,
+        "eval_llm_calls": null,
+        "candidates": null,
+        "evaluator_runs": null,
+        "wall_time_s": null,
+        "total_tokens": null,
+        "on_exceed": "return_best_valid",
+        "accounted": {
+          "optimizer_llm_calls": 0,
+          "eval_llm_calls": 0,
+          "candidates": 0,
+          "candidates_reserved": 0,
+          "candidates_proposed": 0,
+          "candidates_evaluated": 0,
+          "evaluator_runs": 1,
+          "total_tokens": 0,
+          "wall_time_s": 0.985025
+        },
+        "exceeded": []
+      },
+      "metadata": {
+        "level_id": "level-0",
+        "engine_capabilities": [
+          "pareto",
+          "rich_trace",
+          "scalar",
+          "trace_module",
+          "weighted"
+        ],
+        "module_capabilities": [
+          "json_snapshot",
+          "multi_component",
+          "trace_module"
+        ],
+        "objective_mode": "scalar",
+        "candidate_trajectory": [],
+        "evaluator_records": [
+          {
+            "valid": true,
+            "status": "ok",
+            "metrics": {
+              "value": 0.21170890758795324
+            },
+            "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+            "trace": null,
+            "usage": {
+              "forward": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "optimizer": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "feedback": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "judge": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              }
+            },
+            "artifacts": [
+              {
+                "status": "valid",
+                "evaluations": [
+                  {
+                    "x": [
+                      4.560342718892494,
+                      4.478274870593493
+                    ],
+                    "value": 38.29322703900396
+                  },
+                  {
+                    "x": [
+                      -4.7781753100919016,
+                      -4.394231963542027
+                    ],
+                    "value": 49.61932417330297
+                  },
+                  {
+                    "x": [
+                      5.0,
+                      5.0
+                    ],
+                    "value": 47.125
+                  },
+                  {
+                    "x": [
+                      3.9374167757647847,
+                      -2.0121110214613225
+                    ],
+                    "value": 8.815133157156133
+                  },
+                  {
+                    "x": [
+                      -1.2683962792615846,
+                      2.701398359379902
+                    ],
+                    "value": 18.25447045452887
+                  },
+                  {
+                    "x": [
+                      3.047195774128319,
+                      -0.45177929858384847
+                    ],
+                    "value": 3.3188482372978294
+                  },
+                  {
+                    "x": [
+                      2.154894018808542,
+                      -0.28701874883026424
+                    ],
+                    "value": 1.0331848242101678
+                  },
+                  {
+                    "x": [
+                      1.4959566920040999,
+                      -0.3611372822622956
+                    ],
+                    "value": 0.21170890758795324
+                  }
+                ],
+                "proposals": [
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.560342718892494,
+                      4.478274870593493
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      -4.7781753100919016,
+                      -4.394231963542027
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      5.0,
+                      5.0
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      3.9374167757647847,
+                      -2.0121110214613225
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      -1.2683962792615846,
+                      2.701398359379902
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      3.047195774128319,
+                      -0.45177929858384847
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      2.154894018808542,
+                      -0.28701874883026424
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      1.4959566920040999,
+                      -0.3611372822622956
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  }
+                ],
+                "budget": 8,
+                "valid": true,
+                "evaluated_count": 8,
+                "best_value": 0.21170890758795324,
+                "behavior_signature": [
+                  [
+                    4.560342718892494,
+                    4.478274870593493
+                  ],
+                  [
+                    -4.7781753100919016,
+                    -4.394231963542027
+                  ],
+                  [
+                    5.0,
+                    5.0
+                  ],
+                  [
+                    3.9374167757647847,
+                    -2.0121110214613225
+                  ],
+                  [
+                    -1.2683962792615846,
+                    2.701398359379902
+                  ],
+                  [
+                    3.047195774128319,
+                    -0.45177929858384847
+                  ],
+                  [
+                    2.154894018808542,
+                    -0.28701874883026424
+                  ],
+                  [
+                    1.4959566920040999,
+                    -0.3611372822622956
+                  ]
+                ]
+              }
+            ],
+            "error": null
+          }
+        ],
+        "trace_optimize_path": false,
+        "selected_models": {
+          "feedback": null,
+          "forward": null,
+          "judge": null,
+          "optimizer": null
+        },
+        "budget_exhausted": null,
+        "optimizer_response_diagnostics": [],
+        "menu_observations": [],
+        "menu_evidence": {
+          "declared_menu_size": null,
+          "evaluated_candidate_count": 0,
+          "evaluation_observation_count": 0,
+          "valid_candidate_count": 0,
+          "effective_menu_size": null,
+          "menu_collapsed": null,
+          "basis_of_equivalence": "unavailable",
+          "behavior_equivalence_known": false,
+          "common_example_count": 0
+        },
+        "level_ids": [
+          "level-0"
+        ],
+        "resolved_models": {
+          "level-0": {
+            "feedback": null,
+            "forward": null,
+            "judge": null,
+            "optimizer": null
+          }
+        },
+        "test_overrides": {},
+        "arm_id": "default",
+        "seed": 2,
+        "matrix": {}
+      },
+      "error": null,
+      "level_results": [
+        {
+          "unit_id": "default:seed-2:matrix-0:level-0",
+          "plan_fingerprint": "905a61e43d4c02fd3c9683dd4eb7720775787c34e404527b6255861aa8cc348f",
+          "spec_fingerprint": "905a61e43d4c02fd3c9683dd4eb7720775787c34e404527b6255861aa8cc348f",
+          "engine": "fixed",
+          "module_ref": "recursive_opt.module.reasoning_workflow@1",
+          "status": "success",
+          "valid": true,
+          "evaluation": {
+            "valid": true,
+            "status": "ok",
+            "metrics": {
+              "value": 0.21170890758795324
+            },
+            "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+            "trace": null,
+            "usage": {
+              "forward": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "optimizer": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "feedback": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "judge": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              }
+            },
+            "artifacts": [
+              {
+                "status": "valid",
+                "evaluations": [
+                  {
+                    "x": [
+                      4.560342718892494,
+                      4.478274870593493
+                    ],
+                    "value": 38.29322703900396
+                  },
+                  {
+                    "x": [
+                      -4.7781753100919016,
+                      -4.394231963542027
+                    ],
+                    "value": 49.61932417330297
+                  },
+                  {
+                    "x": [
+                      5.0,
+                      5.0
+                    ],
+                    "value": 47.125
+                  },
+                  {
+                    "x": [
+                      3.9374167757647847,
+                      -2.0121110214613225
+                    ],
+                    "value": 8.815133157156133
+                  },
+                  {
+                    "x": [
+                      -1.2683962792615846,
+                      2.701398359379902
+                    ],
+                    "value": 18.25447045452887
+                  },
+                  {
+                    "x": [
+                      3.047195774128319,
+                      -0.45177929858384847
+                    ],
+                    "value": 3.3188482372978294
+                  },
+                  {
+                    "x": [
+                      2.154894018808542,
+                      -0.28701874883026424
+                    ],
+                    "value": 1.0331848242101678
+                  },
+                  {
+                    "x": [
+                      1.4959566920040999,
+                      -0.3611372822622956
+                    ],
+                    "value": 0.21170890758795324
+                  }
+                ],
+                "proposals": [
+                  {
+                    "status": "valid",
+                    "point": [
+                      4.560342718892494,
+                      4.478274870593493
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      -4.7781753100919016,
+                      -4.394231963542027
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      5.0,
+                      5.0
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      3.9374167757647847,
+                      -2.0121110214613225
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      -1.2683962792615846,
+                      2.701398359379902
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      3.047195774128319,
+                      -0.45177929858384847
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      2.154894018808542,
+                      -0.28701874883026424
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      1.4959566920040999,
+                      -0.3611372822622956
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  }
+                ],
+                "budget": 8,
+                "valid": true,
+                "evaluated_count": 8,
+                "best_value": 0.21170890758795324,
+                "behavior_signature": [
+                  [
+                    4.560342718892494,
+                    4.478274870593493
+                  ],
+                  [
+                    -4.7781753100919016,
+                    -4.394231963542027
+                  ],
+                  [
+                    5.0,
+                    5.0
+                  ],
+                  [
+                    3.9374167757647847,
+                    -2.0121110214613225
+                  ],
+                  [
+                    -1.2683962792615846,
+                    2.701398359379902
+                  ],
+                  [
+                    3.047195774128319,
+                    -0.45177929858384847
+                  ],
+                  [
+                    2.154894018808542,
+                    -0.28701874883026424
+                  ],
+                  [
+                    1.4959566920040999,
+                    -0.3611372822622956
+                  ]
+                ]
+              }
+            ],
+            "error": null
+          },
+          "artifact": {
+            "components": {
+              "optimizer": "import math\nimport random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    ranges = [highs[i] - lows[i] for i in range(d)]\n\n    if not history:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Normalize history to [0,1]^d\n    X = []\n    y = []\n    for h in history:\n        x = h['x']\n        X.append([(x[i] - lows[i]) / ranges[i] for i in range(d)])\n        y.append(h['value'])\n\n    n = len(X)\n    if n == 0:\n        return [rng.uniform(lows[i], highs[i]) for i in range(d)]\n\n    # Hyperparameters\n    if n > 1:\n        y_mean = sum(y) / n\n        y_var = sum((v - y_mean) ** 2 for v in y) / n\n        sigma_f = math.sqrt(y_var) if y_var > 0 else 1.0\n    else:\n        sigma_f = 1.0\n    noise = 1e-6\n    prior_mean = sum(y) / n\n\n    def kernel(x1, x2):\n        dist2 = sum((x1[i] - x2[i]) ** 2 for i in range(d))\n        return sigma_f ** 2 * math.exp(-0.5 * dist2)\n\n    # Build and invert covariance matrix\n    def invert_matrix(A):\n        m = len(A)\n        aug = [row[:] + [1.0 if i == j else 0.0 for j in range(m)]\n               for i, row in enumerate(A)]\n        for col in range(m):\n            pivot = max(range(col, m), key=lambda r: abs(aug[r][col]))\n            if abs(aug[pivot][col]) < 1e-12:\n                raise ValueError(\"Singular\")\n            if pivot != col:\n                aug[col], aug[pivot] = aug[pivot], aug[col]\n            pv = aug[col][col]\n            for j in range(col, 2 * m):\n                aug[col][j] /= pv\n            for r in range(m):\n                if r != col:\n                    factor = aug[r][col]\n                    if factor != 0:\n                        for j in range(col, 2 * m):\n                            aug[r][j] -= factor * aug[col][j]\n        return [row[m:] for row in aug]\n\n    K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n          for j in range(n)] for i in range(n)]\n\n    try:\n        K_inv = invert_matrix(K)\n    except ValueError:\n        noise = 1e-3\n        K = [[kernel(X[i], X[j]) + (noise if i == j else 0.0)\n              for j in range(n)] for i in range(n)]\n        K_inv = invert_matrix(K)\n\n    y_centered = [v - prior_mean for v in y]\n    alpha = [sum(K_inv[i][j] * y_centered[j] for j in range(n))\n             for i in range(n)]\n\n    best_y = min(y)\n    best_idx = y.index(best_y)\n    best_x_norm = X[best_idx]\n\n    # Generate candidate points\n    candidates = []\n    for _ in range(100):\n        candidates.append([rng.uniform(0, 1) for _ in range(d)])\n    for _ in range(20):\n        cand = [best_x_norm[i] + rng.gauss(0, 0.1) for i in range(d)]\n        cand = [min(1.0, max(0.0, c)) for c in cand]\n        candidates.append(cand)\n\n    best_ei = -1.0\n    best_cand = None\n\n    for cand in candidates:\n        k_vec = [kernel(X[i], cand) for i in range(n)]\n        mean = prior_mean + sum(k_vec[i] * alpha[i] for i in range(n))\n        k_cand = kernel(cand, cand)\n        K_inv_k = [sum(K_inv[i][j] * k_vec[j] for j in range(n))\n                   for i in range(n)]\n        var = k_cand - sum(k_vec[i] * K_inv_k[i] for i in range(n))\n        if var < 0:\n            var = 0.0\n        sigma = math.sqrt(var)\n        if sigma < 1e-12:\n            ei = 0.0\n        else:\n            z = (best_y - mean) / sigma\n            phi = math.exp(-0.5 * z * z) / math.sqrt(2 * math.pi)\n            Phi = 0.5 * (1.0 + math.erf(z / math.sqrt(2)))\n            ei = sigma * (z * Phi + phi)\n        if ei > best_ei:\n            best_ei = ei\n            best_cand = cand\n\n    if best_cand is None:\n        best_cand = [rng.uniform(0, 1) for _ in range(d)]\n\n    result = [lows[i] + best_cand[i] * ranges[i] for i in range(d)]\n    result = [min(highs[i], max(lows[i], result[i])) for i in range(d)]\n    return result\n"
+            }
+          },
+          "lineage": [],
+          "usage": {
+            "judge": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            },
+            "optimizer": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            },
+            "feedback": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            },
+            "forward": {
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0,
+              "completion_tokens": 0
+            }
+          },
+          "budget": {
+            "optimizer_llm_calls": null,
+            "eval_llm_calls": null,
+            "candidates": null,
+            "evaluator_runs": null,
+            "wall_time_s": null,
+            "total_tokens": null,
+            "on_exceed": "return_best_valid",
+            "accounted": {
+              "optimizer_llm_calls": 0,
+              "eval_llm_calls": 0,
+              "candidates": 0,
+              "candidates_reserved": 0,
+              "candidates_proposed": 0,
+              "candidates_evaluated": 0,
+              "evaluator_runs": 1,
+              "total_tokens": 0,
+              "wall_time_s": 0.98378
+            },
+            "exceeded": []
+          },
+          "metadata": {
+            "level_id": "level-0",
+            "engine_capabilities": [
+              "pareto",
+              "rich_trace",
+              "scalar",
+              "trace_module",
+              "weighted"
+            ],
+            "module_capabilities": [
+              "json_snapshot",
+              "multi_component",
+              "trace_module"
+            ],
+            "objective_mode": "scalar",
+            "candidate_trajectory": [],
+            "evaluator_records": [
+              {
+                "valid": true,
+                "status": "ok",
+                "metrics": {
+                  "value": 0.21170890758795324
+                },
+                "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+                "trace": null,
+                "usage": {
+                  "forward": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  },
+                  "optimizer": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  },
+                  "feedback": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  },
+                  "judge": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0
+                  }
+                },
+                "artifacts": [
+                  {
+                    "status": "valid",
+                    "evaluations": [
+                      {
+                        "x": [
+                          4.560342718892494,
+                          4.478274870593493
+                        ],
+                        "value": 38.29322703900396
+                      },
+                      {
+                        "x": [
+                          -4.7781753100919016,
+                          -4.394231963542027
+                        ],
+                        "value": 49.61932417330297
+                      },
+                      {
+                        "x": [
+                          5.0,
+                          5.0
+                        ],
+                        "value": 47.125
+                      },
+                      {
+                        "x": [
+                          3.9374167757647847,
+                          -2.0121110214613225
+                        ],
+                        "value": 8.815133157156133
+                      },
+                      {
+                        "x": [
+                          -1.2683962792615846,
+                          2.701398359379902
+                        ],
+                        "value": 18.25447045452887
+                      },
+                      {
+                        "x": [
+                          3.047195774128319,
+                          -0.45177929858384847
+                        ],
+                        "value": 3.3188482372978294
+                      },
+                      {
+                        "x": [
+                          2.154894018808542,
+                          -0.28701874883026424
+                        ],
+                        "value": 1.0331848242101678
+                      },
+                      {
+                        "x": [
+                          1.4959566920040999,
+                          -0.3611372822622956
+                        ],
+                        "value": 0.21170890758795324
+                      }
+                    ],
+                    "proposals": [
+                      {
+                        "status": "valid",
+                        "point": [
+                          4.560342718892494,
+                          4.478274870593493
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          -4.7781753100919016,
+                          -4.394231963542027
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          5.0,
+                          5.0
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          3.9374167757647847,
+                          -2.0121110214613225
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          -1.2683962792615846,
+                          2.701398359379902
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          3.047195774128319,
+                          -0.45177929858384847
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          2.154894018808542,
+                          -0.28701874883026424
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      },
+                      {
+                        "status": "valid",
+                        "point": [
+                          1.4959566920040999,
+                          -0.3611372822622956
+                        ],
+                        "stdout": "",
+                        "stderr": ""
+                      }
+                    ],
+                    "budget": 8,
+                    "valid": true,
+                    "evaluated_count": 8,
+                    "best_value": 0.21170890758795324,
+                    "behavior_signature": [
+                      [
+                        4.560342718892494,
+                        4.478274870593493
+                      ],
+                      [
+                        -4.7781753100919016,
+                        -4.394231963542027
+                      ],
+                      [
+                        5.0,
+                        5.0
+                      ],
+                      [
+                        3.9374167757647847,
+                        -2.0121110214613225
+                      ],
+                      [
+                        -1.2683962792615846,
+                        2.701398359379902
+                      ],
+                      [
+                        3.047195774128319,
+                        -0.45177929858384847
+                      ],
+                      [
+                        2.154894018808542,
+                        -0.28701874883026424
+                      ],
+                      [
+                        1.4959566920040999,
+                        -0.3611372822622956
+                      ]
+                    ]
+                  }
+                ],
+                "error": null
+              }
+            ],
+            "trace_optimize_path": false,
+            "selected_models": {
+              "feedback": null,
+              "forward": null,
+              "judge": null,
+              "optimizer": null
+            },
+            "budget_exhausted": null,
+            "optimizer_response_diagnostics": [],
+            "menu_observations": [],
+            "menu_evidence": {
+              "declared_menu_size": null,
+              "evaluated_candidate_count": 0,
+              "evaluation_observation_count": 0,
+              "valid_candidate_count": 0,
+              "effective_menu_size": null,
+              "menu_collapsed": null,
+              "basis_of_equivalence": "unavailable",
+              "behavior_equivalence_known": false,
+              "common_example_count": 0
+            }
+          },
+          "error": null,
+          "level_results": [],
+          "portable": true,
+          "promotable": true
+        }
+      ],
+      "portable": true,
+      "promotable": true
+    }
+  ],
+  "response_metadata": {
+    "id": "gen-1788860750-9CdUKaJCIUIOzAyancsk",
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "created": 1788860750,
+    "system_fingerprint": "vllm-dev-ep-8b5ae245",
+    "usage": {
+      "prompt_tokens": 331,
+      "completion_tokens": 5143,
+      "total_tokens": 5474,
+      "reasoning_tokens": 3919,
+      "cost_usd": 0.00083943
+    },
+    "finish_reason": "stop"
+  },
+  "parse_status": "valid",
+  "artifact_sha256": "700cb4c68536e8c6ad97de845f7a60d47090c6ecaa463c7ed30dc4f13f6b5f75",
+  "history_probe": {
+    "valid": true,
+    "responsive": true,
+    "pairs": [
+      {
+        "length": 2,
+        "seed": 0,
+        "histories": [
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 0
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 1
+            }
+          ],
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 1
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 0
+            }
+          ]
+        ],
+        "proposals": [
+          {
+            "status": "valid",
+            "point": [
+              -5.0,
+              4.676215482009038
+            ]
+          },
+          {
+            "status": "valid",
+            "point": [
+              4.805536372287291,
+              -4.2586039269964235
+            ]
+          }
+        ],
+        "valid": true,
+        "changed": true
+      },
+      {
+        "length": 2,
+        "seed": 1,
+        "histories": [
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 0
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 1
+            }
+          ],
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 1
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 0
+            }
+          ]
+        ],
+        "proposals": [
+          {
+            "status": "valid",
+            "point": [
+              -4.953382054168544,
+              4.4326783591910885
+            ]
+          },
+          {
+            "status": "valid",
+            "point": [
+              5.0,
+              -3.9807133016599416
+            ]
+          }
+        ],
+        "valid": true,
+        "changed": true
+      },
+      {
+        "length": 2,
+        "seed": 2,
+        "histories": [
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 0
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 1
+            }
+          ],
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 1
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 0
+            }
+          ]
+        ],
+        "proposals": [
+          {
+            "status": "valid",
+            "point": [
+              -4.614193928633322,
+              4.801094315805392
+            ]
+          },
+          {
+            "status": "valid",
+            "point": [
+              4.223619934673792,
+              -4.868897228687331
+            ]
+          }
+        ],
+        "valid": true,
+        "changed": true
+      },
+      {
+        "length": 8,
+        "seed": 0,
+        "histories": [
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 0
+            },
+            {
+              "x": [
+                -2.857142857142857,
+                2.142857142857143
+              ],
+              "value": 1
+            },
+            {
+              "x": [
+                -1.7142857142857144,
+                1.2857142857142858
+              ],
+              "value": 2
+            },
+            {
+              "x": [
+                -0.5714285714285716,
+                0.4285714285714284
+              ],
+              "value": 3
+            },
+            {
+              "x": [
+                0.5714285714285712,
+                -0.4285714285714284
+              ],
+              "value": 4
+            },
+            {
+              "x": [
+                1.7142857142857144,
+                -1.2857142857142856
+              ],
+              "value": 5
+            },
+            {
+              "x": [
+                2.8571428571428568,
+                -2.1428571428571432
+              ],
+              "value": 6
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 7
+            }
+          ],
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 7
+            },
+            {
+              "x": [
+                -2.857142857142857,
+                2.142857142857143
+              ],
+              "value": 6
+            },
+            {
+              "x": [
+                -1.7142857142857144,
+                1.2857142857142858
+              ],
+              "value": 5
+            },
+            {
+              "x": [
+                -0.5714285714285716,
+                0.4285714285714284
+              ],
+              "value": 4
+            },
+            {
+              "x": [
+                0.5714285714285712,
+                -0.4285714285714284
+              ],
+              "value": 3
+            },
+            {
+              "x": [
+                1.7142857142857144,
+                -1.2857142857142856
+              ],
+              "value": 2
+            },
+            {
+              "x": [
+                2.8571428571428568,
+                -2.1428571428571432
+              ],
+              "value": 1
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 0
+            }
+          ]
+        ],
+        "proposals": [
+          {
+            "status": "valid",
+            "point": [
+              -4.357836651430852,
+              5.0
+            ]
+          },
+          {
+            "status": "valid",
+            "point": [
+              4.6496209774944255,
+              -4.970598172705883
+            ]
+          }
+        ],
+        "valid": true,
+        "changed": true
+      },
+      {
+        "length": 8,
+        "seed": 1,
+        "histories": [
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 0
+            },
+            {
+              "x": [
+                -2.857142857142857,
+                2.142857142857143
+              ],
+              "value": 1
+            },
+            {
+              "x": [
+                -1.7142857142857144,
+                1.2857142857142858
+              ],
+              "value": 2
+            },
+            {
+              "x": [
+                -0.5714285714285716,
+                0.4285714285714284
+              ],
+              "value": 3
+            },
+            {
+              "x": [
+                0.5714285714285712,
+                -0.4285714285714284
+              ],
+              "value": 4
+            },
+            {
+              "x": [
+                1.7142857142857144,
+                -1.2857142857142856
+              ],
+              "value": 5
+            },
+            {
+              "x": [
+                2.8571428571428568,
+                -2.1428571428571432
+              ],
+              "value": 6
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 7
+            }
+          ],
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 7
+            },
+            {
+              "x": [
+                -2.857142857142857,
+                2.142857142857143
+              ],
+              "value": 6
+            },
+            {
+              "x": [
+                -1.7142857142857144,
+                1.2857142857142858
+              ],
+              "value": 5
+            },
+            {
+              "x": [
+                -0.5714285714285716,
+                0.4285714285714284
+              ],
+              "value": 4
+            },
+            {
+              "x": [
+                0.5714285714285712,
+                -0.4285714285714284
+              ],
+              "value": 3
+            },
+            {
+              "x": [
+                1.7142857142857144,
+                -1.2857142857142856
+              ],
+              "value": 2
+            },
+            {
+              "x": [
+                2.8571428571428568,
+                -2.1428571428571432
+              ],
+              "value": 1
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 0
+            }
+          ]
+        ],
+        "proposals": [
+          {
+            "status": "valid",
+            "point": [
+              -4.712266878707946,
+              4.9315388191689316
+            ]
+          },
+          {
+            "status": "valid",
+            "point": [
+              5.0,
+              -4.0362930616202455
+            ]
+          }
+        ],
+        "valid": true,
+        "changed": true
+      },
+      {
+        "length": 8,
+        "seed": 2,
+        "histories": [
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 0
+            },
+            {
+              "x": [
+                -2.857142857142857,
+                2.142857142857143
+              ],
+              "value": 1
+            },
+            {
+              "x": [
+                -1.7142857142857144,
+                1.2857142857142858
+              ],
+              "value": 2
+            },
+            {
+              "x": [
+                -0.5714285714285716,
+                0.4285714285714284
+              ],
+              "value": 3
+            },
+            {
+              "x": [
+                0.5714285714285712,
+                -0.4285714285714284
+              ],
+              "value": 4
+            },
+            {
+              "x": [
+                1.7142857142857144,
+                -1.2857142857142856
+              ],
+              "value": 5
+            },
+            {
+              "x": [
+                2.8571428571428568,
+                -2.1428571428571432
+              ],
+              "value": 6
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 7
+            }
+          ],
+          [
+            {
+              "x": [
+                -4.0,
+                3.0
+              ],
+              "value": 7
+            },
+            {
+              "x": [
+                -2.857142857142857,
+                2.142857142857143
+              ],
+              "value": 6
+            },
+            {
+              "x": [
+                -1.7142857142857144,
+                1.2857142857142858
+              ],
+              "value": 5
+            },
+            {
+              "x": [
+                -0.5714285714285716,
+                0.4285714285714284
+              ],
+              "value": 4
+            },
+            {
+              "x": [
+                0.5714285714285712,
+                -0.4285714285714284
+              ],
+              "value": 3
+            },
+            {
+              "x": [
+                1.7142857142857144,
+                -1.2857142857142856
+              ],
+              "value": 2
+            },
+            {
+              "x": [
+                2.8571428571428568,
+                -2.1428571428571432
+              ],
+              "value": 1
+            },
+            {
+              "x": [
+                4.0,
+                -3.0
+              ],
+              "value": 0
+            }
+          ]
+        ],
+        "proposals": [
+          {
+            "status": "valid",
+            "point": [
+              -5.0,
+              3.817302266786877
+            ]
+          },
+          {
+            "status": "valid",
+            "point": [
+              4.965569925394552,
+              -4.5544361754956695
+            ]
+          }
+        ],
+        "valid": true,
+        "changed": true
+      }
+    ]
+  }
+}

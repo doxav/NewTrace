@@ -1,0 +1,57 @@
+{
+  "datasets": {
+    "holdout": [],
+    "train": [
+      {
+        "budget": 8,
+        "seed": 2
+      }
+    ],
+    "validation": [
+      {
+        "budget": 8,
+        "seed": 2
+      }
+    ]
+  },
+  "engine": {
+    "name": "fixed"
+  },
+  "kind": "recursive_optimization",
+  "module": {
+    "config": {
+      "components": {
+        "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a point for black-box minimization.\n    Uses history to guide search with a simple local perturbation strategy.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    n = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    ranges = [highs[i] - lows[i] for i in range(n)]\n\n    # No prior observations: uniform random search\n    if not history:\n        return [rng.uniform(lows[i], highs[i]) for i in range(n)]\n\n    # Find best point seen so far\n    best = min(history, key=lambda h: h['value'])\n    best_x = best['x']\n\n    # Exploration vs exploitation\n    if rng.random() < 0.3:\n        # Explore: random point\n        return [rng.uniform(lows[i], highs[i]) for i in range(n)]\n\n    # Exploit: perturb best point with Gaussian noise\n    # Step size decreases slightly with more history to refine\n    scale = 0.1 / (1 + 0.05 * len(history))\n    new_x = []\n    for i in range(n):\n        step = ranges[i] * scale\n        noise = rng.gauss(0, step)\n        val = best_x[i] + noise\n        val = max(lows[i], min(highs[i], val))  # clip\n        new_x.append(val)\n    return new_x\n"
+      }
+    },
+    "ref": "recursive_opt.module.reasoning_workflow@1"
+  },
+  "objective": {
+    "evaluator_ref": "recursive_opt.evaluator.optimizer_program@1",
+    "intent": "Minimize black-box objective within the fixed evaluation budget.",
+    "metrics": {
+      "value": {
+        "direction": "minimize",
+        "source": "evaluation.metrics.value"
+      }
+    },
+    "selection": {
+      "mode": "scalar",
+      "score_key": "value"
+    }
+  },
+  "outputs": {
+    "directory": "artifacts/optimizer_discovery/live_generation/pilot_low_8000_17/seed_2"
+  },
+  "runtime": {
+    "offline": true,
+    "seed": 2
+  },
+  "schema_version": "recursive-opt/v2alpha",
+  "surface": {
+    "kind": "module",
+    "targets": [
+      "optimizer"
+    ]
+  }
+}

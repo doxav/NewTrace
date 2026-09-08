@@ -1,0 +1,57 @@
+{
+  "datasets": {
+    "holdout": [],
+    "train": [
+      {
+        "budget": 8,
+        "seed": 1
+      }
+    ],
+    "validation": [
+      {
+        "budget": 8,
+        "seed": 1
+      }
+    ]
+  },
+  "engine": {
+    "name": "fixed"
+  },
+  "kind": "recursive_optimization",
+  "module": {
+    "config": {
+      "components": {
+        "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n\n    def random_point():\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    if not history:\n        return random_point()\n\n    best = min(history, key=lambda obs: obs['value'])\n    best_x = best['x']\n\n    # 50% chance to explore, 50% chance to exploit around best\n    if rng.random() < 0.5:\n        return random_point()\n\n    # Perturb the best point with a Gaussian\n    new_x = []\n    for i, (low, high) in enumerate(bounds):\n        std = (high - low) / 10.0\n        val = best_x[i] + rng.gauss(0, std)\n        val = max(low, min(high, val))  # clamp to bounds\n        new_x.append(val)\n    return new_x\n"
+      }
+    },
+    "ref": "recursive_opt.module.reasoning_workflow@1"
+  },
+  "objective": {
+    "evaluator_ref": "recursive_opt.evaluator.optimizer_program@1",
+    "intent": "Minimize black-box objective within the fixed evaluation budget.",
+    "metrics": {
+      "value": {
+        "direction": "minimize",
+        "source": "evaluation.metrics.value"
+      }
+    },
+    "selection": {
+      "mode": "scalar",
+      "score_key": "value"
+    }
+  },
+  "outputs": {
+    "directory": "artifacts/optimizer_discovery/live_generation/pilot_default_8000_18/seed_1"
+  },
+  "runtime": {
+    "offline": true,
+    "seed": 1
+  },
+  "schema_version": "recursive-opt/v2alpha",
+  "surface": {
+    "kind": "module",
+    "targets": [
+      "optimizer"
+    ]
+  }
+}

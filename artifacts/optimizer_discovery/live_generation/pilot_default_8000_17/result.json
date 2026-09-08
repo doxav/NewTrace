@@ -1,0 +1,29 @@
+{
+  "label": "pilot_default_8000_17",
+  "provider_status": "success",
+  "attempts": [
+    {
+      "attempt": 1,
+      "status": "success",
+      "wall_s": 293.026,
+      "logs": ""
+    }
+  ],
+  "evaluations": [],
+  "response_metadata": {
+    "id": "gen-1788860434-iYHA2MrfIHNH2UZEsHR9",
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "created": 1788860434,
+    "system_fingerprint": "vllm-dev-ep-8b5ae245",
+    "usage": {
+      "prompt_tokens": 331,
+      "completion_tokens": 8000,
+      "total_tokens": 8331,
+      "reasoning_tokens": 8000,
+      "cost_usd": 0.00129655
+    },
+    "finish_reason": "length"
+  },
+  "parse_status": "invalid",
+  "parse_error": "optimizer response must contain nonempty source"
+}

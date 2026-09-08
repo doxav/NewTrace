@@ -1,0 +1,1085 @@
+{
+  "complete": true,
+  "identity": {
+    "levels": [
+      "f1f4823a6b0ad0c1507a6f0555ed958d610da8b601e80a6e70958667259448a1"
+    ],
+    "registry_sha256": "d3042e1211f61f52a54fe5370973b3a3a8905143d74dea29bddb8c710f337acc",
+    "runtime_tree_sha256": "eec85d88cc93b56159a4d8a5f47e9096efb566155e12e77f005f92afa165bab0",
+    "spec_fingerprint": "d608688e816247269165597f50d46a8a8570512117c2b50569ca18aab86165f3",
+    "unit_id": "default:seed-1:matrix-0"
+  },
+  "result": {
+    "artifact": {
+      "components": {
+        "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a point for black-box minimization.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n\n    # No history: random point in bounds\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Find best observed point (lowest value)\n    best = min(history, key=lambda obs: obs['value'])\n    best_x = best['x']\n\n    # Exploration vs exploitation\n    if rng.random() < 0.5:\n        # Pure exploration: uniform random point\n        return [rng.uniform(low, high) for low, high in bounds]\n    else:\n        # Local perturbation of the best point\n        point = []\n        for i, (low, high) in enumerate(bounds):\n            width = high - low\n            step = rng.uniform(-0.2 * width, 0.2 * width)\n            val = best_x[i] + step\n            val = max(low, min(high, val))  # clip to bounds\n            point.append(val)\n        return point\n"
+      }
+    },
+    "budget": {
+      "accounted": {
+        "candidates": 0,
+        "candidates_evaluated": 0,
+        "candidates_proposed": 0,
+        "candidates_reserved": 0,
+        "eval_llm_calls": 0,
+        "evaluator_runs": 1,
+        "optimizer_llm_calls": 0,
+        "total_tokens": 0,
+        "wall_time_s": 0.759992
+      },
+      "candidates": null,
+      "eval_llm_calls": null,
+      "evaluator_runs": null,
+      "exceeded": [],
+      "on_exceed": "return_best_valid",
+      "optimizer_llm_calls": null,
+      "total_tokens": null,
+      "wall_time_s": null
+    },
+    "engine": "fixed",
+    "error": null,
+    "evaluation": {
+      "artifacts": [
+        {
+          "behavior_signature": [
+            [
+              -3.656357558875988,
+              3.4743373693723267
+            ],
+            [
+              -1.8650476106385905,
+              1.7005428402795615
+            ],
+            [
+              0.44229225295951835,
+              -1.3004483345192073
+            ],
+            [
+              -3.968339657692842,
+              -1.0394175738931901
+            ],
+            [
+              1.409440210002436,
+              -0.11967407225642068
+            ],
+            [
+              2.697256379281343,
+              -0.17953556053263942
+            ],
+            [
+              -3.4915082607549808,
+              1.5093447303985377
+            ],
+            [
+              4.622950358343829,
+              -3.7366910134914044
+            ]
+          ],
+          "best_value": 0.42273195575142486,
+          "budget": 8,
+          "evaluated_count": 8,
+          "evaluations": [
+            {
+              "value": 41.91737070581505,
+              "x": [
+                -3.656357558875988,
+                3.4743373693723267
+              ]
+            },
+            {
+              "value": 15.708681828590613,
+              "x": [
+                -1.8650476106385905,
+                1.7005428402795615
+              ]
+            },
+            {
+              "value": 0.9553851736041797,
+              "x": [
+                0.44229225295951835,
+                -1.3004483345192073
+              ]
+            },
+            {
+              "value": 27.314831315128068,
+              "x": [
+                -3.968339657692842,
+                -1.0394175738931901
+              ]
+            },
+            {
+              "value": 0.42273195575142486,
+              "x": [
+                1.409440210002436,
+                -0.11967407225642068
+              ]
+            },
+            {
+              "value": 2.4199807040673527,
+              "x": [
+                2.697256379281343,
+                -0.17953556053263942
+              ]
+            },
+            {
+              "value": 27.586539197587364,
+              "x": [
+                -3.4915082607549808,
+                1.5093447303985377
+              ]
+            },
+            {
+              "value": 20.297117329922074,
+              "x": [
+                4.622950358343829,
+                -3.7366910134914044
+              ]
+            }
+          ],
+          "proposals": [
+            {
+              "point": [
+                -3.656357558875988,
+                3.4743373693723267
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                -1.8650476106385905,
+                1.7005428402795615
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                0.44229225295951835,
+                -1.3004483345192073
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                -3.968339657692842,
+                -1.0394175738931901
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                1.409440210002436,
+                -0.11967407225642068
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                2.697256379281343,
+                -0.17953556053263942
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                -3.4915082607549808,
+                1.5093447303985377
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                4.622950358343829,
+                -3.7366910134914044
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            }
+          ],
+          "status": "valid",
+          "valid": true
+        }
+      ],
+      "error": null,
+      "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+      "metrics": {
+        "value": 0.42273195575142486
+      },
+      "status": "ok",
+      "trace": null,
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "valid": true
+    },
+    "level_results": [
+      {
+        "artifact": {
+          "components": {
+            "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a point for black-box minimization.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n\n    # No history: random point in bounds\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Find best observed point (lowest value)\n    best = min(history, key=lambda obs: obs['value'])\n    best_x = best['x']\n\n    # Exploration vs exploitation\n    if rng.random() < 0.5:\n        # Pure exploration: uniform random point\n        return [rng.uniform(low, high) for low, high in bounds]\n    else:\n        # Local perturbation of the best point\n        point = []\n        for i, (low, high) in enumerate(bounds):\n            width = high - low\n            step = rng.uniform(-0.2 * width, 0.2 * width)\n            val = best_x[i] + step\n            val = max(low, min(high, val))  # clip to bounds\n            point.append(val)\n        return point\n"
+          }
+        },
+        "budget": {
+          "accounted": {
+            "candidates": 0,
+            "candidates_evaluated": 0,
+            "candidates_proposed": 0,
+            "candidates_reserved": 0,
+            "eval_llm_calls": 0,
+            "evaluator_runs": 1,
+            "optimizer_llm_calls": 0,
+            "total_tokens": 0,
+            "wall_time_s": 0.757955
+          },
+          "candidates": null,
+          "eval_llm_calls": null,
+          "evaluator_runs": null,
+          "exceeded": [],
+          "on_exceed": "return_best_valid",
+          "optimizer_llm_calls": null,
+          "total_tokens": null,
+          "wall_time_s": null
+        },
+        "engine": "fixed",
+        "error": null,
+        "evaluation": {
+          "artifacts": [
+            {
+              "behavior_signature": [
+                [
+                  -3.656357558875988,
+                  3.4743373693723267
+                ],
+                [
+                  -1.8650476106385905,
+                  1.7005428402795615
+                ],
+                [
+                  0.44229225295951835,
+                  -1.3004483345192073
+                ],
+                [
+                  -3.968339657692842,
+                  -1.0394175738931901
+                ],
+                [
+                  1.409440210002436,
+                  -0.11967407225642068
+                ],
+                [
+                  2.697256379281343,
+                  -0.17953556053263942
+                ],
+                [
+                  -3.4915082607549808,
+                  1.5093447303985377
+                ],
+                [
+                  4.622950358343829,
+                  -3.7366910134914044
+                ]
+              ],
+              "best_value": 0.42273195575142486,
+              "budget": 8,
+              "evaluated_count": 8,
+              "evaluations": [
+                {
+                  "value": 41.91737070581505,
+                  "x": [
+                    -3.656357558875988,
+                    3.4743373693723267
+                  ]
+                },
+                {
+                  "value": 15.708681828590613,
+                  "x": [
+                    -1.8650476106385905,
+                    1.7005428402795615
+                  ]
+                },
+                {
+                  "value": 0.9553851736041797,
+                  "x": [
+                    0.44229225295951835,
+                    -1.3004483345192073
+                  ]
+                },
+                {
+                  "value": 27.314831315128068,
+                  "x": [
+                    -3.968339657692842,
+                    -1.0394175738931901
+                  ]
+                },
+                {
+                  "value": 0.42273195575142486,
+                  "x": [
+                    1.409440210002436,
+                    -0.11967407225642068
+                  ]
+                },
+                {
+                  "value": 2.4199807040673527,
+                  "x": [
+                    2.697256379281343,
+                    -0.17953556053263942
+                  ]
+                },
+                {
+                  "value": 27.586539197587364,
+                  "x": [
+                    -3.4915082607549808,
+                    1.5093447303985377
+                  ]
+                },
+                {
+                  "value": 20.297117329922074,
+                  "x": [
+                    4.622950358343829,
+                    -3.7366910134914044
+                  ]
+                }
+              ],
+              "proposals": [
+                {
+                  "point": [
+                    -3.656357558875988,
+                    3.4743373693723267
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    -1.8650476106385905,
+                    1.7005428402795615
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    0.44229225295951835,
+                    -1.3004483345192073
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    -3.968339657692842,
+                    -1.0394175738931901
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    1.409440210002436,
+                    -0.11967407225642068
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    2.697256379281343,
+                    -0.17953556053263942
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    -3.4915082607549808,
+                    1.5093447303985377
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    4.622950358343829,
+                    -3.7366910134914044
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                }
+              ],
+              "status": "valid",
+              "valid": true
+            }
+          ],
+          "error": null,
+          "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+          "metrics": {
+            "value": 0.42273195575142486
+          },
+          "status": "ok",
+          "trace": null,
+          "usage": {
+            "feedback": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "forward": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "judge": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "optimizer": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            }
+          },
+          "valid": true
+        },
+        "level_results": [],
+        "lineage": [],
+        "metadata": {
+          "budget_exhausted": null,
+          "candidate_trajectory": [],
+          "engine_capabilities": [
+            "pareto",
+            "rich_trace",
+            "scalar",
+            "trace_module",
+            "weighted"
+          ],
+          "evaluator_records": [
+            {
+              "artifacts": [
+                {
+                  "behavior_signature": [
+                    [
+                      -3.656357558875988,
+                      3.4743373693723267
+                    ],
+                    [
+                      -1.8650476106385905,
+                      1.7005428402795615
+                    ],
+                    [
+                      0.44229225295951835,
+                      -1.3004483345192073
+                    ],
+                    [
+                      -3.968339657692842,
+                      -1.0394175738931901
+                    ],
+                    [
+                      1.409440210002436,
+                      -0.11967407225642068
+                    ],
+                    [
+                      2.697256379281343,
+                      -0.17953556053263942
+                    ],
+                    [
+                      -3.4915082607549808,
+                      1.5093447303985377
+                    ],
+                    [
+                      4.622950358343829,
+                      -3.7366910134914044
+                    ]
+                  ],
+                  "best_value": 0.42273195575142486,
+                  "budget": 8,
+                  "evaluated_count": 8,
+                  "evaluations": [
+                    {
+                      "value": 41.91737070581505,
+                      "x": [
+                        -3.656357558875988,
+                        3.4743373693723267
+                      ]
+                    },
+                    {
+                      "value": 15.708681828590613,
+                      "x": [
+                        -1.8650476106385905,
+                        1.7005428402795615
+                      ]
+                    },
+                    {
+                      "value": 0.9553851736041797,
+                      "x": [
+                        0.44229225295951835,
+                        -1.3004483345192073
+                      ]
+                    },
+                    {
+                      "value": 27.314831315128068,
+                      "x": [
+                        -3.968339657692842,
+                        -1.0394175738931901
+                      ]
+                    },
+                    {
+                      "value": 0.42273195575142486,
+                      "x": [
+                        1.409440210002436,
+                        -0.11967407225642068
+                      ]
+                    },
+                    {
+                      "value": 2.4199807040673527,
+                      "x": [
+                        2.697256379281343,
+                        -0.17953556053263942
+                      ]
+                    },
+                    {
+                      "value": 27.586539197587364,
+                      "x": [
+                        -3.4915082607549808,
+                        1.5093447303985377
+                      ]
+                    },
+                    {
+                      "value": 20.297117329922074,
+                      "x": [
+                        4.622950358343829,
+                        -3.7366910134914044
+                      ]
+                    }
+                  ],
+                  "proposals": [
+                    {
+                      "point": [
+                        -3.656357558875988,
+                        3.4743373693723267
+                      ],
+                      "status": "valid",
+                      "stderr": "",
+                      "stdout": ""
+                    },
+                    {
+                      "point": [
+                        -1.8650476106385905,
+                        1.7005428402795615
+                      ],
+                      "status": "valid",
+                      "stderr": "",
+                      "stdout": ""
+                    },
+                    {
+                      "point": [
+                        0.44229225295951835,
+                        -1.3004483345192073
+                      ],
+                      "status": "valid",
+                      "stderr": "",
+                      "stdout": ""
+                    },
+                    {
+                      "point": [
+                        -3.968339657692842,
+                        -1.0394175738931901
+                      ],
+                      "status": "valid",
+                      "stderr": "",
+                      "stdout": ""
+                    },
+                    {
+                      "point": [
+                        1.409440210002436,
+                        -0.11967407225642068
+                      ],
+                      "status": "valid",
+                      "stderr": "",
+                      "stdout": ""
+                    },
+                    {
+                      "point": [
+                        2.697256379281343,
+                        -0.17953556053263942
+                      ],
+                      "status": "valid",
+                      "stderr": "",
+                      "stdout": ""
+                    },
+                    {
+                      "point": [
+                        -3.4915082607549808,
+                        1.5093447303985377
+                      ],
+                      "status": "valid",
+                      "stderr": "",
+                      "stdout": ""
+                    },
+                    {
+                      "point": [
+                        4.622950358343829,
+                        -3.7366910134914044
+                      ],
+                      "status": "valid",
+                      "stderr": "",
+                      "stdout": ""
+                    }
+                  ],
+                  "status": "valid",
+                  "valid": true
+                }
+              ],
+              "error": null,
+              "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+              "metrics": {
+                "value": 0.42273195575142486
+              },
+              "status": "ok",
+              "trace": null,
+              "usage": {
+                "feedback": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "forward": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "judge": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                },
+                "optimizer": {
+                  "completion_tokens": 0,
+                  "cost_usd": 0.0,
+                  "prompt_tokens": 0,
+                  "total_tokens": 0
+                }
+              },
+              "valid": true
+            }
+          ],
+          "level_id": "level-0",
+          "menu_evidence": {
+            "basis_of_equivalence": "unavailable",
+            "behavior_equivalence_known": false,
+            "common_example_count": 0,
+            "declared_menu_size": null,
+            "effective_menu_size": null,
+            "evaluated_candidate_count": 0,
+            "evaluation_observation_count": 0,
+            "menu_collapsed": null,
+            "valid_candidate_count": 0
+          },
+          "menu_observations": [],
+          "module_capabilities": [
+            "json_snapshot",
+            "multi_component",
+            "trace_module"
+          ],
+          "objective_mode": "scalar",
+          "optimizer_response_diagnostics": [],
+          "selected_models": {
+            "feedback": null,
+            "forward": null,
+            "judge": null,
+            "optimizer": null
+          },
+          "trace_optimize_path": false
+        },
+        "module_ref": "recursive_opt.module.reasoning_workflow@1",
+        "plan_fingerprint": "d608688e816247269165597f50d46a8a8570512117c2b50569ca18aab86165f3",
+        "portable": true,
+        "promotable": true,
+        "spec_fingerprint": "d608688e816247269165597f50d46a8a8570512117c2b50569ca18aab86165f3",
+        "status": "success",
+        "unit_id": "default:seed-1:matrix-0:level-0",
+        "usage": {
+          "feedback": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "forward": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "judge": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "optimizer": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          }
+        },
+        "valid": true
+      }
+    ],
+    "lineage": [],
+    "metadata": {
+      "arm_id": "default",
+      "budget_exhausted": null,
+      "candidate_trajectory": [],
+      "engine_capabilities": [
+        "pareto",
+        "rich_trace",
+        "scalar",
+        "trace_module",
+        "weighted"
+      ],
+      "evaluator_records": [
+        {
+          "artifacts": [
+            {
+              "behavior_signature": [
+                [
+                  -3.656357558875988,
+                  3.4743373693723267
+                ],
+                [
+                  -1.8650476106385905,
+                  1.7005428402795615
+                ],
+                [
+                  0.44229225295951835,
+                  -1.3004483345192073
+                ],
+                [
+                  -3.968339657692842,
+                  -1.0394175738931901
+                ],
+                [
+                  1.409440210002436,
+                  -0.11967407225642068
+                ],
+                [
+                  2.697256379281343,
+                  -0.17953556053263942
+                ],
+                [
+                  -3.4915082607549808,
+                  1.5093447303985377
+                ],
+                [
+                  4.622950358343829,
+                  -3.7366910134914044
+                ]
+              ],
+              "best_value": 0.42273195575142486,
+              "budget": 8,
+              "evaluated_count": 8,
+              "evaluations": [
+                {
+                  "value": 41.91737070581505,
+                  "x": [
+                    -3.656357558875988,
+                    3.4743373693723267
+                  ]
+                },
+                {
+                  "value": 15.708681828590613,
+                  "x": [
+                    -1.8650476106385905,
+                    1.7005428402795615
+                  ]
+                },
+                {
+                  "value": 0.9553851736041797,
+                  "x": [
+                    0.44229225295951835,
+                    -1.3004483345192073
+                  ]
+                },
+                {
+                  "value": 27.314831315128068,
+                  "x": [
+                    -3.968339657692842,
+                    -1.0394175738931901
+                  ]
+                },
+                {
+                  "value": 0.42273195575142486,
+                  "x": [
+                    1.409440210002436,
+                    -0.11967407225642068
+                  ]
+                },
+                {
+                  "value": 2.4199807040673527,
+                  "x": [
+                    2.697256379281343,
+                    -0.17953556053263942
+                  ]
+                },
+                {
+                  "value": 27.586539197587364,
+                  "x": [
+                    -3.4915082607549808,
+                    1.5093447303985377
+                  ]
+                },
+                {
+                  "value": 20.297117329922074,
+                  "x": [
+                    4.622950358343829,
+                    -3.7366910134914044
+                  ]
+                }
+              ],
+              "proposals": [
+                {
+                  "point": [
+                    -3.656357558875988,
+                    3.4743373693723267
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    -1.8650476106385905,
+                    1.7005428402795615
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    0.44229225295951835,
+                    -1.3004483345192073
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    -3.968339657692842,
+                    -1.0394175738931901
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    1.409440210002436,
+                    -0.11967407225642068
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    2.697256379281343,
+                    -0.17953556053263942
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    -3.4915082607549808,
+                    1.5093447303985377
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    4.622950358343829,
+                    -3.7366910134914044
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                }
+              ],
+              "status": "valid",
+              "valid": true
+            }
+          ],
+          "error": null,
+          "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+          "metrics": {
+            "value": 0.42273195575142486
+          },
+          "status": "ok",
+          "trace": null,
+          "usage": {
+            "feedback": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "forward": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "judge": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "optimizer": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            }
+          },
+          "valid": true
+        }
+      ],
+      "level_id": "level-0",
+      "level_ids": [
+        "level-0"
+      ],
+      "matrix": {},
+      "menu_evidence": {
+        "basis_of_equivalence": "unavailable",
+        "behavior_equivalence_known": false,
+        "common_example_count": 0,
+        "declared_menu_size": null,
+        "effective_menu_size": null,
+        "evaluated_candidate_count": 0,
+        "evaluation_observation_count": 0,
+        "menu_collapsed": null,
+        "valid_candidate_count": 0
+      },
+      "menu_observations": [],
+      "module_capabilities": [
+        "json_snapshot",
+        "multi_component",
+        "trace_module"
+      ],
+      "objective_mode": "scalar",
+      "optimizer_response_diagnostics": [],
+      "resolved_models": {
+        "level-0": {
+          "feedback": null,
+          "forward": null,
+          "judge": null,
+          "optimizer": null
+        }
+      },
+      "seed": 1,
+      "selected_models": {
+        "feedback": null,
+        "forward": null,
+        "judge": null,
+        "optimizer": null
+      },
+      "test_overrides": {},
+      "trace_optimize_path": false
+    },
+    "module_ref": "recursive_opt.module.reasoning_workflow@1",
+    "plan_fingerprint": "d608688e816247269165597f50d46a8a8570512117c2b50569ca18aab86165f3",
+    "portable": true,
+    "promotable": true,
+    "spec_fingerprint": "d608688e816247269165597f50d46a8a8570512117c2b50569ca18aab86165f3",
+    "status": "success",
+    "unit_id": "default:seed-1:matrix-0",
+    "usage": {
+      "feedback": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "forward": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "judge": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "optimizer": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      }
+    },
+    "valid": true
+  },
+  "result_sha256": "c81d6f0b7f82da093aae7773a1f3d9aa16a5815db1c9cf9ad498b435829599c7"
+}

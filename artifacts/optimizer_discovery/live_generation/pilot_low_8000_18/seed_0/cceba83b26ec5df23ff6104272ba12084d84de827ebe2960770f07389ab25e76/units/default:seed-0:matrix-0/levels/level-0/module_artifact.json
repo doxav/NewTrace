@@ -1,0 +1,5 @@
+{
+  "components": {
+    "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a point for black-box minimization.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n\n    # No history: random point in bounds\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Find best observed point (lowest value)\n    best = min(history, key=lambda obs: obs['value'])\n    best_x = best['x']\n\n    # Exploration vs exploitation\n    if rng.random() < 0.5:\n        # Pure exploration: uniform random point\n        return [rng.uniform(low, high) for low, high in bounds]\n    else:\n        # Local perturbation of the best point\n        point = []\n        for i, (low, high) in enumerate(bounds):\n            width = high - low\n            step = rng.uniform(-0.2 * width, 0.2 * width)\n            val = best_x[i] + step\n            val = max(low, min(high, val))  # clip to bounds\n            point.append(val)\n        return point\n"
+  }
+}
