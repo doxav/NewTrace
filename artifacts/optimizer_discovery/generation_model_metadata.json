@@ -1,0 +1,44 @@
+{
+  "source": "https://openrouter.ai/api/v1/models",
+  "retrieved_date": "2026-09-08",
+  "id": "deepseek/deepseek-v4-flash-0731",
+  "pricing": {
+    "prompt": "0.000000065",
+    "completion": "0.00000018",
+    "input_cache_read": "0.000000016"
+  },
+  "reasoning": {
+    "mandatory": false,
+    "default_enabled": true,
+    "supported_efforts": [
+      "max",
+      "high",
+      "low"
+    ],
+    "default_effort": "high"
+  },
+  "supported_parameters": [
+    "frequency_penalty",
+    "include_reasoning",
+    "logit_bias",
+    "logprobs",
+    "max_tokens",
+    "min_p",
+    "parallel_tool_calls",
+    "presence_penalty",
+    "reasoning",
+    "reasoning_effort",
+    "repetition_penalty",
+    "response_format",
+    "seed",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_a",
+    "top_k",
+    "top_logprobs",
+    "top_p"
+  ]
+}
