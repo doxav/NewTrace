@@ -1,0 +1,36 @@
+{
+  "key": {
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "task_identity": "83bba334c7fb705e88b22917808245055aeedc8eb392b5058d9db4b367fa9040",
+    "phase": "pilot",
+    "split": "validation",
+    "local_seed": 1083357177,
+    "budget": 32,
+    "deployment": false,
+    "evaluator_version": "a41259493b2069e88a43d045e89b67241c1398a8dbfe9eae6018d602fef57244"
+  },
+  "result": {
+    "valid": false,
+    "candidate_valid": false,
+    "status": "missing_source",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "task_identity": "83bba334c7fb705e88b22917808245055aeedc8eb392b5058d9db4b367fa9040",
+    "stratum": "quadratic/4",
+    "local_seed": 1083357177,
+    "budget": 32,
+    "observations": [],
+    "proposal_attempts": [
+      {
+        "evaluation_index": 0,
+        "status": "missing_source",
+        "policy": "candidate"
+      }
+    ],
+    "fallback_used": false,
+    "objective_calls": 0,
+    "unused_objective_allocation": 32,
+    "subprocess_executions": 0,
+    "execution_s": 3.3214000723091885e-05,
+    "metrics": null
+  }
+}

@@ -1,0 +1,447 @@
+{
+  "experiment": "EXP-15",
+  "phase": "pilot",
+  "per_seed": [
+    {
+      "outer_seed": 701,
+      "A0": {
+        "description": {
+          "responses": 0,
+          "source_invalid_fraction": null,
+          "trajectories": 12,
+          "trajectory_invalid_fraction": 0.0,
+          "candidate_invalid_fraction": 0.0,
+          "fallback_trajectories": 0,
+          "proposal_status_counts": {
+            "valid": 384
+          },
+          "valid_proposal_fraction": 1.0,
+          "timeout_fraction": 0.0,
+          "exception_fraction": 0.0,
+          "logical_execution_s": 64.99472358799903,
+          "target_evaluations": [
+            null,
+            16,
+            null,
+            null,
+            null,
+            23,
+            null,
+            32,
+            3,
+            4,
+            19,
+            22
+          ],
+          "usage": {
+            "prompt_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "completion_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "reasoning_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "total_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "cost_usd": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            }
+          },
+          "source_complexity": []
+        },
+        "auc": 0.18787310130155643,
+        "final_regret": 0.029035837339848564,
+        "target_attainment": 0.5833333333333334,
+        "capped_target_evaluations": 23.666666666666668,
+        "fallback_trajectories": 0,
+        "candidate_valid_trajectories": 12
+      },
+      "A1": {
+        "description": {
+          "responses": 0,
+          "source_invalid_fraction": null,
+          "trajectories": 12,
+          "trajectory_invalid_fraction": 0.0,
+          "candidate_invalid_fraction": 0.0,
+          "fallback_trajectories": 0,
+          "proposal_status_counts": {
+            "valid": 384
+          },
+          "valid_proposal_fraction": 1.0,
+          "timeout_fraction": 0.0,
+          "exception_fraction": 0.0,
+          "logical_execution_s": 64.99472358799903,
+          "target_evaluations": [
+            null,
+            16,
+            null,
+            null,
+            null,
+            23,
+            null,
+            32,
+            3,
+            4,
+            19,
+            22
+          ],
+          "usage": {
+            "prompt_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "completion_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "reasoning_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "total_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "cost_usd": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            }
+          },
+          "source_complexity": []
+        },
+        "auc": 0.18787310130155643,
+        "final_regret": 0.029035837339848564,
+        "target_attainment": 0.5833333333333334,
+        "capped_target_evaluations": 23.666666666666668,
+        "fallback_trajectories": 0,
+        "candidate_valid_trajectories": 12
+      },
+      "A2": {
+        "description": {
+          "responses": 0,
+          "source_invalid_fraction": null,
+          "trajectories": 12,
+          "trajectory_invalid_fraction": 0.0,
+          "candidate_invalid_fraction": 0.0,
+          "fallback_trajectories": 0,
+          "proposal_status_counts": {
+            "valid": 384
+          },
+          "valid_proposal_fraction": 1.0,
+          "timeout_fraction": 0.0,
+          "exception_fraction": 0.0,
+          "logical_execution_s": 64.99472358799903,
+          "target_evaluations": [
+            null,
+            16,
+            null,
+            null,
+            null,
+            23,
+            null,
+            32,
+            3,
+            4,
+            19,
+            22
+          ],
+          "usage": {
+            "prompt_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "completion_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "reasoning_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "total_tokens": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            },
+            "cost_usd": {
+              "reported_sum": null,
+              "reported_responses": 0,
+              "missing_responses": 0
+            }
+          },
+          "source_complexity": []
+        },
+        "auc": 0.18787310130155643,
+        "final_regret": 0.029035837339848564,
+        "target_attainment": 0.5833333333333334,
+        "capped_target_evaluations": 23.666666666666668,
+        "fallback_trajectories": 0,
+        "candidate_valid_trajectories": 12
+      }
+    }
+  ],
+  "arms": {
+    "A0": {
+      "mean_auc": 0.18787310130155643,
+      "median_auc": 0.18787310130155643
+    },
+    "A1": {
+      "mean_auc": 0.18787310130155643,
+      "median_auc": 0.18787310130155643
+    },
+    "A2": {
+      "mean_auc": 0.18787310130155643,
+      "median_auc": 0.18787310130155643
+    }
+  },
+  "contrasts": {
+    "A2-A0": {
+      "deltas": [
+        0.0
+      ],
+      "mean": 0.0,
+      "median": 0.0,
+      "paired_bootstrap_95": [
+        0.0,
+        0.0
+      ],
+      "interpretation": "no detectable difference",
+      "replication_unit": "outer_seed"
+    },
+    "A2-A1": {
+      "deltas": [
+        0.0
+      ],
+      "mean": 0.0,
+      "median": 0.0,
+      "paired_bootstrap_95": [
+        0.0,
+        0.0
+      ],
+      "interpretation": "no detectable difference",
+      "replication_unit": "outer_seed"
+    }
+  },
+  "accounting": {
+    "proposal_slots": 4,
+    "completed_responses": 4,
+    "transport_attempts": 5,
+    "usage": {
+      "prompt_tokens": 4940,
+      "completion_tokens": 21848,
+      "reasoning_tokens": 19742,
+      "total_tokens": 26788,
+      "cost_usd": 0.005411162024
+    },
+    "per_arm": {
+      "A1": {
+        "responses": 2,
+        "source_invalid_fraction": 0.5,
+        "trajectories": 24,
+        "trajectory_invalid_fraction": 0.5,
+        "candidate_invalid_fraction": 0.5,
+        "fallback_trajectories": 0,
+        "proposal_status_counts": {
+          "syntax_error": 12,
+          "valid": 384
+        },
+        "valid_proposal_fraction": 0.9696969696969697,
+        "timeout_fraction": 0.0,
+        "exception_fraction": 0.0,
+        "logical_execution_s": 52.4725052729882,
+        "target_evaluations": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          6,
+          null,
+          20,
+          null,
+          1,
+          null,
+          20,
+          null,
+          null,
+          null,
+          16,
+          null
+        ],
+        "usage": {
+          "prompt_tokens": {
+            "reported_sum": 866,
+            "reported_responses": 2,
+            "missing_responses": 0
+          },
+          "completion_tokens": {
+            "reported_sum": 10249,
+            "reported_responses": 2,
+            "missing_responses": 0
+          },
+          "reasoning_tokens": {
+            "reported_sum": 8485,
+            "reported_responses": 2,
+            "missing_responses": 0
+          },
+          "total_tokens": {
+            "reported_sum": 11115,
+            "reported_responses": 2,
+            "missing_responses": 0
+          },
+          "cost_usd": {
+            "reported_sum": 0.00255581,
+            "reported_responses": 2,
+            "missing_responses": 0
+          }
+        },
+        "source_complexity": [
+          {
+            "source_bytes": 4247,
+            "ast_nodes": null
+          },
+          {
+            "source_bytes": 2501,
+            "ast_nodes": 582
+          }
+        ],
+        "seed_selected": 1,
+        "ineligible_candidates": 1
+      },
+      "A2": {
+        "responses": 2,
+        "source_invalid_fraction": 0.5,
+        "trajectories": 24,
+        "trajectory_invalid_fraction": 0.5,
+        "candidate_invalid_fraction": 0.5,
+        "fallback_trajectories": 0,
+        "proposal_status_counts": {
+          "missing_source": 12,
+          "valid": 384
+        },
+        "valid_proposal_fraction": 0.9696969696969697,
+        "timeout_fraction": 0.0,
+        "exception_fraction": 0.0,
+        "logical_execution_s": 66.7457072419893,
+        "target_evaluations": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          1,
+          null,
+          26,
+          null,
+          6,
+          null,
+          3,
+          null
+        ],
+        "usage": {
+          "prompt_tokens": {
+            "reported_sum": 4074,
+            "reported_responses": 2,
+            "missing_responses": 0
+          },
+          "completion_tokens": {
+            "reported_sum": 11599,
+            "reported_responses": 2,
+            "missing_responses": 0
+          },
+          "reasoning_tokens": {
+            "reported_sum": 11257,
+            "reported_responses": 2,
+            "missing_responses": 0
+          },
+          "total_tokens": {
+            "reported_sum": 15673,
+            "reported_responses": 2,
+            "missing_responses": 0
+          },
+          "cost_usd": {
+            "reported_sum": 0.002855352024,
+            "reported_responses": 2,
+            "missing_responses": 0
+          }
+        },
+        "source_complexity": [
+          {
+            "source_bytes": 0,
+            "ast_nodes": 1
+          },
+          {
+            "source_bytes": 1127,
+            "ast_nodes": 297
+          }
+        ],
+        "seed_selected": 1,
+        "ineligible_candidates": 1
+      }
+    },
+    "source_screen_invalid": 2,
+    "ineligible_generated_candidates": 2,
+    "allocated_search_trajectories_per_arm": 36,
+    "allocated_search_objective_calls_per_arm": 1152,
+    "allocated_holdout_objective_calls_per_arm": 384,
+    "actual_shared_objective_calls": 1536,
+    "unused_unique_objective_allocations": 768,
+    "subprocess_executions": 3072,
+    "evaluation_requests": 222,
+    "cache_hits": 150,
+    "trace_updates": 2,
+    "normalization_reference_evaluations": 3072
+  },
+  "selections": {
+    "frozen_ns": 1788890852556718802,
+    "selection_hashes": {
+      "701": "69c93405c76850e9fcc624bddc32f48a016f1c99b7c3cf52c321ed5dc81b03da"
+    },
+    "representative_outer_seed": 701,
+    "representative": {
+      "index": -1,
+      "source": "def propose(history, bounds, seed):\n    \"\"\"Mix uniform exploration with decreasing incumbent-centered Gaussian steps.\"\"\"\n    import random\n    rng = random.Random(seed + len(history))\n    if not history or rng.random() < 0.25:\n        return [rng.uniform(low, high) for low, high in bounds]\n    best = min(history, key=lambda row: row[\"value\"])[\"x\"]\n    scale = 0.2 / (1.0 + len(history) / (4.0 * len(bounds))) ** 0.5\n    return [max(low, min(high, x + rng.gauss(0.0, scale * (high - low))))\n            for x, (low, high) in zip(best, bounds)]\n",
+      "source_sha256": "5b74e5a3fe2fc90fcb42a603b058fa7befbf65f38775caa77acd30cdf619b640",
+      "validation_auc": 0.15400968492840839
+    }
+  }
+}

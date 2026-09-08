@@ -1,0 +1,15 @@
+{
+  "selected_ns": 1788890743221807071,
+  "A1": {
+    "index": -1,
+    "source": "def propose(history, bounds, seed):\n    \"\"\"Mix uniform exploration with decreasing incumbent-centered Gaussian steps.\"\"\"\n    import random\n    rng = random.Random(seed + len(history))\n    if not history or rng.random() < 0.25:\n        return [rng.uniform(low, high) for low, high in bounds]\n    best = min(history, key=lambda row: row[\"value\"])[\"x\"]\n    scale = 0.2 / (1.0 + len(history) / (4.0 * len(bounds))) ** 0.5\n    return [max(low, min(high, x + rng.gauss(0.0, scale * (high - low))))\n            for x, (low, high) in zip(best, bounds)]\n",
+    "source_sha256": "5b74e5a3fe2fc90fcb42a603b058fa7befbf65f38775caa77acd30cdf619b640",
+    "validation_auc": 0.15400968492840839
+  },
+  "A2": {
+    "index": -1,
+    "source": "def propose(history, bounds, seed):\n    \"\"\"Mix uniform exploration with decreasing incumbent-centered Gaussian steps.\"\"\"\n    import random\n    rng = random.Random(seed + len(history))\n    if not history or rng.random() < 0.25:\n        return [rng.uniform(low, high) for low, high in bounds]\n    best = min(history, key=lambda row: row[\"value\"])[\"x\"]\n    scale = 0.2 / (1.0 + len(history) / (4.0 * len(bounds))) ** 0.5\n    return [max(low, min(high, x + rng.gauss(0.0, scale * (high - low))))\n            for x, (low, high) in zip(best, bounds)]\n",
+    "source_sha256": "5b74e5a3fe2fc90fcb42a603b058fa7befbf65f38775caa77acd30cdf619b640",
+    "validation_auc": 0.15400968492840839
+  }
+}
