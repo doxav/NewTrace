@@ -1,0 +1,72 @@
+{
+  "completed_responses": 80,
+  "outer_seeds": [
+    11,
+    23,
+    37,
+    41,
+    53
+  ],
+  "source_hashes_verified": true,
+  "requests_match_manifest": true,
+  "equal_allocations_verified": true,
+  "selection_and_holdout_chronology_verified": true,
+  "metrics_recomputed": true,
+  "aggregate_recomputed_exactly": true,
+  "all_cache_metrics_recomputed": true,
+  "production_trace_blocks_verified": 5,
+  "completed_slots_per_arm_per_seed": 8,
+  "rotated_request_order_verified": true,
+  "local_requests_sequential": true,
+  "unique_model_response_ids": 80,
+  "exact_model_verified": true,
+  "source_exports": {
+    "representative_outer_seed": 41,
+    "programs": {
+      "11": {
+        "source_sha256": "5b74e5a3fe2fc90fcb42a603b058fa7befbf65f38775caa77acd30cdf619b640",
+        "selected_index": -1,
+        "validation_auc": 0.09524949728100492,
+        "gzip_path": "artifacts/optimizer_discovery/exp15/selected/A2_seed_11.py.gz",
+        "gzip_sha256": "036785baebc28290b157a7f7b019e623b5d42b0f1512835147f53916be717c2b",
+        "lineage_path": "artifacts/optimizer_discovery/exp15/selected/A2_seed_11_lineage.json"
+      },
+      "23": {
+        "source_sha256": "8c1079d841f13ddc1a6c739447b3bfd94477fbee5daf147f41c30611edae8ded",
+        "selected_index": 0,
+        "validation_auc": 0.1335809154937614,
+        "gzip_path": "artifacts/optimizer_discovery/exp15/selected/A2_seed_23.py.gz",
+        "gzip_sha256": "1d1832ca8a08c22dd0a5090f0c6fd46263265b80ae715ee139158585ac1521e1",
+        "lineage_path": "artifacts/optimizer_discovery/exp15/selected/A2_seed_23_lineage.json"
+      },
+      "37": {
+        "source_sha256": "5b74e5a3fe2fc90fcb42a603b058fa7befbf65f38775caa77acd30cdf619b640",
+        "selected_index": -1,
+        "validation_auc": 0.15735599250234655,
+        "gzip_path": "artifacts/optimizer_discovery/exp15/selected/A2_seed_37.py.gz",
+        "gzip_sha256": "036785baebc28290b157a7f7b019e623b5d42b0f1512835147f53916be717c2b",
+        "lineage_path": "artifacts/optimizer_discovery/exp15/selected/A2_seed_37_lineage.json"
+      },
+      "41": {
+        "source_sha256": "1684f91acdc36c0ca6aac70afeb9cc2c4eed7ab847926d5880590e059266abb7",
+        "selected_index": 5,
+        "validation_auc": 0.05091900455186825,
+        "gzip_path": "artifacts/optimizer_discovery/exp15/selected/A2_seed_41.py.gz",
+        "gzip_sha256": "c6a8eab1264834288772a24d40679540a887b4115e560e5e1fa7767fe9fa3731",
+        "lineage_path": "artifacts/optimizer_discovery/exp15/selected/A2_seed_41_lineage.json"
+      },
+      "53": {
+        "source_sha256": "3a87caf393828d41396dda16eafb703bca52cd2dcb437ddfe8d86bd90e9904b4",
+        "selected_index": 6,
+        "validation_auc": 0.059657978748668315,
+        "gzip_path": "artifacts/optimizer_discovery/exp15/selected/A2_seed_53.py.gz",
+        "gzip_sha256": "a5c20164b015c13cf197f871495964b5565b81f5499019d9258c312ba1058a44",
+        "lineage_path": "artifacts/optimizer_discovery/exp15/selected/A2_seed_53_lineage.json"
+      }
+    },
+    "export_semantics": "gzip mtime=0; decompress to exact evaluated optimizer.py bytes; no formatting or source edits"
+  },
+  "absolute_relative_export_index_bytes_identical": true,
+  "frozen_source_and_environment_preflight": "passed",
+  "compressed_cache_entries": 0
+}

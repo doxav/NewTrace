@@ -1,0 +1,23 @@
+{
+  "baseline": "90651f47b9c3c2570e33b0aa64ca648c4a7c765c",
+  "branch": "codex/phase1-optimizer-discovery-exp15",
+  "source_preflight": "passed",
+  "actual_credential_scan": "passed, including decompressed scientific evidence",
+  "scanned_files_before_this_record": 1648,
+  "file_size_gate_bytes": 512000,
+  "file_size_gate": "passed without exemptions",
+  "no_env_or_pending_files": true,
+  "phase0_original_files_unchanged": 670,
+  "historical_assessment_preserved_as_exact_prefix": true,
+  "historical_H1_H9_rows_preserved": true,
+  "user_probe_sha256": "ca8a08e5c2eca14c1004e2af3241ae8d9ebf2909d386eee9e1e2611f5b5e84e8",
+  "unit_regression": {
+    "passed": 772,
+    "skipped": 3,
+    "seconds": 54.99,
+    "log": "release_offline_tests.txt"
+  },
+  "targeted_tests": 53,
+  "hosted_ci_run": false,
+  "no_merge_push_pr_or_external_contact": true
+}
