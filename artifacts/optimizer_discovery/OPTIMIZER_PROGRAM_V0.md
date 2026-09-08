@@ -78,7 +78,8 @@ infrastructure remains separate work; no security isolation is claimed here.
 
 ## Menu semantics
 
-Canonical result metadata contains `menu_observations` and `menu_evidence` automatically.
+Canonical result metadata and legacy run_spec result rows contain `menu_observations`
+and `menu_evidence` automatically.
 Candidate counts deduplicate exact source artifacts; evaluation_observation_count
 retains duplicate evaluations. declared_menu_size is a declared Cartesian menu count,
 or null for adaptive/unknown menus. Only actual search-phase inputs are included;
@@ -94,7 +95,7 @@ behavioral headroom. Repeated inconsistent observations or disjoint panels retur
 null effective size and null collapse, with a reason. All-invalid is size zero.
 These are observations on the measured panel, never proofs over an entire domain.
 
-Legacy trainer rollouts are observed directly; normalized rejection flags and typed
+Legacy module evaluations are observed before trainer queues can evict rollouts; normalized rejection flags and typed
 invalid payloads are excluded. Legacy numeric ranking floors remain for compatibility,
 and legacy evaluators without behavior signatures cannot certify behavioral diversity.
 This is an explicit narrowing of MC-b, not retrospective certification of old runs.

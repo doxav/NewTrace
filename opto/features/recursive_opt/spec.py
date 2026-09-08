@@ -908,9 +908,10 @@ def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources:
     memory.record_progress(run_id=run_id, level_id=level.level_id, level_index=level_index, event='level_start', level_step=0, global_step=global_step, metrics={'planned_steps': iterations, 'surface': legacy['surface'], 'objective_mode': str((objective_config or {}).get('mode', 'scalar'))}, task_ids=task_ids, budget=_thaw(guard.report()), selected_by='pareto' if (objective_config or {}).get('mode') == 'pareto' else 'objective')
     trainer_result = None
     started_at = time.monotonic()
+    module = _ObservedLegacyModule(module, legacy, guard.menu_observations)
     if should_fit:
         trainer_result = optimize(module, _dataset_for(legacy, families, iterations), guide=guide, optimizer=resources.get('optimizer', level_optimizer), trainer=resources.get('trainer', legacy.get('trainer', config['trainer'])), optimizer_kwargs=optimizer_kwargs, iterations=iterations, num_candidates=num_candidates, logger=logger, budget=RecursiveOptBudget(), **trainer_kwargs)
-    guard.menu_observations.extend(_legacy_menu_observations(trainer_result, legacy))
+    module.observing = False
     wall_s = round(time.monotonic() - started_at, 6)
     selected_candidate = None
     try:
@@ -941,7 +942,7 @@ def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources:
     compatibility = {'surface': legacy['surface'], 'score': score, 'wall_s': wall_s, 'artifact': artifact_text, 'reused_prior': reuse['used_prior'], 'tools': reuse['tools'], 'artifact_id': record.artifact_id, 'depends_on': list(legacy.get('depends_on') or []), 'progress': progress}
     if isinstance(capture, MutableMapping):
         capture.setdefault('results', {})[level.level_id] = compatibility
-        capture.setdefault('levels', {})[level.level_id] = module
+        capture.setdefault('levels', {})[level.level_id] = module.module
         capture['memory'] = memory
         summary = capture.setdefault('progress', {'run_id': run_id, 'levels': {}})
         summary['levels'][level.level_id] = progress
@@ -969,23 +970,53 @@ def _declared_menu_size(level: Mapping[str, Any]) -> Optional[int]:
         return math.prod(len(constraints[target]) for target in targets)
     return None
 
-def _legacy_menu_observations(trainer: Any, level: Mapping[str, Any]) -> List[Dict[str, Any]]:
-    """Read actual trainer rollouts, never final priors or per-family artifact memory."""
-    observations = []
-    for item in getattr(getattr(trainer, 'memory', None), 'memory', []) or []:
-        if not isinstance(item, tuple) or len(item) != 2 or not hasattr(item[1], 'get_module'):
-            continue
-        candidate = item[1]
-        artifact = {'text': _artifact_text(candidate.get_module(), level['surface'])}
-        for rollout in candidate.rollouts:
-            payload = getattr(rollout['target'], 'data', rollout['target'])
-            feedback = str(rollout.get('feedback', ''))
-            score = float(rollout['score'])
-            valid = not is_invalid_score(score) and not _normalizer_rejected(feedback)
-            if isinstance(payload, Mapping):
-                valid = valid and payload.get('valid', True) and not _normalizer_rejected(str(payload.get('feedback', '')))
-            observations.append({'candidate': artifact, 'example': _thaw(rollout['x']), 'phase': 'fit', 'valid': bool(valid), 'metrics': {'score': score} if valid else {}, 'feedback': feedback})
-    return observations
+class _ObservedLegacyModule(Module):
+    """Observe each real legacy evaluation before trainer queues evict its rollout."""
+
+    def __init__(self, module: Module, level: Mapping[str, Any], observations: List[Dict[str, Any]]) -> None:
+        """Share run evidence while preserving the existing legacy module."""
+        self.module = module
+        self.level = level
+        self.observations = observations
+        self.observing = True
+
+    def __getattr__(self, name: str) -> Any:
+        """Preserve access to legacy configuration and artifact attributes."""
+        module = self.__dict__.get('module')
+        if module is None:
+            raise AttributeError(name)
+        return getattr(module, name)
+
+    def parameters(self) -> List[Any]:
+        """Preserve the legacy module's exact trainable parameters."""
+        return self.module.parameters()
+
+    def forward(self, example: Any) -> Any:
+        """Return the original traced output while retaining independent evidence."""
+        value = getattr(example, 'data', example)
+        if not self.observing:
+            return self.module(value)
+        artifact = {'text': _artifact_text(self.module, self.level['surface'])}
+        try:
+            output = self.module(value)
+        except Exception as error:
+            self.observations.append({'candidate': artifact, 'example': _thaw(value), 'phase': 'fit', 'valid': False, 'metrics': {}, 'error': type(error).__name__})
+            raise
+        payload = getattr(output, 'data', output)
+        score = float(payload['score'])
+        feedback = str(payload.get('feedback', ''))
+        valid = bool(payload.get('valid', True)) and not is_invalid_score(score) and not _normalizer_rejected(feedback)
+        observation = {'candidate': artifact, 'example': _thaw(value), 'phase': 'fit', 'valid': valid, 'metrics': {'score': score} if valid else {}, 'feedback': feedback}
+        if 'behavior_signature' in payload:
+            observation['behavior_signature'] = _thaw(payload['behavior_signature'])
+        self.observations.append(observation)
+        return output
+
+    def __deepcopy__(self, memo: Dict[int, Any]) -> '_ObservedLegacyModule':
+        """Copy candidate state while retaining one shared observation list."""
+        copied = type(self)(copy.deepcopy(self.module, memo), self.level, self.observations)
+        memo[id(self)] = copied
+        return copied
 
 def _response_value(value: Any, name: str) -> Any:
     """Read one response field from a mapping or provider-style object."""
@@ -2580,6 +2611,10 @@ def run_spec(spec: dict, *, optimizer: Any=None, trainer: Optional[str]=None, bu
     capture.setdefault('results', {})
     capture.setdefault('levels', {})
     final = results[0]
+    for item in final.level_results:
+        metadata = item['metadata']
+        if metadata['level_id'] in capture['results']:
+            capture['results'][metadata['level_id']].update({key: _thaw(metadata[key]) for key in ('menu_evidence', 'menu_observations') if key in metadata})
     errors = [str(item['error']) for item in final.level_results if item.get('error')]
     if not errors and final.error:
         errors = [str(final.error)]

@@ -1016,3 +1016,19 @@ def test_memorylite_retrieve_and_reconsolidate(tmp_path: Path):
                       promotion_min_score=0.5)
     flat.record(level="O1", cfg={}, family="g", score=0.0, feedback="flat")
     assert flat.reconsolidate_family("g") is None                # gates still apply
+
+
+def test_legacy_public_result_exposes_automatic_menu_evidence(tmp_path: Path) -> None:
+    """Legacy callers see the same measured menu evidence as canonical exports."""
+    spec = {
+        "families": FAMILIES,
+        "memory_root": str(tmp_path),
+        "levels": [_config_level(iterations=2)],
+    }
+    result = S.run_spec(_seq_spec(spec), optimizer=_NoLLMOptimizer)["results"]["o1"]
+    evidence = result["menu_evidence"]
+    assert evidence["evaluated_candidate_count"] >= 1
+    assert evidence["valid_candidate_count"] >= 1
+    assert evidence["effective_menu_size"] == 1
+    assert evidence["basis_of_equivalence"] == "metric_vector"
+    assert result["menu_observations"]

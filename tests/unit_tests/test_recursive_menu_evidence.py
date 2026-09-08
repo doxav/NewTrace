@@ -181,8 +181,6 @@ def test_invalid_aggregation_has_no_numeric_metric() -> None:
 
 def test_legacy_rejection_is_typed_and_not_counted_as_legal_floor() -> None:
     """Normalizer floor and final priors must not inflate a legacy candidate menu."""
-    from types import SimpleNamespace
-
     from opto.features.recursive_opt import spec as S
     from opto.features.recursive_opt.levels import (
         LevelConfig,
@@ -190,22 +188,11 @@ def test_legacy_rejection_is_typed_and_not_counted_as_legal_floor() -> None:
         invalid_result,
     )
 
-    module = MetaLevel(LevelConfig(), lambda cfg, task: (1.0, "ok"))
     rejected = 'SCORE_NORMALIZATION_JSON={"invalid": true, "score": -1.0}'
-    rollouts = [
-        {
-            "x": "shared",
-            "target": {"score": -1, "feedback": rejected},
-            "score": -1,
-            "feedback": rejected,
-        }
-    ]
-    trainer = SimpleNamespace(
-        memory=SimpleNamespace(
-            memory=[(0, SimpleNamespace(get_module=lambda: module, rollouts=rollouts))]
-        )
-    )
-    rows = S._legacy_menu_observations(trainer, {"surface": "config"})
+    module = MetaLevel(LevelConfig(), lambda cfg, task: (-1.0, rejected))
+    rows: list[dict[str, Any]] = []
+    observed = S._ObservedLegacyModule(module, {"surface": "config"}, rows)
+    observed("shared")
     assert rows[0]["valid"] is False and rows[0]["metrics"] == {}
     assert menu_evidence(rows)["effective_menu_size"] == 0
     assert invalid_result("bad config", floor=-1)["valid"] is False
