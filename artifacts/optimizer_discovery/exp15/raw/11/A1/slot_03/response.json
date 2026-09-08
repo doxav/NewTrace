@@ -1,0 +1,21 @@
+{
+  "completed": true,
+  "completed_ns": 1788892290140025673,
+  "id": "gen-1788892187-nXBGaR1yDVhibv5pZ54A",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "finish_reason": "stop",
+  "content": "```python\nimport random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n    best = min(history, key=lambda x: x[\"value\"])\n    best_x = best[\"x\"]\n    n = len(history)\n    explore_prob = max(0.05, 0.3 - 0.01 * n)\n    if rng.random() < explore_prob:\n        return [rng.uniform(low, high) for low, high in bounds]\n    if rng.random() < 0.7:\n        base = best_x\n    else:\n        candidates = [p[\"x\"] for p in history]\n        if len(candidates) > 1:\n            base = rng.choice(candidates)\n        else:\n            base = best_x\n    scale = max(0.01, 0.2 * (1 - n / 32))\n    new_x = []\n    for i, (low, high) in enumerate(bounds):\n        width = high - low\n        std = scale * width\n        if std <= 0:\n            std = 1e-6\n        perturb = rng.gauss(0, std)\n        val = base[i] + perturb\n        val = max(low, min(high, val))\n        new_x.append(val)\n    return new_x\n```",
+  "source": "import random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n    best = min(history, key=lambda x: x[\"value\"])\n    best_x = best[\"x\"]\n    n = len(history)\n    explore_prob = max(0.05, 0.3 - 0.01 * n)\n    if rng.random() < explore_prob:\n        return [rng.uniform(low, high) for low, high in bounds]\n    if rng.random() < 0.7:\n        base = best_x\n    else:\n        candidates = [p[\"x\"] for p in history]\n        if len(candidates) > 1:\n            base = rng.choice(candidates)\n        else:\n            base = best_x\n    scale = max(0.01, 0.2 * (1 - n / 32))\n    new_x = []\n    for i, (low, high) in enumerate(bounds):\n        width = high - low\n        std = scale * width\n        if std <= 0:\n            std = 1e-6\n        perturb = rng.gauss(0, std)\n        val = base[i] + perturb\n        val = max(low, min(high, val))\n        new_x.append(val)\n    return new_x\n",
+  "source_sha256": "f0f3b980daab42d05f7dbf3e51dd6d85c40f03a5e5d14f83e8b23aad27a5097f",
+  "parse_status": "parsed",
+  "source_status": "valid",
+  "usage": {
+    "prompt_tokens": 433,
+    "completion_tokens": 2943,
+    "total_tokens": 3376,
+    "reasoning_tokens": 2621,
+    "cost_usd": 0.00049253
+  },
+  "wall_s": 103.23379909700088,
+  "attempt": 1
+}
