@@ -304,3 +304,68 @@ def test_reported_latency_matches_the_completed_attempt(tmp_path: Path) -> None:
     assert result["measured_attempts_s"] == 60
     assert result["unattributed_wall_gap_s"] == 890
     assert result["transport_attempts"] == 2 and result["transport_failures"] == 1
+
+
+def test_selected_source_export_preserves_bytes_and_frozen_hash(tmp_path: Path) -> None:
+    """Portable export preserves even raw formatting and refuses altered selections."""
+    import gzip
+
+    from artifacts.optimizer_discovery.reporting import export_programs
+
+    root = tmp_path / "raw"
+    source = B.SEED_SOURCE + "\n  \n"
+    candidate = {
+        "source": source,
+        "source_sha256": B.source_hash(source),
+        "index": 0,
+        "validation_auc": 0.1,
+    }
+    selection = {"A2": candidate}
+    E.persist(root / "11/selection.json", selection)
+    E.persist(
+        root / "selections_frozen.json",
+        {
+            "selection_hashes": {"11": B.digest(selection)},
+            "representative_outer_seed": 11,
+            "representative": candidate,
+        },
+    )
+    E.persist(
+        root / "11/A2/pool.json",
+        [
+            {
+                **candidate,
+                "eligible": True,
+                "train": [
+                    {"valid": True, "metrics": {"auc": 0.1}, "stratum": "sphere/2"}
+                ],
+            }
+        ],
+    )
+    E.persist(
+        root / "11/A2/slot_00/request.json",
+        {"slot": 0, "parent_sha256": B.MANIFEST["seed_sha256"]},
+    )
+    response_record = {"source": source, "source_sha256": B.source_hash(source)}
+    E.persist(root / "11/A2/slot_00/response.json", response_record)
+    result = export_programs(root)
+    exported = Path(result["programs"]["11"]["gzip_path"])
+    assert gzip.decompress(exported.read_bytes()).decode() == source
+    assert result["programs"]["11"]["source_sha256"] == B.source_hash(source)
+    assert result["representative_outer_seed"] == 11
+    assert export_programs(root) == result
+    lineage = E.read(Path(result["programs"]["11"]["lineage_path"]))
+    assert lineage[0]["selected"] and lineage[0]["source_sha256"] == B.source_hash(
+        source
+    )
+    assert lineage[0]["parent_sha256"] == B.MANIFEST["seed_sha256"]
+    assert "+  \n" in lineage[0]["diff"]
+    response_path = root / "11/A2/slot_00/response.json"
+    original_response = response_path.read_bytes()
+    response_path.write_text(json.dumps({**response_record, "source": "changed"}))
+    with pytest.raises(RuntimeError, match="lineage"):
+        export_programs(root)
+    response_path.write_bytes(original_response)
+    (root / "11/selection.json").write_text("{}")
+    with pytest.raises(RuntimeError, match="selection"):
+        export_programs(root)

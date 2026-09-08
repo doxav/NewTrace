@@ -64,3 +64,10 @@ response to its own attempt ID before calculating latency. It is not imported
 by generation, evaluation, selection or primary analysis. The frozen preflight
 still passes. The earlier manual latency summaries are preserved and explicitly
 superseded; all original scientific records and decisions remain unchanged.
+
+Selected-program export: 51 targeted tests passed in 14.38s (export_tests.txt).
+The export test additionally exercises lineage diffs, preserves trailing whitespace
+in the raw source and rejects a tampered response or frozen selection. It passes
+independently after those stronger assertions. Exports use deterministic gzip and
+record both the exact evaluated-source hash and compressed-file hash. No generated
+program is reformatted or executed by the reporting helper.
