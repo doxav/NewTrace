@@ -1,0 +1,98 @@
+{
+  "experiment": "EXP-15",
+  "status": "PILOT_PROTOCOL_DRAFT_CONFIRMATORY",
+  "baseline": "90651f47b9c3c2570e33b0aa64ca648c4a7c765c",
+  "outer_seeds": [
+    11,
+    23,
+    37,
+    41,
+    53
+  ],
+  "pilot_outer_seeds": [
+    701
+  ],
+  "proposal_slots": 8,
+  "pilot_proposal_slots": 2,
+  "inner_budget": 32,
+  "families": [
+    "sphere",
+    "quadratic",
+    "rosenbrock"
+  ],
+  "dimensions": [
+    2,
+    4
+  ],
+  "split_replicates": {
+    "train": 1,
+    "validation": 1,
+    "holdout": 2
+  },
+  "normalization_reference_size": 128,
+  "target": 0.01,
+  "negative_regret_tolerance": 1e-12,
+  "bootstrap": {
+    "replicates": 10000,
+    "seed": 1515,
+    "percentiles": [
+      2.5,
+      97.5
+    ],
+    "unit": "outer_seed"
+  },
+  "seed_source": "def propose(history, bounds, seed):\n    \"\"\"Mix uniform exploration with decreasing incumbent-centered Gaussian steps.\"\"\"\n    import random\n    rng = random.Random(seed + len(history))\n    if not history or rng.random() < 0.25:\n        return [rng.uniform(low, high) for low, high in bounds]\n    best = min(history, key=lambda row: row[\"value\"])[\"x\"]\n    scale = 0.2 / (1.0 + len(history) / (4.0 * len(bounds))) ** 0.5\n    return [max(low, min(high, x + rng.gauss(0.0, scale * (high - low))))\n            for x, (low, high) in zip(best, bounds)]\n",
+  "seed_sha256": "5b74e5a3fe2fc90fcb42a603b058fa7befbf65f38775caa77acd30cdf619b640",
+  "model": {
+    "provider": "openrouter",
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "temperature": 0.6,
+    "top_p": 1.0,
+    "max_tokens": 8000,
+    "extra_body": {
+      "reasoning": {
+        "effort": "low"
+      }
+    },
+    "timeout": 300,
+    "cache": false,
+    "empty_response_retries": 0,
+    "concurrency": 1,
+    "transport_retry_delays_s": [
+      2,
+      4,
+      8
+    ]
+  },
+  "proposal_timeout_s": 2,
+  "allowed_imports": [
+    "math",
+    "random",
+    "statistics",
+    "itertools",
+    "functools",
+    "collections",
+    "heapq",
+    "operator",
+    "typing",
+    "bisect"
+  ],
+  "feedback": {
+    "schema": "train-only/v1",
+    "max_source_chars": 65536,
+    "max_training_feedback_chars": 12000,
+    "history_points_per_task": 4
+  },
+  "tie_break": "validation mean AUC ascending, then proposal index ascending; seed index -1",
+  "arm_order": "A1 then A2 for even outer-seed index; A2 then A1 for odd",
+  "task_seed_rule": "first 8 bytes SHA256(canonical compact sorted JSON of [\"EXP-15\",domain,...components]), masked to 31 bits",
+  "local_seed_rule": "stable_seed(\"local\",phase,outer_seed,task semantic fingerprint), shared across arms and candidates",
+  "request_seed_rule": "stable_seed(\"request\",phase,outer_seed,slot), shared across arms",
+  "interpretation": "95% paired percentile interval wholly below zero: positive signal; wholly above zero: negative signal; all deltas exactly zero: no detectable difference; otherwise inconclusive",
+  "pilot_adjustable": [
+    "engineering limits",
+    "inner budget or structural benchmark parameters only for measured infeasibility/saturation",
+    "symmetric provider settings if engineering requires"
+  ],
+  "freeze": {}
+}
