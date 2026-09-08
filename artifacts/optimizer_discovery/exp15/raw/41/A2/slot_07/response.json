@@ -1,0 +1,21 @@
+{
+  "completed": true,
+  "completed_ns": 1788900234040521848,
+  "id": "gen-1788900193-tfIuTxxB2vFxPBCmXMQr",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "finish_reason": "length",
+  "content": "```python\nimport random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"Bayesian optimization with expected improvement, plus random exploration.\"\"\"\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n\n    # No history: random point\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    n = len(history)\n\n    # Too few points for a reliable GP \u2013 random exploration\n    if n < 2 * d + 2:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Build Gaussian Process model\n    X = [row[\"x\"] for row in history]\n    y = [row[\"value\"] for row in history]\n\n    # Length scales per dimension (20% of range)\n    ls = [0.2 * (high - low) for low, high in bounds]\n\n    # Kernel matrix K\n    K = [[0.0] * n for _ in range(n)]\n    for i in range(n):\n        for j in range(n):\n            diff = [(X[i][k] - X[j][k]) / ls[k] for k in range(d)]\n            K[i][j] = math.exp(-0.5 * sum(q * q for q in diff))\n\n    # Add small noise for numerical stability\n    noise = 1e-6\n    for i in range(n):\n        K[i][i] += noise\n\n    # Invert K via Gaussian elimination with partial pivoting\n    A = [row[:] + [1.0 if i == j else 0.0 for j in range(n)] for i, row in enumerate(K)]\n    for col in range(n):\n        max_row = col\n        max_abs = abs(A[col][col])\n        for r in range(col + 1, n):\n            if abs(A[r][col]) > max_abs:\n                max_abs = abs(A[r][col])\n                max_row = r\n        if max_abs < 1e-12:\n            # Singular \u2013 fall back to random\n            return [rng.uniform(low, high) for low, high in bounds]\n        A[col], A[max_row] = A[max_row], A[col]\n        pivot = A[col][col]\n        for j in range(col, 2 * n):\n            A[col][j] /= pivot\n        for r in range(n):\n            if r != col:\n                factor = A[r][col]\n                for j in range(col, 2 * n):\n                    A[r][j] -= factor * A[col][j]\n\n    K_inv = [row[n:] for row in A]\n    alpha = [sum(K_inv[i][j] * y[j] for j in range(n)) for i in range(n)]\n\n    best_idx = min(range(n), key=lambda i: y[i])\n    f_best = y[best_idx]\n    best_x = X[best_idx]\n\n    # Generate candidate points: random + local around best\n    candidates = []\n    for _ in range(50):\n        candidates.append([rng.uniform(low, high) for low, high in bounds])\n    scale = 0.1 * (1 - n / 31.0) + 1e-6\n    for _ in range(30):\n        cand = [max(low, min(high, best_x[k] + rng.gauss(0.0, scale * (high - low))))\n                for k, (low, high) in enumerate(bounds)]\n        candidates.append(cand)\n\n    best_ei = -float(\"inf\")\n    best_candidate = None\n\n    for cand in candidates:\n        # Compute k* vector\n        k_star = [math.exp(-0.5 * sum(((cand[k] - X[i][k]) / ls[k]) ** 2 for k in range(d)))\n                  for i in range(n)]\n        # Predictive mean\n        mu = sum(k_star[i] * alpha[i] for i in range(n))\n        # Predictive variance\n        beta = [sum(K_inv[i][j] * k_star[j] for j in range(n)) for i in range(n)]\n        var = 1.0 - sum(k_star[i] * beta[i] for i in range(n))\n        if var < 0:\n            var = 0.0\n        sigma = math.sqrt(var)\n\n        # Expected Improvement\n        if sigma > 1e-12:\n            z = (f_best -",
+  "source": "",
+  "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "parse_status": "unparsable",
+  "source_status": "missing_source",
+  "usage": {
+    "prompt_tokens": 2909,
+    "completion_tokens": 8000,
+    "total_tokens": 10909,
+    "reasoning_tokens": 7020,
+    "cost_usd": 0.001121898176
+  },
+  "wall_s": 40.62963803700404,
+  "attempt": 1
+}

@@ -1,0 +1,21 @@
+{
+  "completed": true,
+  "completed_ns": 1788899949554999593,
+  "id": "gen-1788899924-hlFoK3G3e58THl3ouvM4",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "finish_reason": "stop",
+  "content": "```python\nimport random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"Improved optimizer: early exploration, then adaptive local refinement.\"\"\"\n    rng = random.Random(seed + len(history))\n    n = len(history)\n    dim = len(bounds)\n\n    # First evaluation: pure uniform\n    if n == 0:\n        return [rng.uniform(l, h) for l, h in bounds]\n\n    # Explore phase: first 3*dim points (or at least 6) to cover the space\n    explore_until = max(6, 3 * dim)\n    if n < explore_until:\n        # 75% pure random, 25% local step (to start refining early)\n        if rng.random() < 0.75:\n            return [rng.uniform(l, h) for l, h in bounds]\n    else:\n        # Later: small exploration chance, mostly local\n        if rng.random() < 0.05:\n            return [rng.uniform(l, h) for l, h in bounds]\n\n    # Local search around current best\n    best = min(history, key=lambda row: row[\"value\"])\n    best_x = best[\"x\"]\n\n    # Decaying scale: from 0.25 to 0.02 of range\n    progress = n / 32.0\n    scale_factor = 0.25 * (1.0 - progress) + 0.02 * progress\n\n    # Alternate between full\u2011dimension Gaussian and single\u2011coordinate step\n    if rng.random() < 0.4:\n        # Single\u2011coordinate perturbation (good for valleys)\n        axis = rng.randrange(dim)\n        l, h = bounds[axis]\n        step = scale_factor * (h - l)\n        new_x = best_x[:]\n        new_x[axis] = max(l, min(h, best_x[axis] + rng.gauss(0.0, step)))\n        return new_x\n    else:\n        # Full\u2011dimension Gaussian\n        return [\n            max(low, min(high, x + rng.gauss(0.0, scale_factor * (hi - low)))\n            for x, (low, high) in zip(best_x, bounds)\n        ]\n```",
+  "source": "import random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"Improved optimizer: early exploration, then adaptive local refinement.\"\"\"\n    rng = random.Random(seed + len(history))\n    n = len(history)\n    dim = len(bounds)\n\n    # First evaluation: pure uniform\n    if n == 0:\n        return [rng.uniform(l, h) for l, h in bounds]\n\n    # Explore phase: first 3*dim points (or at least 6) to cover the space\n    explore_until = max(6, 3 * dim)\n    if n < explore_until:\n        # 75% pure random, 25% local step (to start refining early)\n        if rng.random() < 0.75:\n            return [rng.uniform(l, h) for l, h in bounds]\n    else:\n        # Later: small exploration chance, mostly local\n        if rng.random() < 0.05:\n            return [rng.uniform(l, h) for l, h in bounds]\n\n    # Local search around current best\n    best = min(history, key=lambda row: row[\"value\"])\n    best_x = best[\"x\"]\n\n    # Decaying scale: from 0.25 to 0.02 of range\n    progress = n / 32.0\n    scale_factor = 0.25 * (1.0 - progress) + 0.02 * progress\n\n    # Alternate between full\u2011dimension Gaussian and single\u2011coordinate step\n    if rng.random() < 0.4:\n        # Single\u2011coordinate perturbation (good for valleys)\n        axis = rng.randrange(dim)\n        l, h = bounds[axis]\n        step = scale_factor * (h - l)\n        new_x = best_x[:]\n        new_x[axis] = max(l, min(h, best_x[axis] + rng.gauss(0.0, step)))\n        return new_x\n    else:\n        # Full\u2011dimension Gaussian\n        return [\n            max(low, min(high, x + rng.gauss(0.0, scale_factor * (hi - low)))\n            for x, (low, high) in zip(best_x, bounds)\n        ]\n",
+  "source_sha256": "dca6125e0fe16a2ad1f8e1506504d5c7d671eb00f0d342f88ce3d7285be54054",
+  "parse_status": "parsed",
+  "source_status": "syntax_error",
+  "usage": {
+    "prompt_tokens": 3169,
+    "completion_tokens": 4418,
+    "total_tokens": 7587,
+    "reasoning_tokens": 3927,
+    "cost_usd": 0.000686718144
+  },
+  "wall_s": 25.314709657002822,
+  "attempt": 1
+}
