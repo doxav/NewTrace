@@ -1,0 +1,21 @@
+{
+  "completed": true,
+  "completed_ns": 1788899221299505710,
+  "id": "gen-1788899138-csuFxRsTAX4wfKExD14V",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "finish_reason": "stop",
+  "content": " ```python\nimport random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a new point within bounds based on history.\n\n    Args:\n        history: List of dicts with keys 'x' (list of floats) and 'value' (float).\n        bounds: List of (low, high) tuples for each dimension.\n        seed: Integer seed for reproducibility.\n\n    Returns:\n        List of floats representing the proposed point.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n\n    # If no history, sample uniformly at random\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Find the best point so far\n    best = min(history, key=lambda row: row['value'])\n    best_x = best['x']\n\n    # Exploration probability (decreases slightly with more evaluations)\n    exploration_prob = 0.25\n    if rng.random() < exploration_prob:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Local search around the best point with decreasing step size\n    scale = 0.2 / (1.0 + len(history) / (4.0 * dim)) ** 0.5\n    proposal = []\n    for i, (low, high) in enumerate(bounds):\n        noise = rng.gauss(0.0, scale * (high - low))\n        new_val = best_x[i] + noise\n        # Clip to bounds\n        new_val = max(low, min(high, new_val))\n        proposal.append(new_val)\n    return proposal\n```",
+  "source": "import random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a new point within bounds based on history.\n\n    Args:\n        history: List of dicts with keys 'x' (list of floats) and 'value' (float).\n        bounds: List of (low, high) tuples for each dimension.\n        seed: Integer seed for reproducibility.\n\n    Returns:\n        List of floats representing the proposed point.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n\n    # If no history, sample uniformly at random\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Find the best point so far\n    best = min(history, key=lambda row: row['value'])\n    best_x = best['x']\n\n    # Exploration probability (decreases slightly with more evaluations)\n    exploration_prob = 0.25\n    if rng.random() < exploration_prob:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Local search around the best point with decreasing step size\n    scale = 0.2 / (1.0 + len(history) / (4.0 * dim)) ** 0.5\n    proposal = []\n    for i, (low, high) in enumerate(bounds):\n        noise = rng.gauss(0.0, scale * (high - low))\n        new_val = best_x[i] + noise\n        # Clip to bounds\n        new_val = max(low, min(high, new_val))\n        proposal.append(new_val)\n    return proposal\n",
+  "source_sha256": "a2a74b3ddb20e0e4f213ad15d38ea5d6b2e2fa58d4fb73367faa9967d9fd47ee",
+  "parse_status": "parsed",
+  "source_status": "valid",
+  "usage": {
+    "prompt_tokens": 433,
+    "completion_tokens": 2140,
+    "total_tokens": 2573,
+    "reasoning_tokens": 1780,
+    "cost_usd": 0.00036405
+  },
+  "wall_s": 83.07211592699605,
+  "attempt": 1
+}

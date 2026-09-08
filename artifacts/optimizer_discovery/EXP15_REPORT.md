@@ -62,10 +62,20 @@ cost/latency, routing metadata and unknown billing on the timed-out attempt.
 No scientific setting changed because of pilot arm performance.
 
 Baseline: 559 passed, 2 skipped. Final affected regression: 581 passed, 2 skipped.
-Broader offline suite: 766 passed, 3 existing optional skips, one existing warning.
+Latest broader offline suite: 771 passed, 3 existing optional skips. The earlier
+766-test run also reported one pre-existing SyntaxWarning.
 New/interface-specific suites include interrupted production-A2 resume and the corrected attempt-timing association. Commands and exclusions:
 [verification record](exp15/VERIFICATION.md). Final raw-evidence checks follow after
 confirmation, including full manifest/source/slot/chronology integrity and recomputation.
+
+The original 3,000-token completion allowance was a starting design choice, not
+evidence that this reasoning model could reliably finish code within that budget.
+The prospectively selected 8,000-token/low-reasoning configuration passed Phase 0's
+ten fresh fixture requests; those used at most 2,331 completion tokens. That result
+did not establish readiness for longer iterative prompts. EXP-15 preserves its
+frozen 8,000-token cap even when reasoning consumes the allowance without usable
+code. A user-authorized larger cap would require a separate registered protocol;
+it is not applied midway through these confirmatory comparisons.
 
 ## Runtime observation and reporting correction
 

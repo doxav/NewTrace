@@ -1,0 +1,584 @@
+{
+  "key": {
+    "source_sha256": "06d4a5409512cecdb33a24dbc62af68a77e68ef4e95eb15cd28b0d6bf71372e4",
+    "task_identity": "fc99dcf5dc2261b228b2dc272afd86b52115e16847752039825f87941600d5f3",
+    "phase": "confirmation",
+    "split": "train",
+    "local_seed": 1099406912,
+    "budget": 32,
+    "deployment": false,
+    "evaluator_version": "a41259493b2069e88a43d045e89b67241c1398a8dbfe9eae6018d602fef57244"
+  },
+  "result": {
+    "valid": true,
+    "candidate_valid": true,
+    "status": "valid",
+    "source_sha256": "06d4a5409512cecdb33a24dbc62af68a77e68ef4e95eb15cd28b0d6bf71372e4",
+    "task_identity": "fc99dcf5dc2261b228b2dc272afd86b52115e16847752039825f87941600d5f3",
+    "stratum": "rosenbrock/4",
+    "local_seed": 1099406912,
+    "budget": 32,
+    "observations": [
+      {
+        "x": [
+          -3.9104415161010064,
+          0.9494912099856991,
+          -1.6933882160194424,
+          3.494925593990706
+        ],
+        "value": 16665.504433445192
+      },
+      {
+        "x": [
+          5.0,
+          5.0,
+          -1.3937731157889832,
+          5.0
+        ],
+        "value": 383677.29680884996
+      },
+      {
+        "x": [
+          0.8759434765555114,
+          1.4249268297931934,
+          -1.0895263320458202,
+          4.36755615315541
+        ],
+        "value": 24930.745031911294
+      },
+      {
+        "x": [
+          -5.0,
+          5.0,
+          -5.0,
+          5.0
+        ],
+        "value": 435470.144884444
+      },
+      {
+        "x": [
+          5.0,
+          5.0,
+          5.0,
+          -5.0
+        ],
+        "value": 358384.94708884956
+      },
+      {
+        "x": [
+          -3.599575045027892,
+          -1.4210508416154708,
+          2.5298266176291335,
+          1.1329098629959446
+        ],
+        "value": 2019.3680881396683
+      },
+      {
+        "x": [
+          4.040495462582269,
+          0.308163722499887,
+          -4.9469237880033905,
+          1.343661514082867
+        ],
+        "value": 102973.35287091426
+      },
+      {
+        "x": [
+          -2.8358082378814062,
+          0.36833995938681996,
+          5.0,
+          -4.0700302763520515
+        ],
+        "value": 41842.90707451013
+      },
+      {
+        "x": [
+          2.078579247678852,
+          -1.7877901035509147,
+          5.0,
+          -3.6410045518912444
+        ],
+        "value": 46811.37849559065
+      },
+      {
+        "x": [
+          -4.695009489614107,
+          -5.0,
+          5.0,
+          -5.0
+        ],
+        "value": 63227.87532489214
+      },
+      {
+        "x": [
+          0.3813283351999379,
+          -5.0,
+          4.087029146830287,
+          -5.0
+        ],
+        "value": 26329.24427883072
+      },
+      {
+        "x": [
+          -5.0,
+          -2.638910107741089,
+          -1.3295909236146102,
+          5.0
+        ],
+        "value": 15320.576690758026
+      },
+      {
+        "x": [
+          -5.0,
+          -5.0,
+          4.183132509619412,
+          0.38037265999129755
+        ],
+        "value": 36010.95549795653
+      },
+      {
+        "x": [
+          5.0,
+          -4.079668432704217,
+          5.0,
+          -0.1792195157762646
+        ],
+        "value": 119113.64646000713
+      },
+      {
+        "x": [
+          5.0,
+          -5.0,
+          5.0,
+          2.295961624045052
+        ],
+        "value": 121324.58526210758
+      },
+      {
+        "x": [
+          4.518043067315544,
+          -3.412682216912323,
+          4.468111731072721,
+          -1.0011687161100724
+        ],
+        "value": 81741.7042787494
+      },
+      {
+        "x": [
+          5.0,
+          -5.0,
+          5.0,
+          5.0
+        ],
+        "value": 115247.85438269288
+      },
+      {
+        "x": [
+          -5.0,
+          -5.0,
+          3.777350932837545,
+          -1.8211024449358293
+        ],
+        "value": 34805.07785220207
+      },
+      {
+        "x": [
+          0.5454404280250693,
+          -5.0,
+          -5.0,
+          5.0
+        ],
+        "value": 73058.52442163228
+      },
+      {
+        "x": [
+          -5.0,
+          -0.03011048755084067,
+          5.0,
+          5.0
+        ],
+        "value": 25587.081474511542
+      },
+      {
+        "x": [
+          -5.0,
+          -5.0,
+          -5.0,
+          -0.4689209933712948
+        ],
+        "value": 112564.34523014213
+      },
+      {
+        "x": [
+          -5.0,
+          5.0,
+          2.976068953655487,
+          -4.21950476032865
+        ],
+        "value": 302140.5233034518
+      },
+      {
+        "x": [
+          5.0,
+          -1.7332915266770441,
+          -3.758504707702245,
+          -5.0
+        ],
+        "value": 112974.61077737104
+      },
+      {
+        "x": [
+          5.0,
+          -5.0,
+          -4.538623724229647,
+          5.0
+        ],
+        "value": 147202.1137989423
+      },
+      {
+        "x": [
+          -0.6286034120020361,
+          -5.0,
+          3.8454321471757185,
+          3.3600290374804263
+        ],
+        "value": 8699.481943944662
+      },
+      {
+        "x": [
+          -1.6591658185067988,
+          -3.724821314589129,
+          -1.7366427357624934,
+          3.0226181271587187
+        ],
+        "value": 3091.968422450559
+      },
+      {
+        "x": [
+          5.0,
+          -5.0,
+          -4.8419295081010105,
+          -5.0
+        ],
+        "value": 197698.6483832758
+      },
+      {
+        "x": [
+          -5.0,
+          -5.0,
+          -5.0,
+          5.0
+        ],
+        "value": 91568.31475896253
+      },
+      {
+        "x": [
+          -5.0,
+          5.0,
+          1.8529454381778843,
+          -0.16859255358582326
+        ],
+        "value": 308368.98501919064
+      },
+      {
+        "x": [
+          -5.0,
+          2.579278711416286,
+          5.0,
+          5.0
+        ],
+        "value": 62319.69759795007
+      },
+      {
+        "x": [
+          4.74100738927952,
+          -5.0,
+          -4.782344086930722,
+          5.0
+        ],
+        "value": 142685.05159418567
+      },
+      {
+        "x": [
+          -5.0,
+          -5.0,
+          -5.0,
+          -2.688656497930825
+        ],
+        "value": 122158.57959785592
+      }
+    ],
+    "proposal_attempts": [
+      {
+        "evaluation_index": 0,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 1,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 2,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 3,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 4,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 5,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 6,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 7,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 8,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 9,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 10,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 11,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 12,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 13,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 14,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 15,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 16,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 17,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 18,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 19,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 20,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 21,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 22,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 23,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 24,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 25,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 26,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 27,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 28,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 29,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 30,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 31,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "fallback_used": false,
+    "objective_calls": 32,
+    "unused_objective_allocation": 0,
+    "subprocess_executions": 64,
+    "execution_s": 2.2295863079998526,
+    "metrics": {
+      "auc": 0.05760778856732021,
+      "curve": [
+        0.22286477145395367,
+        0.22286477145395367,
+        0.22286477145395367,
+        0.22286477145395367,
+        0.22286477145395367,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017,
+        0.027004643588314017
+      ],
+      "final_regret": 0.027004643588314017,
+      "attained": false,
+      "target_evaluations": null,
+      "capped_target_evaluations": 33
+    }
+  }
+}

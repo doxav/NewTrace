@@ -1,0 +1,21 @@
+{
+  "completed": true,
+  "completed_ns": 1788898679104574692,
+  "id": "gen-1788898606-y5mbVarMEOXipwW49KhJ",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "finish_reason": "stop",
+  "content": "```python\nimport random\nimport math\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    n = len(history)\n    best_row = min(history, key=lambda row: row[\"value\"])\n    best = best_row[\"x\"]\n\n    # Determine if the last point improved over all previous points\n    if n == 1:\n        improved = True\n    else:\n        prev_best_val = min(row[\"value\"] for row in history[:-1])\n        improved = history[-1][\"value\"] < prev_best_val\n\n    # Center for local search: last point if improving, else best point\n    center = history[-1][\"x\"] if improved else best\n\n    # Exploration probability decreases from 0.3 to 0.05\n    p_explore = max(0.05, 0.3 - n / 32 * 0.25)\n    if rng.random() < p_explore:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Compute per\u2011coordinate scale from the spread of sampled points\n    ranges = []\n    for i in range(d):\n        vals = [row[\"x\"][i] for row in history]\n        span = max(vals) - min(vals)\n        if span < 1e-9:\n            span = (bounds[i][1] - bounds[i][0]) * 0.1\n        ranges.append(span)\n\n    # Step size decreases with the number of evaluations\n    base = 0.2 / (1.0 + n / (4.0 * d)) ** 0.5\n    step = []\n    for i in range(d):\n        s = base * ranges[i]\n        # Avoid too small steps\n        min_step = (bounds[i][1] - bounds[i][0]) * 1e-4\n        step.append(max(s, min_step))\n\n    # Gaussian perturbation around the chosen center\n    new_point = []\n    for i in range(d):\n        x = center[i] + rng.gauss(0.0, step[i])\n        low, high = bounds[i]\n        new_point.append(max(low, min(high, x)))\n\n    return new_point\n```",
+  "source": "import random\nimport math\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    n = len(history)\n    best_row = min(history, key=lambda row: row[\"value\"])\n    best = best_row[\"x\"]\n\n    # Determine if the last point improved over all previous points\n    if n == 1:\n        improved = True\n    else:\n        prev_best_val = min(row[\"value\"] for row in history[:-1])\n        improved = history[-1][\"value\"] < prev_best_val\n\n    # Center for local search: last point if improving, else best point\n    center = history[-1][\"x\"] if improved else best\n\n    # Exploration probability decreases from 0.3 to 0.05\n    p_explore = max(0.05, 0.3 - n / 32 * 0.25)\n    if rng.random() < p_explore:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Compute per\u2011coordinate scale from the spread of sampled points\n    ranges = []\n    for i in range(d):\n        vals = [row[\"x\"][i] for row in history]\n        span = max(vals) - min(vals)\n        if span < 1e-9:\n            span = (bounds[i][1] - bounds[i][0]) * 0.1\n        ranges.append(span)\n\n    # Step size decreases with the number of evaluations\n    base = 0.2 / (1.0 + n / (4.0 * d)) ** 0.5\n    step = []\n    for i in range(d):\n        s = base * ranges[i]\n        # Avoid too small steps\n        min_step = (bounds[i][1] - bounds[i][0]) * 1e-4\n        step.append(max(s, min_step))\n\n    # Gaussian perturbation around the chosen center\n    new_point = []\n    for i in range(d):\n        x = center[i] + rng.gauss(0.0, step[i])\n        low, high = bounds[i]\n        new_point.append(max(low, min(high, x)))\n\n    return new_point\n",
+  "source_sha256": "aa5714a2adc258a84a9f3526e4f1089be058f3d8c731aabc8a1579bbe817b6db",
+  "parse_status": "parsed",
+  "source_status": "valid",
+  "usage": {
+    "prompt_tokens": 433,
+    "completion_tokens": 5146,
+    "total_tokens": 5579,
+    "reasoning_tokens": 4917,
+    "cost_usd": 0.00104244
+  },
+  "wall_s": 73.2069334619955,
+  "attempt": 1
+}

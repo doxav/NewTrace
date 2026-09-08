@@ -1,0 +1,21 @@
+{
+  "completed": true,
+  "completed_ns": 1788898591857881588,
+  "id": "gen-1788898527-LhM3lxjQL7WWgQuJ8sbr",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "finish_reason": "stop",
+  "content": "```python\nimport random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a point to evaluate next, using a mix of random exploration and\n    local refinement around the current best point.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    n = len(bounds)\n\n    # First evaluation: uniform random point\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Best point so far\n    best = min(history, key=lambda row: row[\"value\"])[\"x\"]\n\n    # Bounds ranges\n    ranges = [high - low for low, high in bounds]\n\n    # Progress through the 32\u2011evaluation budget\n    frac = len(history) / 32.0\n\n    # Exploration probability: high early, low later\n    p_explore = max(0.1, 0.5 - 0.4 * frac)\n    if rng.random() < p_explore:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Local Gaussian step around the best point\n    # Step scale decreases from ~0.1 to ~0.01 of each range\n    step_scale = 0.1 * (1 - frac) + 0.01\n    step = [rng.gauss(0.0, step_scale * r) for r in ranges]\n\n    # Apply step and clip to bounds\n    new_point = [x + s for x, s in zip(best, step)]\n    return [max(low, min(high, x)) for x, (low, high) in zip(new_point, bounds)]\n```",
+  "source": "import random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a point to evaluate next, using a mix of random exploration and\n    local refinement around the current best point.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    n = len(bounds)\n\n    # First evaluation: uniform random point\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Best point so far\n    best = min(history, key=lambda row: row[\"value\"])[\"x\"]\n\n    # Bounds ranges\n    ranges = [high - low for low, high in bounds]\n\n    # Progress through the 32\u2011evaluation budget\n    frac = len(history) / 32.0\n\n    # Exploration probability: high early, low later\n    p_explore = max(0.1, 0.5 - 0.4 * frac)\n    if rng.random() < p_explore:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Local Gaussian step around the best point\n    # Step scale decreases from ~0.1 to ~0.01 of each range\n    step_scale = 0.1 * (1 - frac) + 0.01\n    step = [rng.gauss(0.0, step_scale * r) for r in ranges]\n\n    # Apply step and clip to bounds\n    new_point = [x + s for x, s in zip(best, step)]\n    return [max(low, min(high, x)) for x, (low, high) in zip(new_point, bounds)]\n",
+  "source_sha256": "63c508f7d483eea43ea5eeb408c7398a25cda34e55cf420b92858bcd2b21986b",
+  "parse_status": "parsed",
+  "source_status": "valid",
+  "usage": {
+    "prompt_tokens": 433,
+    "completion_tokens": 5715,
+    "total_tokens": 6148,
+    "reasoning_tokens": 5581,
+    "cost_usd": 0.00165649
+  },
+  "wall_s": 64.4119725940036,
+  "attempt": 1
+}
