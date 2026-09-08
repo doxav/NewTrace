@@ -7,6 +7,7 @@ import contextlib
 import hashlib
 import io
 import json
+import math
 import os
 import re
 import time
@@ -14,14 +15,26 @@ from pathlib import Path
 from typing import Any
 
 from opto.features.recursive_opt import spec as control
-from opto.features.recursive_opt.measurement import is_transient_provider_error
-from opto.features.recursive_opt.optimizer_program import optimizer_spec, parse_program
+from opto.features.recursive_opt.measurement import (
+    is_transient_provider_error,
+    menu_evidence,
+)
+from opto.features.recursive_opt.optimizer_program import (
+    optimizer_spec,
+    parse_program,
+    propose_point,
+)
 from opto.features.recursive_opt.runmode import _response_usage, make_live_llm
 
 ROOT = Path(__file__).resolve().parent
 SPEC = json.loads((ROOT / "phase0_spec.json").read_text())
 ENGINEERING_SPEC = json.loads((ROOT / "engineering_smoke_spec.json").read_text())
-REQUESTS = [*SPEC["live"]["requests"], ENGINEERING_SPEC["label"]]
+CALIBRATION_SPEC = json.loads((ROOT / "generation_calibration_spec.json").read_text())
+REQUESTS = [
+    *SPEC["live"]["requests"],
+    ENGINEERING_SPEC["label"],
+    *CALIBRATION_SPEC["requests"],
+]
 PROMPT = """Write a complete portable optimizer.py file exporting exactly
 propose(history, bounds, seed). It proposes one point for a black-box MINIMIZATION
 problem. history is a list of past observations, each with exactly x (a list of
@@ -61,11 +74,28 @@ def run_request(
     """Run one preregistered request, retaining every retry and invalid candidate."""
     if label not in REQUESTS:
         raise ValueError("request label must be preregistered")
-    directory.mkdir(parents=True, exist_ok=False)
+    calibration = CALIBRATION_SPEC["requests"].get(label)
+    if calibration and (
+        seeds != CALIBRATION_SPEC["fixture_seeds"]
+        or budget != CALIBRATION_SPEC["fixture_budget"]
+    ):
+        raise ValueError("calibration fixture seeds and budget must remain frozen")
+    if (
+        calibration
+        and hashlib.sha256(PROMPT.encode()).hexdigest()
+        != CALIBRATION_SPEC["prompt_sha256"]
+    ):
+        raise ValueError("calibration prompt must remain frozen")
     settings = {
         name: SPEC["live"][name]
         for name in ("temperature", "top_p", "max_tokens", "seed")
     }
+    timeout = SPEC["live"]["request_timeout_s"]
+    if calibration:
+        settings.update(CALIBRATION_SPEC["configs"][calibration["config"]])
+        settings["seed"] = calibration["seed"]
+        timeout = CALIBRATION_SPEC["request_timeout_s"]
+    directory.mkdir(parents=True, exist_ok=False)
     request = {
         "model": SPEC["live"]["model"],
         "provider": "openrouter",
@@ -80,7 +110,7 @@ def run_request(
             }
         ],
         **settings,
-        "request_timeout_s": SPEC["live"]["request_timeout_s"],
+        "request_timeout_s": timeout,
         "concurrency": 1,
     }
     _write(directory / "request.json", request)
@@ -96,7 +126,9 @@ def run_request(
         started = time.monotonic()
         try:
             with contextlib.redirect_stdout(stream), contextlib.redirect_stderr(stream):
-                response = client(messages=request["messages"], **settings)
+                response = client(
+                    messages=request["messages"], timeout=timeout, **settings
+                )
             attempt = {"attempt": index + 1, "status": "success"}
         except Exception as error:  # noqa: BLE001 - preserve every provider failure
             attempt = {
@@ -126,6 +158,25 @@ def run_request(
         for name in ("id", "model", "created", "system_fingerprint")
     }
     metadata["usage"] = _response_usage(response)
+    raw_usage = getattr(response, "usage", None)
+    if hasattr(raw_usage, "model_dump"):
+        raw_usage = raw_usage.model_dump()
+    if isinstance(raw_usage, dict):
+        details = raw_usage.get("completion_tokens_details") or {}
+        for name, value in {
+            "reasoning_tokens": details.get("reasoning_tokens"),
+            "cost_usd": raw_usage.get("cost_usd", raw_usage.get("cost")),
+        }.items():
+            if value is not None:
+                if (
+                    type(value) not in (int, float)
+                    or not math.isfinite(value)
+                    or value < 0
+                ):
+                    raise ValueError(
+                        f"provider usage {name} must be finite and non-negative"
+                    )
+                metadata["usage"][name] = value
     metadata["finish_reason"] = getattr(response.choices[0], "finish_reason", None)
     metadata["content"] = content
     _write(directory / "response.json", metadata)
@@ -148,8 +199,153 @@ def run_request(
             evaluation = control.execute_plan(control.compile_plan(raw))[0]
             result["evaluations"].append({"seed": seed, **evaluation.to_dict()})
             _write(directory / "result.json", result)
+        if calibration:
+            result["history_probe"] = history_probe(source)
     _write(directory / "result.json", result)
     return result
+
+
+def history_probe(source: str) -> dict[str, Any]:
+    """Measure response to reversed value rankings without changing length or seed."""
+    pairs = []
+    for length in CALIBRATION_SPEC["probe_lengths"]:
+        histories = [
+            [
+                {
+                    "x": [-4 + 8 * i / (length - 1), 3 - 6 * i / (length - 1)],
+                    "value": length - 1 - i if reverse else i,
+                }
+                for i in range(length)
+            ]
+            for reverse in (False, True)
+        ]
+        for seed in CALIBRATION_SPEC["probe_seeds"]:
+            proposals = [
+                propose_point(source, h, [[-5, 5], [-5, 5]], seed) for h in histories
+            ]
+            pairs.append(
+                {
+                    "length": length,
+                    "seed": seed,
+                    "histories": histories,
+                    "proposals": [
+                        {"status": p.status, "point": p.point} for p in proposals
+                    ],
+                    "valid": all(p.valid for p in proposals),
+                    "changed": all(p.valid for p in proposals)
+                    and proposals[0].point != proposals[1].point,
+                }
+            )
+    valid = all(pair["valid"] for pair in pairs)
+    return {
+        "valid": valid,
+        "responsive": valid and any(p["changed"] for p in pairs),
+        "pairs": pairs,
+    }
+
+
+def readiness_gate(
+    rows: list[dict[str, Any]], menu: dict[str, Any], expected: list[str], *, phase: str
+) -> dict[str, Any]:
+    """Apply the preregistered batch gate without excluding failures or missing runs."""
+    if phase not in ("pilot", "confirmation"):
+        raise ValueError("readiness phase must be pilot or confirmation")
+    thresholds = CALIBRATION_SPEC[f"{phase}_gate"]
+    complete = sorted(row["label"] for row in rows) == sorted(expected)
+    valid = sum(bool(row["generation_valid"]) for row in rows)
+    responsive = sum(
+        bool(row["generation_valid"] and row["history_responsive"]) for row in rows
+    )
+    passed = (
+        complete
+        and valid >= thresholds["valid"]
+        and responsive >= thresholds["history_responsive"]
+        and menu.get("behavior_equivalence_known") is True
+        and (menu.get("effective_menu_size") or 0) >= thresholds["effective_menu_size"]
+    )
+    return {
+        "passed": passed,
+        "complete": complete,
+        "expected_count": len(expected),
+        "valid_count": valid,
+        "history_responsive_count": responsive,
+        "thresholds": thresholds,
+        "menu_evidence": menu,
+    }
+
+
+def summarize_readiness(directory: Path, config: str, phase: str) -> dict[str, Any]:
+    """Recompute readiness from retained canonical evaluations and provider evidence."""
+    if config not in CALIBRATION_SPEC["pilot_order"] or phase not in (
+        "pilot",
+        "confirmation",
+    ):
+        raise ValueError("unknown readiness config or phase")
+    expected = [
+        label
+        for label, item in CALIBRATION_SPEC["requests"].items()
+        if item["config"] == config and item["phase"] == phase
+    ]
+    rows, observations = [], []
+    for label in expected:
+        path = directory / label / "result.json"
+        if not path.exists():
+            continue
+        result = json.loads(path.read_text())
+        metadata = result.get("response_metadata", {})
+        tokens = metadata.get("usage", {}).get("completion_tokens")
+        evaluations = result["evaluations"]
+        fixture_valid = [row["seed"] for row in evaluations] == CALIBRATION_SPEC[
+            "fixture_seeds"
+        ] and all(
+            row["valid"]
+            and row["evaluation"]["artifacts"][0]["evaluated_count"]
+            == CALIBRATION_SPEC["fixture_budget"]
+            for row in evaluations
+        )
+        generation_valid = (
+            result["provider_status"] == "success"
+            and metadata.get("finish_reason") == "stop"
+            and fixture_valid
+            and result.get("history_probe", {}).get("valid", False)
+            and type(tokens) is int
+            and 0 < tokens <= CALIBRATION_SPEC["configs"][config]["max_tokens"]
+            and bool(result["attempts"])
+            and result["attempts"][-1]["wall_s"]
+            <= CALIBRATION_SPEC["request_timeout_s"]
+        )
+        rows.append(
+            {
+                "label": label,
+                "generation_valid": generation_valid,
+                "history_responsive": result.get("history_probe", {}).get(
+                    "responsive", False
+                ),
+                "usage": metadata.get("usage", {}),
+                "wall_s": sum(attempt["wall_s"] for attempt in result["attempts"]),
+                "finish_reason": metadata.get("finish_reason"),
+            }
+        )
+        for row in evaluations:
+            observation = {
+                "candidate": {"sha256": result["artifact_sha256"]},
+                "example": {"seed": row["seed"]},
+                "phase": "fit",
+                "valid": generation_valid,
+                "metrics": {},
+            }
+            if generation_valid:
+                observation["behavior_signature"] = row["evaluation"]["artifacts"][0][
+                    "behavior_signature"
+                ]
+            observations.append(observation)
+    menu = menu_evidence(observations, declared_menu_size=len(expected))
+    return {
+        "config": config,
+        "phase": phase,
+        "rows": rows,
+        **readiness_gate(rows, menu, expected, phase=phase),
+    }
 
 
 def _load_key() -> None:
@@ -185,7 +381,18 @@ def main() -> None:
     evaluate.add_argument("--program", type=Path, required=True)
     evaluate.add_argument("--seed", type=int, default=0)
     evaluate.add_argument("--budget", type=int, default=8)
+    summary = subparsers.add_parser("readiness-summary")
+    summary.add_argument("--output", type=Path, default=ROOT / "live_generation")
+    summary.add_argument(
+        "--config", choices=CALIBRATION_SPEC["pilot_order"], required=True
+    )
+    summary.add_argument("--phase", choices=["pilot", "confirmation"], required=True)
     args = parser.parse_args()
+    if args.command == "readiness-summary":
+        result = summarize_readiness(args.output, args.config, args.phase)
+        _write(args.output / f"{args.phase}_{args.config}_summary.json", result)
+        print(json.dumps(result, indent=2))
+        return
     if args.command == "evaluate":
         result = control.execute_plan(
             control.compile_plan(
