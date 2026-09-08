@@ -1,0 +1,14 @@
+{
+  "source_sha256": "5b74e5a3fe2fc90fcb42a603b058fa7befbf65f38775caa77acd30cdf619b640",
+  "selected_outer_seed": 11,
+  "selected_index": -1,
+  "scope": "Descriptive source inspection after this outer seed selection. No holdout results accessed; no novelty claim; source is unchanged.",
+  "label": "Unchanged seed policy",
+  "first_point": "Uniform within bounds.",
+  "subsequent_points": "25% uniform exploration; otherwise clipped Gaussian perturbation around the lowest-value observed point.",
+  "incumbent": "Directly uses the best observed x.",
+  "adaptation": "Gaussian scale is 0.2 / sqrt(1 + history_length/(4*dimension)), multiplied by each bound width; exploration probability stays fixed.",
+  "history_statistics": "Best observed point and history length only.",
+  "boundary_handling": "Coordinate-wise clipping for Gaussian steps; uniform draws remain in bounds.",
+  "lineage": "Seed selected (index -1); no generated replacement selected for this outer seed."
+}

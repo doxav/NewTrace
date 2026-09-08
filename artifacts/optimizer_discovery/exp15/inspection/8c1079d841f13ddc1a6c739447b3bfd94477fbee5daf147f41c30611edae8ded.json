@@ -1,0 +1,15 @@
+{
+  "source_sha256": "8c1079d841f13ddc1a6c739447b3bfd94477fbee5daf147f41c30611edae8ded",
+  "selected_outer_seed": 23,
+  "selected_index": 0,
+  "scope": "Descriptive source inspection after this outer seed selection. No holdout results accessed; no novelty claim; source is unchanged.",
+  "label": "Nearest-observation scoring of uniform candidates",
+  "first_point": "Uniform within bounds.",
+  "subsequent_points": "Draw 50 uniform points. For each, find the nearest observed point in Euclidean distance normalized by bound widths. Minimize nearest_observed_value + lambda*distance.",
+  "incumbent": "Computes best_x and best_val, but neither variable is subsequently used; low observed values influence selection indirectly through nearest neighbors.",
+  "adaptation": "lambda=0.5*(1-history_length/32)+0.01 decreases through the registered horizon. There is no explicit Gaussian step radius or trust region.",
+  "history_statistics": "Nearest observation and its raw objective value; no observed-value scale normalization.",
+  "boundary_handling": "All candidate points are sampled within bounds.",
+  "comment_correction": "For minimization, the positive distance term penalizes remoteness; it is not an exploration bonus as the source comment suggests. Its decreasing coefficient weakens that penalty. The globally uniform candidate pool still provides exploration.",
+  "lineage": "Selected slot 0, the first training-feedback proposal from the seed; later attempts did not replace it under final validation selection."
+}
