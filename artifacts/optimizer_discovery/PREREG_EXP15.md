@@ -1,4 +1,4 @@
-# EXP-15 — pilot protocol and draft confirmatory design
+# EXP-15 — frozen confirmatory protocol
 
 Registered before implementation/pilot outcomes. Baseline 90651f47. Scientific
 question: does iterative training feedback improve deployed optimizer-program
@@ -138,3 +138,39 @@ invalid numeric objective. The internal rejection ranking is never regret data.
 The pilot includes midpoint/uniform/seed diagnostics and ten uncached replays of
 the identical seed/task/local-seed trajectory. Report the measured diagnostic range
 and residual seed regret; do not choose a benchmark because A2 outperforms A1.
+
+## Final confirmatory freeze — 2026-09-08
+
+The pilot completed without an unresolved execution defect. No scientific setting,
+seed, metric, benchmark, prompt, selection rule or budget was changed in response
+to comparative outcomes. Both pilot arms selected the unchanged seed. Generation
+validity was 2/4; invalid generation remains a reportable search outcome, not a
+reason to request replacements. See exp15/PILOT_REPORT.md for feasibility evidence.
+
+This committed version is FROZEN_CONFIRMATORY. exp15/freeze.json pins the exact
+manifest, protocol, benchmark/evaluator, prompts/feedback, all production Python
+sources, contract, baseline selected generation configuration, split fingerprints,
+and complete installed-distribution/Python/platform versions. The preflight rejects
+any mismatch. Five paired outer seeds and 80 completed response slots are retained.
+No holdout evaluation has occurred. Reference-design preparation is host-side and
+separate from search objective calls; recomputation for integrity checks is audit
+work and does not create search opportunities.
+
+Declared descriptive AST complexity is the number of nodes from ast.walk(ast.parse
+(source)); syntax-invalid source has no AST count. Source size is UTF-8 bytes.
+Missing token/cost fields remain explicitly missing with reported-field coverage.
+Execution time summed over logical allocations can include reused cache timings;
+actual execution/launch counts are separately derived from unique cache records.
+Candidate-only validity and deployment fallback are reported alongside primary AUC.
+
+Large immutable JSON records use lossless deterministic gzip above 450,000 bytes.
+The parser's original response and exact evaluated source remain preserved; no
+formatting repair is applied to candidates. Registered resume logic reads either
+ordinary or compressed JSON. A transport failure may have remote completion or
+billing uncertainty even when no generation ID was returned; report this explicitly.
+
+The paired interpretation uses the rules above: H15-A or H15-B is supported only in
+the limited sense of a positive signal when its paired interval lies wholly below
+zero. A wholly positive interval is contrary evidence (not supported); all-zero
+pairs show no detectable difference; an interval crossing zero is inconclusive.
+None establishes novelty, additional recursion-depth benefit or amortization.

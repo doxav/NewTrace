@@ -1,6 +1,6 @@
 {
   "experiment": "EXP-15",
-  "status": "PILOT_PROTOCOL_DRAFT_CONFIRMATORY",
+  "status": "FROZEN_CONFIRMATORY",
   "baseline": "90651f47b9c3c2570e33b0aa64ca648c4a7c765c",
   "outer_seeds": [
     11,
@@ -94,5 +94,20 @@
     "inner budget or structural benchmark parameters only for measured infeasibility/saturation",
     "symmetric provider settings if engineering requires"
   ],
-  "freeze": {}
+  "freeze": {
+    "implementation_commit": "15af6e2ad4dab029529ed72839c914bee793aa28",
+    "files_and_environment": "exp15/freeze.json",
+    "amendment": "No pilot-informed scientific setting changes; tested provenance and lossless packaging added."
+  },
+  "allocation": {
+    "search_trajectories_per_arm": 540,
+    "search_objective_calls_per_arm": 17280,
+    "holdout_objective_calls_per_arm": 1920,
+    "shared_normalization_reference_evaluations": 3072,
+    "seed_pool_index": -1,
+    "invalid_allocation_recycling": false
+  },
+  "deployment_fallback": "Permanently switch failed selected program to exact seed; preserve actual history/local seed and remaining budget.",
+  "representative": "Lowest validation AUC among selected A2 policies; ties by outer-seed order; freeze before all holdout.",
+  "source_packaging": "Exact evaluated source in immutable JSON; records above 450000 UTF-8 bytes use deterministic gzip mtime=0, lossless."
 }
