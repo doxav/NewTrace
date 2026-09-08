@@ -1,5 +1,129 @@
 # Phase 0 report
 
+## Current assessment — generation readiness, 2026-09-08
+
+**Phase 0: GREEN for generation readiness and the portable optimizer interface.**
+Proceed to Phase-1 preregistration with the same exact OpenRouter model and
+[selected_generation_config.json](selected_generation_config.json). Benchmark
+execution separately requires its task family, splits, baselines, compute accounting,
+replication and success criteria. This calibration is not a performance experiment.
+
+The user authorized prospective configuration calibration after the initial NO-GO.
+The [protocol](GENERATION_CALIBRATION_SPEC.md) and its JSON were committed at
+`eb56d68c` before new requests. Implementation: `db59111e`, followed by the tested
+native-reasoning transport fix `3dc4fbb9`. Pilot evidence and selection were committed
+at `304a7734` before any confirmation request. The original prompt, model, validator,
+objective budget and holdout rules were preserved. No performance threshold was used.
+
+| Criterion fixed before results | Required | Measured | Status |
+|---|---:|---:|---|
+| Fresh generation validity, including complete fixture and valid history probes | at least 9/10 | 10/10 | PASS |
+| Valid programs responding to reversed history value rankings at fixed length/seed | at least 8/10 | 10/10 | PASS |
+| Effective menu size from actual common fixture trajectories | at least 2 | 7 | PASS |
+| Exact objective calls per generated program | 3 seeds × 8 | 24 each; 240 confirmation total | PASS |
+| Completion allowance / successful-request latency | at most 8,000 tokens / 300s | maximum 2,331 tokens / 21.927s | PASS |
+| Broader affected offline suite | no failures | 559 passed, 2 existing optional skips | PASS |
+| Original specifications, failures, runtime validator and historical data | unchanged | integrity audit passed | PASS |
+
+### Selected configuration and measured outcomes
+
+Model: `deepseek/deepseek-v4-flash-0731`. Temperature **0.6**, top_p **1.0**,
+max_tokens **8,000**, reasoning effort **low**, concurrency **1**, provider timeout
+**300s**, cache disabled, no empty-output retries. The installed LiteLLM rejects
+its generic `reasoning_effort` argument for this model; the experiment adapter uses
+the equivalent native `extra_body={"reasoning": {"effort": "low"}}` through the
+existing client. No production dependency or core runtime changed.
+
+| Separate engineering batch | Valid / requested | History-responsive | Effective menu | Outcome |
+|---|---:|---:|---:|---|
+| Fresh 3,000-token control, default reasoning | 0/1 | 0 | not applicable | length; all 3,000 tokens reported as reasoning |
+| 8,000-token pilot, default reasoning | 2/3 | 2 | 2 | fails 3/3 pilot validity requirement |
+| 8,000-token pilot, low reasoning | 3/3 | 3 | 3 | first qualifying setting; selected |
+| Fresh seeds 101–110, selected setting | 10/10 | 10 | 7 | confirmation PASS |
+
+The failed 8,000-token request also spent its entire allowance on reasoning and
+returned no code after 293.026s. The 16,000-token fallback was not run because the
+preceding setting passed. All **17 requests / 17 attempts** remain, including both
+new invalid responses. No failed candidate was resampled; no generation transport
+retry occurred. The earlier three failures and midpoint smoke remain unchanged.
+
+Confirmation averaged **1,506.5 completion tokens**, median latency **16.116s**
+(range **9.884–21.927s**), and provider-reported cost **$0.00401024**. All new requests
+used **41,503 total tokens**, including **36,982 completion / 31,827 reasoning tokens**,
+at reported cost **$0.008255231**. The 15 executable programs consumed 360 fixture
+objective calls total. History probes and proposal replays consumed no objective calls.
+
+Evidence: [confirmation summary](live_generation/confirmation_low_8000_summary.json),
+[accounting and integrity checks](generation_validation_summary.json), and all
+requests, attempts, code, history probes, provider metadata and canonical per-seed
+evaluation artifacts under `live_generation/`.
+
+### Limits and the next gate
+
+Ten successes are a small engineering screen, not proof of population reliability
+of at least 90%. History responsiveness is established only on the declared finite
+probes; diversity only on the common public 2-D fixture. No claim is made about
+optimization quality, transfer, generalization or recursion benefit.
+
+OpenRouter chose different upstream providers. Confirmation used Together (8) and
+Relace (2). This supports the selected configuration under observed routing, not
+an isolated causal estimate of reasoning effort or a guarantee about every provider.
+Native token counts, costs and provider identities are retained in
+`provider_generation.json`. One immediate metadata lookup returned HTTP 404; a
+later read succeeded. No model generation was repeated for that metadata lookup.
+
+Phase 1 must retain failures, record providers, replicate outer LLM stochasticity,
+and preregister its scientific comparison. Accepted seed arguments do not establish
+identical outer generation on replay. Revisit readiness after material changes to
+the prompt, model, routing policy or task contract. The original 3,000-token protocol
+remains NO-GO; its negative evidence has not been overwritten.
+
+### Verification and reproducible commands
+
+TDD: seven new cases failed for missing behavior before implementation. The native
+reasoning transport assertion failed before its adapter fix. The final twelve
+calibration tests pass, including real subprocess/canonical execution, history
+sensitivity, collapse, gate boundaries and missing telemetry.
+
+```bash
+python -m pytest -q tests/unit_tests/test_recursive_phase0_calibration.py
+python -m ruff check artifacts/optimizer_discovery/phase0.py tests/unit_tests/test_recursive_phase0_calibration.py
+python -m black --target-version py310 --check artifacts/optimizer_discovery/phase0.py tests/unit_tests/test_recursive_phase0_calibration.py
+mapfile -t phase0_tests < <(rg --files tests/unit_tests | rg '/test_recursive.*\.py$' | rg -v '/test_recursive_opt_review_regression.py$' | sort)
+/tmp/phase0-venv/bin/python -m pytest -q -rs --disable-socket --allow-hosts=127.0.0.1,localhost "${phase0_tests[@]}" tests/unit_tests/test_objectives.py tests/unit_tests/test_evaluators_vector.py tests/unit_tests/test_trainers_multiobjective.py
+git diff --check
+```
+
+Results: **12 passed** targeted; Ruff and Black passed; broader matrix **559 passed,
+2 skipped in 25.82s** ([log](generation_tests.txt)); diff and credential scans passed.
+The same pre-existing backend-dependent module exclusion and optional telemetry
+skips described in the original report below remain. No assertion was weakened.
+
+The staged whitespace check found six whitespace-only blank lines in two verbatim
+model outputs. Their exact raw source remains in response.json and the canonical
+evaluation records. Only the standalone optimizer.py exports for confirmation seeds
+103 and 109 had trailing whitespace removed after the experiment. AST equality and
+all six replayed trajectories/scores were verified unchanged (48 additional offline
+verification objective calls, separate from the 360 calibration calls). Original
+and export hashes are recorded in [generation_export_checks.json](generation_export_checks.json).
+Result artifact hashes continue to identify the exact raw evaluated source.
+
+Live commands already executed; existing directories reject overwrite:
+
+```bash
+python -u -m artifacts.optimizer_discovery.phase0 calibrate --requests readiness_control pilot_default_8000_17 pilot_default_8000_18 pilot_default_8000_19 --output artifacts/optimizer_discovery/live_generation
+python -u -m artifacts.optimizer_discovery.phase0 calibrate --requests pilot_low_8000_17 pilot_low_8000_18 pilot_low_8000_19 --output artifacts/optimizer_discovery/live_generation
+python -u -m artifacts.optimizer_discovery.phase0 calibrate --requests confirmation_low_8000_101 confirmation_low_8000_102 confirmation_low_8000_103 confirmation_low_8000_104 confirmation_low_8000_105 confirmation_low_8000_106 confirmation_low_8000_107 confirmation_low_8000_108 confirmation_low_8000_109 confirmation_low_8000_110 --output artifacts/optimizer_discovery/live_generation
+```
+
+Recompute the decision offline:
+
+```bash
+python -m artifacts.optimizer_discovery.phase0 readiness-summary --config low_8000 --phase confirmation --output artifacts/optimizer_discovery/live_generation
+```
+
+## Original assessment — before generation-readiness calibration
+
 Phase 0's instrument and Patrick interface are complete. **Phase 1 optimizer-search
 execution is NO-GO under the frozen open-ended generation prompt.** The portable
 interface is ready for Patrick and for Phase-1 protocol development. These are

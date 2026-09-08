@@ -2122,3 +2122,34 @@ settings in its result manifest. EXP-13's script requires a found-prompt file at
 ephemeral external path that is no longer present. Exact reproduction/comparability
 cannot be established. No Phase-0 observation was appended to EXP-12 or EXP-13; both
 remain historical/unresolved. The existing untracked probe_aa result was untouched.
+
+## 24 — Optimizer generation readiness calibration
+
+The user subsequently authorized a separate preregistered engineering calibration.
+This prospectively changes request settings without replacing the frozen original
+experiment or its negative results. Section 23.2's warning against raising a bound
+after a bad result applies to silently changing that experiment; it does not prohibit
+a separately registered calibration on a public engineering surface.
+
+The new protocol (`eb56d68c`) fixed pilot ordering and the confirmation gate before
+live results. A fresh default-reasoning 3,000-token control exhausted its allowance
+entirely on reasoning. Default reasoning at 8,000 tokens yielded 2/3 valid programs,
+with another all-reasoning truncation. Low reasoning at 8,000 tokens yielded 3/3
+valid, history-responsive programs. That setting was selected and committed at
+`304a7734` before ten fresh confirmation requests; no score influenced selection.
+
+Confirmation yielded **10/10 valid, 10/10 history-responsive**, with **effective
+menu size 7** from actual comparable trajectories at local seeds 0/1/2. Each valid
+program completed exactly eight objective calls per seed under unchanged validation.
+The fixed green thresholds were at least 9/10 valid, 8/10 responsive and menu size 2.
+All checks passed; Phase 0 is now GREEN for the selected configuration and portable
+interface. Phase-1 scientific benchmarking still requires its own preregistration.
+
+This is finite readiness evidence, not an optimizer performance result or a reliable
+estimate of population success probability. Provider routing varied; confirmation
+used Together and Relace. Attribution to reasoning effort alone is therefore not
+identified. The exact model identifier and prompt remained fixed, and provider
+metadata is preserved. No model replacement was needed, no invalidity rule was
+relaxed, and no failed generation was rerun. The original failures and historical
+H1/H2/H3/H5 and EXP-12/13 conclusions remain unchanged. See the current
+[Phase-0 report](optimizer_discovery/PHASE0_REPORT.md) for counts, costs and commands.

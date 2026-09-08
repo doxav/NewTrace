@@ -1,0 +1,57 @@
+{
+  "datasets": {
+    "holdout": [],
+    "train": [
+      {
+        "budget": 8,
+        "seed": 1
+      }
+    ],
+    "validation": [
+      {
+        "budget": 8,
+        "seed": 1
+      }
+    ]
+  },
+  "engine": {
+    "name": "fixed"
+  },
+  "kind": "recursive_optimization",
+  "module": {
+    "config": {
+      "components": {
+        "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n    best = min(history, key=lambda h: h['value'])\n    best_x = best['x']\n    if rng.random() < 0.2:\n        return [rng.uniform(low, high) for low, high in bounds]\n    result = []\n    for i, (low, high) in enumerate(bounds):\n        sigma = 0.1 * (high - low)\n        delta = rng.gauss(0, sigma)\n        val = best_x[i] + delta\n        val = max(low, min(high, val))\n        result.append(val)\n    return result\n"
+      }
+    },
+    "ref": "recursive_opt.module.reasoning_workflow@1"
+  },
+  "objective": {
+    "evaluator_ref": "recursive_opt.evaluator.optimizer_program@1",
+    "intent": "Minimize black-box objective within the fixed evaluation budget.",
+    "metrics": {
+      "value": {
+        "direction": "minimize",
+        "source": "evaluation.metrics.value"
+      }
+    },
+    "selection": {
+      "mode": "scalar",
+      "score_key": "value"
+    }
+  },
+  "outputs": {
+    "directory": "artifacts/optimizer_discovery/live_generation/confirmation_low_8000_108/seed_1"
+  },
+  "runtime": {
+    "offline": true,
+    "seed": 1
+  },
+  "schema_version": "recursive-opt/v2alpha",
+  "surface": {
+    "kind": "module",
+    "targets": [
+      "optimizer"
+    ]
+  }
+}

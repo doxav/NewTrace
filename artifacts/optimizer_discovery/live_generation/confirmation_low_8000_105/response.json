@@ -1,0 +1,15 @@
+{
+  "id": "gen-1788861219-0Ithiv4mXoepN251nmrM",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "created": 1788861219,
+  "system_fingerprint": "default",
+  "usage": {
+    "prompt_tokens": 252,
+    "completion_tokens": 1997,
+    "total_tokens": 2249,
+    "reasoning_tokens": 1667,
+    "cost_usd": 0.00056683
+  },
+  "finish_reason": "stop",
+  "content": "```python\nimport random\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a point for black-box minimization.\n    history: list of dicts with 'x' (list of floats) and 'value' (float)\n    bounds: list of [low, high] pairs\n    seed: integer\n    Returns a list of floats within bounds.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n\n    if not history:\n        # No observations: uniform random\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Find best observed point (lowest value)\n    best = min(history, key=lambda h: h['value'])\n    best_x = best['x']\n\n    # With probability 0.5, sample near best; otherwise uniform\n    if rng.random() < 0.5:\n        # Local perturbation step size shrinks with more data\n        step = [(high - low) / (len(history) + 1) for low, high in bounds]\n        perturbed = [\n            best_x[i] + rng.uniform(-step[i], step[i])\n            for i in range(dim)\n        ]\n        # Clip to bounds\n        return [\n            min(max(perturbed[i], bounds[i][0]), bounds[i][1])\n            for i in range(dim)\n        ]\n    else:\n        # Uniform random exploration\n        return [rng.uniform(low, high) for low, high in bounds]\n```"
+}

@@ -1,0 +1,134 @@
+{
+  "budget": {
+    "candidates": null,
+    "eval_llm_calls": null,
+    "evaluator_runs": null,
+    "on_exceed": "return_best_valid",
+    "optimizer_llm_calls": null,
+    "total_tokens": null,
+    "wall_time_s": null
+  },
+  "experiment": {
+    "arms": [],
+    "matrix": {},
+    "seeds": []
+  },
+  "extensions": {},
+  "fingerprint": "20d2d24847668c78ec498cc3999f89c262ac884539cbdf386c115767e328d586",
+  "kind": "recursive_optimization",
+  "knowledge": {
+    "injection_codec": "recursive_opt.codec.artifact_to_prior@1",
+    "promotion_rule": {},
+    "retrieval": "best",
+    "rollback_rule": {},
+    "scope_fields": [
+      "family",
+      "level",
+      "kind"
+    ],
+    "statuses": [
+      "promoted"
+    ],
+    "store": "recursive_opt.knowledge.memory_lite@1",
+    "top_k": 5
+  },
+  "levels": [
+    {
+      "bindings": [],
+      "datasets": {
+        "holdout": [],
+        "train": [
+          {
+            "budget": 8,
+            "seed": 1
+          }
+        ],
+        "validation": [
+          {
+            "budget": 8,
+            "seed": 1
+          }
+        ]
+      },
+      "depends_on": [],
+      "engine": {
+        "config": {},
+        "name": "fixed"
+      },
+      "id": "level-0",
+      "llm_roles": {
+        "feedback": null,
+        "forward": null,
+        "judge": null,
+        "optimizer": null
+      },
+      "module": {
+        "artifact": null,
+        "config": {
+          "components": {
+            "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose one point for a black-box minimization problem.\n    history: list of observations, each with 'x' (list) and 'value' (float)\n    bounds: list of [low, high] pairs\n    seed: integer\n    Returns a list of coordinates within bounds.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    ndim = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    ranges = [h - l for l, h in bounds]\n\n    # No history: uniform random search\n    if not history:\n        return [rng.uniform(lows[i], highs[i]) for i in range(ndim)]\n\n    # Parse history (handle dict or tuple)\n    xs = []\n    vals = []\n    for obs in history:\n        if isinstance(obs, dict):\n            x = obs['x']\n            val = obs['value']\n        else:\n            x, val = obs[0], obs[1]\n        xs.append(x)\n        vals.append(val)\n\n    # Find best point so far\n    best_idx = min(range(len(vals)), key=vals.__getitem__)\n    best_x = xs[best_idx]\n\n    # Exploration vs exploitation\n    # 20% chance of pure random exploration\n    if rng.random() < 0.2:\n        return [rng.uniform(lows[i], highs[i]) for i in range(ndim)]\n\n    # Otherwise, local search around the best point\n    # Step size shrinks with more observations (sqrt decay)\n    sigma = [ranges[i] * (0.5 / (1 + len(history)) ** 0.5) for i in range(ndim)]\n    proposal = [best_x[i] + rng.gauss(0, sigma[i]) for i in range(ndim)]\n\n    # Clip to bounds\n    proposal = [min(max(proposal[i], lows[i]), highs[i]) for i in range(ndim)]\n    return proposal\n"
+          }
+        },
+        "inputs": {},
+        "ref": "recursive_opt.module.reasoning_workflow@1"
+      },
+      "objective": {
+        "aggregation": {
+          "mode": "mean"
+        },
+        "evaluator_ref": "recursive_opt.evaluator.optimizer_program@1",
+        "feedback_channels": [
+          "natural_language",
+          "trace"
+        ],
+        "hard_constraints": [],
+        "intent": "Minimize black-box objective within the fixed evaluation budget.",
+        "metrics": {
+          "value": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.value"
+          }
+        },
+        "selection": {
+          "mode": "scalar",
+          "score_key": "value"
+        }
+      },
+      "ordering_only": false,
+      "outputs": {
+        "directory": "artifacts/optimizer_discovery/live_generation/confirmation_low_8000_101/seed_1",
+        "format": "json",
+        "save_artifacts": true
+      },
+      "surface": {
+        "kind": "module",
+        "targets": [
+          "optimizer"
+        ]
+      }
+    }
+  ],
+  "llm_profiles": {},
+  "outputs": {
+    "directory": "artifacts/optimizer_discovery/live_generation/confirmation_low_8000_101/seed_1",
+    "format": "json",
+    "save_artifacts": true
+  },
+  "runtime": {
+    "memory_root": "./trace_memory",
+    "offline": true,
+    "prior_promotion": {},
+    "reproducible": true,
+    "resume": false,
+    "reuse_priors": false,
+    "run_id": null,
+    "scoring": {},
+    "seed": 1,
+    "strict_refs": true,
+    "test_mode": false,
+    "tracebench": {},
+    "trainer_kwargs": {}
+  },
+  "schema_version": "recursive-opt/v2alpha"
+}

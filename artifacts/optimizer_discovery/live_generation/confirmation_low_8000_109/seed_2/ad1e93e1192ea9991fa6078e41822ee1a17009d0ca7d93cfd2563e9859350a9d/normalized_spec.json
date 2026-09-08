@@ -1,0 +1,134 @@
+{
+  "budget": {
+    "candidates": null,
+    "eval_llm_calls": null,
+    "evaluator_runs": null,
+    "on_exceed": "return_best_valid",
+    "optimizer_llm_calls": null,
+    "total_tokens": null,
+    "wall_time_s": null
+  },
+  "experiment": {
+    "arms": [],
+    "matrix": {},
+    "seeds": []
+  },
+  "extensions": {},
+  "fingerprint": "ad1e93e1192ea9991fa6078e41822ee1a17009d0ca7d93cfd2563e9859350a9d",
+  "kind": "recursive_optimization",
+  "knowledge": {
+    "injection_codec": "recursive_opt.codec.artifact_to_prior@1",
+    "promotion_rule": {},
+    "retrieval": "best",
+    "rollback_rule": {},
+    "scope_fields": [
+      "family",
+      "level",
+      "kind"
+    ],
+    "statuses": [
+      "promoted"
+    ],
+    "store": "recursive_opt.knowledge.memory_lite@1",
+    "top_k": 5
+  },
+  "levels": [
+    {
+      "bindings": [],
+      "datasets": {
+        "holdout": [],
+        "train": [
+          {
+            "budget": 8,
+            "seed": 2
+          }
+        ],
+        "validation": [
+          {
+            "budget": 8,
+            "seed": 2
+          }
+        ]
+      },
+      "depends_on": [],
+      "engine": {
+        "config": {},
+        "name": "fixed"
+      },
+      "id": "level-0",
+      "llm_roles": {
+        "feedback": null,
+        "forward": null,
+        "judge": null,
+        "optimizer": null
+      },
+      "module": {
+        "artifact": null,
+        "config": {
+          "components": {
+            "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n    \n    best = min(history, key=lambda h: h['value'])\n    best_x = best['x']\n    \n    # Exploit with probability 0.7, else explore\n    if rng.random() < 0.7:\n        point = []\n        for i, (low, high) in enumerate(bounds):\n            center = best_x[i]\n            std = (high - low) / 10.0\n            val = rng.gauss(center, std)\n            val = max(low, min(high, val))\n            point.append(val)\n        return point\n    else:\n        return [rng.uniform(low, high) for low, high in bounds]\n"
+          }
+        },
+        "inputs": {},
+        "ref": "recursive_opt.module.reasoning_workflow@1"
+      },
+      "objective": {
+        "aggregation": {
+          "mode": "mean"
+        },
+        "evaluator_ref": "recursive_opt.evaluator.optimizer_program@1",
+        "feedback_channels": [
+          "natural_language",
+          "trace"
+        ],
+        "hard_constraints": [],
+        "intent": "Minimize black-box objective within the fixed evaluation budget.",
+        "metrics": {
+          "value": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.value"
+          }
+        },
+        "selection": {
+          "mode": "scalar",
+          "score_key": "value"
+        }
+      },
+      "ordering_only": false,
+      "outputs": {
+        "directory": "artifacts/optimizer_discovery/live_generation/confirmation_low_8000_109/seed_2",
+        "format": "json",
+        "save_artifacts": true
+      },
+      "surface": {
+        "kind": "module",
+        "targets": [
+          "optimizer"
+        ]
+      }
+    }
+  ],
+  "llm_profiles": {},
+  "outputs": {
+    "directory": "artifacts/optimizer_discovery/live_generation/confirmation_low_8000_109/seed_2",
+    "format": "json",
+    "save_artifacts": true
+  },
+  "runtime": {
+    "memory_root": "./trace_memory",
+    "offline": true,
+    "prior_promotion": {},
+    "reproducible": true,
+    "resume": false,
+    "reuse_priors": false,
+    "run_id": null,
+    "scoring": {},
+    "seed": 2,
+    "strict_refs": true,
+    "test_mode": false,
+    "tracebench": {},
+    "trainer_kwargs": {}
+  },
+  "schema_version": "recursive-opt/v2alpha"
+}

@@ -1,0 +1,15 @@
+{
+  "id": "gen-1788861239-uuZgXpN7syxKatNgyJyP",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "created": 1788861239,
+  "system_fingerprint": "default",
+  "usage": {
+    "prompt_tokens": 252,
+    "completion_tokens": 1873,
+    "total_tokens": 2125,
+    "reasoning_tokens": 1518,
+    "cost_usd": 0.00053211
+  },
+  "finish_reason": "stop",
+  "content": "```python\nimport random\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a point for black-box minimization.\n\n    Args:\n        history: list of dicts with 'x' (list of coordinates) and 'value' (float).\n        bounds: list of [low, high] pairs.\n        seed: integer for deterministic randomness.\n\n    Returns:\n        list of coordinates within bounds.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    ranges = [high - low for low, high in bounds]\n\n    if not history:\n        # Uniform random search when no prior observations\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Find the best point so far\n    best = min(history, key=lambda h: h['value'])\n    best_x = best['x']\n\n    # Exploration vs exploitation\n    if rng.random() < 0.3:\n        # Explore: uniform random\n        return [rng.uniform(low, high) for low, high in bounds]\n    else:\n        # Exploit: perturb the best point with Gaussian noise\n        new_x = []\n        for i in range(dim):\n            std = ranges[i] * 0.1\n            perturb = rng.gauss(0, std)\n            val = best_x[i] + perturb\n            # Clip to bounds\n            val = max(lows[i], min(highs[i], val))\n            new_x.append(val)\n        return new_x\n```"
+}

@@ -1,0 +1,57 @@
+{
+  "datasets": {
+    "holdout": [],
+    "train": [
+      {
+        "budget": 8,
+        "seed": 0
+      }
+    ],
+    "validation": [
+      {
+        "budget": 8,
+        "seed": 0
+      }
+    ]
+  },
+  "engine": {
+    "name": "fixed"
+  },
+  "kind": "recursive_optimization",
+  "module": {
+    "config": {
+      "components": {
+        "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a single point for black-box minimization.\n    history: list of dicts with keys 'x' (list of floats) and 'value' (float).\n    bounds: list of [low, high] pairs.\n    seed: integer.\n    Returns a list of floats within bounds.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n\n    if not history:\n        # No prior observations: uniform random search\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Find best observed point\n    best = min(history, key=lambda obs: obs['value'])\n    best_x = best['x']\n\n    # Compute ranges for scaling perturbations\n    ranges = [high - low for low, high in bounds]\n\n    # Decide whether to explore randomly or exploit near best point\n    if rng.random() < 0.2:\n        # Random exploration\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Perturb best point with small noise\n    proposed = []\n    for i, (low, high) in enumerate(bounds):\n        if ranges[i] > 0:\n            noise = rng.uniform(-0.1 * ranges[i], 0.1 * ranges[i])\n        else:\n            noise = 0.0\n        val = best_x[i] + noise\n        # Clamp to bounds\n        val = max(low, min(high, val))\n        proposed.append(val)\n    return proposed\n"
+      }
+    },
+    "ref": "recursive_opt.module.reasoning_workflow@1"
+  },
+  "objective": {
+    "evaluator_ref": "recursive_opt.evaluator.optimizer_program@1",
+    "intent": "Minimize black-box objective within the fixed evaluation budget.",
+    "metrics": {
+      "value": {
+        "direction": "minimize",
+        "source": "evaluation.metrics.value"
+      }
+    },
+    "selection": {
+      "mode": "scalar",
+      "score_key": "value"
+    }
+  },
+  "outputs": {
+    "directory": "artifacts/optimizer_discovery/live_generation/confirmation_low_8000_102/seed_0"
+  },
+  "runtime": {
+    "offline": true,
+    "seed": 0
+  },
+  "schema_version": "recursive-opt/v2alpha",
+  "surface": {
+    "kind": "module",
+    "targets": [
+      "optimizer"
+    ]
+  }
+}

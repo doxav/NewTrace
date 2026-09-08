@@ -1,0 +1,305 @@
+{
+  "phase0_status": "GREEN",
+  "scope": "generation readiness on public Phase-0 fixture; Phase-1 benchmark protocol still required",
+  "logical_requests": 17,
+  "attempts": 17,
+  "total_tokens": 41503,
+  "completion_tokens": 36982,
+  "reasoning_tokens": 31827,
+  "reported_cost_usd": 0.008255231,
+  "objective_calls": 360,
+  "confirmation": {
+    "requests": 10,
+    "total_tokens": 17585,
+    "reported_cost_usd": 0.00401024,
+    "completion_tokens_mean": 1506.5,
+    "latency_median_s": 16.116,
+    "latency_range_s": [
+      9.884,
+      21.927
+    ],
+    "providers": {
+      "Relace": 2,
+      "Together": 8
+    }
+  },
+  "integrity": {
+    "secret_scan": "passed",
+    "original_specs_and_live_evidence": "unchanged",
+    "production_runtime": "unchanged",
+    "user_probe": "unchanged",
+    "unique_provider_request_ids": 17,
+    "registered_settings_and_prompt": "verified for all 17 requests",
+    "generated_artifact_hashes": "All raw evaluated sources verified against response content; two normalized standalone exports verified against generation_export_checks.json",
+    "provider_cost_crosscheck": "matched for all 17 requests",
+    "confirmation_summary_recomputation": "identical"
+  },
+  "records": [
+    {
+      "label": "confirmation_low_8000_101",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 2331,
+        "total_tokens": 2583,
+        "reasoning_tokens": 1866,
+        "cost_usd": 0.00043596
+      },
+      "provider": "Relace",
+      "wall_s": 17.506,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "confirmation_low_8000_102",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1242,
+        "total_tokens": 1494,
+        "reasoning_tokens": 941,
+        "cost_usd": 0.00023994
+      },
+      "provider": "Relace",
+      "wall_s": 9.884,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "confirmation_low_8000_103",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1031,
+        "total_tokens": 1283,
+        "reasoning_tokens": 756,
+        "cost_usd": 0.00032396
+      },
+      "provider": "Together",
+      "wall_s": 10.859,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "confirmation_low_8000_104",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1569,
+        "total_tokens": 1821,
+        "reasoning_tokens": 1244,
+        "cost_usd": 0.00044699
+      },
+      "provider": "Together",
+      "wall_s": 15.648,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "confirmation_low_8000_105",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1997,
+        "total_tokens": 2249,
+        "reasoning_tokens": 1667,
+        "cost_usd": 0.00056683
+      },
+      "provider": "Together",
+      "wall_s": 16.672,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "confirmation_low_8000_106",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1873,
+        "total_tokens": 2125,
+        "reasoning_tokens": 1518,
+        "cost_usd": 0.00053211
+      },
+      "provider": "Together",
+      "wall_s": 19.705,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "confirmation_low_8000_107",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1143,
+        "total_tokens": 1395,
+        "reasoning_tokens": 760,
+        "cost_usd": 0.00032771
+      },
+      "provider": "Together",
+      "wall_s": 12.944,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "confirmation_low_8000_108",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1503,
+        "total_tokens": 1755,
+        "reasoning_tokens": 1318,
+        "cost_usd": 0.00042851
+      },
+      "provider": "Together",
+      "wall_s": 16.321,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "confirmation_low_8000_109",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1112,
+        "total_tokens": 1364,
+        "reasoning_tokens": 910,
+        "cost_usd": 0.00034664
+      },
+      "provider": "Together",
+      "wall_s": 21.927,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "confirmation_low_8000_110",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1264,
+        "total_tokens": 1516,
+        "reasoning_tokens": 1009,
+        "cost_usd": 0.00036159
+      },
+      "provider": "Together",
+      "wall_s": 15.911,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "pilot_default_8000_17",
+      "usage": {
+        "prompt_tokens": 331,
+        "completion_tokens": 8000,
+        "total_tokens": 8331,
+        "reasoning_tokens": 8000,
+        "cost_usd": 0.00129655
+      },
+      "provider": "OpenInference",
+      "wall_s": 293.026,
+      "attempts": 1,
+      "valid_fixture_runs": 0,
+      "objective_calls": 0
+    },
+    {
+      "label": "pilot_default_8000_18",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1038,
+        "total_tokens": 1290,
+        "reasoning_tokens": 925,
+        "cost_usd": 0.00020196
+      },
+      "provider": "DeepInfra",
+      "wall_s": 18.967,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "pilot_default_8000_19",
+      "usage": {
+        "prompt_tokens": 331,
+        "completion_tokens": 5143,
+        "total_tokens": 5474,
+        "reasoning_tokens": 3919,
+        "cost_usd": 0.00083943
+      },
+      "provider": "OpenInference",
+      "wall_s": 208.416,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "pilot_low_8000_17",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1525,
+        "total_tokens": 1777,
+        "reasoning_tokens": 1301,
+        "cost_usd": 0.00045976
+      },
+      "provider": "Inceptron",
+      "wall_s": 17.119,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "pilot_low_8000_18",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1382,
+        "total_tokens": 1634,
+        "reasoning_tokens": 1126,
+        "cost_usd": 0.000580536
+      },
+      "provider": "StreamLake",
+      "wall_s": 8.985,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "pilot_low_8000_19",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 1829,
+        "total_tokens": 2081,
+        "reasoning_tokens": 1567,
+        "cost_usd": 0.00030524
+      },
+      "provider": "OpenInference",
+      "wall_s": 67.189,
+      "attempts": 1,
+      "valid_fixture_runs": 3,
+      "objective_calls": 24
+    },
+    {
+      "label": "readiness_control",
+      "usage": {
+        "prompt_tokens": 331,
+        "completion_tokens": 3000,
+        "total_tokens": 3331,
+        "reasoning_tokens": 3000,
+        "cost_usd": 0.000561515
+      },
+      "provider": "Sail Research",
+      "wall_s": 82.304,
+      "attempts": 1,
+      "valid_fixture_runs": 0,
+      "objective_calls": 0
+    }
+  ],
+  "additional_offline_verification_objective_calls": 48,
+  "offline_verification": {
+    "calibration_tests_passed": 12,
+    "broader_tests_passed": 559,
+    "existing_optional_skips": 2,
+    "failures": 0,
+    "log": "generation_tests.txt",
+    "ruff": "passed",
+    "black": "passed",
+    "staged_diff_check": "passed"
+  }
+}

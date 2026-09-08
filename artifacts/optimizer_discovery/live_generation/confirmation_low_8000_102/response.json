@@ -1,0 +1,15 @@
+{
+  "id": "gen-1788861173-3Y1QsqC2cunM725dzqgU",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "created": 1788861173,
+  "system_fingerprint": null,
+  "usage": {
+    "prompt_tokens": 252,
+    "completion_tokens": 1242,
+    "total_tokens": 1494,
+    "reasoning_tokens": 941,
+    "cost_usd": 0.00023994
+  },
+  "finish_reason": "stop",
+  "content": "```python\nimport random\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a single point for black-box minimization.\n    history: list of dicts with keys 'x' (list of floats) and 'value' (float).\n    bounds: list of [low, high] pairs.\n    seed: integer.\n    Returns a list of floats within bounds.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n\n    if not history:\n        # No prior observations: uniform random search\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Find best observed point\n    best = min(history, key=lambda obs: obs['value'])\n    best_x = best['x']\n\n    # Compute ranges for scaling perturbations\n    ranges = [high - low for low, high in bounds]\n\n    # Decide whether to explore randomly or exploit near best point\n    if rng.random() < 0.2:\n        # Random exploration\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Perturb best point with small noise\n    proposed = []\n    for i, (low, high) in enumerate(bounds):\n        if ranges[i] > 0:\n            noise = rng.uniform(-0.1 * ranges[i], 0.1 * ranges[i])\n        else:\n            noise = 0.0\n        val = best_x[i] + noise\n        # Clamp to bounds\n        val = max(low, min(high, val))\n        proposed.append(val)\n    return proposed\n```"
+}

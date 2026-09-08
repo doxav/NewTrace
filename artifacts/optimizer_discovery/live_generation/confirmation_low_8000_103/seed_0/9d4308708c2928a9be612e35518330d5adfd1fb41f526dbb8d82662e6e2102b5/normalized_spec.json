@@ -1,0 +1,134 @@
+{
+  "budget": {
+    "candidates": null,
+    "eval_llm_calls": null,
+    "evaluator_runs": null,
+    "on_exceed": "return_best_valid",
+    "optimizer_llm_calls": null,
+    "total_tokens": null,
+    "wall_time_s": null
+  },
+  "experiment": {
+    "arms": [],
+    "matrix": {},
+    "seeds": []
+  },
+  "extensions": {},
+  "fingerprint": "9d4308708c2928a9be612e35518330d5adfd1fb41f526dbb8d82662e6e2102b5",
+  "kind": "recursive_optimization",
+  "knowledge": {
+    "injection_codec": "recursive_opt.codec.artifact_to_prior@1",
+    "promotion_rule": {},
+    "retrieval": "best",
+    "rollback_rule": {},
+    "scope_fields": [
+      "family",
+      "level",
+      "kind"
+    ],
+    "statuses": [
+      "promoted"
+    ],
+    "store": "recursive_opt.knowledge.memory_lite@1",
+    "top_k": 5
+  },
+  "levels": [
+    {
+      "bindings": [],
+      "datasets": {
+        "holdout": [],
+        "train": [
+          {
+            "budget": 8,
+            "seed": 0
+          }
+        ],
+        "validation": [
+          {
+            "budget": 8,
+            "seed": 0
+          }
+        ]
+      },
+      "depends_on": [],
+      "engine": {
+        "config": {},
+        "name": "fixed"
+      },
+      "id": "level-0",
+      "llm_roles": {
+        "feedback": null,
+        "forward": null,
+        "judge": null,
+        "optimizer": null
+      },
+      "module": {
+        "artifact": null,
+        "config": {
+          "components": {
+            "optimizer": "import random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a single point for black-box minimization.\n    Uses a simple random search with local exploitation around the best observed point.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n    \n    # If no history, sample uniformly\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n    \n    # Find best point (lowest value)\n    best_x = min(history, key=lambda obs: obs[\"value\"])[\"x\"]\n    \n    # Decide whether to explore or exploit\n    if rng.random() < 0.2:  # 20% exploration\n        return [rng.uniform(low, high) for low, high in bounds]\n    \n    # Exploit: sample around best point with small std\n    proposal = []\n    for i, (low, high) in enumerate(bounds):\n        std = 0.1 * (high - low)\n        # Sample from normal, clip to bounds\n        val = rng.gauss(best_x[i], std)\n        val = max(low, min(high, val))\n        proposal.append(val)\n    return proposal\n"
+          }
+        },
+        "inputs": {},
+        "ref": "recursive_opt.module.reasoning_workflow@1"
+      },
+      "objective": {
+        "aggregation": {
+          "mode": "mean"
+        },
+        "evaluator_ref": "recursive_opt.evaluator.optimizer_program@1",
+        "feedback_channels": [
+          "natural_language",
+          "trace"
+        ],
+        "hard_constraints": [],
+        "intent": "Minimize black-box objective within the fixed evaluation budget.",
+        "metrics": {
+          "value": {
+            "aggregate_examples": "mean",
+            "direction": "minimize",
+            "source": "evaluation.metrics.value"
+          }
+        },
+        "selection": {
+          "mode": "scalar",
+          "score_key": "value"
+        }
+      },
+      "ordering_only": false,
+      "outputs": {
+        "directory": "artifacts/optimizer_discovery/live_generation/confirmation_low_8000_103/seed_0",
+        "format": "json",
+        "save_artifacts": true
+      },
+      "surface": {
+        "kind": "module",
+        "targets": [
+          "optimizer"
+        ]
+      }
+    }
+  ],
+  "llm_profiles": {},
+  "outputs": {
+    "directory": "artifacts/optimizer_discovery/live_generation/confirmation_low_8000_103/seed_0",
+    "format": "json",
+    "save_artifacts": true
+  },
+  "runtime": {
+    "memory_root": "./trace_memory",
+    "offline": true,
+    "prior_promotion": {},
+    "reproducible": true,
+    "resume": false,
+    "reuse_priors": false,
+    "run_id": null,
+    "scoring": {},
+    "seed": 0,
+    "strict_refs": true,
+    "test_mode": false,
+    "tracebench": {},
+    "trainer_kwargs": {}
+  },
+  "schema_version": "recursive-opt/v2alpha"
+}

@@ -182,3 +182,23 @@ EXP-12/13 remain historical/unresolved: model-name agreement does not establish
 request comparability; the required ephemeral EXP-13 prompt is absent. Their raw
 records and H1/H2/H3/H5 conclusions are unchanged. Full evidence:
 [PHASE0_REPORT.md](optimizer_discovery/PHASE0_REPORT.md).
+
+## 10. Optimizer generation readiness — separate calibration, 2026-09-08
+
+After the user authorized prospective configuration calibration, a separately
+preregistered 3,000-token control again returned no code: all 3,000 reported output
+tokens were reasoning. An 8,000-token/default-reasoning pilot yielded 2/3 valid
+history-responsive optimizers and failed its fixed gate. The 8,000-token/low-effort
+pilot yielded 3/3 and was selected before fresh confirmation seeds 101–110.
+
+Confirmation: **10/10 valid and history-responsive**, **effective menu size 7** on
+actual common fixture trajectories. Each program completed 3 × 8 objective calls.
+**Phase 0 generation readiness: GREEN** for the selected exact-model configuration;
+proceed to Phase-1 preregistration. This does not establish optimization quality or
+population reliability. All original failures and both new invalid requests remain.
+The provider mix varied; observed readiness is not an isolated causal estimate of
+reasoning effort. No historical hypothesis conclusion changed.
+
+See [current Phase-0 report](optimizer_discovery/PHASE0_REPORT.md),
+[selected settings](optimizer_discovery/selected_generation_config.json), and
+[assessment §24](recursive_opt_assessment.md#24--optimizer-generation-readiness-calibration).

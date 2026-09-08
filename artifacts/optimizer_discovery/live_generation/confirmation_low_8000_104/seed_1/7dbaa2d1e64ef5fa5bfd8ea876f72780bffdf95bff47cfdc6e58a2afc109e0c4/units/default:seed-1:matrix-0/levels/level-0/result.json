@@ -1,0 +1,554 @@
+{
+  "complete": true,
+  "identity": {
+    "dataset_refs": {
+      "holdout": {
+        "inline_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "train": {
+        "inline_sha256": "74b11c1d7b7873d4c2b77a1a92e007208218b1d6718bb745965b76ae8a894506"
+      },
+      "validation": {
+        "inline_sha256": "74b11c1d7b7873d4c2b77a1a92e007208218b1d6718bb745965b76ae8a894506"
+      }
+    },
+    "engine": "fixed",
+    "evaluator_ref": "recursive_opt.evaluator.optimizer_program@1",
+    "level_fingerprint": "1b570c0f6081bb0bb2908914cd14141f54b8cda3dd4e4eea698f1a97863a2064",
+    "level_id": "level-0",
+    "module_ref": "recursive_opt.module.reasoning_workflow@1",
+    "registry_sha256": "d3042e1211f61f52a54fe5370973b3a3a8905143d74dea29bddb8c710f337acc",
+    "runtime_tree_sha256": "eec85d88cc93b56159a4d8a5f47e9096efb566155e12e77f005f92afa165bab0",
+    "spec_fingerprint": "7dbaa2d1e64ef5fa5bfd8ea876f72780bffdf95bff47cfdc6e58a2afc109e0c4",
+    "unit_id": "default:seed-1:matrix-0"
+  },
+  "result": {
+    "artifact": {
+      "components": {
+        "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a single point for black-box minimization.\n\n    Args:\n        history: list of dicts with keys 'x' (list of coordinates) and 'value' (float).\n        bounds: list of [low, high] pairs, one per dimension.\n        seed: integer seed for reproducibility.\n\n    Returns:\n        list of floats, one coordinate per dimension, within bounds.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n\n    # No history: uniform random sampling\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Find the best observed point (lowest value)\n    best = min(history, key=lambda h: h['value'])\n    best_x = best['x']\n\n    # With probability 0.5, perturb the best point; otherwise sample uniformly\n    if rng.random() < 0.5:\n        proposed = []\n        for i, (low, high) in enumerate(bounds):\n            # Gaussian perturbation with std = 10% of the range\n            std = (high - low) / 10.0\n            val = best_x[i] + rng.gauss(0, std)\n            # Clip to bounds\n            val = max(low, min(high, val))\n            proposed.append(val)\n        return proposed\n    else:\n        return [rng.uniform(low, high) for low, high in bounds]\n"
+      }
+    },
+    "budget": {
+      "accounted": {
+        "candidates": 0,
+        "candidates_evaluated": 0,
+        "candidates_proposed": 0,
+        "candidates_reserved": 0,
+        "eval_llm_calls": 0,
+        "evaluator_runs": 1,
+        "optimizer_llm_calls": 0,
+        "total_tokens": 0,
+        "wall_time_s": 1.018181
+      },
+      "candidates": null,
+      "eval_llm_calls": null,
+      "evaluator_runs": null,
+      "exceeded": [],
+      "on_exceed": "return_best_valid",
+      "optimizer_llm_calls": null,
+      "total_tokens": null,
+      "wall_time_s": null
+    },
+    "engine": "fixed",
+    "error": null,
+    "evaluation": {
+      "artifacts": [
+        {
+          "behavior_signature": [
+            [
+              -3.656357558875988,
+              3.4743373693723267
+            ],
+            [
+              4.478274870593493,
+              -4.434486322731913
+            ],
+            [
+              3.5539411184935816,
+              -4.698182569514693
+            ],
+            [
+              4.354508756065586,
+              -4.091843979787163
+            ],
+            [
+              2.4178698926072943,
+              2.9519356556569667
+            ],
+            [
+              3.2195404231972677,
+              -0.14965372069054705
+            ],
+            [
+              4.06605904901284,
+              1.0286490639489398
+            ],
+            [
+              3.7247422403790136,
+              -0.2716302721103707
+            ]
+          ],
+          "best_value": 4.239505133688776,
+          "budget": 8,
+          "evaluated_count": 8,
+          "evaluations": [
+            {
+              "value": 41.91737070581505,
+              "x": [
+                -3.656357558875988,
+                3.4743373693723267
+              ]
+            },
+            {
+              "value": 23.99719810250397,
+              "x": [
+                4.478274870593493,
+                -4.434486322731913
+              ]
+            },
+            {
+              "value": 20.896290279705102,
+              "x": [
+                3.5539411184935816,
+                -4.698182569514693
+              ]
+            },
+            {
+              "value": 20.8058958017276,
+              "x": [
+                4.354508756065586,
+                -4.091843979787163
+              ]
+            },
+            {
+              "value": 15.06824768468295,
+              "x": [
+                2.4178698926072943,
+                2.9519356556569667
+              ]
+            },
+            {
+              "value": 4.239505133688776,
+              "x": [
+                3.2195404231972677,
+                -0.14965372069054705
+              ]
+            },
+            {
+              "value": 11.09378106021354,
+              "x": [
+                4.06605904901284,
+                1.0286490639489398
+              ]
+            },
+            {
+              "value": 6.353186752877337,
+              "x": [
+                3.7247422403790136,
+                -0.2716302721103707
+              ]
+            }
+          ],
+          "proposals": [
+            {
+              "point": [
+                -3.656357558875988,
+                3.4743373693723267
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                4.478274870593493,
+                -4.434486322731913
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                3.5539411184935816,
+                -4.698182569514693
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                4.354508756065586,
+                -4.091843979787163
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                2.4178698926072943,
+                2.9519356556569667
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                3.2195404231972677,
+                -0.14965372069054705
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                4.06605904901284,
+                1.0286490639489398
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            },
+            {
+              "point": [
+                3.7247422403790136,
+                -0.2716302721103707
+              ],
+              "status": "valid",
+              "stderr": "",
+              "stdout": ""
+            }
+          ],
+          "status": "valid",
+          "valid": true
+        }
+      ],
+      "error": null,
+      "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+      "metrics": {
+        "value": 4.239505133688776
+      },
+      "status": "ok",
+      "trace": null,
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "valid": true
+    },
+    "level_results": [],
+    "lineage": [],
+    "metadata": {
+      "budget_exhausted": null,
+      "candidate_trajectory": [],
+      "engine_capabilities": [
+        "pareto",
+        "rich_trace",
+        "scalar",
+        "trace_module",
+        "weighted"
+      ],
+      "evaluator_records": [
+        {
+          "artifacts": [
+            {
+              "behavior_signature": [
+                [
+                  -3.656357558875988,
+                  3.4743373693723267
+                ],
+                [
+                  4.478274870593493,
+                  -4.434486322731913
+                ],
+                [
+                  3.5539411184935816,
+                  -4.698182569514693
+                ],
+                [
+                  4.354508756065586,
+                  -4.091843979787163
+                ],
+                [
+                  2.4178698926072943,
+                  2.9519356556569667
+                ],
+                [
+                  3.2195404231972677,
+                  -0.14965372069054705
+                ],
+                [
+                  4.06605904901284,
+                  1.0286490639489398
+                ],
+                [
+                  3.7247422403790136,
+                  -0.2716302721103707
+                ]
+              ],
+              "best_value": 4.239505133688776,
+              "budget": 8,
+              "evaluated_count": 8,
+              "evaluations": [
+                {
+                  "value": 41.91737070581505,
+                  "x": [
+                    -3.656357558875988,
+                    3.4743373693723267
+                  ]
+                },
+                {
+                  "value": 23.99719810250397,
+                  "x": [
+                    4.478274870593493,
+                    -4.434486322731913
+                  ]
+                },
+                {
+                  "value": 20.896290279705102,
+                  "x": [
+                    3.5539411184935816,
+                    -4.698182569514693
+                  ]
+                },
+                {
+                  "value": 20.8058958017276,
+                  "x": [
+                    4.354508756065586,
+                    -4.091843979787163
+                  ]
+                },
+                {
+                  "value": 15.06824768468295,
+                  "x": [
+                    2.4178698926072943,
+                    2.9519356556569667
+                  ]
+                },
+                {
+                  "value": 4.239505133688776,
+                  "x": [
+                    3.2195404231972677,
+                    -0.14965372069054705
+                  ]
+                },
+                {
+                  "value": 11.09378106021354,
+                  "x": [
+                    4.06605904901284,
+                    1.0286490639489398
+                  ]
+                },
+                {
+                  "value": 6.353186752877337,
+                  "x": [
+                    3.7247422403790136,
+                    -0.2716302721103707
+                  ]
+                }
+              ],
+              "proposals": [
+                {
+                  "point": [
+                    -3.656357558875988,
+                    3.4743373693723267
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    4.478274870593493,
+                    -4.434486322731913
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    3.5539411184935816,
+                    -4.698182569514693
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    4.354508756065586,
+                    -4.091843979787163
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    2.4178698926072943,
+                    2.9519356556569667
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    3.2195404231972677,
+                    -0.14965372069054705
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    4.06605904901284,
+                    1.0286490639489398
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                },
+                {
+                  "point": [
+                    3.7247422403790136,
+                    -0.2716302721103707
+                  ],
+                  "status": "valid",
+                  "stderr": "",
+                  "stdout": ""
+                }
+              ],
+              "status": "valid",
+              "valid": true
+            }
+          ],
+          "error": null,
+          "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+          "metrics": {
+            "value": 4.239505133688776
+          },
+          "status": "ok",
+          "trace": null,
+          "usage": {
+            "feedback": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "forward": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "judge": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "optimizer": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            }
+          },
+          "valid": true
+        }
+      ],
+      "level_id": "level-0",
+      "menu_evidence": {
+        "basis_of_equivalence": "unavailable",
+        "behavior_equivalence_known": false,
+        "common_example_count": 0,
+        "declared_menu_size": null,
+        "effective_menu_size": null,
+        "evaluated_candidate_count": 0,
+        "evaluation_observation_count": 0,
+        "menu_collapsed": null,
+        "valid_candidate_count": 0
+      },
+      "menu_observations": [],
+      "module_capabilities": [
+        "json_snapshot",
+        "multi_component",
+        "trace_module"
+      ],
+      "objective_mode": "scalar",
+      "optimizer_response_diagnostics": [],
+      "selected_models": {
+        "feedback": null,
+        "forward": null,
+        "judge": null,
+        "optimizer": null
+      },
+      "trace_optimize_path": false
+    },
+    "module_ref": "recursive_opt.module.reasoning_workflow@1",
+    "plan_fingerprint": "7dbaa2d1e64ef5fa5bfd8ea876f72780bffdf95bff47cfdc6e58a2afc109e0c4",
+    "portable": true,
+    "promotable": true,
+    "spec_fingerprint": "7dbaa2d1e64ef5fa5bfd8ea876f72780bffdf95bff47cfdc6e58a2afc109e0c4",
+    "status": "success",
+    "unit_id": "default:seed-1:matrix-0:level-0",
+    "usage": {
+      "feedback": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "forward": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "judge": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "optimizer": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      }
+    },
+    "valid": true
+  },
+  "result_sha256": "15ef77dc15da898d57ed4ed30b3162e3d87957e49ce96dc583e4e747b405ccdc"
+}
