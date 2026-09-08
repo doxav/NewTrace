@@ -181,3 +181,40 @@ def test_optimizer_artifact_is_trainable_through_real_trace() -> None:
     assert (
         result.metadata["menu_evidence"]["basis_of_equivalence"] == "behavior_signature"
     )
+
+
+def test_scalar_trace_continues_after_invalid_candidate_without_metric_imputation() -> (
+    None
+):
+    """A typed-invalid proposal cannot crash scalar ranking or become a numeric objective."""
+    from typing import Any
+
+    from opto.features.recursive_opt import spec as S
+    from opto.features.recursive_opt.optimizer_program import optimizer_spec
+    from opto.optimizers.optimizer import Optimizer
+
+    calls: list[int] = []
+
+    class Change(Optimizer):
+        """First emit invalid syntax, then a valid improving source."""
+
+        def _step(self, *args: Any, **kwargs: Any) -> dict[Any, str]:
+            """Use the real trainer's next proposal even after an invalid result."""
+            calls.append(1)
+            source = (
+                "def :"
+                if len(calls) == 1
+                else "def propose(history, bounds, seed): return [1.0, -1.0]"
+            )
+            return {p: source for p in self.parameters}
+
+    raw = optimizer_spec(VALID, seed=0, budget=2, engine="trace")
+    raw["runtime"]["test_mode"] = True
+    raw["datasets"]["validation"] = []
+    raw["engine"]["config"]["iterations"] = 3
+    result = S.execute_plan(S.compile_plan(raw), {"optimizer": Change})[0]
+    assert result.valid and len(calls) == 2
+    assert result.evaluation.metrics["value"] == 0.125
+    records = result.level_results[0]["metadata"]["evaluator_records"]
+    invalid = [r for r in records if not r["valid"]]
+    assert invalid and all(not r["metrics"] for r in invalid)

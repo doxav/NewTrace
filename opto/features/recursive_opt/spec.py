@@ -1233,7 +1233,10 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
         optimizer = resources.get('optimizer', config['optimizer'])
         trainer = resources.get('trainer', config['trainer'])
         evaluated_module = _EvaluatedModule(module, evaluator, objective, prepared['fit_context'], guard, prepared['metered_roles'], prepared['records'])
-        trainer_kwargs = {**_thaw(config['trainer_kwargs']), 'objective_config': objective['config']}
+        # Scalar outputs already carry the projected ranking score, including typed
+        # invalid rejection. Reprojecting their empty metric dict crashes the trainer.
+        trainer_objective = None if objective['config'].mode == 'scalar' else objective['config']
+        trainer_kwargs = {**_thaw(config['trainer_kwargs']), 'objective_config': trainer_objective}
         fit_iterations, fit_candidates = _resolve_search_size(trainer_kwargs, config['iterations'], config['num_candidates'])
         if validation:
             trainer_kwargs.update({'validate_dataset': _trainer_dataset(validation), 'validate_guide': RecursiveGuide(), 'validate_exploration_candidates': bool(config['validation_gate'])})
