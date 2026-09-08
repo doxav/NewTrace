@@ -902,3 +902,62 @@ def compare_arms(
         verdict = "worse quality, cheaper" if d_cost < 0 else "worse quality, more expensive"
     return {"comparable": True, "baseline": a.to_dict(), "candidate": b.to_dict(),
             "delta_quality": d_quality, "delta_policy_cost": d_cost, "verdict": verdict}
+
+
+def menu_evidence(observations: Sequence[Mapping[str, Any]], *,
+                  declared_menu_size: Optional[int] = None) -> Dict[str, Any]:
+    """Summarize actual search observations on a shared input panel.
+
+    Source identifies a candidate only. Equivalence uses evaluator-declared behavior
+    signatures, or explicitly weaker metric vectors. Repeated inconsistent outputs
+    and disjoint input panels remain unknown; final evaluation is never search data.
+    Counts of candidates deduplicate source artifacts; observation counts retain
+    repeated evaluations. No absent evidence certifies headroom.
+    """
+    import json
+
+    def key(value: Any) -> str:
+        """Use exact JSON equivalence, rejecting nonfinite or opaque evidence."""
+        return json.dumps(value, sort_keys=True, allow_nan=False, separators=(',', ':'))
+
+    if declared_menu_size is not None and (type(declared_menu_size) is not int or declared_menu_size < 0):
+        raise ValueError('declared_menu_size must be a nonnegative integer or None')
+    rows = [row for row in observations if row.get('phase') != 'final_evaluation']
+    grouped: Dict[str, List[Mapping[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(key(row['candidate']), []).append(row)
+    valid = [values for values in grouped.values() if all(row.get('valid') is True for row in values)]
+    report = {'declared_menu_size': declared_menu_size,
+              'evaluated_candidate_count': len(grouped), 'evaluation_observation_count': len(rows),
+              'valid_candidate_count': len(valid), 'effective_menu_size': None,
+              'menu_collapsed': None, 'basis_of_equivalence': 'unavailable',
+              'behavior_equivalence_known': False, 'common_example_count': 0}
+    if not grouped:
+        return report
+    if not valid:
+        report.update(effective_menu_size=0, menu_collapsed=True, basis_of_equivalence='no_valid_candidates')
+        return report
+    panels = [{key(row['example']) for row in values} for values in valid]
+    common = set.intersection(*panels)
+    report['common_example_count'] = len(common)
+    if not common:
+        report['basis_of_equivalence'] = 'incomparable_inputs'
+        return report
+    behavior = all('behavior_signature' in row for values in valid for row in values
+                   if key(row['example']) in common)
+    field = 'behavior_signature' if behavior else 'metrics'
+    signatures = []
+    for values in valid:
+        signature = []
+        for example in sorted(common):
+            outcomes = {key(row[field]) for row in values if key(row['example']) == example}
+            if len(outcomes) != 1:
+                report['basis_of_equivalence'] = 'observed_stochasticity'
+                return report
+            signature.append(next(iter(outcomes)))
+        signatures.append(tuple(signature))
+    size = len(set(signatures))
+    report.update(effective_menu_size=size, menu_collapsed=size <= 1,
+                  basis_of_equivalence=field if behavior else 'metric_vector',
+                  behavior_equivalence_known=behavior)
+    return report

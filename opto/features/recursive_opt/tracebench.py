@@ -632,10 +632,10 @@ class TraceBenchTaskAdapter:
             "task score remains the real benchmark score"
         )
 
-    # TODO(menu-collapse): the surface guard below stops a WRONG-KIND candidate, but not a
-    # RANKING-EQUIVALENT one -- for these heuristics only the argmax matters, so `item - bins`
-    # and `-(bins - item)` are the same candidate and a menu of them is effectively size 1.
-    # That is invisible here and only shows up as tied scores; see score_spread().
+    # This type guard cannot detect ranking-equivalent heuristics. Canonical runs
+    # now retain actual menu observations and label scalar-only equivalence as such.
+    # Legacy Trace-Bench evaluators still need to supply behavioral signatures to
+    # distinguish tied scores from identical choices; no type check proves headroom.
     def _apply_starting_artifact(self, bundle: Dict[str, Any], cfg: LevelConfig) -> bool:
         """Seed the bundle's trainable param from cfg before scoring.
 

@@ -168,7 +168,7 @@ def invalid_result(reason: str, floor: Optional[float] = None, **extra) -> dict:
     an astronomical internal sentinel must never leak into stats, normalization
     baselines, or reported results (root cause of the -666,666,666 confirm runs).
     """
-    return {"score": float(floor) if floor is not None else INVALID_CONFIG_SCORE,
+    return {"valid": False, "score": float(floor) if floor is not None else INVALID_CONFIG_SCORE,
             "feedback": reason, **extra}
 
 

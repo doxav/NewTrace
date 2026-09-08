@@ -364,12 +364,17 @@ def execute_plan(plan: ExecutionPlan, resources: Optional[Mapping[str, Any]]=Non
                 else:
                     all_cached = False
                     level_resources = {**runtime_resources, '_upstream': upstream, '_budget': guard, '_memory': memory, '_overrides': overrides}
+                    guard.menu_observations = []
+                    guard.menu_level_spec = level.spec
                     try:
                         result = _engine_entry(level.spec['engine']['name']).run(unit, level, level_resources)
                     except Exception as exc:
                         if _should_raise(unit.spec['budget'], exc):
                             raise
                         result = _failed_level_result(plan, unit, level, guard, exc)
+                    from .measurement import menu_evidence
+                    menu = menu_evidence(guard.menu_observations, declared_menu_size=_declared_menu_size(level.spec))
+                    result = RunResult(**{**result.__dict__, 'metadata': _freeze({**result.metadata, 'menu_observations': guard.menu_observations, 'menu_evidence': menu})})
                     portable = not bool(overrides) and _evaluator_entry(level.spec['objective']['evaluator_ref']).mode == 'output'
                     result = RunResult(**{**result.__dict__, 'plan_fingerprint': plan.fingerprint, 'portable': portable, 'promotable': portable and result.valid})
                     _persist_level_result(plan, unit, level, result, output_root)
@@ -905,6 +910,7 @@ def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources:
     started_at = time.monotonic()
     if should_fit:
         trainer_result = optimize(module, _dataset_for(legacy, families, iterations), guide=guide, optimizer=resources.get('optimizer', level_optimizer), trainer=resources.get('trainer', legacy.get('trainer', config['trainer'])), optimizer_kwargs=optimizer_kwargs, iterations=iterations, num_candidates=num_candidates, logger=logger, budget=RecursiveOptBudget(), **trainer_kwargs)
+    guard.menu_observations.extend(_legacy_menu_observations(trainer_result, legacy))
     wall_s = round(time.monotonic() - started_at, 6)
     selected_candidate = None
     try:
@@ -942,6 +948,33 @@ def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources:
         capture['_global_step'] = global_step + executed_steps
     evaluation = EvaluationResult(valid=True, status='ok', metrics={'score': float(score)}, feedback=data.get('feedback', '') if isinstance(data, Mapping) else '', trace={'legacy_data': _thaw(data)}, artifacts={'artifact_id': record.artifact_id})
     return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine='trace', module_ref=canonical['module']['ref'], status='success', valid=True, evaluation=evaluation, artifact=_freeze({'text': artifact_text}), lineage=(), usage=evaluation.usage, budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'legacy_compatibility': compatibility}))
+def _declared_menu_size(level: Mapping[str, Any]) -> Optional[int]:
+    """Count a declared legacy Cartesian menu; adaptive proposal budgets are not menus."""
+    legacy = level['module']['config'].get('level', {})
+    constraints = legacy.get('constraints', {})
+    targets = legacy.get('targets', [])
+    if targets and all(target in constraints for target in targets):
+        return math.prod(len(constraints[target]) for target in targets)
+    return None
+
+def _legacy_menu_observations(trainer: Any, level: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """Read actual trainer rollouts, never final priors or per-family artifact memory."""
+    observations = []
+    for item in getattr(getattr(trainer, 'memory', None), 'memory', []) or []:
+        if not isinstance(item, tuple) or len(item) != 2 or not hasattr(item[1], 'get_module'):
+            continue
+        candidate = item[1]
+        artifact = {'text': _artifact_text(candidate.get_module(), level['surface'])}
+        for rollout in candidate.rollouts:
+            payload = getattr(rollout['target'], 'data', rollout['target'])
+            feedback = str(rollout.get('feedback', ''))
+            score = float(rollout['score'])
+            valid = not is_invalid_score(score) and not _normalizer_rejected(feedback)
+            if isinstance(payload, Mapping):
+                valid = valid and payload.get('valid', True) and not _normalizer_rejected(str(payload.get('feedback', '')))
+            observations.append({'candidate': artifact, 'example': _thaw(rollout['x']), 'phase': 'fit', 'valid': bool(valid), 'metrics': {'score': score} if valid else {}, 'feedback': feedback})
+    return observations
+
 def _response_value(value: Any, name: str) -> Any:
     """Read one response field from a mapping or provider-style object."""
     return value.get(name) if isinstance(value, Mapping) else getattr(value, name, None)
@@ -1436,14 +1469,26 @@ def _transport_retry_recorder(role: str, usage: MutableMapping[str, MutableMappi
                 raise ValueError(f'unknown transport retry event {event!r}')
     return record
 def _evaluate_example(module: Module, example: Any, context: Mapping[str, Any], evaluator: _EvaluatorEntry, guard: _BudgetGuard, metered_roles: set[str]) -> Tuple[EvaluationResult, Any]:
-    """Run one explicit evaluator contract and return its exact output anchor."""
+    """Run an evaluator and retain actual search observations before aggregation."""
     guard.consume('evaluator_runs')
-    if evaluator.mode == 'output':
-        output = module(example)
-        result = normalize_evaluation_result(evaluator.evaluate(output, example, context))
-    else:
-        output = None
-        result = normalize_evaluation_result(evaluator.evaluate(module, [example], context))
+    observe = hasattr(guard, 'menu_observations') and context.get('phase') == 'fit'
+    artifact = _snapshot_level_module(guard.menu_level_spec, module) if observe else None
+    try:
+        if evaluator.mode == 'output':
+            output = module(example)
+            result = normalize_evaluation_result(evaluator.evaluate(output, example, context))
+        else:
+            output = None
+            result = normalize_evaluation_result(evaluator.evaluate(module, [example], context))
+    except Exception as error:
+        if observe:
+            guard.menu_observations.append({'candidate': artifact, 'example': _thaw(example), 'phase': context['phase'], 'valid': False, 'metrics': {}, 'error': type(error).__name__})
+        raise
+    if observe:
+        observation = {'candidate': artifact, 'example': _thaw(example), 'phase': context['phase'], **_evaluation_info(result)}
+        if isinstance(result.artifacts, Mapping) and 'behavior_signature' in result.artifacts:
+            observation['behavior_signature'] = _thaw(result.artifacts['behavior_signature'])
+        guard.menu_observations.append(observation)
     _charge_reported_usage(result.usage, guard, metered_roles)
     return result, output
 def _evaluate_dataset(module: Module, dataset: Iterable[Any], context: Mapping[str, Any], objective: Mapping[str, Any], evaluator: _EvaluatorEntry, guard: _BudgetGuard, metered_roles: set[str], records: Optional[List[Dict[str, Any]]]=None) -> EvaluationResult:
@@ -1478,6 +1523,8 @@ def _charge_reported_usage(usage: Mapping[str, Any], guard: _BudgetGuard, metere
             guard.consume('total_tokens', tokens)
 def _aggregate_evaluations(results: List[EvaluationResult], objective: Mapping[str, Any]) -> EvaluationResult:
     """Aggregate exact metric sources and retain declared feedback channels."""
+    if any(not result.valid for result in results):
+        return EvaluationResult(valid=False, status='invalid', feedback=[result.feedback for result in results], usage=_thaw(_merge_usage(result.usage for result in results)), artifacts=[_evaluation_info(result) for result in results], error=next((result.error for result in results if result.error), 'invalid candidate evaluation'))
     metrics: Dict[str, float] = {}
     for name, descriptor in objective['metrics'].items():
         values = [float(_evaluation_source(result, descriptor['source'])) for result in results]
@@ -2730,12 +2777,9 @@ def score_spread(task_id: str, probes: Optional[List[dict]]=None, scoring: Optio
     Read ``effective_menu_size`` before ``flat``: when it is 1 the probes offered one
     usable point, so ``flat`` describes the MENU, not the task.
 
-    TODO(menu-collapse): this is opt-in, so a run whose menu collapsed still reports a
-    clean null. Record effective_menu_size per level inside the run instead. A first
-    attempt was reverted (it read 3 where the truth was 1): count over the candidates
-    the LEVEL evaluated, not memory.artifact_history() which also holds the final prior
-    and per-family records, and detect rejections via the normalizer flag below rather
-    than by is_invalid_score() on the numeric score.
+    Canonical runs now record menu_evidence automatically from actual evaluations.
+    This legacy diagnostic reports scalar equivalence only, not behavioral identity;
+    normalized rejections are excluded by their explicit feedback flag.
     """
     probes = probes or [{}, {'starting_artifact': 'Answer directly.'}, {'starting_artifact': 'Plan step by step, then verify the answer before replying.'}]
     runner = make_scored_task_runner(scoring)
@@ -2764,7 +2808,7 @@ def score_spread(task_id: str, probes: Optional[List[dict]]=None, scoring: Optio
     # that are ranking-equivalent (they tie). No type check can see the second, but
     # both show up here, and while this is 1 `flat` is a statement about the menu.
     effective_menu_size = len(set(valid_scores))
-    return {'task': task_id, 'rows': rows, 'spread': valid_spread, 'valid_spread': valid_spread, 'flat': valid_spread < 1e-09, 'failed_probes': invalid_probes, 'invalid_probes': invalid_probes, 'catastrophic': invalid_probes > 0, 'effective_menu_size': effective_menu_size, 'menu_collapsed': effective_menu_size <= 1}
+    return {'task': task_id, 'rows': rows, 'spread': valid_spread, 'valid_spread': valid_spread, 'flat': valid_spread < 1e-09, 'failed_probes': invalid_probes, 'invalid_probes': invalid_probes, 'catastrophic': invalid_probes > 0, 'declared_menu_size': len(probes), 'evaluated_candidate_count': len(rows), 'valid_candidate_count': len(valid_scores), 'basis_of_equivalence': 'scalar_score', 'behavior_equivalence_known': False, 'effective_menu_size': effective_menu_size, 'menu_collapsed': effective_menu_size <= 1}
 
 def agentic_optimizer_factory(level_spec: dict, memory: MemoryLite, reused_tools: Optional[List[str]]=None):
     """Build an AgenticOptimizer factory wiring (declared + reused) tools."""
@@ -2793,9 +2837,8 @@ def agentic_optimizer_factory(level_spec: dict, memory: MemoryLite, reused_tools
             super().__init__(parameters, **{**configured_kwargs, **optimizer_kwargs})
     return ConfiguredAgenticOptimizer
 
-# TODO(menu-collapse): this normalizes a rejection to the worst LEGAL score, which keeps one
-# bad candidate from poisoning a mean but also hides rejections from any is_invalid_score()
-# check downstream. Expose the rejection as a flag on the result, not only as a number.
+# Legacy tuple callers keep the numeric ranking floor. Its explicit normalization
+# flag is consumed by automatic menu observations; it is never a valid menu score.
 def make_scored_task_runner(scoring: Optional[dict]=None, *, raw_runner: Optional[Callable[[LevelConfig, str], Tuple[float, str]]]=None) -> Callable[[LevelConfig, str], Tuple[float, str]]:
     """Wrap a task runner with optional spec-level score normalization."""
     cfg = scoring or {}

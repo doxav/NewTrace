@@ -103,3 +103,81 @@ def test_portable_file(tmp_path: Path) -> None:
     path = tmp_path / "optimizer.py"
     path.write_text(VALID)
     assert evaluate_program(path.read_text(), seed=0, budget=1).valid
+
+
+def test_worker_has_no_objective_or_installed_packages() -> None:
+    """The child runtime exposes proposal validation, never the parent objective."""
+    code = """import __main__
+def propose(history, bounds, seed):
+    assert not hasattr(__main__, 'evaluate_program')
+    return [0, 0]
+"""
+    assert propose_point(code, [], [[-5, 5]] * 2, 0).valid
+    assert (
+        propose_point("import numpy\n" + VALID, [], [[-5, 5]] * 2, 0).status
+        == "import_error"
+    )
+
+
+def test_seeded_randomness_and_mutation() -> None:
+    """Local seeded random sampling is reproducible and cannot mutate parent inputs."""
+    code = """import random
+def propose(history, bounds, seed):
+    rng = random.Random(seed + len(history))
+    history.clear()
+    return [rng.uniform(lo, hi) for lo, hi in bounds]
+"""
+    history = [{"x": [0, 0], "value": 2.125}]
+    assert propose_point(code, history, [[-5, 5]] * 2, 4).valid
+    assert len(history) == 1
+
+
+def test_canonical_optimizer_artifact_and_typed_invalidity(tmp_path: Path) -> None:
+    """The canonical module stores optimizer.py source and returns typed fixture feedback."""
+    from opto.features.recursive_opt import spec as S
+    from opto.features.recursive_opt.optimizer_program import optimizer_spec
+
+    raw = optimizer_spec(VALID, seed=0, budget=2)
+    raw["outputs"] = {"directory": str(tmp_path)}
+    result = S.execute_plan(S.compile_plan(raw))[0]
+    assert result.valid and result.portable
+    assert result.evaluation.metrics["value"] == 2.125
+    assert result.artifact["components"]["optimizer"] == VALID
+    assert result.budget["accounted"]["evaluator_runs"] == 1
+    assert result.evaluation.artifacts[0]["evaluated_count"] == 2
+    raw = optimizer_spec(
+        "def propose(history, bounds, seed): return [99, 0]", seed=0, budget=2
+    )
+    invalid = S.execute_plan(S.compile_plan(raw))[0]
+    assert not invalid.valid
+    assert invalid.status == "invalid"
+    assert not invalid.evaluation.metrics
+    assert invalid.error == "out_of_bounds"
+
+
+def test_optimizer_artifact_is_trainable_through_real_trace() -> None:
+    """A real trainer update reaches source text and receives deterministic feedback."""
+    from typing import Any
+
+    from opto.features.recursive_opt import spec as S
+    from opto.features.recursive_opt.optimizer_program import optimizer_spec
+    from opto.optimizers.optimizer import Optimizer
+
+    improved = "def propose(history, bounds, seed):\n return [1.0, -1.0]\n"
+
+    class Change(Optimizer):
+        """Use the existing optimizer update protocol with a deterministic candidate."""
+
+        def _step(self, *args: Any, **kwargs: Any) -> dict[Any, str]:
+            """Replace the trainable optimizer source."""
+            return {p: improved for p in self.parameters}
+
+    raw = optimizer_spec(VALID, seed=0, budget=2, engine="trace")
+    raw["runtime"]["test_mode"] = True
+    result = S.execute_plan(S.compile_plan(raw), {"optimizer": Change})[0]
+    assert result.valid and result.evaluation.metrics["value"] == 0.125
+    assert result.artifact["components"]["optimizer"] == improved
+    assert result.metadata["menu_evidence"]["effective_menu_size"] == 2
+    assert (
+        result.metadata["menu_evidence"]["basis_of_equivalence"] == "behavior_signature"
+    )

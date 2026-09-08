@@ -18,7 +18,10 @@ import tempfile
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from opto.trainer.objectives import EvaluationResult
 
 
 @dataclass(frozen=True)
@@ -142,6 +145,17 @@ def _execute_once(
     """Execute in a fresh credential-free process, killing its group on timeout."""
     with tempfile.TemporaryDirectory(prefix="optimizer-program-") as directory:
         root = Path(directory)
+        # Ship only proposal validation to the child, never the objective implementation.
+        worker_source = (
+            "from __future__ import annotations\n"
+            "import inspect, json, math\nfrom pathlib import Path\n"
+            + "\n".join(
+                inspect.getsource(function)
+                for function in (_finite_number, _point_status, _worker)
+            )
+            + "\n_worker()\n"
+        )
+        (root / "worker.py").write_text(worker_source, encoding="utf-8")
         (root / "optimizer.py").write_text(source, encoding="utf-8")
         (root / "request.json").write_text(json.dumps(payload), encoding="utf-8")
         with (
@@ -149,7 +163,7 @@ def _execute_once(
             (root / "stderr.txt").open("wb") as stderr,
         ):
             process = subprocess.Popen(
-                [sys.executable, "-I", str(Path(__file__).resolve()), "--worker"],
+                [sys.executable, "-I", "-S", "worker.py"],
                 cwd=root,
                 env={"PATH": os.defpath, "LANG": "C.UTF-8"},
                 stdin=subprocess.DEVNULL,
@@ -280,5 +294,62 @@ def _worker() -> None:
     Path("result.json").write_text(json.dumps(result, allow_nan=False))
 
 
-if __name__ == "__main__":
-    _worker()
+def optimizer_evaluator(output: Any, example: Any, context: Any) -> EvaluationResult:
+    """Adapt portable source to the canonical typed evaluator without executing it in Trace."""
+    from opto.trainer.objectives import EvaluationResult
+
+    data = getattr(output, "data", output)
+    source = data["components"]["optimizer"]
+    if not isinstance(example, dict) or set(example) != {"seed", "budget"}:
+        raise ValueError("optimizer fixture examples require only seed and budget")
+    result = evaluate_program(source, seed=example["seed"], budget=example["budget"])
+    return EvaluationResult(
+        valid=result.valid,
+        status="ok" if result.valid else "invalid",
+        metrics={"value": result.best_value} if result.valid else {},
+        feedback=f"OptimizerProgramV0: {result.status}; evaluations={result.evaluated_count}/{result.budget}",
+        artifacts=result.to_dict(),
+        error=None if result.valid else result.status,
+    )
+
+
+def optimizer_spec(
+    source: str, *, seed: int, budget: int = 8, engine: str = "fixed"
+) -> dict[str, Any]:
+    """Build a minimal canonical fixture spec using the existing trainable component module."""
+    from opto.features.recursive_opt import spec as control
+
+    _validate_inputs([], [[-5, 5], [-5, 5]], seed, 2.0)
+    if type(budget) is not int or budget <= 0:
+        raise ValueError("budget must be a positive integer")
+    if not isinstance(source, str) or not source.strip():
+        raise ValueError("source must be nonempty Python text")
+    if engine not in {"fixed", "trace", "gepa"}:
+        raise ValueError("engine must be fixed, trace or gepa")
+    reference = "recursive_opt.evaluator.optimizer_program@1"
+    control.register_evaluator(reference, optimizer_evaluator)
+    example = {"seed": seed, "budget": budget}
+    return {
+        "schema_version": control.SCHEMA_VERSION,
+        "kind": control.SPEC_KIND,
+        "runtime": {"offline": True, "seed": seed},
+        "module": {
+            "ref": "recursive_opt.module.reasoning_workflow@1",
+            "config": {"components": {"optimizer": source}},
+        },
+        "surface": {"kind": "module", "targets": ["optimizer"]},
+        "engine": (
+            {"name": engine, "config": {"iterations": 2, "num_candidates": 1}}
+            if engine == "trace"
+            else {"name": engine}
+        ),
+        "objective": {
+            "evaluator_ref": reference,
+            "intent": "Minimize black-box objective within the fixed evaluation budget.",
+            "metrics": {
+                "value": {"direction": "minimize", "source": "evaluation.metrics.value"}
+            },
+            "selection": {"mode": "scalar", "score_key": "value"},
+        },
+        "datasets": {"train": [example], "validation": [example], "holdout": []},
+    }
