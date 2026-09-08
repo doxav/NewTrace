@@ -8,6 +8,17 @@ from typing import Any
 from artifacts.optimizer_discovery.exp15 import read
 
 
+def _artifact_path(path: Path) -> str:
+    """Use stable repository-relative labels, or absolute paths for external exports."""
+    absolute = path.resolve()
+    repository = Path(__file__).resolve().parents[2]
+    return str(
+        absolute.relative_to(repository)
+        if absolute.is_relative_to(repository)
+        else absolute
+    )
+
+
 def attempt_timing(directory: Path) -> dict[str, Any]:
     """Associate response latency with its actual attempt and separate total slot time."""
     response = read(directory / "response.json")
@@ -127,9 +138,9 @@ def export_programs(root: Path) -> dict[str, Any]:
             "source_sha256": selected["source_sha256"],
             "selected_index": selected["index"],
             "validation_auc": selected["validation_auc"],
-            "gzip_path": str(target),
+            "gzip_path": _artifact_path(target),
             "gzip_sha256": hashlib.sha256(payload).hexdigest(),
-            "lineage_path": str(
+            "lineage_path": _artifact_path(
                 lineage_path
                 if lineage_path.exists()
                 else lineage_path.with_suffix(".json.gz")
@@ -206,3 +217,99 @@ def archive_trace(directory: Path) -> dict[str, Any]:
     read_trace(directory)
     original.unlink()
     return record
+
+
+def _event_bytes(root: Path) -> bytes:
+    """Verify the compressed and original-byte hashes of the completed event stream."""
+    import gzip
+    import hashlib
+
+    try:
+        record = read(root / "events_archive.json")
+        packed = (root / "events.jsonl.gz").read_bytes()
+        raw = gzip.decompress(packed)
+        if (
+            hashlib.sha256(packed).hexdigest() != record["gzip_sha256"]
+            or hashlib.sha256(raw).hexdigest() != record["jsonl_sha256"]
+        ):
+            raise ValueError("hash mismatch")
+        return raw
+    except (OSError, EOFError, ValueError, KeyError) as error:
+        raise RuntimeError("event archive integrity failed") from error
+
+
+def archive_events(root: Path) -> dict[str, Any]:
+    """Archive a completed run's exact event stream without weakening size checks."""
+    import gzip
+    import hashlib
+
+    from artifacts.optimizer_discovery.exp15 import exists, persist
+
+    if not exists(root / "results.json"):
+        raise RuntimeError("event archival requires completed results")
+    original = root / "events.jsonl"
+    if not original.exists():
+        _event_bytes(root)
+        return read(root / "events_archive.json")
+    raw = original.read_bytes()
+    packed = gzip.compress(raw, mtime=0)
+    archived = root / "events.jsonl.gz"
+    if archived.exists() and archived.read_bytes() != packed:
+        raise RuntimeError("event log differs from its retained archive")
+    temporary = archived.with_suffix(".gz.pending")
+    temporary.write_bytes(packed)
+    temporary.replace(archived)
+    record = {
+        "format": "gzip mtime=0; exact completed JSONL stream",
+        "jsonl_bytes": len(raw),
+        "jsonl_sha256": hashlib.sha256(raw).hexdigest(),
+        "gzip_bytes": len(packed),
+        "gzip_sha256": hashlib.sha256(packed).hexdigest(),
+        "semantics": "Post-run storage only; restore exact bytes temporarily for the frozen analyzer.",
+    }
+    persist(root / "events_archive.json", record)
+    if _event_bytes(root) != raw:
+        raise RuntimeError("event archive roundtrip failed")
+    original.unlink()
+    return record
+
+
+def analyze_archived(root: Path) -> dict[str, Any]:
+    """Materialize exact archived events, run the frozen analyzer and verify equality."""
+    from artifacts.optimizer_discovery.exp15 import Experiment
+
+    raw = _event_bytes(root)
+    path = root / "events.jsonl"
+    temporary = not path.exists()
+    if not temporary and path.read_bytes() != raw:
+        raise RuntimeError("event log differs from its retained archive")
+    if temporary:
+        with path.open("xb") as stream:
+            stream.write(raw)
+    try:
+        result = Experiment(root, "confirmation").analyze()
+        if result != read(root / "results.json"):
+            raise RuntimeError("recomputed analysis differs from completed results")
+        return result
+    finally:
+        if temporary:
+            path.unlink()
+
+
+def main() -> None:
+    """Recompute completed archived evidence without new generation or evaluation."""
+    import argparse
+    import json
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("root", type=Path)
+    result = analyze_archived(parser.parse_args().root)
+    print(
+        json.dumps(
+            {key: result[key] for key in ("experiment", "arms", "contrasts")}, indent=2
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()

@@ -42,3 +42,21 @@ completed proposals per outer seed and the identical train/validation evaluation
 schedule. The engine may consume training feedback only. Collect every proposal,
 then apply the common validation selection and global holdout barrier. Additional
 engine-internal model/repair calls must consume declared slots; no hidden budget.
+
+Completed EXP-15 evidence uses lossless compression for large traces, the event
+stream and exact source exports. To recompute its unchanged frozen analysis:
+
+```bash
+python -m artifacts.optimizer_discovery.reporting artifacts/optimizer_discovery/exp15/raw
+```
+
+This materializes the exact archived event bytes temporarily, checks equality with
+the preserved aggregate and removes its temporary log. It makes no model or candidate
+calls. To deploy the validation-selected representative as a normal source file:
+
+```bash
+gzip -dc artifacts/optimizer_discovery/exp15/selected/A2_seed_41.py.gz > optimizer.py
+```
+
+The export index records the hash of those exact decompressed bytes. Archived
+scientific evidence and source strings have not been reformatted.

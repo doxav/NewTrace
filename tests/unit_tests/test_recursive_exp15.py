@@ -306,7 +306,9 @@ def test_reported_latency_matches_the_completed_attempt(tmp_path: Path) -> None:
     assert result["transport_attempts"] == 2 and result["transport_failures"] == 1
 
 
-def test_selected_source_export_preserves_bytes_and_frozen_hash(tmp_path: Path) -> None:
+def test_selected_source_export_preserves_bytes_and_frozen_hash(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
     """Portable export preserves even raw formatting and refuses altered selections."""
     import gzip
 
@@ -354,6 +356,9 @@ def test_selected_source_export_preserves_bytes_and_frozen_hash(tmp_path: Path) 
     assert result["programs"]["11"]["source_sha256"] == B.source_hash(source)
     assert result["representative_outer_seed"] == 11
     assert export_programs(root) == result
+    with monkeypatch.context() as relative_context:
+        relative_context.chdir(tmp_path)
+        assert export_programs(Path("raw")) == result
     lineage = E.read(Path(result["programs"]["11"]["lineage_path"]))
     assert lineage[0]["selected"] and lineage[0]["source_sha256"] == B.source_hash(
         source
@@ -396,3 +401,41 @@ def test_trace_archive_is_lossless_and_requires_completed_generation(
     (tmp_path / "trace.json.xz").write_bytes(b"corrupt")
     with pytest.raises(RuntimeError, match="integrity"):
         read_trace(tmp_path)
+
+
+def test_completed_event_archive_replays_exact_log_and_cleans_up(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    """Oversized event evidence stays lossless and reconstructs for unchanged analysis."""
+    from artifacts.optimizer_discovery.reporting import analyze_archived, archive_events
+
+    payload = b'{"event":"evaluation","value":-1}\n' * 20000
+    path = tmp_path / "events.jsonl"
+    path.write_bytes(payload)
+    with pytest.raises(RuntimeError, match="completed"):
+        archive_events(tmp_path)
+    expected = {"all_rows_preserved": True}
+    E.persist(tmp_path / "results.json", expected)
+    record = archive_events(tmp_path)
+    assert not path.exists() and record["jsonl_bytes"] == len(payload)
+    assert archive_events(tmp_path) == record
+
+    class Reader:
+        """Stand in only for the scientific reader while checking exact log bytes."""
+
+        def analyze(self) -> dict[str, bool]:
+            """Read the original stream, including every negative row."""
+            assert path.read_bytes() == payload
+            return expected
+
+    monkeypatch.setattr(E, "Experiment", lambda root, phase: Reader())
+    assert analyze_archived(tmp_path) == expected
+    assert not path.exists()
+    path.write_bytes(b"changed")
+    with pytest.raises(RuntimeError, match="differs"):
+        analyze_archived(tmp_path)
+    assert path.read_bytes() == b"changed"
+    path.unlink()
+    (tmp_path / "events.jsonl.gz").write_bytes(b"damaged")
+    with pytest.raises(RuntimeError, match="integrity"):
+        analyze_archived(tmp_path)

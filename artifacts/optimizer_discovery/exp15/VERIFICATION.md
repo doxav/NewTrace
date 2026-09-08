@@ -47,8 +47,10 @@ No production dependencies were added. Full-repository automatic formatting was
 not run because it would modify unrelated historical code/evidence. Targeted
 formatting/lint and the broad offline regression cover this change.
 
-Final evidence-integrity, staged credential scan, source-hash verification and
-aggregate recomputation are recorded separately after confirmation completes.
+Final evidence integrity and aggregate recomputation are recorded in
+final_integrity.json and resource_audit.json. Staged credential/size checks accompany
+the final data commit. Every registered seed and all 80 completed response slots
+are represented; no holdout trajectory required fallback.
 
 Additional audit during confirmation, without changing frozen scientific source:
 49 new/interface-targeted tests passed in 13.39s (resume_audit_tests.txt). This adds
@@ -92,3 +94,61 @@ Final broader offline regression on the current implementation and reporting too
 same all-unit-tests command and external-backend module exclusion above. No new
 skip or xfail was added. The original frozen generation/evaluation source remains
 unchanged; the additional tests cover reporting and lossless archive integrity.
+
+Reporting repair R15-EXPORT-PATH-01: invoking the exporter first with a relative
+path and then its absolute equivalent changed path labels in the index, so the
+immutable writer correctly refused the second write. The failing regression is
+preserved in export_path_red.txt.gz (one intended failure). Canonical path labels in
+the reporting helper resolve it without changing any frozen scientific module.
+52 targeted tests pass in 14.25s (export_path_green.txt). Both path forms now return
+the identical index, whose bytes match the previously committed export at 6ffdd524;
+all sources and lineage bytes remain unchanged. Targeted Ruff/Black and the frozen
+preflight pass. No scientific result was invalidated or replaced.
+
+After this final reporting change, the full offline command passes again:
+**771 passed, 3 existing optional skips in 54.89s** (completion_offline_tests.txt).
+The same external-backend module is excluded; no exclusions, skips or xfails changed.
+
+Final raw audit verifies all source hashes, all request settings, 80 unique response
+IDs, five actual production Trace blocks with eight updates each, the rotated
+sequential request order, equal logical evaluation allocations, validation isolation
+and the global selection barrier. Every one of the 1,020 cache file names matches
+its complete key hash, all cached numeric metrics recompute from retained observations,
+and the complete analysis equals raw/results.json exactly. All cache records are
+ordinary JSON, so the frozen cache's unsupported compressed-record edge was not
+exercised. There were no extra candidate or model calls in this audit. Reference
+normalization recomputation is accounted separately in resource_audit.json.
+
+Completed event-stream packaging: events.jsonl was 1,463,776 bytes, over the 500 KiB
+file gate. The exact JSONL stream is retained as a 45,361-byte deterministic gzip,
+with both hashes in raw/events_archive.json. The reporting adapter materializes
+the original bytes temporarily for the unchanged frozen analyzer, checks exact
+result equality, then removes only its temporary copy. No event is dropped or
+rewritten. The archived source stream is the final evidence, not an untracked log.
+The original frozen runner is unchanged and can still create new unarchived runs.
+
+An intended missing-function failure is retained in events_archive_red.txt.
+53 targeted tests pass in 14.26s (events_archive_green.txt), including completeness,
+roundtrip, tamper refusal and temporary-file cleanup. Actual complete EXP-15 analysis
+matches its original results after archival (events_archive_integrity.json).
+
+Recompute the primary aggregate from the delivered archive without model or
+candidate calls; the adapter verifies equality with the preserved result:
+
+```bash
+/tmp/phase0-venv/bin/python -m artifacts.optimizer_discovery.reporting artifacts/optimizer_discovery/exp15/raw
+```
+
+The full `evidence.verify(Experiment(raw_root, "confirmation"))` scientific audit was
+run before archival, while the complete event stream was materialized. It requires
+that stream when rerun. `reporting.read_trace` verifies losslessly archived
+production traces, and `reporting.export_programs` verifies all selected A2 artifacts.
+
+Final release regression after all reporting/archive changes: **772 passed, 3 existing
+optional skips in 54.99s** (release_offline_tests.txt), with the same socket restrictions
+and external-backend module exclusion. All 53 targeted tests, targeted Ruff/Black,
+frozen preflight and exact archived-result recomputation pass. No frozen source changed.
+
+The failing path-export test log is gzip-compressed without changing its trailing
+whitespace; test_log_packaging.json records both hashes. The staged whitespace gate
+passes without an exemption.

@@ -1,0 +1,18 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_________ test_completed_event_archive_replays_exact_log_and_cleans_up _________
+
+tmp_path = PosixPath('/tmp/pytest-of-xav/pytest-70/test_completed_event_archive_r0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x719b032976f0>
+
+    def test_completed_event_archive_replays_exact_log_and_cleans_up(
+        tmp_path: Path, monkeypatch: Any
+    ) -> None:
+        """Oversized event evidence stays lossless and reconstructs for unchanged analysis."""
+>       from artifacts.optimizer_discovery.reporting import archive_events, analyze_archived
+E       ImportError: cannot import name 'archive_events' from 'artifacts.optimizer_discovery.reporting' (/home/xav/code/Trace/artifacts/optimizer_discovery/reporting.py)
+
+tests/unit_tests/test_recursive_exp15.py:410: ImportError
+=========================== short test summary info ============================
+FAILED tests/unit_tests/test_recursive_exp15.py::test_completed_event_archive_replays_exact_log_and_cleans_up
+1 failed in 1.57s
