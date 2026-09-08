@@ -63,21 +63,31 @@ No scientific setting changed because of pilot arm performance.
 
 Baseline: 559 passed, 2 skipped. Final affected regression: 581 passed, 2 skipped.
 Broader offline suite: 766 passed, 3 existing optional skips, one existing warning.
-New/interface-specific suites: 49 passed, including interrupted production-A2 resume. Commands and exclusions:
+New/interface-specific suites include interrupted production-A2 resume and the corrected attempt-timing association. Commands and exclusions:
 [verification record](exp15/VERIFICATION.md). Final raw-evidence checks follow after
 confirmation, including full manifest/source/slot/chronology integrity and recomputation.
 
-## Runtime observation during confirmation
+## Runtime observation and reporting correction
 
-Slot 11/A1/06 completed normally after 275.127 seconds on the monotonic timer,
-although its wall-clock timestamps span 2,407.236 seconds. The 2,132.109-second
-gap is consistent with observed system suspension. It does not demonstrate a
-violation of the configured 300-second SDK timeout. Live socket observations
-confirmed the process remained active, so no duplicate request was issued.
-The response exhausted 8,000 reasoning tokens without code and consumed its slot.
-Safe observations and the resolved timing interpretation remain under exp15/raw/.
-This affects interpretation of wall-clock latency, not generation settings, budgets,
-selection or primary scientific values.
+R15-LATENCY-01 is a reporting-only defect. A manual diagnostic initially paired the
+start of slot 11/A1/06's first attempt with the 275.127-second duration of its second
+attempt. That wrongly attributed the entire 2,132.109-second difference to a clock
+or suspension gap. The original two diagnostic summaries are retained and explicitly
+superseded by exp15/raw/latency_observation_correction.json.
+
+Correct accounting: attempt one ended in a transport timeout after 372.852 measured
+seconds; attempt two completed after 275.127 seconds. Total measured attempt time is
+647.979 seconds, versus 2,407.236 wall-clock seconds for the slot. The remaining
+1,759.257 seconds include backoff, scheduling and the observed system suspension;
+they are not assigned to model inference. The completed response had no code after
+8,000 reasoning tokens and consumed exactly one scientific slot. Its first attempt
+has unknown remote completion/billing. The first A1 block has eight completed
+responses and nine transport attempts.
+
+A tested reporting helper now matches each response with its actual attempt ID.
+Original requests, responses, sources, evaluations and frozen settings are unchanged.
+No primary metric or scientific selection changed, and no experiment was invalidated
+by this descriptive reporting repair. The live process was never manually restarted.
 
 ## Confirmatory results
 

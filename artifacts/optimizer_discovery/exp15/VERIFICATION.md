@@ -57,3 +57,10 @@ is preserved byte-for-byte; only the unfinished second slot makes another model
 request. A missing outer seed blocks aggregation and a missing selection blocks the
 global holdout freeze. A modified frozen source byte fails preflight. All these
 checks use mocks only in unit tests; confirmatory generation remains real.
+
+Reporting repair R15-LATENCY-01: 50 targeted tests passed in 14.02s
+(reporting_repair_tests.txt). A new descriptive helper matches the completed
+response to its own attempt ID before calculating latency. It is not imported
+by generation, evaluation, selection or primary analysis. The frozen preflight
+still passes. The earlier manual latency summaries are preserved and explicitly
+superseded; all original scientific records and decisions remain unchanged.

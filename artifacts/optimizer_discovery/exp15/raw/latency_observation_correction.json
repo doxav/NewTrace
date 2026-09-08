@@ -1,0 +1,22 @@
+{
+  "defect": "R15-LATENCY-01",
+  "kind": "reporting-only attempt association error",
+  "supersedes": [
+    "latency_observation_summary.json",
+    "latency_observation_resolution.json"
+  ],
+  "corrected_timing": {
+    "completed_attempt": 2,
+    "transport_attempts": 2,
+    "transport_failures": 1,
+    "slot_wall_s": 2407.23579964,
+    "successful_attempt_wall_s": 275.127353128,
+    "successful_attempt_monotonic_s": 275.12704490099713,
+    "measured_attempts_s": 647.9790148549982,
+    "unattributed_wall_gap_s": 1759.2567847850019,
+    "gap_interpretation": "May include system suspension, backoff, scheduling and resume gaps; do not attribute it solely to provider latency."
+  },
+  "cause": "The previous manual summary paired started_1 with the response duration for attempt_2. The 2132-second difference therefore included the failed first attempt and retry delay as well as suspension/scheduling.",
+  "scientific_effect": "None: original response, attempt records, requests, candidates, evaluations, settings and selections are unchanged. No new scientific experiment ID is required.",
+  "billing": "The timed-out first attempt has unknown remote completion or billing; its retry produced the one retained completed response."
+}

@@ -282,3 +282,25 @@ def test_preflight_rejects_modified_frozen_source(
     source.write_text("changed\n")
     with pytest.raises(RuntimeError, match="freeze mismatch"):
         E.preflight(frozen)
+
+
+def test_reported_latency_matches_the_completed_attempt(tmp_path: Path) -> None:
+    """A resumed slot's total wall duration must not be attributed to its final attempt."""
+    from artifacts.optimizer_discovery.reporting import attempt_timing
+
+    E.persist(tmp_path / "started_1.json", {"time_ns": 100_000_000_000})
+    E.persist(
+        tmp_path / "attempt_1.json", {"status": "transport_failure", "wall_s": 10.0}
+    )
+    E.persist(tmp_path / "started_2.json", {"time_ns": 1_000_000_000_000})
+    E.persist(tmp_path / "attempt_2.json", {"status": "completed", "wall_s": 50.0})
+    E.persist(
+        tmp_path / "response.json",
+        {"attempt": 2, "completed_ns": 1_050_000_000_000, "wall_s": 50.0},
+    )
+    result = attempt_timing(tmp_path)
+    assert result["successful_attempt_wall_s"] == 50
+    assert result["slot_wall_s"] == 950
+    assert result["measured_attempts_s"] == 60
+    assert result["unattributed_wall_gap_s"] == 890
+    assert result["transport_attempts"] == 2 and result["transport_failures"] == 1
