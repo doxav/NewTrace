@@ -122,6 +122,10 @@ def test_production_trace_budgets_isolation_and_selection(
     assert (
         json.loads((tmp_path / "701/selection.json").read_text())["A1"]["index"] == -1
     )
+    exp.seeds = [701, 702]
+    with pytest.raises(RuntimeError, match="every selection"):
+        exp.freeze_selections()
+    exp.seeds = [701]
     exp.freeze_selections()
     exp.holdout()
     before = len(calls)
@@ -135,6 +139,10 @@ def test_production_trace_budgets_isolation_and_selection(
     assert result["contrasts"]["A2-A1"]["mean"] == 0
     assert exp.audit()["proposal_slots"] == 4
     assert exp.audit()["ineligible_generated_candidates"] == 2
+    exp.seeds = [701, 702]
+    with pytest.raises(RuntimeError, match="missing outer seeds"):
+        exp.analyze()
+    exp.seeds = [701]
     (tmp_path / "701/selection.json").write_text("{}")
     with pytest.raises(RuntimeError, match="modified"):
         exp.freeze_selections()
@@ -221,3 +229,56 @@ def test_large_evidence_packaging_preserves_exact_json(tmp_path: Path) -> None:
     E.persist(path, value)
     with pytest.raises(RuntimeError, match="overwrite"):
         E.persist(path, {"different": True})
+
+
+def test_production_a2_resumes_mid_search_without_replacing_completed_response(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    """Replay production search state after interruption, without a second completed slot zero."""
+    monkeypatch.setitem(B.MANIFEST, "inner_budget", 2)
+    completed_source = (
+        "def propose(history, bounds, seed):\n    return [(a+b)/2 for a,b in bounds]\n"
+    )
+    calls = []
+
+    def client(**kwargs: Any) -> Any:
+        """Interrupt the second scientific slot once, then complete it on explicit resume."""
+        calls.append(kwargs["seed"])
+        if len(calls) == 2:
+            raise RuntimeError("unit nontransient interruption")
+        return response(completed_source)
+
+    first = E.Experiment(tmp_path, "pilot", client=client)
+    with pytest.raises(RuntimeError, match="proposal count"):
+        first.generate(701, "A2")
+    retained = (tmp_path / "701/A2/slot_00/response.json").read_bytes()
+    resumed = E.Experiment(tmp_path, "pilot", client=client)
+    resumed.generate(701, "A2")
+    assert (tmp_path / "701/A2/slot_00/response.json").read_bytes() == retained
+    assert calls == [
+        B.stable_seed("request", "pilot", 701, index) for index in [0, 1, 1]
+    ]
+    assert len(list(tmp_path.glob("701/A2/slot_*/response.json"))) == 2
+    assert len(list(tmp_path.glob("701/A2/slot_*/attempt_*.json"))) == 3
+    assert E.read(tmp_path / "701/A2/generation_complete.json")["slots"] == 2
+
+
+def test_preflight_rejects_modified_frozen_source(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    """Changing a frozen byte must fail before a confirmatory request can execute."""
+    monkeypatch.setitem(B.MANIFEST, "status", "FROZEN_CONFIRMATORY")
+    source = tmp_path / "source.py"
+    source.write_text("original\n")
+    frozen = tmp_path / "freeze.json"
+    E.persist(
+        frozen,
+        {
+            "files": {str(source): B.source_hash(source.read_text())},
+            "environment": E.environment(),
+        },
+    )
+    E.preflight(frozen)
+    source.write_text("changed\n")
+    with pytest.raises(RuntimeError, match="freeze mismatch"):
+        E.preflight(frozen)

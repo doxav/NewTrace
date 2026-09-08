@@ -49,3 +49,11 @@ formatting/lint and the broad offline regression cover this change.
 
 Final evidence-integrity, staged credential scan, source-hash verification and
 aggregate recomputation are recorded separately after confirmation completes.
+
+Additional audit during confirmation, without changing frozen scientific source:
+49 new/interface-targeted tests passed in 13.39s (resume_audit_tests.txt). This adds
+an actual production-A2 interruption/resume regression: the first completed response
+is preserved byte-for-byte; only the unfinished second slot makes another model
+request. A missing outer seed blocks aggregation and a missing selection blocks the
+global holdout freeze. A modified frozen source byte fails preflight. All these
+checks use mocks only in unit tests; confirmatory generation remains real.
