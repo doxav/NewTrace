@@ -72,6 +72,7 @@ One row per experiment. `n` is usable paired observations, not runs attempted.
 | EXP-12 | 09-02 | Paired seed-delta sd | qasper | **2 pairs** | sd 0.254 @ c=2 — *not yet usable* | in flight |
 | EXP-13 | 09-02 | Was seed 101's 0.5455 a find or noise? | qasper | 6+6 | *running* — see note | pending |
 | EXP-14 | 09-02 | Backlog triage | 90 specs | — | 18 variants; **8 unrunnable** | see §5 |
+| EXP-15 | 09-08 | Does training-informed optimizer code search improve held-out regret over seed and independent search? | Sphere / Quadratic / Rosenbrock, d=2/4 | 5 pairs registered | Confirmation running under freeze `0643691b`; no holdout result yet | pending |
 
 **EXP-13 note — environment, not design.** First attempt left evaluation UNBOUNDED: one item
 took 514 s and the full design projected to 10+ hours. That is the same unbounded-sampling defect
@@ -202,3 +203,24 @@ reasoning effort. No historical hypothesis conclusion changed.
 See [current Phase-0 report](optimizer_discovery/PHASE0_REPORT.md),
 [selected settings](optimizer_discovery/selected_generation_config.json), and
 [assessment §24](recursive_opt_assessment.md#24--optimizer-generation-readiness-calibration).
+
+
+## 11. EXP-15 — first controlled optimizer-program discovery experiment
+
+Preregistered H15-A tests selected A2 deployment against the unchanged seed. H15-B,
+the central contrast, tests A2 against equal-response-budget independent code search.
+Both remain pending until the frozen confirmatory analysis. The Phase-1 pilot used
+separate instances and outer seed 701; two of four completed responses produced
+eligible programs, and validation retained the seed in both arms. All failures and
+the transport retry remain recorded. Pilot results do not enter confirmation.
+
+The frozen protocol (`0643691b`) uses five paired outer seeds, eight completed
+DeepSeek responses per generative arm, 32 objective calls per trajectory and balanced
+6/6/12 train/validation/holdout splits. All selections must be frozen before any
+holdout evaluation. Invalid candidates and common deployment fallback are explicit.
+See [preregistration](optimizer_discovery/PREREG_EXP15.md) and
+[pilot evidence](optimizer_discovery/exp15/PILOT_REPORT.md).
+
+This creates a portable-artifact venue. It does not retroactively overturn H3's
+signature-bound historical setup, measure amortization, or identify a recursion-
+depth effect. Historical H1/H2/H3/H5 conclusions and prior retractions are preserved.
