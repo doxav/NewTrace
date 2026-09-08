@@ -133,7 +133,8 @@ def test_readiness_settings_and_numeric_reasoning_usage(tmp_path: Path) -> None:
         client, "pilot_low_8000_17", tmp_path / "run", seeds=[0, 1, 2], budget=8
     )
     assert calls[0]["max_tokens"] == 8000
-    assert calls[0]["reasoning_effort"] == "low"
+    assert calls[0]["extra_body"] == {"reasoning": {"effort": "low"}}
+    assert "reasoning_effort" not in calls[0]
     assert calls[0]["timeout"] == 300
     assert calls[0]["messages"][0]["content"] == phase0.PROMPT
     assert result["response_metadata"]["usage"]["reasoning_tokens"] == 8000

@@ -95,6 +95,10 @@ def run_request(
         settings.update(CALIBRATION_SPEC["configs"][calibration["config"]])
         settings["seed"] = calibration["seed"]
         timeout = CALIBRATION_SPEC["request_timeout_s"]
+    provider_settings = dict(settings)
+    effort = provider_settings.pop("reasoning_effort", None)
+    if effort is not None:
+        provider_settings["extra_body"] = {"reasoning": {"effort": effort}}
     directory.mkdir(parents=True, exist_ok=False)
     request = {
         "model": SPEC["live"]["model"],
@@ -127,7 +131,7 @@ def run_request(
         try:
             with contextlib.redirect_stdout(stream), contextlib.redirect_stderr(stream):
                 response = client(
-                    messages=request["messages"], timeout=timeout, **settings
+                    messages=request["messages"], timeout=timeout, **provider_settings
                 )
             attempt = {"attempt": index + 1, "status": "success"}
         except Exception as error:  # noqa: BLE001 - preserve every provider failure
