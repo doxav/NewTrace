@@ -192,6 +192,11 @@ def source_status(source: str) -> str:
         "quit",
     }
     for node in ast.walk(tree):
+        if isinstance(node, ast.alias) and (
+            node.name.startswith("_")
+            or node.name in {"os", "sys", "builtins", "subprocess", "socket", "pathlib"}
+        ):
+            return "protocol_violation"
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             names = (
                 [a.name for a in node.names]

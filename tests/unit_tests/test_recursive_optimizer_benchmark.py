@@ -62,6 +62,10 @@ def test_metric_equations_and_censoring() -> None:
             "protocol_violation",
         ),
         (B.SEED_SOURCE, "valid"),
+        (
+            "from random import _os\ndef propose(history,bounds,seed): return _os.getcwd()",
+            "protocol_violation",
+        ),
     ],
 )
 def test_source_protocol_screen(source: str, status: str) -> None:

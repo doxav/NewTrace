@@ -118,3 +118,23 @@ Completion accepts any valid comparative result, including fallback-dominated
 search. Retain all slots/seeds, raw source hashes, lineage, frozen selections, full
 holdout outcomes, recomputable aggregates and a <=2-page Patrick brief. No merge,
 push, PR or contact. Preserve historical conclusions and original Phase-0 evidence.
+
+## Implementation audit before pilot
+
+The registered `exp15_trace_v1` engine adapter delegates to the existing production
+`_run_module_engine(fit=True)`, which runs PrioritySearch and Trace backward/update.
+Its sole optimizer adapter maps each propagated-feedback update to one durable LLM
+slot. Test mode is false and no behavioral runtime override is supplied to
+execute_plan. The registered evaluator accepts only the training-panel context.
+Actual model calls use the existing client with SDK retries explicitly zero and
+the outer three-retry policy. Generation sources remain exact strings in JSON.
+
+A pre-pilot regression exposed a scalar Trace defect: invalid evaluations with
+empty metric dictionaries crashed its redundant objective-vector projection.
+Scalar training now uses the already-projected scalar ranking score. Weighted and
+Pareto behavior is unchanged. Typed scientific evaluator records still have no
+invalid numeric objective. The internal rejection ranking is never regret data.
+
+The pilot includes midpoint/uniform/seed diagnostics and ten uncached replays of
+the identical seed/task/local-seed trajectory. Report the measured diagnostic range
+and residual seed regret; do not choose a benchmark because A2 outperforms A1.
