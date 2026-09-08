@@ -142,3 +142,67 @@ def export_programs(root: Path) -> dict[str, Any]:
     }
     persist(destination / "index.json", result)
     return result
+
+
+def read_trace(directory: Path) -> dict[str, Any]:
+    """Read a completed trace, including its lossless post-run archive with hash checks."""
+    import hashlib
+    import json
+    import lzma
+
+    archived = directory / "trace.json.xz"
+    if not archived.exists():
+        return read(directory / "trace.json")
+    record = read(directory / "trace_archive.json")
+    try:
+        packed = archived.read_bytes()
+        raw = lzma.decompress(packed)
+        if (
+            hashlib.sha256(packed).hexdigest() != record["xz_sha256"]
+            or hashlib.sha256(raw).hexdigest() != record["json_sha256"]
+        ):
+            raise ValueError("hash mismatch")
+        return json.loads(raw)
+    except (lzma.LZMAError, ValueError) as error:
+        raise RuntimeError("trace archive integrity failed") from error
+
+
+def archive_trace(directory: Path) -> dict[str, Any]:
+    """Archive only a completed trace, preserving exact JSON bytes and original gzip provenance."""
+    import gzip
+    import hashlib
+    import lzma
+
+    from artifacts.optimizer_discovery.exp15 import persist
+
+    if not (directory / "generation_complete.json").exists():
+        raise RuntimeError("trace archival requires completed generation")
+    original = directory / "trace.json.gz"
+    archived = directory / "trace.json.xz"
+    if not original.exists():
+        read_trace(directory)
+        return read(directory / "trace_archive.json")
+    compressed = original.read_bytes()
+    raw = gzip.decompress(compressed)
+    packed = lzma.compress(raw, preset=9)
+    if lzma.decompress(packed) != raw:
+        raise RuntimeError("trace archive roundtrip failed")
+    record = {
+        "format": "xz preset=9; lossless post-run archive",
+        "json_bytes": len(raw),
+        "json_sha256": hashlib.sha256(raw).hexdigest(),
+        "original_gzip_bytes": len(compressed),
+        "original_gzip_sha256": hashlib.sha256(compressed).hexdigest(),
+        "xz_bytes": len(packed),
+        "xz_sha256": hashlib.sha256(packed).hexdigest(),
+        "execution_semantics": "Frozen runner output unchanged; archiving occurs only after generation_complete. Completed-run resume does not read trace files.",
+    }
+    if archived.exists() and archived.read_bytes() != packed:
+        raise RuntimeError("refusing to overwrite a trace archive")
+    temporary = archived.with_suffix(".xz.pending")
+    temporary.write_bytes(packed)
+    temporary.replace(archived)
+    persist(directory / "trace_archive.json", record)
+    read_trace(directory)
+    original.unlink()
+    return record

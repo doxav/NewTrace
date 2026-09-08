@@ -369,3 +369,30 @@ def test_selected_source_export_preserves_bytes_and_frozen_hash(tmp_path: Path) 
     (root / "11/selection.json").write_text("{}")
     with pytest.raises(RuntimeError, match="selection"):
         export_programs(root)
+
+
+def test_trace_archive_is_lossless_and_requires_completed_generation(
+    tmp_path: Path,
+) -> None:
+    """Post-run compression preserves every byte and never removes an active trace."""
+    import gzip
+    import hashlib
+    import lzma
+
+    from artifacts.optimizer_discovery.reporting import archive_trace, read_trace
+
+    original = b'{"source": "raw  \\n", "all_data": [1, 2, 3]}\n'
+    compressed = gzip.compress(original, mtime=0)
+    (tmp_path / "trace.json.gz").write_bytes(compressed)
+    with pytest.raises(RuntimeError, match="completed generation"):
+        archive_trace(tmp_path)
+    E.persist(tmp_path / "generation_complete.json", {"slots": 8})
+    record = archive_trace(tmp_path)
+    assert lzma.decompress((tmp_path / "trace.json.xz").read_bytes()) == original
+    assert not (tmp_path / "trace.json.gz").exists()
+    assert read_trace(tmp_path) == json.loads(original)
+    assert record["original_gzip_sha256"] == hashlib.sha256(compressed).hexdigest()
+    assert archive_trace(tmp_path) == record
+    (tmp_path / "trace.json.xz").write_bytes(b"corrupt")
+    with pytest.raises(RuntimeError, match="integrity"):
+        read_trace(tmp_path)

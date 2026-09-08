@@ -71,3 +71,18 @@ in the raw source and rejects a tampered response or frozen selection. It passes
 independently after those stronger assertions. Exports use deterministic gzip and
 record both the exact evaluated-source hash and compressed-file hash. No generated
 program is reformatted or executed by the reporting helper.
+
+Trace archive packaging: the first full A2 gzip trace was 899,427 bytes, above the
+repository's 500 KiB added-file gate. The first raw-data commit included that file;
+a following packaging commit replaces its working-tree representation with a
+115,372-byte XZ archive. Exact uncompressed JSON bytes and the original gzip hash
+are preserved and checked. No source string or trace field changes. The original
+gzip remains in Git history. The final size gate is rerun rather than relaxed.
+
+52 targeted tests passed in 13.97s (archive_tests.txt), including refusal to archive
+an unfinished generation, byte-preserving roundtrip, hash integrity and idempotence.
+The frozen completed-block resume was also exercised on the actual seed-11 block
+without a live client after archiving; it returned without new generation.
+`reporting.read_trace` reads and verifies these post-run archives. The frozen
+runner itself still writes its original JSON/gzip representation. This archive
+operation is reporting/storage only and does not amend scientific semantics.
