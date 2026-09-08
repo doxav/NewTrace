@@ -1,0 +1,21 @@
+{
+  "completed": true,
+  "completed_ns": 1788895915911724344,
+  "id": "gen-1788895773-taZApp93CnOSXqm9WT2r",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "finish_reason": "stop",
+  "content": " ```python\nimport random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"Improved optimizer: adaptive exploration/exploitation with differential evolution.\"\"\"\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    n = len(history)\n\n    # No history: pure random\n    if n == 0:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Best point so far\n    best_val = min(h['value'] for h in history)\n    best_x = [h['x'] for h in history if h['value'] == best_val][0]\n\n    # Adaptive probabilities: more exploration early, more exploitation late\n    p_random = max(0.05, 0.5 - 0.45 * (n / 32))\n    p_diff = 0.3\n    p_local = 1 - p_random - p_diff\n\n    r = rng.random()\n\n    # 1. Pure random exploration\n    if r < p_random:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # 2. Differential evolution style: best + F*(x1 - x2)\n    if r < p_random + p_diff:\n        if n >= 2:\n            idx1, idx2 = rng.sample(range(n), 2)\n            x1 = history[idx1]['x']\n            x2 = history[idx2]['x']\n            F = rng.uniform(0.5, 1.0)\n            new = [best_x[i] + F * (x1[i] - x2[i]) for i in range(d)]\n            return [max(lows[i], min(highs[i], new[i])) for i in range(d)]\n        # fall through to local if not enough points\n\n    # 3. Local Gaussian around best with shrinking step size\n    sigma_scale = 0.2 * (1 - n / 32) + 0.02\n    new = [best_x[i] + rng.gauss(0, sigma_scale * (highs[i] - lows[i])) for i in range(d)]\n    return [max(lows[i], min(highs[i], new[i])) for i in range(d)]\n```",
+  "source": "import random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"Improved optimizer: adaptive exploration/exploitation with differential evolution.\"\"\"\n    rng = random.Random(seed + len(history))\n    d = len(bounds)\n    lows = [b[0] for b in bounds]\n    highs = [b[1] for b in bounds]\n    n = len(history)\n\n    # No history: pure random\n    if n == 0:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Best point so far\n    best_val = min(h['value'] for h in history)\n    best_x = [h['x'] for h in history if h['value'] == best_val][0]\n\n    # Adaptive probabilities: more exploration early, more exploitation late\n    p_random = max(0.05, 0.5 - 0.45 * (n / 32))\n    p_diff = 0.3\n    p_local = 1 - p_random - p_diff\n\n    r = rng.random()\n\n    # 1. Pure random exploration\n    if r < p_random:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # 2. Differential evolution style: best + F*(x1 - x2)\n    if r < p_random + p_diff:\n        if n >= 2:\n            idx1, idx2 = rng.sample(range(n), 2)\n            x1 = history[idx1]['x']\n            x2 = history[idx2]['x']\n            F = rng.uniform(0.5, 1.0)\n            new = [best_x[i] + F * (x1[i] - x2[i]) for i in range(d)]\n            return [max(lows[i], min(highs[i], new[i])) for i in range(d)]\n        # fall through to local if not enough points\n\n    # 3. Local Gaussian around best with shrinking step size\n    sigma_scale = 0.2 * (1 - n / 32) + 0.02\n    new = [best_x[i] + rng.gauss(0, sigma_scale * (highs[i] - lows[i])) for i in range(d)]\n    return [max(lows[i], min(highs[i], new[i])) for i in range(d)]\n",
+  "source_sha256": "1fc516e6428783de4acca1e192c053e33f837a8b344801ac41d196d1a0bdd8c4",
+  "parse_status": "parsed",
+  "source_status": "valid",
+  "usage": {
+    "prompt_tokens": 3829,
+    "completion_tokens": 3519,
+    "total_tokens": 7348,
+    "reasoning_tokens": 3001,
+    "cost_usd": 0.00075449
+  },
+  "wall_s": 142.85627068300528,
+  "attempt": 1
+}

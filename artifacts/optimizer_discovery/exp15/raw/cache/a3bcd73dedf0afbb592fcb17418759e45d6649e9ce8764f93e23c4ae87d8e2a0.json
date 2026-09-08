@@ -1,0 +1,520 @@
+{
+  "key": {
+    "source_sha256": "1164ad471c810285a4769600ffa627c97aa56fc969fc71318bd6d2980a912e65",
+    "task_identity": "53c949aba494e3cd2a269a80c83daf0c990220d0d60bfa6d759885b6603cd682",
+    "phase": "confirmation",
+    "split": "train",
+    "local_seed": 776639184,
+    "budget": 32,
+    "deployment": false,
+    "evaluator_version": "a41259493b2069e88a43d045e89b67241c1398a8dbfe9eae6018d602fef57244"
+  },
+  "result": {
+    "valid": true,
+    "candidate_valid": true,
+    "status": "valid",
+    "source_sha256": "1164ad471c810285a4769600ffa627c97aa56fc969fc71318bd6d2980a912e65",
+    "task_identity": "53c949aba494e3cd2a269a80c83daf0c990220d0d60bfa6d759885b6603cd682",
+    "stratum": "rosenbrock/2",
+    "local_seed": 776639184,
+    "budget": 32,
+    "observations": [
+      {
+        "x": [
+          2.3174077741579238,
+          1.848066879168341
+        ],
+        "value": 3598.2684757876045
+      },
+      {
+        "x": [
+          -2.018286603609847,
+          -4.94332923146819
+        ],
+        "value": 1925.8407866435407
+      },
+      {
+        "x": [
+          -4.920258553503371,
+          4.558336421560567
+        ],
+        "value": 5357.288536810461
+      },
+      {
+        "x": [
+          3.6654817594510973,
+          -4.313907248786687
+        ],
+        "value": 28954.632378112787
+      },
+      {
+        "x": [
+          -3.0223202449453233,
+          0.5677236386423035
+        ],
+        "value": 718.7396696661694
+      },
+      {
+        "x": [
+          0.6830016299364869,
+          -2.1674192628682
+        ],
+        "value": 1250.0548383871337
+      },
+      {
+        "x": [
+          0.05730474250524065,
+          4.981791352342803
+        ],
+        "value": 561.5290958403925
+      },
+      {
+        "x": [
+          4.4477288688188406,
+          4.342056831039853
+        ],
+        "value": 26287.053677754167
+      },
+      {
+        "x": [
+          -0.25977047868158293,
+          1.4731919694514612
+        ],
+        "value": 12.367596500791263
+      },
+      {
+        "x": [
+          -3.183352934137977,
+          1.2244748095302251
+        ],
+        "value": 718.7878704783384
+      },
+      {
+        "x": [
+          -0.11696326354600023,
+          2.299859543097825
+        ],
+        "value": 58.73810517850639
+      },
+      {
+        "x": [
+          -0.3042292089499855,
+          1.3959206760914635
+        ],
+        "value": 11.486285117522906
+      },
+      {
+        "x": [
+          0.11003944710592028,
+          1.503535247804636
+        ],
+        "value": 0.2896419912050723
+      },
+      {
+        "x": [
+          0.24996584665207594,
+          1.3720204662247604
+        ],
+        "value": 12.04614003952252
+      },
+      {
+        "x": [
+          -0.8462605401662422,
+          -0.8459476883050476
+        ],
+        "value": 83.37174208653691
+      },
+      {
+        "x": [
+          0.14377043597648317,
+          1.5876311234083629
+        ],
+        "value": 0.19271699945013457
+      },
+      {
+        "x": [
+          -0.06701438214444894,
+          1.6453165593807453
+        ],
+        "value": 7.218300137974947
+      },
+      {
+        "x": [
+          0.09743142797678131,
+          1.632737557780409
+        ],
+        "value": 0.2874814386302899
+      },
+      {
+        "x": [
+          0.1563313051366795,
+          1.5454043101101298
+        ],
+        "value": 0.8071304886724776
+      },
+      {
+        "x": [
+          0.08464392309594762,
+          1.555217771554571
+        ],
+        "value": 0.047720547409994894
+      },
+      {
+        "x": [
+          3.3965197994497345,
+          -0.8906897054213001
+        ],
+        "value": 17288.67757181357
+      },
+      {
+        "x": [
+          0.019693933609578745,
+          1.5895238627109671
+        ],
+        "value": 1.5977654317606353
+      },
+      {
+        "x": [
+          0.07763171600200797,
+          2.4340972058298203
+        ],
+        "value": 38.526023605095176
+      },
+      {
+        "x": [
+          0.08202037987524752,
+          1.6029615225961806
+        ],
+        "value": 0.2983918107760711
+      },
+      {
+        "x": [
+          2.6889537851277017,
+          -0.22898026944954997
+        ],
+        "value": 8204.407325254953
+      },
+      {
+        "x": [
+          3.8265961618799302,
+          -0.6992332718350784
+        ],
+        "value": 24174.98670410983
+      },
+      {
+        "x": [
+          0.12183827210871631,
+          1.5761707085200136
+        ],
+        "value": 0.050802788390500245
+      },
+      {
+        "x": [
+          0.11244398803049002,
+          1.5771192721550886
+        ],
+        "value": 0.016968467795596902
+      },
+      {
+        "x": [
+          0.17936589624019444,
+          1.527958061500435
+        ],
+        "value": 1.820049046048049
+      },
+      {
+        "x": [
+          0.008930232949021524,
+          1.72714222063968
+        ],
+        "value": 5.4000938662235205
+      },
+      {
+        "x": [
+          0.11104549141993779,
+          1.6145004188494856
+        ],
+        "value": 0.057946553389544964
+      },
+      {
+        "x": [
+          0.18940364711555413,
+          1.6529510593751304
+        ],
+        "value": 0.42655160250400936
+      }
+    ],
+    "proposal_attempts": [
+      {
+        "evaluation_index": 0,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 1,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 2,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 3,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 4,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 5,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 6,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 7,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 8,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 9,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 10,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 11,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 12,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 13,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 14,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 15,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 16,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 17,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 18,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 19,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 20,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 21,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 22,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 23,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 24,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 25,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 26,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 27,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 28,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 29,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 30,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "evaluation_index": 31,
+        "status": "valid",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "fallback_used": false,
+    "objective_calls": 32,
+    "unused_objective_allocation": 0,
+    "subprocess_executions": 64,
+    "execution_s": 2.195112246001372,
+    "metrics": {
+      "auc": 0.0584759191125002,
+      "curve": [
+        0.5617062159426299,
+        0.3006325814909465,
+        0.3006325814909465,
+        0.3006325814909465,
+        0.11219855961628093,
+        0.11219855961628093,
+        0.08765726784662838,
+        0.08765726784662838,
+        0.0019306385494884987,
+        0.0019306385494884987,
+        0.0019306385494884987,
+        0.0017930617995895134,
+        4.521444354489934e-05,
+        4.521444354489934e-05,
+        4.521444354489934e-05,
+        3.008400769352228e-05,
+        3.008400769352228e-05,
+        3.008400769352228e-05,
+        3.008400769352228e-05,
+        7.449396366265283e-06,
+        7.449396366265283e-06,
+        7.449396366265283e-06,
+        7.449396366265283e-06,
+        7.449396366265283e-06,
+        7.449396366265283e-06,
+        7.449396366265283e-06,
+        7.449396366265283e-06,
+        2.6488556648688824e-06,
+        2.6488556648688824e-06,
+        2.6488556648688824e-06,
+        2.6488556648688824e-06,
+        2.6488556648688824e-06
+      ],
+      "final_regret": 2.6488556648688824e-06,
+      "attained": true,
+      "target_evaluations": 9,
+      "capped_target_evaluations": 9
+    }
+  }
+}

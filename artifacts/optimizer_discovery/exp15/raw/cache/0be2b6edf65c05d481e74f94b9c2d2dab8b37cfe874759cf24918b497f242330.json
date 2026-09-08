@@ -1,0 +1,36 @@
+{
+  "key": {
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "task_identity": "65f08d380ec7c6509c3b705272132672d4d78d2abce74183fcff89132c89eedc",
+    "phase": "confirmation",
+    "split": "validation",
+    "local_seed": 1013666994,
+    "budget": 32,
+    "deployment": false,
+    "evaluator_version": "a41259493b2069e88a43d045e89b67241c1398a8dbfe9eae6018d602fef57244"
+  },
+  "result": {
+    "valid": false,
+    "candidate_valid": false,
+    "status": "missing_source",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "task_identity": "65f08d380ec7c6509c3b705272132672d4d78d2abce74183fcff89132c89eedc",
+    "stratum": "sphere/4",
+    "local_seed": 1013666994,
+    "budget": 32,
+    "observations": [],
+    "proposal_attempts": [
+      {
+        "evaluation_index": 0,
+        "status": "missing_source",
+        "policy": "candidate"
+      }
+    ],
+    "fallback_used": false,
+    "objective_calls": 0,
+    "unused_objective_allocation": 32,
+    "subprocess_executions": 0,
+    "execution_s": 9.650997526478022e-06,
+    "metrics": null
+  }
+}
