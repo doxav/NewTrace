@@ -1,0 +1,21 @@
+{
+  "completed": true,
+  "completed_ns": 1788897634601517124,
+  "id": "gen-1788897626-eYifp5hKvZZCbsPt3fBS",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "finish_reason": "stop",
+  "content": "```python\ndef propose(history, bounds, seed):\n    \"\"\"Mix uniform exploration with decreasing incumbent-centered Gaussian steps.\"\"\"\n    import random\n    rng = random.Random(seed + len(history))\n    if not history or rng.random() < 0.25:\n        return [rng.uniform(low, high) for low, high in bounds]\n    best = min(history, key=lambda row: row[\"value\"])[\"x\"]\n    scale = 0.2 / (1.0 + len(history) / (4.0 * len(bounds))) ** 0.5\n    return [max(low, min(high, x + rng.gauss(0.0, scale * (high - low))))\n            for x, (low, high) in zip(best, bounds)]\n```",
+  "source": "def propose(history, bounds, seed):\n    \"\"\"Mix uniform exploration with decreasing incumbent-centered Gaussian steps.\"\"\"\n    import random\n    rng = random.Random(seed + len(history))\n    if not history or rng.random() < 0.25:\n        return [rng.uniform(low, high) for low, high in bounds]\n    best = min(history, key=lambda row: row[\"value\"])[\"x\"]\n    scale = 0.2 / (1.0 + len(history) / (4.0 * len(bounds))) ** 0.5\n    return [max(low, min(high, x + rng.gauss(0.0, scale * (high - low))))\n            for x, (low, high) in zip(best, bounds)]\n",
+  "source_sha256": "5b74e5a3fe2fc90fcb42a603b058fa7befbf65f38775caa77acd30cdf619b640",
+  "parse_status": "parsed",
+  "source_status": "valid",
+  "usage": {
+    "prompt_tokens": 433,
+    "completion_tokens": 386,
+    "total_tokens": 819,
+    "reasoning_tokens": 212,
+    "cost_usd": 7.8185e-05
+  },
+  "wall_s": 8.17587148000166,
+  "attempt": 1
+}

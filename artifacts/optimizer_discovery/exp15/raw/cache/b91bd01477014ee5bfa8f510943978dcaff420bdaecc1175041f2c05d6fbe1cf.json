@@ -1,0 +1,38 @@
+{
+  "key": {
+    "source_sha256": "04f57607a05ef3f4f3d4cc5d1cdb11573b382bc378c4db3ea824075279cd642e",
+    "task_identity": "65f08d380ec7c6509c3b705272132672d4d78d2abce74183fcff89132c89eedc",
+    "phase": "confirmation",
+    "split": "validation",
+    "local_seed": 90266898,
+    "budget": 32,
+    "deployment": false,
+    "evaluator_version": "a41259493b2069e88a43d045e89b67241c1398a8dbfe9eae6018d602fef57244"
+  },
+  "result": {
+    "valid": false,
+    "candidate_valid": false,
+    "status": "nondeterministic",
+    "source_sha256": "04f57607a05ef3f4f3d4cc5d1cdb11573b382bc378c4db3ea824075279cd642e",
+    "task_identity": "65f08d380ec7c6509c3b705272132672d4d78d2abce74183fcff89132c89eedc",
+    "stratum": "sphere/4",
+    "local_seed": 90266898,
+    "budget": 32,
+    "observations": [],
+    "proposal_attempts": [
+      {
+        "evaluation_index": 0,
+        "status": "nondeterministic",
+        "policy": "candidate",
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "fallback_used": false,
+    "objective_calls": 0,
+    "unused_objective_allocation": 32,
+    "subprocess_executions": 2,
+    "execution_s": 0.06511345100443577,
+    "metrics": null
+  }
+}
