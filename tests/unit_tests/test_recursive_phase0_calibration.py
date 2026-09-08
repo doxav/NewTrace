@@ -69,3 +69,33 @@ def test_transient_failures_keep_all_four_attempts(
     assert len(result["attempts"]) == 4
     assert delays == [2, 4, 8]
     assert len(list((tmp_path / "run").glob("attempt_*.json"))) == 4
+
+
+def test_separate_interface_smoke_uses_its_registered_prompt(tmp_path: Path) -> None:
+    """The engineering task has separate identity without rewriting original requests."""
+    from artifacts.optimizer_discovery import phase0
+
+    calls: list[Any] = []
+
+    def client(**kwargs: Any) -> Any:
+        """Capture request identity, returning an invalid source without retries."""
+        calls.append(kwargs)
+        return SimpleNamespace(
+            id="test",
+            model="test",
+            usage={},
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content="def :"), finish_reason="stop"
+                )
+            ],
+        )
+
+    run_request(client, "interface_smoke", tmp_path / "run", seeds=[0], budget=1)
+    assert calls[0]["messages"][0]["content"] == phase0.ENGINEERING_SPEC["prompt"]
+    assert calls[0]["max_tokens"] == 3000 and calls[0]["seed"] == 17
+    assert phase0.SPEC["live"]["requests"] == [
+        "generation_1",
+        "generation_2",
+        "clean_smoke",
+    ]

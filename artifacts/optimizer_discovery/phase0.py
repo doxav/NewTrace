@@ -20,6 +20,8 @@ from opto.features.recursive_opt.runmode import _response_usage, make_live_llm
 
 ROOT = Path(__file__).resolve().parent
 SPEC = json.loads((ROOT / "phase0_spec.json").read_text())
+ENGINEERING_SPEC = json.loads((ROOT / "engineering_smoke_spec.json").read_text())
+REQUESTS = [*SPEC["live"]["requests"], ENGINEERING_SPEC["label"]]
 PROMPT = """Write a complete portable optimizer.py file exporting exactly
 propose(history, bounds, seed). It proposes one point for a black-box MINIMIZATION
 problem. history is a list of past observations, each with exactly x (a list of
@@ -57,7 +59,7 @@ def run_request(
     client: Any, label: str, directory: Path, *, seeds: list[int], budget: int
 ) -> dict[str, Any]:
     """Run one preregistered request, retaining every retry and invalid candidate."""
-    if label not in SPEC["live"]["requests"]:
+    if label not in REQUESTS:
         raise ValueError("request label must be preregistered")
     directory.mkdir(parents=True, exist_ok=False)
     settings = {
@@ -67,7 +69,16 @@ def run_request(
     request = {
         "model": SPEC["live"]["model"],
         "provider": "openrouter",
-        "messages": [{"role": "user", "content": PROMPT}],
+        "messages": [
+            {
+                "role": "user",
+                "content": (
+                    ENGINEERING_SPEC["prompt"]
+                    if label == ENGINEERING_SPEC["label"]
+                    else PROMPT
+                ),
+            }
+        ],
         **settings,
         "request_timeout_s": SPEC["live"]["request_timeout_s"],
         "concurrency": 1,
@@ -168,9 +179,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
     live = subparsers.add_parser("calibrate")
-    live.add_argument(
-        "--requests", nargs="+", choices=SPEC["live"]["requests"], required=True
-    )
+    live.add_argument("--requests", nargs="+", choices=REQUESTS, required=True)
     live.add_argument("--output", type=Path, default=ROOT / "live")
     evaluate = subparsers.add_parser("evaluate")
     evaluate.add_argument("--program", type=Path, required=True)
