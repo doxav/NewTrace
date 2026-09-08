@@ -1,0 +1,1072 @@
+{
+  "unit_id": "default:seed-0:matrix-0",
+  "plan_fingerprint": "0362263b58d89684ad5559192a05c531cca0955aac56294a4e24df1ff8c43d46",
+  "spec_fingerprint": "0362263b58d89684ad5559192a05c531cca0955aac56294a4e24df1ff8c43d46",
+  "engine": "fixed",
+  "module_ref": "recursive_opt.module.reasoning_workflow@1",
+  "status": "success",
+  "valid": true,
+  "evaluation": {
+    "valid": true,
+    "status": "ok",
+    "metrics": {
+      "value": 2.125
+    },
+    "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+    "trace": null,
+    "usage": {
+      "forward": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0
+      },
+      "optimizer": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0
+      },
+      "feedback": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0
+      },
+      "judge": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0
+      }
+    },
+    "artifacts": [
+      {
+        "status": "valid",
+        "evaluations": [
+          {
+            "x": [
+              0.0,
+              0.0
+            ],
+            "value": 2.125
+          },
+          {
+            "x": [
+              0.0,
+              0.0
+            ],
+            "value": 2.125
+          },
+          {
+            "x": [
+              0.0,
+              0.0
+            ],
+            "value": 2.125
+          },
+          {
+            "x": [
+              0.0,
+              0.0
+            ],
+            "value": 2.125
+          },
+          {
+            "x": [
+              0.0,
+              0.0
+            ],
+            "value": 2.125
+          },
+          {
+            "x": [
+              0.0,
+              0.0
+            ],
+            "value": 2.125
+          },
+          {
+            "x": [
+              0.0,
+              0.0
+            ],
+            "value": 2.125
+          },
+          {
+            "x": [
+              0.0,
+              0.0
+            ],
+            "value": 2.125
+          }
+        ],
+        "proposals": [
+          {
+            "status": "valid",
+            "point": [
+              0.0,
+              0.0
+            ],
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "status": "valid",
+            "point": [
+              0.0,
+              0.0
+            ],
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "status": "valid",
+            "point": [
+              0.0,
+              0.0
+            ],
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "status": "valid",
+            "point": [
+              0.0,
+              0.0
+            ],
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "status": "valid",
+            "point": [
+              0.0,
+              0.0
+            ],
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "status": "valid",
+            "point": [
+              0.0,
+              0.0
+            ],
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "status": "valid",
+            "point": [
+              0.0,
+              0.0
+            ],
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "status": "valid",
+            "point": [
+              0.0,
+              0.0
+            ],
+            "stdout": "",
+            "stderr": ""
+          }
+        ],
+        "budget": 8,
+        "valid": true,
+        "evaluated_count": 8,
+        "best_value": 2.125,
+        "behavior_signature": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      }
+    ],
+    "error": null
+  },
+  "artifact": {
+    "components": {
+      "optimizer": "def propose(history, bounds, seed):\n    return [(low + high) / 2 for low, high in bounds]\n"
+    }
+  },
+  "lineage": [],
+  "usage": {
+    "optimizer": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "cost_usd": 0.0
+    },
+    "judge": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "cost_usd": 0.0
+    },
+    "forward": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "cost_usd": 0.0
+    },
+    "feedback": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "cost_usd": 0.0
+    }
+  },
+  "budget": {
+    "optimizer_llm_calls": null,
+    "eval_llm_calls": null,
+    "candidates": null,
+    "evaluator_runs": null,
+    "wall_time_s": null,
+    "total_tokens": null,
+    "on_exceed": "return_best_valid",
+    "accounted": {
+      "optimizer_llm_calls": 0,
+      "eval_llm_calls": 0,
+      "candidates": 0,
+      "candidates_reserved": 0,
+      "candidates_proposed": 0,
+      "candidates_evaluated": 0,
+      "evaluator_runs": 1,
+      "total_tokens": 0,
+      "wall_time_s": 0.526089
+    },
+    "exceeded": []
+  },
+  "metadata": {
+    "level_id": "level-0",
+    "engine_capabilities": [
+      "pareto",
+      "rich_trace",
+      "scalar",
+      "trace_module",
+      "weighted"
+    ],
+    "module_capabilities": [
+      "json_snapshot",
+      "multi_component",
+      "trace_module"
+    ],
+    "objective_mode": "scalar",
+    "candidate_trajectory": [],
+    "evaluator_records": [
+      {
+        "valid": true,
+        "status": "ok",
+        "metrics": {
+          "value": 2.125
+        },
+        "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+        "trace": null,
+        "usage": {
+          "forward": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "optimizer": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "feedback": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "judge": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          }
+        },
+        "artifacts": [
+          {
+            "status": "valid",
+            "evaluations": [
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              }
+            ],
+            "proposals": [
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "budget": 8,
+            "valid": true,
+            "evaluated_count": 8,
+            "best_value": 2.125,
+            "behavior_signature": [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          }
+        ],
+        "error": null
+      }
+    ],
+    "trace_optimize_path": false,
+    "selected_models": {
+      "feedback": null,
+      "forward": null,
+      "judge": null,
+      "optimizer": null
+    },
+    "budget_exhausted": null,
+    "optimizer_response_diagnostics": [],
+    "menu_observations": [],
+    "menu_evidence": {
+      "declared_menu_size": null,
+      "evaluated_candidate_count": 0,
+      "evaluation_observation_count": 0,
+      "valid_candidate_count": 0,
+      "effective_menu_size": null,
+      "menu_collapsed": null,
+      "basis_of_equivalence": "unavailable",
+      "behavior_equivalence_known": false,
+      "common_example_count": 0
+    },
+    "level_ids": [
+      "level-0"
+    ],
+    "resolved_models": {
+      "level-0": {
+        "feedback": null,
+        "forward": null,
+        "judge": null,
+        "optimizer": null
+      }
+    },
+    "test_overrides": {},
+    "arm_id": "default",
+    "seed": 0,
+    "matrix": {}
+  },
+  "error": null,
+  "level_results": [
+    {
+      "unit_id": "default:seed-0:matrix-0:level-0",
+      "plan_fingerprint": "0362263b58d89684ad5559192a05c531cca0955aac56294a4e24df1ff8c43d46",
+      "spec_fingerprint": "0362263b58d89684ad5559192a05c531cca0955aac56294a4e24df1ff8c43d46",
+      "engine": "fixed",
+      "module_ref": "recursive_opt.module.reasoning_workflow@1",
+      "status": "success",
+      "valid": true,
+      "evaluation": {
+        "valid": true,
+        "status": "ok",
+        "metrics": {
+          "value": 2.125
+        },
+        "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+        "trace": null,
+        "usage": {
+          "forward": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "optimizer": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "feedback": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          },
+          "judge": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0
+          }
+        },
+        "artifacts": [
+          {
+            "status": "valid",
+            "evaluations": [
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              },
+              {
+                "x": [
+                  0.0,
+                  0.0
+                ],
+                "value": 2.125
+              }
+            ],
+            "proposals": [
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "status": "valid",
+                "point": [
+                  0.0,
+                  0.0
+                ],
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "budget": 8,
+            "valid": true,
+            "evaluated_count": 8,
+            "best_value": 2.125,
+            "behavior_signature": [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          }
+        ],
+        "error": null
+      },
+      "artifact": {
+        "components": {
+          "optimizer": "def propose(history, bounds, seed):\n    return [(low + high) / 2 for low, high in bounds]\n"
+        }
+      },
+      "lineage": [],
+      "usage": {
+        "optimizer": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0,
+          "cost_usd": 0.0
+        },
+        "judge": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0,
+          "cost_usd": 0.0
+        },
+        "forward": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0,
+          "cost_usd": 0.0
+        },
+        "feedback": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0,
+          "cost_usd": 0.0
+        }
+      },
+      "budget": {
+        "optimizer_llm_calls": null,
+        "eval_llm_calls": null,
+        "candidates": null,
+        "evaluator_runs": null,
+        "wall_time_s": null,
+        "total_tokens": null,
+        "on_exceed": "return_best_valid",
+        "accounted": {
+          "optimizer_llm_calls": 0,
+          "eval_llm_calls": 0,
+          "candidates": 0,
+          "candidates_reserved": 0,
+          "candidates_proposed": 0,
+          "candidates_evaluated": 0,
+          "evaluator_runs": 1,
+          "total_tokens": 0,
+          "wall_time_s": 0.525744
+        },
+        "exceeded": []
+      },
+      "metadata": {
+        "level_id": "level-0",
+        "engine_capabilities": [
+          "pareto",
+          "rich_trace",
+          "scalar",
+          "trace_module",
+          "weighted"
+        ],
+        "module_capabilities": [
+          "json_snapshot",
+          "multi_component",
+          "trace_module"
+        ],
+        "objective_mode": "scalar",
+        "candidate_trajectory": [],
+        "evaluator_records": [
+          {
+            "valid": true,
+            "status": "ok",
+            "metrics": {
+              "value": 2.125
+            },
+            "feedback": "OptimizerProgramV0: valid; evaluations=8/8",
+            "trace": null,
+            "usage": {
+              "forward": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "optimizer": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "feedback": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              },
+              "judge": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0
+              }
+            },
+            "artifacts": [
+              {
+                "status": "valid",
+                "evaluations": [
+                  {
+                    "x": [
+                      0.0,
+                      0.0
+                    ],
+                    "value": 2.125
+                  },
+                  {
+                    "x": [
+                      0.0,
+                      0.0
+                    ],
+                    "value": 2.125
+                  },
+                  {
+                    "x": [
+                      0.0,
+                      0.0
+                    ],
+                    "value": 2.125
+                  },
+                  {
+                    "x": [
+                      0.0,
+                      0.0
+                    ],
+                    "value": 2.125
+                  },
+                  {
+                    "x": [
+                      0.0,
+                      0.0
+                    ],
+                    "value": 2.125
+                  },
+                  {
+                    "x": [
+                      0.0,
+                      0.0
+                    ],
+                    "value": 2.125
+                  },
+                  {
+                    "x": [
+                      0.0,
+                      0.0
+                    ],
+                    "value": 2.125
+                  },
+                  {
+                    "x": [
+                      0.0,
+                      0.0
+                    ],
+                    "value": 2.125
+                  }
+                ],
+                "proposals": [
+                  {
+                    "status": "valid",
+                    "point": [
+                      0.0,
+                      0.0
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      0.0,
+                      0.0
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      0.0,
+                      0.0
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      0.0,
+                      0.0
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      0.0,
+                      0.0
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      0.0,
+                      0.0
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      0.0,
+                      0.0
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  },
+                  {
+                    "status": "valid",
+                    "point": [
+                      0.0,
+                      0.0
+                    ],
+                    "stdout": "",
+                    "stderr": ""
+                  }
+                ],
+                "budget": 8,
+                "valid": true,
+                "evaluated_count": 8,
+                "best_value": 2.125,
+                "behavior_signature": [
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0
+                  ]
+                ]
+              }
+            ],
+            "error": null
+          }
+        ],
+        "trace_optimize_path": false,
+        "selected_models": {
+          "feedback": null,
+          "forward": null,
+          "judge": null,
+          "optimizer": null
+        },
+        "budget_exhausted": null,
+        "optimizer_response_diagnostics": [],
+        "menu_observations": [],
+        "menu_evidence": {
+          "declared_menu_size": null,
+          "evaluated_candidate_count": 0,
+          "evaluation_observation_count": 0,
+          "valid_candidate_count": 0,
+          "effective_menu_size": null,
+          "menu_collapsed": null,
+          "basis_of_equivalence": "unavailable",
+          "behavior_equivalence_known": false,
+          "common_example_count": 0
+        }
+      },
+      "error": null,
+      "level_results": [],
+      "portable": true,
+      "promotable": true
+    }
+  ],
+  "portable": true,
+  "promotable": true
+}

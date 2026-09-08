@@ -1,0 +1,27 @@
+{
+  "label": "clean_smoke",
+  "provider_status": "success",
+  "attempts": [
+    {
+      "attempt": 1,
+      "status": "success",
+      "wall_s": 86.661,
+      "logs": ""
+    }
+  ],
+  "evaluations": [],
+  "response_metadata": {
+    "id": "gen-1788857106-M2FiS2kS3qjQBkjGxcqa",
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "created": 1788857106,
+    "system_fingerprint": null,
+    "usage": {
+      "prompt_tokens": 331,
+      "completion_tokens": 3000,
+      "total_tokens": 3331
+    },
+    "finish_reason": "length"
+  },
+  "parse_status": "invalid",
+  "parse_error": "optimizer response must contain nonempty source"
+}

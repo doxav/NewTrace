@@ -1,0 +1,54 @@
+......................................................F................. [ 20%]
+....................................................................s..s [ 41%]
+...............................................F........................ [ 61%]
+........................................................................ [ 82%]
+.............................................................            [100%]
+=================================== FAILURES ===================================
+__________________________ test_35_source_provenance ___________________________
+
+    def test_35_source_provenance() -> None:
+        smoke = json.loads(
+            Path("artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        provenance = S.compile_plan(smoke).code_provenance
+        readiness = json.loads(
+            Path("artifacts/control_plane_v2/prompt18_readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    
+        assert "final_sha" not in readiness
+>       assert readiness["verified_runtime_tree_sha256"] == provenance["runtime_tree_sha256"]
+E       AssertionError: assert '70b4d82fedbd...0c6b1a2368f18' == 'dae2eecb2cf9...d88841146c887'
+E         
+E         - dae2eecb2cf95d941de3145db1f43fcbabcec0285bed0904493d88841146c887
+E         + 70b4d82fedbd71944825d8845dbebe24ccc0d294b5ae9851df60c6b1a2368f18
+
+tests/unit_tests/test_recursive_control_plane_v2.py:1969: AssertionError
+__________ test_readiness_uses_source_digests_without_sha_environment __________
+
+    def test_readiness_uses_source_digests_without_sha_environment() -> None:
+        """A checkout verifies digests and the explicit pre/post-CI readiness state."""
+        readiness = json.loads(
+            Path("artifacts/control_plane_v2/prompt18_readiness.json").read_text()
+        )
+        smoke = json.loads(
+            Path("artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json").read_text()
+        )
+        provenance = S.compile_plan(smoke).code_provenance
+    
+        assert readiness["schema_version"] == "prompt18-readiness/v2"
+        assert "final_sha" not in readiness
+>       assert readiness["verified_runtime_tree_sha256"] == provenance["runtime_tree_sha256"]
+E       AssertionError: assert '70b4d82fedbd...0c6b1a2368f18' == 'dae2eecb2cf9...d88841146c887'
+E         
+E         - dae2eecb2cf95d941de3145db1f43fcbabcec0285bed0904493d88841146c887
+E         + 70b4d82fedbd71944825d8845dbebe24ccc0d294b5ae9851df60c6b1a2368f18
+
+tests/unit_tests/test_recursive_final_hardening.py:559: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit_tests/test_recursive_control_plane_v2.py::test_35_source_provenance
+FAILED tests/unit_tests/test_recursive_final_hardening.py::test_readiness_uses_source_digests_without_sha_environment
+2 failed, 345 passed, 2 skipped in 16.01s
