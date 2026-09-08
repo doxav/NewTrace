@@ -63,9 +63,21 @@ No scientific setting changed because of pilot arm performance.
 
 Baseline: 559 passed, 2 skipped. Final affected regression: 581 passed, 2 skipped.
 Broader offline suite: 766 passed, 3 existing optional skips, one existing warning.
-New/interface-specific suites: 47 passed. Commands and exclusions:
+New/interface-specific suites: 49 passed, including interrupted production-A2 resume. Commands and exclusions:
 [verification record](exp15/VERIFICATION.md). Final raw-evidence checks follow after
 confirmation, including full manifest/source/slot/chronology integrity and recomputation.
+
+## Runtime observation during confirmation
+
+Slot 11/A1/06 completed normally after 275.127 seconds on the monotonic timer,
+although its wall-clock timestamps span 2,407.236 seconds. The 2,132.109-second
+gap is consistent with observed system suspension. It does not demonstrate a
+violation of the configured 300-second SDK timeout. Live socket observations
+confirmed the process remained active, so no duplicate request was issued.
+The response exhausted 8,000 reasoning tokens without code and consumed its slot.
+Safe observations and the resolved timing interpretation remain under exp15/raw/.
+This affects interpretation of wall-clock latency, not generation settings, budgets,
+selection or primary scientific values.
 
 ## Confirmatory results
 

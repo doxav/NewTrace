@@ -1,0 +1,7 @@
+{
+  "resolves": "latency_observation_summary.json",
+  "observed_monotonic_call_s": 275.12704490099713,
+  "observed_wall_clock_s": 2407.23579964,
+  "clock_gap_s": 2132.108754739003,
+  "conclusion": "The completed call took 275.127 seconds on the monotonic clock, below configured timeout=300. Its 2132.109-second wall/monotonic gap is consistent with observed host suspension. This event does NOT demonstrate an SDK timeout defect. No attempt was replaced and no scientific setting changed."
+}

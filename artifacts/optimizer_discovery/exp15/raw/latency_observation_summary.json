@@ -1,0 +1,17 @@
+{
+  "slot": "11/A1/slot_06",
+  "completed": true,
+  "status": "missing_source",
+  "wall_clock_s": 2407.23579964,
+  "monotonic_call_s": 275.12704490099713,
+  "difference_s": 2132.108754739003,
+  "sdk_timeout_s": 300,
+  "usage": {
+    "prompt_tokens": 512,
+    "completion_tokens": 8000,
+    "total_tokens": 8512,
+    "reasoning_tokens": 8000,
+    "cost_usd": 0.002028957196
+  },
+  "interpretation": "The wall/monotonic gap is consistent with observed host suspension. Configured SDK timeout is not a total elapsed-call deadline; the call completed normally and consumed one slot."
+}
