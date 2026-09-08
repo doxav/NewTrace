@@ -2153,3 +2153,86 @@ metadata is preserved. No model replacement was needed, no invalidity rule was
 relaxed, and no failed generation was rerun. The original failures and historical
 H1/H2/H3/H5 and EXP-12/13 conclusions remain unchanged. See the current
 [Phase-0 report](optimizer_discovery/PHASE0_REPORT.md) for counts, costs and commands.
+
+## 25 — EXP-15: first controlled optimizer-program discovery result
+
+EXP-15 uses Phase-0 completion 90651f47 as its scientific baseline. The pilot protocol
+was committed at 13b88440, and confirmation was frozen at 0643691b after a separate
+four-response pilot. No scientific setting changed during confirmation. Five paired
+outer seeds each received eight real DeepSeek/OpenRouter responses per generative
+arm. All 80 completed responses remain, including 20 source failures and one further
+candidate rejected for unseeded, nondeterministic execution. Invalidity has no
+numeric regret value.
+
+The engine-independent artifact is `propose(history, bounds, seed) -> x`. The
+benchmark contains Sphere, anisotropic Quadratic and Rosenbrock instances in 2D/4D,
+with balanced train6/validation6/holdout12 splits and 32 objective calls per trajectory.
+A1 uses independent generation. A2 uses production Trace/PrioritySearch updates with
+training feedback. Both pools include the exact seed and every eligible proposal,
+including search-rejected proposals. Validation cannot influence generation. Every
+selection and the overall validation representative was frozen before any holdout.
+
+### 25.1 Result and scope of the inference
+
+| Arm | Mean held-out normalized regret AUC | Median |
+|---|---:|---:|
+| A0 unchanged seed | 0.139579 | 0.133280 |
+| A1 independent best-of-eight | 0.121748 | 0.126687 |
+| A2 iterative recursive_opt | 0.116680 | 0.120232 |
+
+Lower is better. The preregistered 10,000-draw paired bootstrap resamples the five
+outer seeds, not tasks or trajectory points. H15-A's A2−A0 mean delta is −0.022899,
+95% interval [−0.042456, −0.003341]: **positive signal under the registered rule**.
+H15-B's central A2−A1 delta is −0.005068, interval [−0.037728, +0.024551]:
+**inconclusive**. A2 wins three pairs against A1 and loses two. A1 has better sample
+mean final regret (0.010110 versus 0.012166) and target attainment (81.7% versus 76.7%).
+The primary AUC result does not suppress those secondary outcomes.
+
+The declared deployment policy includes a shared permanent seed fallback preserving
+history and remaining budget. None of the 180 held-out trajectories needed fallback.
+A2's two seed selections were validation decisions despite eligible generated
+alternatives; the other three selected sources are generated programs. The primary
+estimand is therefore fully defined without inventing penalties for invalid source.
+
+This is a scientifically interpretable portable-artifact venue and a first conditional
+signal over the starting policy. It does not establish feedback superiority over
+independent generation, literature novelty, an effect of recursion depth, or amortization.
+Uncertainty is fragile at n=5 and conditional on the fixed twelve-instance ID panel.
+The central optimum-location prior and modest dimensions limit generality. Historical
+H1/H2/H3/H5 and all earlier retractions retain their original scope; H3's signature-bound
+transfer failure is not retroactively overturned by this different artifact contract.
+
+### 25.2 Integrity, failures and portable continuation
+
+All 80 unique response IDs match the exact model; all request settings and rotated
+sequential ordering match the freeze. A1/A2 each receive 17,280 logical search
+allocations and 1,920 holdout allocations. Shared execution makes 28,800 objective
+calls and 57,624 subprocess calls; caches, unused allocations and reference preparation
+are accounted separately. The single transport timeout has unknown remote completion
+and billing. No completed poor response was retried. Actual totals are 573,191 tokens
+and USD 0.086824 reported cost; A2's larger prompt usage is explicit.
+
+Every frozen source/configuration hash, candidate source hash, selection, raw metric
+and aggregate was checked. Full recomputation reproduces the complete result exactly.
+The local regression has 772 passing tests and three unchanged optional skips, with
+the historical external-backend module exclusion documented. Two reporting defects
+were corrected with tests: an attempt-latency association error and relative/absolute
+path labels in source exports. Lossless Trace archival also addresses repository
+file-size limits. None changed generation, evaluation, selection or metrics; no
+confirmatory experiment was invalidated or replaced. Detailed provenance remains in
+[EXP15_REPORT.md](optimizer_discovery/EXP15_REPORT.md).
+
+The representative is outer41/slot5, selected on validation before holdout, with
+lineage seed → slot4 → slot5. It combines Halton exploration, incumbent perturbations
+and a regularized quadratic fit. Its exact source hash is
+`1684f91acdc36c0ca6aac70afeb9cc2c4eed7ab847926d5880590e059266abb7`.
+All selected sources, including unchanged seeds, and all attempted diffs are preserved.
+The subprocess boundary sanitizes the environment and separates the candidate API;
+it is not an operating-system security sandbox.
+
+The next comparison can add source-producing FunSearch/OpenEvolve adapters under a
+new preregistration while retaining the optimizer contract and benchmark semantics.
+It must account for every internal model/repair call and protect a new confirmatory
+holdout; EXP-15's holdout is now observed. Patrick need not adopt recursive_opt
+infrastructure. The prepared [brief](optimizer_discovery/PATRICK_BRIEF.md) has not
+been sent. No push, merge or PR was performed.

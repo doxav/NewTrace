@@ -1,11 +1,10 @@
 # Optimizer-program discovery — EXP-15
 
-**Draft: confirmation is running. Results and the representative program are pending.**
+**Completed preregistered result: positive signal versus the seed; added value over
+independent generation remains inconclusive.**
 
-Can iterative code generation through recursive_opt discover a deployable black-box
-optimization policy that improves on its starting policy and on independent LLM
-code search with the same proposal budget? This first experiment compares those
-procedures. It does not compare FunSearch/OpenEvolve yet.
+Can recursive_opt discover a deployable black-box policy that improves on its seed
+and equal-budget independent LLM code search? FunSearch/OpenEvolve are not compared yet.
 
 The artifact is one portable Python file:
 
@@ -42,32 +41,51 @@ using previous code and training observations. Both final pools include the seed
 All generation uses OpenRouter `deepseek/deepseek-v4-flash-0731`, temperature .6,
 top_p 1, 8,000 completion tokens, native low reasoning, concurrency 1 and no response
 cache or automatic empty-response replacement. Outer seeds are 11, 23, 37, 41 and 53:
-**80 completed response slots**, including invalid or empty responses. Transport
-retries are counted separately. Each generative arm has 17,280 search objective
-allocations and 1,920 holdout allocations; actual calls and cache hits are reported
-separately. Shared normalization preparation allocates 3,072 reference evaluations.
+**80 completed response slots**, including invalid or empty responses. Each generative
+arm has 17,280 search objective allocations and 1,920 holdout allocations. Shared
+normalization preparation allocates 3,072 reference evaluations.
 Equalized proposals do not imply equal realized token expenditure or cost.
 
 Selection uses validation only. All five seeds' selections and the representative
-are frozen before any holdout evaluation. An invalid search may retain the seed.
-If a selected program fails during deployment, the trajectory permanently switches
-to the seed with its actual history and remaining budget. Candidate invalidity and
-fallback frequency are reported alongside the deployment metric.
+are frozen before any holdout evaluation. If deployment fails, the trajectory
+permanently switches to the seed with its actual history and remaining budget.
 
-**Confirmatory results and uncertainty: pending.** The registered comparisons are
-A2−A0 and A2−A1; negative regret deltas favor A2. A paired bootstrap uses the five
-outer seeds as its replication units. Its uncertainty is fragile at this sample
-size. A null, negative or fallback-dominated result is a valid scientific outcome.
-No conclusion about novelty, additional recursion depth or amortization follows.
+| Held-out primary result | A0 seed | A1 independent | A2 recursive |
+|---|---:|---:|---:|
+| Mean normalized regret AUC | 0.139579 | 0.121748 | 0.116680 |
+| Median | 0.133280 | 0.126687 | 0.120232 |
 
-**Validation-selected optimizer example: pending.** The exact evaluated source,
-its hash and lineage will accompany the final result. No representative will be
-chosen by holdout performance. The separate engineering pilot retained the seed
-in both search arms; two of four pilot responses yielded eligible programs. Pilot
-results are excluded from confirmation.
+The paired mean A2−A0 delta is **−0.022899**, with a 95% paired bootstrap interval
+**[−0.042456, −0.003341]**: a positive signal under the registered rule.
+The central A2−A1 delta is **−0.005068**, interval **[−0.037728, +0.024551]**:
+**inconclusive**. A2 beats A1 in three pairs and loses in two. The five outer seeds,
+not individual tasks or trajectory points, are the replication units; uncertainty
+is fragile. A1 has better mean final regret (0.010110 versus A2's 0.012166) and
+target attainment (81.7% versus 76.7%). No novelty, recursion-depth or amortization
+claim follows.
 
-The execution boundary sanitizes the credential environment and separates the
-candidate API from objective data. It is **not an operating-system security sandbox**
+All 80 responses remain. A1 has 9/40 invalid candidates; A2 has 12/40: seven missing
+sources, four syntax errors and one program using unseeded randomness. A2 selects
+the unchanged seed in two of five replications. All 180 selected-policy holdout
+trajectories complete; none needs deployment fallback. There are 81 transport
+attempts, 573,191 reported tokens and USD 0.086824 reported cost, excluding unknown
+billing for one timed-out attempt. Actual shared execution uses 28,800 objective
+calls and 57,624 subprocesses; cached and unused allocations remain explicit.
+
+The representative, selected on validation before holdout, is seed41/slot5:
+**Halton exploration plus incumbent perturbations and a regularized quadratic fit**.
+Its lineage is seed → slot4 → slot5. It clips proposals to bounds but does not check
+that the fitted stationary point is a minimum. Its exact evaluated source is
+[A2_seed_41.py.gz](exp15/selected/A2_seed_41.py.gz), SHA-256
+`1684f91acdc36c0ca6aac70afeb9cc2c4eed7ab847926d5880590e059266abb7`.
+Decompress it to optimizer.py without editing. All selected sources and attempted
+diffs are in [the export index](exp15/selected/index.json).
+
+The separate four-response engineering pilot is excluded from confirmation.
+Full per-seed results, invalid records, accounting and limitations are in
+[EXP15_REPORT.md](EXP15_REPORT.md); raw data recompute exactly and 772 offline tests pass.
+
+The sanitized subprocess boundary is **not an operating-system security sandbox**
 and does not establish adversarial filesystem confinement.
 
 Proposed next question:

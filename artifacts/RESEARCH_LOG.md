@@ -20,6 +20,7 @@ The global view: what is settled, what is not, and what has never been tried.
 | **VOID** | measured, but the instrument could not have detected an effect — carries no information |
 | **UNTESTED** | never run |
 | **BLOCKED** | cannot be run in the current task pool; the blocker is named |
+| **INCONCLUSIVE** | measured, but the registered uncertainty interval does not resolve the contrast |
 
 | # | hypothesis | status | best evidence | where |
 |---|---|---|---|---|
@@ -32,11 +33,13 @@ The global view: what is settled, what is not, and what has never been tried.
 | **H7** | The flagship **UC4 +0.163** is a real effect | **REFUTED** | Arithmetic identity `(qasper − gsm8k)/2`; arms scored on different task sets; artifacts byte-identical. Corrected run gives **−0.0060**. | §5.2, EXP-02 |
 | **H8** | Standard optimisation improves anything on **prose** tasks | **UNRESOLVED** | probe F deltas wildly heterogeneous [0.53, 0.009, 0.035, 0.133]; qasper S/N 0.74, gsm8k 0.96 — changing the prompt moves the score less than re-running it. EXP-13 in flight. | §13, EXP-13 |
 | **H9** | The config→score surface is non-flat (optimisation is *possible*) | **SUPPORTED** on code; **REFUTED** on prose | Code: ranges **2908.2** and **390.0** at noise 0. Prose: signal below noise (S/N < 1). | §19.2, EXP-06 |
+| **H15-A** | Selected recursive optimizer-code search improves held-out anytime regret over its unchanged seed | **SUPPORTED within EXP-15**, positive signal | A2−A0 = **−0.022899**, paired bootstrap 95% [−0.042456, −0.003341], n=5; lower is better | §11 below; assessment §25 |
+| **H15-B** | Iterative training feedback improves held-out anytime regret over equal-proposal independent generation | **INCONCLUSIVE** | A2−A1 = **−0.005068**, paired bootstrap 95% [−0.037728, +0.024551], n=5 | §11 below; assessment §25 |
 
-**Bottom line.** Recursion has never beaten standard on maximum performance (H1). Its one
-demonstrated advantage is *speed* under conditions a real LLM optimiser did not satisfy (H2 vs
-H3). The precondition it needs does exist (H5). The two paths by which it could exploit that
-precondition are closed in this task pool (H3 refuted, H4 blocked).
+Historical H1/H2/H3/H5 conclusions above remain unchanged. EXP-15 establishes a new
+portable optimizer-program venue and a positive signal over the starting policy;
+it does not establish an advantage over independent LLM generation. The historical
+signature-bound artifact failure and inert configuration surfaces still stand.
 
 ---
 
@@ -44,10 +47,10 @@ precondition are closed in this task pool (H3 refuted, H4 blocked).
 
 | goal | state | blocker / next |
 |---|---|---|
-| **G-A** Decide whether recursive_opt is a viable optimisation layer | **answered, conditionally** | Viable mechanism, no demonstrated quality win. Needs a task family satisfying §21.4's five properties. |
+| **G-A** Decide whether recursive_opt is a viable optimisation layer | **answered, conditionally** | EXP-15 improves over its seed; added value over independent generation remains inconclusive. |
 | **G-B** Make the instrument trustworthy | **largely done** | automatic menu evidence now recorded; behavioral certainty requires evaluator signatures (Phase 0, §23). |
-| **G-C** Find a venue where recursion *can* win | **blocked on task design** | No existing task qualifies. Requires portable-artifact family (fixed calling convention). |
-| **G-D** Establish the paired-seed noise floor | **in flight** | EXP-12/13. Everything downstream is gated on this number. |
+| **G-C** Find a venue where recursion *can* win | **portable venue established** | EXP-15 supplies a common artifact/evaluator and a valid comparison; a feedback advantage is not yet established. |
+| **G-D** Establish the paired-seed noise floor | **historical noisy-prose work unresolved** | EXP-12/13 remain separate; they do not gate EXP-15's deterministic numerical benchmark. |
 | **G-E** Clear or retire the spec backlog | **triaged, not run** | 8 of 18 variants need *fixing*, not running. |
 
 ---
@@ -72,7 +75,7 @@ One row per experiment. `n` is usable paired observations, not runs attempted.
 | EXP-12 | 09-02 | Paired seed-delta sd | qasper | **2 pairs** | sd 0.254 @ c=2 — *not yet usable* | in flight |
 | EXP-13 | 09-02 | Was seed 101's 0.5455 a find or noise? | qasper | 6+6 | *running* — see note | pending |
 | EXP-14 | 09-02 | Backlog triage | 90 specs | — | 18 variants; **8 unrunnable** | see §5 |
-| EXP-15 | 09-08 | Does training-informed optimizer code search improve held-out regret over seed and independent search? | Sphere / Quadratic / Rosenbrock, d=2/4 | 5 pairs registered | Confirmation running under freeze `0643691b`; no holdout result yet | pending |
+| EXP-15 | 09-08 | Does training-informed optimizer code search improve held-out regret over seed and independent search? | Sphere / Quadratic / Rosenbrock, d=2/4 | **5 complete pairs** | Mean AUC A0/A1/A2 **0.139579 / 0.121748 / 0.116680**; all 80 slots retained | H15-A positive signal; H15-B inconclusive |
 
 **EXP-13 note — environment, not design.** First attempt left evaluation UNBOUNDED: one item
 took 514 s and the full design projected to 10+ hours. That is the same unbounded-sampling defect
@@ -209,17 +212,41 @@ See [current Phase-0 report](optimizer_discovery/PHASE0_REPORT.md),
 
 Preregistered H15-A tests selected A2 deployment against the unchanged seed. H15-B,
 the central contrast, tests A2 against equal-response-budget independent code search.
-Both remain pending until the frozen confirmatory analysis. The Phase-1 pilot used
+Both were evaluated under the frozen confirmatory analysis. The Phase-1 pilot used
 separate instances and outer seed 701; two of four completed responses produced
 eligible programs, and validation retained the seed in both arms. All failures and
 the transport retry remain recorded. Pilot results do not enter confirmation.
 
 The frozen protocol (`0643691b`) uses five paired outer seeds, eight completed
 DeepSeek responses per generative arm, 32 objective calls per trajectory and balanced
-6/6/12 train/validation/holdout splits. All selections must be frozen before any
-holdout evaluation. Invalid candidates and common deployment fallback are explicit.
+6/6/12 train/validation/holdout splits. All selections and the validation-selected
+representative were frozen before any holdout evaluation. All five paired seeds and
+80 response slots are retained. Invalid candidates and common deployment fallback
+are explicit; no holdout fallback was needed.
 See [preregistration](optimizer_discovery/PREREG_EXP15.md) and
 [pilot evidence](optimizer_discovery/exp15/PILOT_REPORT.md).
+
+Mean normalized anytime regret, lower better: A0 **0.139579**, A1 **0.121748**,
+A2 **0.116680**. H15-A's paired delta is **−0.022899**, 95% bootstrap interval
+**[−0.042456, −0.003341]**, a positive signal under the registered rule.
+H15-B's delta is **−0.005068**, interval **[−0.037728, +0.024551]**, inconclusive.
+A2 loses to A1 in two of five pairs. A1 has better sample mean final regret and
+target attainment. Five outer seeds do not justify strong superiority claims.
+
+A1 has 9/40 ineligible candidate slots; A2 has 12/40, including one program rejected
+for nondeterministic execution. A2 retains the seed in two replications. All failures
+remain, including the single transport timeout. There were 81 attempts for 80
+completed responses, 573,191 reported tokens and USD 0.086824 reported cost, excluding
+unknown billing on the timeout. Reporting-only latency/path-label corrections and
+lossless archive packaging changed no scientific values or decisions. The frozen
+protocol and complete aggregate pass the integrity audit; 772 offline tests pass.
+
+The validation-selected representative is outer41/slot5, a Halton/incumbent/quadratic
+hybrid, with exact source and lineage preserved. The result and portable evaluator
+are ready for discussion with Patrick; the brief has not been sent. See
+[full report](optimizer_discovery/EXP15_REPORT.md),
+[machine-readable results](optimizer_discovery/exp15_results.json),
+[Patrick brief](optimizer_discovery/PATRICK_BRIEF.md) and assessment §25.
 
 This creates a portable-artifact venue. It does not retroactively overturn H3's
 signature-bound historical setup, measure amortization, or identify a recursion-
