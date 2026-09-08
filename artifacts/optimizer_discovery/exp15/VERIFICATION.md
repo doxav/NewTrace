@@ -86,3 +86,9 @@ without a live client after archiving; it returned without new generation.
 `reporting.read_trace` reads and verifies these post-run archives. The frozen
 runner itself still writes its original JSON/gzip representation. This archive
 operation is reporting/storage only and does not amend scientific semantics.
+
+Final broader offline regression on the current implementation and reporting tools:
+771 passed, 3 existing optional skips in 59.00s (final_offline_tests.txt), using the
+same all-unit-tests command and external-backend module exclusion above. No new
+skip or xfail was added. The original frozen generation/evaluation source remains
+unchanged; the additional tests cover reporting and lossless archive integrity.
