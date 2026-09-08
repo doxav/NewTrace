@@ -42,5 +42,6 @@ EXP-12 uses probe_g QASPER paired smoke; EXP-13's script imports a found prompt
 from an ephemeral /tmp/claude-1000 path, inherits provider defaults and uses
 max_examples=2, inner_steps=0, evaluation timeout 90s, run SIGALRM 480s, n=6
 interleaved conditions. Complete original request settings/seed provenance are
-absent. Exact reproducibility/comparability is not established despite model-name
+absent. The referenced found-prompt file was confirmed absent.
+Exact reproducibility/comparability is not established despite model-name
 agreement. Do not append fresh calibration to either historical experiment.

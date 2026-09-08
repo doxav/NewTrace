@@ -5,7 +5,7 @@
 `recursive_opt_assessment.md`, referenced here by section (§n) — it is the audit trail,
 not the status.
 
-*Last updated 2026-09-02.*
+*Last updated 2026-09-08.*
 
 ---
 
@@ -45,7 +45,7 @@ precondition are closed in this task pool (H3 refuted, H4 blocked).
 | goal | state | blocker / next |
 |---|---|---|
 | **G-A** Decide whether recursive_opt is a viable optimisation layer | **answered, conditionally** | Viable mechanism, no demonstrated quality win. Needs a task family satisfying §21.4's five properties. |
-| **G-B** Make the instrument trustworthy | **largely done** | 18 defects fixed; menu-collapse detection still opt-in (TODO). |
+| **G-B** Make the instrument trustworthy | **largely done** | automatic menu evidence now recorded; behavioral certainty requires evaluator signatures (Phase 0, §23). |
 | **G-C** Find a venue where recursion *can* win | **blocked on task design** | No existing task qualifies. Requires portable-artifact family (fixed calling convention). |
 | **G-D** Establish the paired-seed noise floor | **in flight** | EXP-12/13. Everything downstream is gated on this number. |
 | **G-E** Clear or retire the spec backlog | **triaged, not run** | 8 of 18 variants need *fixing*, not running. |
@@ -104,9 +104,9 @@ probe A's.
 | D16/D17 | config encode/decode truncation; registry pollution | fixed |
 | D18 | certification not menu-conditional | open — demoted; see menu-collapse |
 | **MC-a** | prose overwrote code/numeric params → menu effective size 1 | **fixed** (`artifact_fits_surface`) |
-| **MC-b** | ranking-equivalent candidates collapse a menu invisibly | **open** — `TODO(menu-collapse)`, no type check can see it |
+| **MC-b** | ranking-equivalent candidates collapse a menu invisibly | **resolved on signature-equipped evaluators; narrowed on legacy** — actual behavior evidence, metric-only/unknown scope explicit (§23) |
 | **MC-c** | type audit is **vacuous on prose** — accepts everything unread | **fixed** (`menu_check_kind`) |
-| **MC-d** | `effective_menu_size` is opt-in, not recorded per run | **open** — first attempt reverted (read 3 where truth was 1) |
+| **MC-d** | `effective_menu_size` is opt-in, not recorded per run | **fixed for future runs** — automatic actual-evaluation evidence in canonical and legacy public results (§23) |
 | EX-1 | example A reported a tie-break as a learned result | fixed (`NO WINNER`) |
 | EX-2 | `list_tasks` fabricated a task list when Trace-Bench absent | fixed (raises) |
 
@@ -159,6 +159,26 @@ narrative in `recursive_opt_assessment.md` and reference it by §.
 
 1. **Finish EXP-12/13** — the paired-seed sd gates every remaining decision. Run arms sequentially or declare shared concurrency; the last attempt confounded two agents on one endpoint.
 2. **Fix, don't run, the 8 broken variants** — serialisation and design bugs no sd value touches.
-3. **Close MC-b / MC-d** — record `effective_menu_size` per run, over the candidates the level evaluated.
+3. **Use MC-b / MC-d evidence** — future runs record actual evaluations; require behavior signatures before claiming behavioral menu headroom.
 4. **Build a portable-artifact family** (§21.4 property 5) — the only route to testing H3 honestly.
 5. **Test H6/W1** — the one hypothesis never explored, on a prose surface with n sized to its floor.
+
+## 9. Optimizer discovery Phase 0 — 2026-09-08
+
+The portable propose(history, bounds, seed) interface and deterministic evaluator are
+ready. Future runs retain actual candidate behavior/evaluation evidence, with explicit
+invalidity and unknown equivalence instead of silently certifying a collapsed menu.
+This changes instrument validity, not any historical performance conclusion; see
+[assessment §23](recursive_opt_assessment.md#23--optimizer-discovery-phase-0-instrument-and-interface).
+
+Frozen OpenRouter DeepSeek calibration: **0/3** open-ended generation responses had
+parseable code (all reached 3000 completion tokens). All failures are retained. A
+separately preregistered interface-only midpoint request succeeded and executed at
+seeds 0/1/2, budget 8 each, value 2.125 throughout. This demonstrates the interface,
+not optimizer discovery or improvement. **Phase-1 search execution: NO-GO** under
+the failed generation protocol; interface/protocol development can proceed.
+
+EXP-12/13 remain historical/unresolved: model-name agreement does not establish
+request comparability; the required ephemeral EXP-13 prompt is absent. Their raw
+records and H1/H2/H3/H5 conclusions are unchanged. Full evidence:
+[PHASE0_REPORT.md](optimizer_discovery/PHASE0_REPORT.md).

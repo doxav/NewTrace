@@ -2067,3 +2067,58 @@ NO WINNER: score=-2091.800 for every candidate
 
 This is the `effective_menu_size` principle (§20.1) applied at the example level: **an inert
 search must not report a winner.**
+
+
+## §23 — Optimizer discovery Phase 0: instrument and interface
+
+The Phase-0 preregistration, tests and full evidence are in
+[optimizer_discovery/PHASE0_REPORT.md](optimizer_discovery/PHASE0_REPORT.md).
+This is an instrument/readiness result, not an update to the historical performance
+ceiling, amortisation, transfer or shared-optimum conclusions in §20–21.
+
+### 23.1 Actual evaluated menus, with an explicit limit on equivalence
+
+Canonical evaluation records now bind each observed candidate to its actual input,
+validity, metric vector and, when supplied, behavior signature. Search records exclude
+final/holdout evaluation. Legacy module evaluations are observed before trainer queues
+can discard them; the same evidence reaches legacy run_spec public results. Reading
+only the trainer's active queue was insufficient: a regression fixture evaluated real
+candidates while that queue ended empty. The final observer preserves legacy outputs,
+parameter updates, module return types and final-evaluation fallback behavior.
+
+Equivalence is measured on common inputs. Actual proposal trajectories distinguish
+score-tied optimizers and collapse byte-different equivalent ones. Scalar-only legacy
+evaluators are labeled metric_vector, without behavioral certification; disjoint panels
+and observed stochasticity produce unknown. MC-d is closed for future results; MC-b
+is closed for signature-equipped evaluators and explicitly narrowed elsewhere. Old
+results are readable but cannot acquire evidence that was never recorded.
+
+Invalid canonical evaluations with absent metrics previously failed during aggregation.
+They now remain typed invalid with no aggregate score. Exported trainer/GEPA candidate
+trajectories also remove invalid numeric ranking penalties. Internal legacy ranking
+floors remain compatibility details, not valid scientific measurements. Historical
+sentinel-contaminated results have not been recomputed or silently corrected.
+
+### 23.2 Negative generation calibration, successful tiny interface test
+
+The exact frozen OpenRouter deepseek/deepseek-v4-flash-0731 requests used temperature
+0.6, top_p 1.0, max_tokens 3000 and seed 17, sequentially. The preregistered pair and
+clean smoke all ended with length and no parseable program: **0/3**. Those observations
+remain failed, with request metadata and token usage preserved. The provider was
+available; this is not an external-service blocker and not a reason to raise the token
+bound after seeing results. No model or request setting was substituted.
+
+A separate, subsequently preregistered engineering-only prompt asked for a complete
+midpoint propose function. It returned valid code with 110 completion tokens, which
+executed on the public 2-D fixture at seeds 0/1/2 using exactly eight objective calls
+each (value 2.125). It passes the tiny portable-interface acceptance criterion while
+leaving open-ended optimizer discovery under the original prompt **NO-GO**. Neither
+this fixture nor the midpoint score is a performance, transfer or recursion result.
+
+### 23.3 Historical QASPER evidence remains separate
+
+The probe README reports this same DeepSeek model, but EXP-12 lacks complete request
+settings in its result manifest. EXP-13's script requires a found-prompt file at an
+ephemeral external path that is no longer present. Exact reproduction/comparability
+cannot be established. No Phase-0 observation was appended to EXP-12 or EXP-13; both
+remain historical/unresolved. The existing untracked probe_aa result was untouched.
