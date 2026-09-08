@@ -209,3 +209,19 @@ def test_legacy_rejection_is_typed_and_not_counted_as_legal_floor() -> None:
     assert rows[0]["valid"] is False and rows[0]["metrics"] == {}
     assert menu_evidence(rows)["effective_menu_size"] == 0
     assert invalid_result("bad config", floor=-1)["valid"] is False
+
+
+def test_exported_trajectory_does_not_publish_invalid_ranking_penalties() -> None:
+    """Internal trainer/GEPA ranking adapters must not export invalidity as a score."""
+    from opto.features.recursive_opt import spec as S
+
+    trajectory = [
+        {"artifact": {"text": "bad"}, "evaluation": {"score": -1e12}},
+        {"artifact": {"text": "ok"}, "evaluation": {"score": 1.0}},
+        {"artifact": {"text": "unseen"}, "evaluation": {"score": -1e12}},
+    ]
+    rows = [observation("bad", valid=False), observation("ok", [1])]
+    result = S._typed_candidate_trajectory(trajectory, rows)
+    assert result[0]["evaluation"] == {"valid": False, "score": None}
+    assert result[1]["evaluation"] == {"valid": True, "score": 1.0}
+    assert result[2]["evaluation"] == {"valid": None, "score": None}

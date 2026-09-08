@@ -1,0 +1,19 @@
+{
+  "label": "interface_smoke",
+  "purpose": "separate interface-only engineering pilot",
+  "request_settings_ref": "phase0_spec.json#/live",
+  "prompt": "Return only Python code for a function named propose(history, bounds, seed) that returns [(low + high) / 2 for low, high in bounds]. Use exactly those three positional parameters, no defaults. Include the complete function definition.",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "budget": 8,
+  "requests": 1,
+  "quality_threshold": null,
+  "does_not_replace": [
+    "generation_1",
+    "generation_2",
+    "clean_smoke"
+  ]
+}

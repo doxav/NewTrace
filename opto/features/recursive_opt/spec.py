@@ -374,7 +374,7 @@ def execute_plan(plan: ExecutionPlan, resources: Optional[Mapping[str, Any]]=Non
                         result = _failed_level_result(plan, unit, level, guard, exc)
                     from .measurement import menu_evidence
                     menu = menu_evidence(guard.menu_observations, declared_menu_size=_declared_menu_size(level.spec))
-                    result = RunResult(**{**result.__dict__, 'metadata': _freeze({**result.metadata, 'menu_observations': guard.menu_observations, 'menu_evidence': menu})})
+                    result = RunResult(**{**result.__dict__, 'metadata': _freeze({**result.metadata, 'menu_observations': guard.menu_observations, 'menu_evidence': menu, **({'candidate_trajectory': _typed_candidate_trajectory(result.metadata['candidate_trajectory'], guard.menu_observations)} if 'candidate_trajectory' in result.metadata else {})})})
                     portable = not bool(overrides) and _evaluator_entry(level.spec['objective']['evaluator_ref']).mode == 'output'
                     result = RunResult(**{**result.__dict__, 'plan_fingerprint': plan.fingerprint, 'portable': portable, 'promotable': portable and result.valid})
                     _persist_level_result(plan, unit, level, result, output_root)
@@ -948,6 +948,18 @@ def _run_legacy_trace_engine(unit: _ExecutionUnit, level: _LevelPlan, resources:
         capture['_global_step'] = global_step + executed_steps
     evaluation = EvaluationResult(valid=True, status='ok', metrics={'score': float(score)}, feedback=data.get('feedback', '') if isinstance(data, Mapping) else '', trace={'legacy_data': _thaw(data)}, artifacts={'artifact_id': record.artifact_id})
     return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine='trace', module_ref=canonical['module']['ref'], status='success', valid=True, evaluation=evaluation, artifact=_freeze({'text': artifact_text}), lineage=(), usage=evaluation.usage, budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'legacy_compatibility': compatibility}))
+def _typed_candidate_trajectory(trajectory: Iterable[Mapping[str, Any]], observations: Iterable[Mapping[str, Any]]) -> List[Dict[str, Any]]:
+    """Keep internal numeric ranking penalties out of exported scientific scores."""
+    validity: Dict[str, List[bool]] = {}
+    for observation in observations:
+        validity.setdefault(_canonical_json(observation['candidate']), []).append(observation['valid'])
+    rows = []
+    for row in trajectory:
+        checks = validity.get(_canonical_json(row['artifact']))
+        valid = all(checks) if checks else None
+        rows.append({**_thaw(row), 'evaluation': {'valid': valid, 'score': row['evaluation'].get('score') if valid else None}})
+    return rows
+
 def _declared_menu_size(level: Mapping[str, Any]) -> Optional[int]:
     """Count a declared legacy Cartesian menu; adaptive proposal budgets are not menus."""
     legacy = level['module']['config'].get('level', {})
