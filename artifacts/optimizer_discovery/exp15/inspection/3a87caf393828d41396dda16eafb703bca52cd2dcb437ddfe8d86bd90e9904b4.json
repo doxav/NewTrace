@@ -1,0 +1,20 @@
+{
+  "source_sha256": "3a87caf393828d41396dda16eafb703bca52cd2dcb437ddfe8d86bd90e9904b4",
+  "selected_outer_seed": 53,
+  "selected_index": 6,
+  "scope": "Descriptive source inspection after global validation selection freeze. No holdout results accessed; no novelty claim; source is unchanged.",
+  "label": "Halton initialization with stagnation-aware incumbent search",
+  "first_points": "Use deterministic Halton points for the first 2*d evaluations, mapped to the legal bounds.",
+  "incumbent": "Sort observed points by value. The base is the best point with probability 0.5, otherwise a uniformly chosen member of the best quarter.",
+  "stagnation": "Count observations since the latest strict best-value improvement. Uniform exploration probability is 0.03, rising to 0.15 at six stagnant observations and 0.30 at ten. This does not reset history or the objective budget.",
+  "adaptation": "Base sigma=0.3*(1-0.8*n/32), floored at 0.05. Multiply by 1.5 after more than five stagnant observations, and independently by three with probability 0.2.",
+  "directional_step": "With probability 0.3, interpolate between the best and second-best points and add independent Gaussian noise with absolute standard deviation sigma; this branch does not scale sigma by bound width.",
+  "other_steps": "Otherwise perturb one coordinate with probability 0.3 or all coordinates, scaling Gaussian sigma by each bound width. Thus the directional branch uses smaller noise on this width-ten benchmark.",
+  "history_statistics": "Uses objective ranking and strict incumbent-improvement timing; best_val is computed but unused.",
+  "boundary_handling": "Clip every perturbed point coordinatewise; Halton and uniform points are already in bounds.",
+  "lineage": {
+    "selected_slot": 6,
+    "parent_sha256": "fd65cfceb1ef44979420e627304665a977c073f4ae65f6f015a1c10d3a833160",
+    "description": "The seventh generated proposal is selected by validation; all attempted parent-child diffs are exported unchanged."
+  }
+}

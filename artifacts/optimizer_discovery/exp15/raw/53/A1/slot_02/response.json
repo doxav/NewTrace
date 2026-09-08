@@ -1,0 +1,21 @@
+{
+  "completed": true,
+  "completed_ns": 1788900888671000236,
+  "id": "gen-1788900875-R76jr8dTWUsRsISK7KRp",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "finish_reason": "stop",
+  "content": "```python\nimport random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a point to evaluate the black-box function.\n\n    Strategy:\n      - Initial exploration: uniform random points for a small number of evaluations.\n      - Afterwards, mostly local Gaussian steps around the best observed point,\n        with a decaying probability of doing a uniform random jump.\n      - The step size shrinks with the number of evaluations to refine the search.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n    ranges = [hi - lo for lo, hi in bounds]\n\n    # Initial exploration phase: a few points to cover the space.\n    if len(history) < 2 * dim + 2:\n        return [rng.uniform(lo, hi) for lo, hi in bounds]\n\n    # Best known point\n    best = min(history, key=lambda row: row[\"value\"])\n    best_x = best[\"x\"]\n\n    # Probability of uniform exploration decreases with evaluations.\n    p_explore = max(0.05, 0.35 - 0.01 * len(history))\n    if rng.random() < p_explore:\n        return [rng.uniform(lo, hi) for lo, hi in bounds]\n\n    # Gaussian step size: starts medium and decays.\n    # Scale proportional to domain size, with slower decay for higher dimensions.\n    decay = (len(history) / (4.0 * dim)) ** 0.5\n    sigma_factor = 0.15 / (1.0 + decay)\n    scale = [sigma_factor * (hi - lo) for lo, hi in bounds]\n\n    # Propose a point near the best, clipped to bounds.\n    result = []\n    for x, (lo, hi), s in zip(best_x, bounds, scale):\n        y = x + rng.gauss(0.0, s)\n        result.append(max(lo, min(hi, y)))\n    return result\n```",
+  "source": "import random\nimport math\n\ndef propose(history, bounds, seed):\n    \"\"\"\n    Propose a point to evaluate the black-box function.\n\n    Strategy:\n      - Initial exploration: uniform random points for a small number of evaluations.\n      - Afterwards, mostly local Gaussian steps around the best observed point,\n        with a decaying probability of doing a uniform random jump.\n      - The step size shrinks with the number of evaluations to refine the search.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    dim = len(bounds)\n    ranges = [hi - lo for lo, hi in bounds]\n\n    # Initial exploration phase: a few points to cover the space.\n    if len(history) < 2 * dim + 2:\n        return [rng.uniform(lo, hi) for lo, hi in bounds]\n\n    # Best known point\n    best = min(history, key=lambda row: row[\"value\"])\n    best_x = best[\"x\"]\n\n    # Probability of uniform exploration decreases with evaluations.\n    p_explore = max(0.05, 0.35 - 0.01 * len(history))\n    if rng.random() < p_explore:\n        return [rng.uniform(lo, hi) for lo, hi in bounds]\n\n    # Gaussian step size: starts medium and decays.\n    # Scale proportional to domain size, with slower decay for higher dimensions.\n    decay = (len(history) / (4.0 * dim)) ** 0.5\n    sigma_factor = 0.15 / (1.0 + decay)\n    scale = [sigma_factor * (hi - lo) for lo, hi in bounds]\n\n    # Propose a point near the best, clipped to bounds.\n    result = []\n    for x, (lo, hi), s in zip(best_x, bounds, scale):\n        y = x + rng.gauss(0.0, s)\n        result.append(max(lo, min(hi, y)))\n    return result\n",
+  "source_sha256": "9712f5e0dca2aacbfabd28a0e6bf933a9425722165c3ba581e713146461ec5ce",
+  "parse_status": "parsed",
+  "source_status": "valid",
+  "usage": {
+    "prompt_tokens": 433,
+    "completion_tokens": 2369,
+    "total_tokens": 2802,
+    "reasoning_tokens": 1938,
+    "cost_usd": 0.000322604352
+  },
+  "wall_s": 12.806380854002782,
+  "attempt": 1
+}

@@ -1,0 +1,21 @@
+{
+  "completed": true,
+  "completed_ns": 1788901169051688722,
+  "id": "gen-1788901142-rm6LYmZcNpfDoihf3xEp",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "finish_reason": "stop",
+  "content": "```python\nimport random\nimport statistics\n\ndef propose(history, bounds, seed):\n    \"\"\"Adaptive optimizer:\n    - uniform exploration with decaying probability\n    - Gaussian perturbation around best or around the mean of top points,\n      with per-dimension scale derived from the spread of the best few points.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    n = len(history)\n    d = len(bounds)\n    sorted_hist = sorted(history, key=lambda row: row[\"value\"])\n    best = sorted_hist[0][\"x\"]\n\n    # Exploration probability decays from ~0.35 to ~0.1\n    explore = max(0.1, 0.35 - n * 0.005)\n    if rng.random() < explore:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Use the top few points to estimate per\u2011dimension scale\n    k = min(5, n)\n    top_points = [row[\"x\"] for row in sorted_hist[:k]]\n    scales = []\n    for i in range(d):\n        vals = [p[i] for p in top_points]\n        if len(vals) >= 2:\n            s = statistics.stdev(vals)\n            if s == 0:\n                s = (bounds[i][1] - bounds[i][0]) * 0.05\n        else:\n            s = (bounds[i][1] - bounds[i][0]) * 0.1\n        scales.append(s)\n\n    # 80% chance to exploit around the best point, 20% around the mean of top points\n    if rng.random() < 0.8:\n        center = best\n        factor = 0.25 / (1 + n / 4.0)\n    else:\n        center = [statistics.mean([p[i] for p in top_points]) for i in range(d)]\n        factor = 1.0\n\n    new = []\n    for i in range(d):\n        low, high = bounds[i]\n        x = center[i] + rng.gauss(0.0, factor * scales[i] * 1.2)\n        x = max(low, min(high, x))\n        new.append(x)\n    return new\n```",
+  "source": "import random\nimport statistics\n\ndef propose(history, bounds, seed):\n    \"\"\"Adaptive optimizer:\n    - uniform exploration with decaying probability\n    - Gaussian perturbation around best or around the mean of top points,\n      with per-dimension scale derived from the spread of the best few points.\n    \"\"\"\n    rng = random.Random(seed + len(history))\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    n = len(history)\n    d = len(bounds)\n    sorted_hist = sorted(history, key=lambda row: row[\"value\"])\n    best = sorted_hist[0][\"x\"]\n\n    # Exploration probability decays from ~0.35 to ~0.1\n    explore = max(0.1, 0.35 - n * 0.005)\n    if rng.random() < explore:\n        return [rng.uniform(low, high) for low, high in bounds]\n\n    # Use the top few points to estimate per\u2011dimension scale\n    k = min(5, n)\n    top_points = [row[\"x\"] for row in sorted_hist[:k]]\n    scales = []\n    for i in range(d):\n        vals = [p[i] for p in top_points]\n        if len(vals) >= 2:\n            s = statistics.stdev(vals)\n            if s == 0:\n                s = (bounds[i][1] - bounds[i][0]) * 0.05\n        else:\n            s = (bounds[i][1] - bounds[i][0]) * 0.1\n        scales.append(s)\n\n    # 80% chance to exploit around the best point, 20% around the mean of top points\n    if rng.random() < 0.8:\n        center = best\n        factor = 0.25 / (1 + n / 4.0)\n    else:\n        center = [statistics.mean([p[i] for p in top_points]) for i in range(d)]\n        factor = 1.0\n\n    new = []\n    for i in range(d):\n        low, high = bounds[i]\n        x = center[i] + rng.gauss(0.0, factor * scales[i] * 1.2)\n        x = max(low, min(high, x))\n        new.append(x)\n    return new\n",
+  "source_sha256": "fcbc0395e171eb6109a267b5fbd1a8895ec6023802ba4f589e8f00d7ee4d5d70",
+  "parse_status": "parsed",
+  "source_status": "valid",
+  "usage": {
+    "prompt_tokens": 3183,
+    "completion_tokens": 5224,
+    "total_tokens": 8407,
+    "reasoning_tokens": 4708,
+    "cost_usd": 0.000832254528
+  },
+  "wall_s": 26.156201936995785,
+  "attempt": 1
+}

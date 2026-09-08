@@ -1,0 +1,36 @@
+{
+  "key": {
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "task_identity": "c6d2709a4eeb30f482f02af7f2586a4f84aca48ab63817f29868bdad12c78b25",
+    "phase": "confirmation",
+    "split": "validation",
+    "local_seed": 1335174230,
+    "budget": 32,
+    "deployment": false,
+    "evaluator_version": "a41259493b2069e88a43d045e89b67241c1398a8dbfe9eae6018d602fef57244"
+  },
+  "result": {
+    "valid": false,
+    "candidate_valid": false,
+    "status": "missing_source",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "task_identity": "c6d2709a4eeb30f482f02af7f2586a4f84aca48ab63817f29868bdad12c78b25",
+    "stratum": "rosenbrock/4",
+    "local_seed": 1335174230,
+    "budget": 32,
+    "observations": [],
+    "proposal_attempts": [
+      {
+        "evaluation_index": 0,
+        "status": "missing_source",
+        "policy": "candidate"
+      }
+    ],
+    "fallback_used": false,
+    "objective_calls": 0,
+    "unused_objective_allocation": 32,
+    "subprocess_executions": 0,
+    "execution_s": 1.1153999366797507e-05,
+    "metrics": null
+  }
+}
