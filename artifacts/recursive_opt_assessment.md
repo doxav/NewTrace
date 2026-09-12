@@ -2236,3 +2236,183 @@ It must account for every internal model/repair call and protect a new confirmat
 holdout; EXP-15's holdout is now observed. Patrick need not adopt recursive_opt
 infrastructure. The prepared [brief](optimizer_discovery/PATRICK_BRIEF.md) has not
 been sent. No push, merge or PR was performed.
+
+## 26 — EXP-16: systematic feedback investigation and prospective production retest
+
+Completed 2026-09-10 on `codex/investigation-feedback-exp16`, based on EXP-15
+completion SHA `13ebda2242e1c18022591737b113030ca2ce2da2`. Earlier specifications,
+raw evidence, retractions and user work are preserved. The investigation is
+exploratory, with stage protocols and hashes frozen before their respective
+outcomes; it is not a replacement or favorable rerun of EXP-15. The complete
+[report](optimizer_discovery/investigation16/REPORT.md) and
+[decision matrix](optimizer_discovery/investigation16/DECISION_MATRIX.md) connect
+each explanation to an intervention, retest and explicit inferential limit.
+
+### 26.1 What the staged diagnostics isolate
+
+S0 identifies concrete information defects in EXP-15: six tasks yielded 192
+observations, but displayed feedback retained only four of 32 observations per
+trajectory, omitted the incumbent in 167/240 summaries and never explicitly named
+the anytime/AUC target in 80 prompts. Different anytime outcomes could share the
+same feedback. The adapter rebuilt a separate summary rather than consuming the
+canonical propagated Trace. These are corrected instrument limitations; identifying
+them alone does not prove that their correction improves generated policies.
+
+G1's 12 paired requests compare 8,000 and 32,000 completion-token caps. Eligibility
+is 8/12 versus 10/12. All larger-cap responses stop below 8,000 tokens; no direct
+individual rescue from crossing that cap is established. The registered reliability
+rule selects 32,000 for the subsequent study. A performance benefit is unproven.
+F1's 24 completed fixed-parent requests compare legacy, code-only, sparse and rich
+feedback. Rich minus sparse is +0.049229 regret AUC, interval
+[+0.000160, +0.103587]: a fragile negative exploratory signal, not a full-search
+comparison. All invalid outcomes and common seed fallback are retained.
+
+Fixed-policy benchmark diagnostics show real headroom and an important initial-
+point prior; the numerical family is not globally saturated. B2 changes only the
+first proposal to the bounds midpoint and keeps the original mapping on every
+nonempty history. It lowers average AUC by 85.66% on the central public diagnostic
+and 67.14% under broader shifts. Its losses and poorer terminal results in some
+strata are retained. This isolates a weakness of the seed and the metric's early-
+trajectory sensitivity; it does not explain an R-versus-I difference by itself.
+
+S1 evaluates a frozen bank of 11 programs on new instances. Moving from 6 instances
+×1 local seed to 24×2 reduces selected-policy audit AUC by 17.3% descriptively and
+stabilizes selection. Its 200 overlapping selection panels are not 200 independent
+generative replications. T1 reproduces identical scientific results with parallel
+local evaluation; corrected speedups are 5.49× at eight workers and 7.29× at sixteen.
+A paused serial timing was superseded by a registered engineering repeat; the old
+record and 67-minute P1 suspension remain explicit. Speedup is not optimizer quality.
+
+Historical Git inspection and 165 actual offline Trace-Bench replays reproduce
+stored scores and conditional routing savings, while an informed nearest-policy
+baseline matches the routing optimum without meta-search. All 22 historical
+sibling-signature failures remain. Some stored independent code generations improve
+their original task (best retained VRPTW example: 21.81%); this is not a new unseen-
+task replication. Knob datasets with one example do not activate batch/order effects.
+Several strategy labels are aliases rather than distinct implemented mechanisms.
+See [historical report](optimizer_discovery/investigation16/history/HISTORY_REPORT.md).
+
+### 26.2 Frozen production study P1
+
+The main freeze is
+`113f2eb03abfbb3f8e80e8ce5946beecd6b039fef28968b96171475a21d57e8e`;
+the supplementary B2-control freeze is
+`f0aeb8b78d56745c2e54b02462877952bdda15ec4e184fc0346e13d0bb0e288f`.
+Both precede main generation. The 97-file source archive includes all 79 production
+Python files. Six outer seeds (16411, 16423, 16437, 16441, 16453, 16467) each receive
+eight completed responses in I, C, R and W. The benchmark uses 24 TRAIN, 12 validation
+and 12 audit instances, two local seeds, 32 objective calls and equal stratum weights.
+The original seed, contract, selection pools and fallback are shared. DeepSeek
+`deepseek/deepseek-v4-flash-0731` through OpenRouter uses temperature 0.6, top_p 1,
+32,000 output tokens, native low reasoning, sequential generation and no cache or
+empty-response retries. Provider receipts and actual usage are preserved.
+
+I generates independently. C rewrites the TRAIN-selected current parent without
+explicit performance text. R uses the actual propagated current-parent Trace and
+aggregate TRAIN AUC. W uses two parents over four rounds at the same response
+allocation. The production Control Plane path is exercised; validation never feeds
+generation, and all selections plus the representative are frozen before audit.
+
+| Arm | Mean audit regret AUC | Final regret | Eligible generated candidates |
+|---|---:|---:|---:|
+| A0 original seed | 0.179329 | 0.027274 | — |
+| I independent | 0.077260 | 0.006712 | 46/48 |
+| C selected-parent rewriting | 0.047588 | 0.002646 | 44/48 |
+| R explicit rich feedback | 0.122517 | 0.024585 | 41/48 |
+| W two rich-feedback parents | 0.112582 | 0.027942 | 43/48 |
+| B2 fixed initial-point control | 0.031633 | 0.014285 | — |
+
+Registered paired contrasts (lower is better): R−I **+0.045257**,
+95% bootstrap **[+0.003176, +0.085126]**, and R−C **+0.074929**,
+**[+0.034075, +0.116730]**, are negative signals. W−R **−0.009935**,
+**[−0.054857, +0.030305]**, is inconclusive. R−A0 **−0.056813**,
+**[−0.090926, −0.023830]**, is positive. The six outer seeds, not trajectory
+points, are the bootstrap unit (10,000 draws, seed 1515). Intervals are fragile,
+exploratory and conditional on the fixed audit panel; no multiplicity guarantee is
+claimed. C−I's −0.029672 sample mean is post hoc and needs fresh confirmation.
+
+Supplementary B2−A0 is **−0.147696**, interval **[−0.170401, −0.125731]**;
+R−B2 is **+0.090884**, **[+0.056326, +0.126515]**. B2's mean AUC reduction of
+82.36% confirms the initialization result prospectively. Its final regret remains
+worse than I/C. It does not retrospectively replace A0 or alter the registered
+primary comparison. Rich feedback still improves the original seed while losing
+to independent generation and training-selected parent rewriting.
+
+### 26.3 Actual feedback, lineages, validity and integrity
+
+Every rich prompt contains 48 current-parent trajectories and all 32 best-so-far
+curve values, but coordinates only for initialization and improvements (19.10% of
+R observations). Thirty of 48 R panels repeat a previous parent panel. The prompt
+contains no cumulative rejected-attempt memory; parent selection does not expose
+failed alternatives. R's selected lineage depths are 4/2/3/5/0/1, not eight
+guaranteed updates and not depths of recursive meta-optimization. W exercises two
+distinct parents in all 18 rounds after initialization, but width trades against
+sequential rounds. Neither this test nor its strategy name establishes Pareto
+diversity selection, memory efficacy or extra recursion-level benefits.
+
+The validation-selected representative is R/16411/slot7, source SHA
+`40567fda87a2734f31a680db90e54d5f975a73b7930bc487be821d0cc5c9f243`,
+lineage seed→1→5→6→7. It combines Halton initialization, a Gaussian-kernel surrogate
+and expected-improvement-style internal point selection. Internal points are not
+extra objective calls. Its source, all six selected R programs and exact diffs
+are preserved in [program inspection](optimizer_discovery/investigation16/production/PROGRAM_INSPECTION.md).
+This descriptive inspection makes no novelty claim.
+
+All 192 unique completed responses and 194 transport attempts are retained.
+Eighteen generated slots are ineligible; R selects the seed once despite six
+eligible alternatives. All 720 logical primary audit trajectories and all 144 B2
+trajectories are valid, with zero fallback. P1 uses 6,980,225 reported tokens and
+USD 0.488195 known cost; remote billing of two transport failures is unknown.
+Realized tokens differ substantially: I 314,858, C 453,456, R 3,176,939, W 3,034,972.
+Equal response limits and allocation are not equal token expenditure.
+
+Primary logical allocation is 520,704 objective calls, with 483,201 actual logical
+observations and 37,503 unused. Caching reduces physical search/selection/audit to
+440,961 objective calls and 882,283 candidate subprocess executions. B2 adds 4,608
+objective calls and 9,216 subprocess executions. Reference preparation and numeric
+verification are separately accounted: the primary verifier rechecks 447,105
+objective/reference values without rerunning candidates; the independent B2 review
+adds 6,144 mathematical checks. Partial invalid trajectories are retained.
+
+Independent review reproduces the complete aggregate and all six registered
+contrasts (maximum rounding difference 3.47e−17), verifies every selection precedes
+audit, all source hashes and 97 archive files, 144 native Trace callbacks, 14,592
+cached evaluations and immutable raw evidence. See
+[review](optimizer_discovery/investigation16/production/INDEPENDENT_FINAL_REVIEW.md)
+and [verification](optimizer_discovery/investigation16/VERIFICATION.md).
+Pre-generation engineering fixes, F1's namespace-preflight restart and T1's
+suspension timing correction are documented with preserved originals. Reporting/
+export repairs alter no scientific decisions or values. No completed adverse
+scientific result is rerun or reclassified as an infrastructure failure.
+
+The execution boundary remains a sanitized subprocess with timeouts and API
+isolation, not an operating-system security sandbox. Provider routing varies;
+R/I order is balanced 3/3, while C/R and R/W precedences are 5/1. Endpoint drift
+is a possible confound, not a measured explanation. Generalization to different
+families, dimensions or horizons remains untested.
+
+### 26.4 Decision after the negative feedback result
+
+The investigation supports stronger controls, correct feedback instrumentation,
+larger representative selection panels and faster local evaluation. It does not
+support a positive projected gain from increasing tokens, rich feedback quantity,
+outer replication count or search width. The next useful confirmatory question is
+whether C beats I on wholly new instances/seeds, with B2 fixed and A0 retained as
+a historical link. C uses implicit training feedback through selection; it must not
+be called independent or taken as proof of the value of explicit rich traces.
+
+An illustrative C−I effect of 0.02 AUC, with its observed paired SD 0.048137 and
+normal 80% power approximation, requires 46 new pairs (736 completed responses at
+eight per arm), not six or seven by default. This is a conditional planning
+scenario, not a forecast or a guarantee for a bootstrap analysis. Improving the
+common seed to B2 changes the task and requires a separate registered pilot.
+If explicit feedback is the question, retain I/C/R and prospectively isolate one
+compact or rejection-memory intervention first. Do not increase scope until a
+favorable result appears. [Design note](optimizer_discovery/investigation16/production/FUTURE_DESIGN.md).
+
+No numerical future recursive-feedback gain is justified by this evidence.
+Historical H15-A/B, H1/H2/H3/H5 and all prior retractions remain scoped to their
+original experiments. No amortization, literature novelty or recursion-depth
+benefit is established. The portable artifact/evaluator can support a new
+FunSearch/OpenEvolve adapter comparison without requiring Patrick to adopt Trace;
+all internal proposals, repairs and evaluation allocations must remain auditable.

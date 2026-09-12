@@ -5,7 +5,7 @@
 `recursive_opt_assessment.md`, referenced here by section (§n) — it is the audit trail,
 not the status.
 
-*Last updated 2026-09-08.*
+*Last updated 2026-09-10.*
 
 ---
 
@@ -41,15 +41,22 @@ portable optimizer-program venue and a positive signal over the starting policy;
 it does not establish an advantage over independent LLM generation. The historical
 signature-bound artifact failure and inert configuration surfaces still stand.
 
+EXP-16's separately frozen prospective diagnostic now gives a **negative signal**
+for rich feedback against independent generation: R−I = **+0.045257** regret AUC,
+95% paired bootstrap **[+0.003176, +0.085126]**, six outer seeds. It also loses to
+training-selected parent rewriting without explicit trajectory feedback (C).
+These are new, exploratory conditions; H15-B's historical inconclusive result is
+not rewritten. See §12 and assessment §26.
+
 ---
 
 ## 2. Goals
 
 | goal | state | blocker / next |
 |---|---|---|
-| **G-A** Decide whether recursive_opt is a viable optimisation layer | **answered, conditionally** | EXP-15 improves over its seed; added value over independent generation remains inconclusive. |
+| **G-A** Decide whether recursive_opt is a viable optimisation layer | **answered, conditionally** | EXP-15 improves over its seed; EXP-16 rich feedback loses to independent generation. Training-selected parent rewriting is a new hypothesis to confirm. |
 | **G-B** Make the instrument trustworthy | **largely done** | automatic menu evidence now recorded; behavioral certainty requires evaluator signatures (Phase 0, §23). |
-| **G-C** Find a venue where recursion *can* win | **portable venue established** | EXP-15 supplies a common artifact/evaluator and a valid comparison; a feedback advantage is not yet established. |
+| **G-C** Find a venue where recursion *can* win | **portable venue established** | EXP-15/16 supply a common evaluator and real comparisons; no rich-feedback advantage is established. A stronger fixed initialization control is now validated. |
 | **G-D** Establish the paired-seed noise floor | **historical noisy-prose work unresolved** | EXP-12/13 remain separate; they do not gate EXP-15's deterministic numerical benchmark. |
 | **G-E** Clear or retire the spec backlog | **triaged, not run** | 8 of 18 variants need *fixing*, not running. |
 
@@ -76,6 +83,9 @@ One row per experiment. `n` is usable paired observations, not runs attempted.
 | EXP-13 | 09-02 | Was seed 101's 0.5455 a find or noise? | qasper | 6+6 | *running* — see note | pending |
 | EXP-14 | 09-02 | Backlog triage | 90 specs | — | 18 variants; **8 unrunnable** | see §5 |
 | EXP-15 | 09-08 | Does training-informed optimizer code search improve held-out regret over seed and independent search? | Sphere / Quadratic / Rosenbrock, d=2/4 | **5 complete pairs** | Mean AUC A0/A1/A2 **0.139579 / 0.121748 / 0.116680**; all 80 slots retained | H15-A positive signal; H15-B inconclusive |
+| EXP-16 | 09-09–10 | Which generation, feedback, selection and search mechanisms limit optimizer discovery? | Separate numerical diagnostics + historical replay | P1: **6 paired outer seeds**, 192 responses | Rich feedback R−I **+0.045257**, CI [+0.003176, +0.085126]; R−C **+0.074929**; width contrast inconclusive | Completed exploratory investigation; negative rich-feedback signal; [report](optimizer_discovery/investigation16/REPORT.md); no replacement of EXP-15 |
+| EXP-17 | 09-10– | Does TRAIN-selected parent rewriting beat independent generation? | Fresh numerical panels, unchanged seed and fixed B2 control | Frozen **46 paired outer seeds**, N8 | Engineering gate passed; confirmation running; no efficacy result yet | New confirmation; [frozen protocol](optimizer_discovery/exp17/PREREG_EXP17.md), [manifest](optimizer_discovery/exp17/exp17_manifest.json); EXP-16 not pooled |
+| EXP-18 | 09-10– | Do aligned attempt memory and per-instance Pareto parent selection help? | Separate fresh numerical panels; L/M/P/PM factorial | Frozen **6 paired outer seeds**, N16 | Both engineering gates passed; main execution running; no efficacy result yet | Registered exploratory study; [frozen protocol](optimizer_discovery/exp18/PREREG_EXP18.md), [manifest](optimizer_discovery/exp18/exp18_manifest.json); no independent N16 arm |
 
 **EXP-13 note — environment, not design.** First attempt left evaluation UNBOUNDED: one item
 took 514 s and the full design projected to 10+ hours. That is the same unbounded-sampling defect
@@ -251,3 +261,60 @@ are ready for discussion with Patrick; the brief has not been sent. See
 This creates a portable-artifact venue. It does not retroactively overturn H3's
 signature-bound historical setup, measure amortization, or identify a recursion-
 depth effect. Historical H1/H2/H3/H5 conclusions and prior retractions are preserved.
+
+## 12. EXP-16 — feedback root-cause investigation and prospective retest
+
+This completed exploratory investigation preserves EXP-15 and tests several
+explanations separately before a frozen production search comparison. The old
+feedback omitted the explicit anytime objective and most incumbent evidence;
+six tasks did exist, but one outer Trace row did not mean one training observation.
+Increasing the completion cap improved observed eligibility in a small diagnostic,
+without establishing a performance benefit or proving token exhaustion was the
+central cause. More representative selection panels and parallel local evaluation
+showed measurable benefits on fixed policies, not a demonstrated feedback gain.
+
+P1 uses six paired outer seeds, eight completed responses per I/C/R/W search,
+32 objective calls, 24 TRAIN/12 validation/12 audit instances with two local seeds,
+the exact DeepSeek/OpenRouter model, 32,000 completion tokens and low reasoning.
+I is independent; C rewrites a TRAIN-selected parent without explicit trajectory
+feedback; R adds the actual propagated current-parent feedback; W allocates two
+parents over four rounds. C therefore uses performance information indirectly.
+Generation, validation selections and representative selection all precede audit.
+
+Mean regret AUC, lower better: A0 **0.179329**, I **0.077260**, C **0.047588**,
+R **0.122517**, W **0.112582**. Registered R−I **+0.045257** and R−C **+0.074929**
+are negative signals; W−R **−0.009935**, CI **[−0.054857, +0.030305]**, is
+inconclusive. R−A0 **−0.056813**, CI **[−0.090926, −0.023830]**, is positive.
+Six outer replications on one fixed audit panel give fragile exploratory intervals.
+C−I's promising mean **−0.029672** is post hoc, not a registered positive finding.
+
+A separately registered fixed B2 control changes only the first seed proposal to
+the bounds midpoint. It achieves AUC **0.031633**, **82.36% lower than A0**, on
+the fresh P1 audit panel. Its final regret is worse than I/C, so it does not dominate
+all metrics. This validates a weak-initialization mechanism for A0, not a causal
+explanation of R−I. Merely beating the original seed is an insufficient target.
+
+All 192 responses and 194 transport attempts are preserved. I/C/R/W eligibility is
+46/44/41/43 out of 48; all 720 allocated audit trajectories are valid, without
+deployment fallback. R selects the unchanged seed once despite eligible alternatives.
+P1 reports 6,980,225 tokens and USD 0.488195; two failed transport attempts have
+unknown billing. Source hashes, chronology, budgets, all cached numeric observations
+and the full aggregate passed independent verification. No negative response was
+replaced. All stages together comprise 242 completed model responses, separately
+reported in the investigation; diagnostic and confirmatory evidence are not pooled.
+
+Historical replay confirms conditional routing search savings against an uninformed
+baseline, plus some genuinely improved stored programs on their original tasks.
+It also reproduces the 22 sibling-signature failures and inert one-example knobs.
+An informed handwritten policy removes the historical routing search advantage.
+Neither this replay nor P1 establishes new amortization, recursion-depth benefits,
+or literature novelty; earlier retractions and H1/H2/H3/H5 remain intact.
+
+The next recommended question is whether TRAIN-selected parent rewriting C beats I
+on wholly new instances and outer seeds, with B2 as a fixed comparator. This changes
+the question explicitly. Richer feedback, rejected-attempt memory and other search
+strategies require new bounded diagnostics; no numerical future feedback gain is
+justified. See [full report](optimizer_discovery/investigation16/REPORT.md),
+[future design](optimizer_discovery/investigation16/production/FUTURE_DESIGN.md),
+[historical replay](optimizer_discovery/investigation16/history/HISTORY_REPORT.md)
+and assessment §26. No new commit, push, merge, PR or message to Patrick was made.
