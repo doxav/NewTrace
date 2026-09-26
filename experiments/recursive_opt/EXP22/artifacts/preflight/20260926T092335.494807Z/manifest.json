@@ -1,0 +1,83 @@
+{
+  "benchmarks": {
+    "benchmarks/ADRS/prism/config.yaml": {
+      "head_sha256": "ce9257aae14f1e1f865ed08b2a47d4c30d98beb477c308b4b38f249ce86432c9",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "ce9257aae14f1e1f865ed08b2a47d4c30d98beb477c308b4b38f249ce86432c9",
+      "working_sha256": "ce9257aae14f1e1f865ed08b2a47d4c30d98beb477c308b4b38f249ce86432c9"
+    },
+    "benchmarks/ADRS/prism/evaluator/evaluator.py": {
+      "head_sha256": "93a18d0f620038d9ece54ff447a788631572c5db563947605266f523c1cd9c95",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "93a18d0f620038d9ece54ff447a788631572c5db563947605266f523c1cd9c95",
+      "working_sha256": "93a18d0f620038d9ece54ff447a788631572c5db563947605266f523c1cd9c95"
+    },
+    "benchmarks/ADRS/prism/initial_program.py": {
+      "head_sha256": "db9a35fbee16d97055e07594586a9d84817fd7ac63f539a254d282b162f3d819",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "db9a35fbee16d97055e07594586a9d84817fd7ac63f539a254d282b162f3d819",
+      "working_sha256": "db9a35fbee16d97055e07594586a9d84817fd7ac63f539a254d282b162f3d819"
+    },
+    "benchmarks/math/signal_processing/config.yaml": {
+      "head_sha256": "294876fd92aa7486083a23b172671b917b09db1a95cc07edfc72bbd45fd5ec9d",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "294876fd92aa7486083a23b172671b917b09db1a95cc07edfc72bbd45fd5ec9d",
+      "working_sha256": "294876fd92aa7486083a23b172671b917b09db1a95cc07edfc72bbd45fd5ec9d"
+    },
+    "benchmarks/math/signal_processing/evaluator/evaluator.py": {
+      "head_sha256": "c2bfad2a428e79e874d7a5088b7b27a65f1eae9619aa5fa06c4f394e19ff504b",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "c2bfad2a428e79e874d7a5088b7b27a65f1eae9619aa5fa06c4f394e19ff504b",
+      "working_sha256": "c2bfad2a428e79e874d7a5088b7b27a65f1eae9619aa5fa06c4f394e19ff504b"
+    },
+    "benchmarks/math/signal_processing/initial_program.py": {
+      "head_sha256": "9d317dc0fccf93f53ba5db218470322c9ee140314aee465670a881f94db17378",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "9d317dc0fccf93f53ba5db218470322c9ee140314aee465670a881f94db17378",
+      "working_sha256": "9d317dc0fccf93f53ba5db218470322c9ee140314aee465670a881f94db17378"
+    }
+  },
+  "completed_runs": [],
+  "evidence_directory": "artifacts/preflight/20260926T092335.494807Z",
+  "execution_authorized_by_this_script": false,
+  "experiment": "EXP22 SkyDiscover/Trace PRISM and Signal comparison",
+  "gates_not_run": [
+    "S0 dependency imports",
+    "S1 evaluator parity",
+    "S2 transport",
+    "S3 compile",
+    "S4 candidate",
+    "S5 pilot"
+  ],
+  "paid_calls": 0,
+  "repositories": {
+    "skydiscover": {
+      "branch": "",
+      "head": "3f7a611fe83980970dd14f1d65c49e40de61b7df",
+      "path": "/home/xav/code/evo-compare/repos/skydiscover",
+      "status_porcelain": "?? benchmarks/ADRS/prism.zip\n?? benchmarks/math/signal_processing.zip"
+    },
+    "trace": {
+      "branch": "codex/exp17-parent-selection-exp18-memory-pareto",
+      "head": "7e701b40485b9880ccfbb64c1faaabb22401c294",
+      "path": "/home/xav/code/Trace",
+      "status_porcelain": " M artifacts/EXECUTION_PLAN.md\n M artifacts/RESEARCH_LOG.md\n M artifacts/RESULTS_INDEX.md\n M artifacts/control_plane_v2/prompt18_readiness.json\n M artifacts/recursive_opt_assessment.md\n M examples/recursive_opt_three_way.py\n M opto/features/recursive_opt/spec.py\n M opto/features/recursive_opt/traces.py\n M opto/trace/bundle.py\nAM opto/trace/io/__init__.py\nA  opto/trace/io/bindings.py\nAM opto/trace/io/instrumentation.py\nAM opto/trace/io/observers.py\nAM opto/trace/io/optimization.py\nA  opto/trace/io/otel_adapter.py\nA  opto/trace/io/otel_runtime.py\nA  opto/trace/io/otel_semconv.py\nAM opto/trace/io/sysmonitoring.py\nAM opto/trace/io/telemetry_session.py\nA  opto/trace/io/tgj_export.py\nA  opto/trace/io/tgj_ingest.py\n M opto/trainer/algorithms/classical_algorithms.py\n M opto/trainer/algorithms/priority_search.py\n M opto/trainer/loader.py\n M opto/trainer/sampler.py\n M opto/trainer/search_template.py\n?? artifacts/o1_learning/\n?? artifacts/optimizer_discovery/exp17/\n?? artifacts/optimizer_discovery/exp18.zip\n?? artifacts/optimizer_discovery/exp18/\n?? artifacts/optimizer_discovery/investigation16/\n?? artifacts/probe_2026/probe_aa_results.json\n?? artifacts/recursive_opt_audit_20260924/\n?? artifacts/recursive_opt_etude_2026-09-24.md\n?? examples/OpenTrace_LangGraph_BBEH_boolean_expressions_PAL_curriculum_clean.ipynb\n?? experiments/recursive_opt/o1_qa/\n?? outputs/01a07fdf-c364-79d1-bfe2-c467a140e0b7/\n?? tests/unit_tests/test_exp17_driver.py\n?? tests/unit_tests/test_exp17_study.py\n?? tests/unit_tests/test_investigation16_benchmark.py\n?? tests/unit_tests/test_investigation16_feedback_experiment.py\n?? tests/unit_tests/test_investigation16_generation.py\n?? tests/unit_tests/test_investigation16_history.py\n?? tests/unit_tests/test_investigation16_history_trace_review.py\n?? tests/unit_tests/test_investigation16_production_driver.py\n?? tests/unit_tests/test_investigation16_search_experiment.py\n?? tests/unit_tests/test_investigation16_trace_schedule.py\n?? tests/unit_tests/test_o1_hotpot.py\n?? tests/unit_tests/test_o1_learning_study.py\n?? tests/unit_tests/test_o1_qa_axes.py\n?? tests/unit_tests/test_o1_qa_campaign.py\n?? tests/unit_tests/test_o1_qa_open_optimizer.py\n?? tests/unit_tests/test_o1_trace_curriculum.py"
+    }
+  },
+  "status": "STOPPED_PRECHECK",
+  "timestamp_utc": "20260926T092335.494807Z",
+  "trace_branch_gate": {
+    "actual_branch": "codex/exp17-parent-selection-exp18-memory-pareto",
+    "actual_head": "7e701b40485b9880ccfbb64c1faaabb22401c294",
+    "passed": false,
+    "reason": "Trace checkout does not resolve to the required recursive_opt branch",
+    "required_branch": "recursive_opt",
+    "required_head": "846580defe935195c1f5f39d6336079ef6ff1e10"
+  }
+}
