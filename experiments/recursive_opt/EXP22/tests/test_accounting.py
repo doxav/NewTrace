@@ -137,13 +137,19 @@ class AccountingTests(unittest.TestCase):
                 self.assertEqual(report['completion_requests'], 2)
                 self.assertEqual(report['valid_generated_candidates'], 0)
                 self.assertTrue((root/'artifacts/STOP.json').exists())
+                (root/'manifest.json').write_text(json.dumps({'evaluator_protocol': 'process-stage-v1'}))
+                report = analyze.analyze()
+                self.assertEqual(report['attempts'], [])
+                self.assertEqual(report['completion_requests'], 0)
+                self.assertEqual(report['status'], 'PARTIAL')
+                self.assertFalse((root/'artifacts/STOP.json').exists())
 
     def test_old_transport_gate_cannot_authorize_new_provider(self) -> None:
         """A previously passed DeepInfra gate cannot enable a Novita run."""
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root/'artifacts').mkdir()
-            (root/'artifacts/evaluator_parity.json').write_text('{"passed": true}')
+            (root/'artifacts/evaluator_parity.json').write_text(json.dumps({'passed': True, 'evaluator_protocol': run_stage.EVALUATOR_PROTOCOL}))
             (root/'artifacts/openrouter_transport_validation.json').write_text(json.dumps({'passed': True, 'direct': {'outbound_body': {'provider': {'only': ['DeepInfra']}}}}))
             with patch.object(run_stage, 'ROOT', root), patch('sys.argv', ['run_stage', '--stage', 'one', '--task', 'prism', '--arm', 'SD-EVOX']), self.assertRaisesRegex(ValueError, 'different routing identity'):
                 run_stage.main()

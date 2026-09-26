@@ -1,0 +1,82 @@
+{
+  "schema_version": "recursive-opt/v2alpha",
+  "kind": "recursive_optimization",
+  "runtime": {
+    "offline": false,
+    "test_mode": true,
+    "seed": 42
+  },
+  "llm_profiles": {
+    "main": {
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.3-flash",
+      "api_key_ref": "env:OPENROUTER_API_KEY",
+      "temperature": 0.7,
+      "max_tokens": 32000,
+      "request_timeout_s": 600,
+      "transport_max_attempts": 1,
+      "request_params": {
+        "extra_body": {
+          "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+          "reasoning_effort": "low"
+        }
+      }
+    }
+  },
+  "budget": {
+    "candidates": 100,
+    "on_exceed": "fail"
+  },
+  "outputs": {
+    "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/configs/process-stage-v1/prism_TRACE-RECURSIVE_CP-A/control_plane"
+  },
+  "levels": [
+    {
+      "id": "coevolution",
+      "surface": {
+        "kind": "code",
+        "targets": [
+          "policy_source"
+        ]
+      },
+      "module": {
+        "ref": "exp22.module.discovery_policy@1",
+        "config": {
+          "task": "prism",
+          "arm": "TRACE-RECURSIVE",
+          "horizon": 100,
+          "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/configs/process-stage-v1/prism_TRACE-RECURSIVE_CP-A"
+        }
+      },
+      "engine": {
+        "name": "exp22.engine.coevolution@1"
+      },
+      "objective": {
+        "evaluator_ref": "exp22.evaluator.coevolution@1",
+        "intent": "Maximize stock benchmark combined_score at equal solution generation budget.",
+        "metrics": {
+          "combined_score": {
+            "direction": "maximize",
+            "source": "evaluation.metrics.combined_score",
+            "aggregate_examples": "mean"
+          }
+        },
+        "selection": {
+          "mode": "scalar",
+          "score_key": "combined_score"
+        }
+      },
+      "llm_roles": {
+        "optimizer": "main"
+      },
+      "datasets": {
+        "train": {
+          "ref": "exp22.dataset.prism@1",
+          "config": {
+            "task": "prism"
+          }
+        }
+      }
+    }
+  ]
+}

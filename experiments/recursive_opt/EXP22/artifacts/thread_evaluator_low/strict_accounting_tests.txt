@@ -1,0 +1,21 @@
+test_account_identifier_redaction_preserves_failure (test_accounting.AccountingTests.test_account_identifier_redaction_preserves_failure)
+Redaction hides account IDs without changing error codes or candidate data. ... ok
+test_advanced_requires_complete_matrix_and_deployment (test_accounting.AccountingTests.test_advanced_requires_complete_matrix_and_deployment)
+Positive pilot or incomplete strict results cannot authorize exploration. ... ok
+test_analysis_separates_provider_series (test_accounting.AccountingTests.test_analysis_separates_provider_series)
+Historical runs must not affect current-route counts or outcomes. ... ok
+test_old_transport_gate_cannot_authorize_new_provider (test_accounting.AccountingTests.test_old_transport_gate_cannot_authorize_new_provider)
+A previously passed DeepInfra gate cannot enable a Novita run. ... ok
+test_rejected_cost_is_unknown (test_accounting.AccountingTests.test_rejected_cost_is_unknown)
+Absent usage is not evidence that a rejected request was free. ... ok
+test_strict_trajectory_metrics_and_failures (test_accounting.AccountingTests.test_strict_trajectory_metrics_and_failures)
+Verify known AUC, improvement timing and rejection of corrupted evidence. ... ok
+test_summary_role_requires_exact_stock_prompt (test_accounting.AccountingTests.test_summary_role_requires_exact_stock_prompt)
+Resolve stock guide calls without changing raw evidence or guessing roles. ... ok
+test_usage_curve_does_not_include_future_retry (test_accounting.AccountingTests.test_usage_curve_does_not_include_future_retry)
+A failed attempt's cumulative cost stops before the later successful retry. ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.011s
+
+OK

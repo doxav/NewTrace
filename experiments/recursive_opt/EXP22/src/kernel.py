@@ -19,7 +19,7 @@ from skydiscover.optimize.search.registry import create_database, get_program
 from skydiscover.optimize.search.utils.discovery_utils import SerializableResult
 from skydiscover.optimize.utils.metrics import get_score
 from src.accounting import usage_summary
-from src.evaluation import SKY, TASKS
+from src.evaluation import SKY, TASKS, ProcessEvaluator
 from src.transport import HTTP_RECORDS, HTTP_ROLES, model_config
 
 from opto import trace
@@ -89,6 +89,8 @@ class AuditController(CoEvolutionController):
         """Initialize stock pools and attach per-run audit state."""
         super().__init__(controller_input)
         self.directory = Path(controller_input.output_dir)
+        for controller, role in ((self, 'solution'), (self.search_controller, 'policy')):
+            controller.evaluator = ProcessEvaluator.replace(controller.evaluator, self.directory / 'evaluations' / role)
         self.curve: list[dict[str, Any]] = []
         self.policy_events: list[dict[str, Any]] = []
         self.window_observation: dict[str, Any] = {}

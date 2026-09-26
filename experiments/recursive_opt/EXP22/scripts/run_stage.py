@@ -22,7 +22,7 @@ from scripts.framework_smoke import observer
 from scripts.preflight import write_json
 from src.accounting import usage_summary
 from src.control_plane import register, specification
-from src.evaluation import SKY, TASKS
+from src.evaluation import EVALUATOR_PROTOCOL, SKY, TASKS
 from src.kernel import run_kernel
 from src.transport import (
     EXTRA_BODY,
@@ -62,6 +62,8 @@ def main() -> int:
         raise ValueError('Evaluator and transport gates must pass first')
     if any(transport['direct']['outbound_body'].get(key) != value for key, value in EXTRA_BODY.items()):
         raise ValueError('Transport evidence belongs to a different routing identity')
+    if json.loads((ROOT/'artifacts/evaluator_parity.json').read_text()).get('evaluator_protocol') != EVALUATOR_PROTOCOL:
+        raise ValueError('Evaluator parity evidence belongs to a different execution protocol')
     if args.stage == 'strict':
         gates = json.loads((ROOT/'artifacts/gates.json').read_text())
         if not all(gates.get(name) is True for name in ('S0', 'S1', 'S2', 'S3', 'S4', 'S5')):
@@ -77,7 +79,7 @@ def main() -> int:
     for origin, name in ((ROOT/'manifest.json', 'source_manifest.json'), (ROOT/'artifacts/environment.json', 'environment.json')):
         shutil.copyfile(origin, directory/name)
     write_json(directory/'openrouter_config_sanitized.json', {'model': MODEL, **EXTRA_BODY, 'temperature': 0.7, 'max_tokens': 32000, 'timeout_seconds': 600})
-    write_json(directory/'config.json', {'task': args.task, 'arm': args.arm, 'stage': args.stage, 'horizon': horizon, 'concurrency': 1, 'seed': 42})
+    write_json(directory/'config.json', {'task': args.task, 'arm': args.arm, 'stage': args.stage, 'horizon': horizon, 'concurrency': 1, 'seed': 42, 'evaluator_protocol': EVALUATOR_PROTOCOL})
     for name in ('solution_curve.jsonl', 'candidate_history.jsonl', 'policy_history.jsonl'):
         (directory/name).touch()
     HTTP_RECORDS.clear()

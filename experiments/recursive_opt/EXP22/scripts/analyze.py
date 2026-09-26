@@ -115,8 +115,9 @@ def strict_metrics(directory: Path, result: dict[str, Any], requests: list[dict[
         'usage': usage, 'role_resolution_evidence': role_evidence, 'wall_time_seconds': result.get('wall_time'),
         'semantic_retry_attempts': sum(max(0, row['attempts_used'] - 1) for row in history),
         'transport_retry_attempts': 0,
-        'evaluator_calls': None,
-        'evaluator_calls_note': 'Stock evaluator reused; exact invocation count was not separately instrumented. Valid/invalid candidates are not a substitute for evaluator calls.',
+        'evaluator_calls': {role: len(events(directory/'evaluations'/role/'calls.jsonl')) for role in ('solution', 'policy')} if (directory/'evaluations').exists() else None,
+        'evaluator_stages': {role: len(events(directory/'evaluations'/role/'stages.jsonl')) for role in ('solution', 'policy')} if (directory/'evaluations').exists() else None,
+        'evaluator_calls_note': 'Process series counts invocations separately from stage attempts; historical thread runs lack these counters.',
         'reasoning_tokens': sum(((row.get('usage') or {}).get('completion_tokens_details') or {}).get('reasoning_tokens', 0) or 0 for row in requests),
         'native_metrics': native,
         'prism_mean_max_pressure_successful_cases': 1 / inverse_pressure if inverse_pressure and inverse_pressure > 0 else None,
@@ -149,9 +150,9 @@ def write_report(report: dict[str, Any]) -> None:
     """Publish observed strict evidence with explicit missing-comparison limits."""
     strict = [row for row in report['attempts'] if row['config']['stage'] == 'strict']
     lines = [f"STATUS: {report['status']}", '',
-             'FACT: All low-effort S0–S5 gates passed before strict execution. Two independent SkyDiscover PRISM checks and one Trace check returned valid code with 886–996 completion tokens (51–74 reasoning tokens). The two earlier default-reasoning PRISM calls each exhausted 32,000 completion tokens without code. Their evidence is archived separately.', '',
+             f"FACT: Current gates: {report['gates']}. The process-stage-v1 amendment isolates stock evaluation stages for both frameworks. Earlier thread-evaluator results and the timeout diagnosis are archived in `artifacts/thread_evaluator_low/` and excluded from this comparison.", '',
              'FACT: The fixed route is `z-ai/glm-5.3-flash` through OpenRouter, provider `novita`, reasoning effort `low`, session `benchmark-PRIMS-SIGNAL-run-001`, temperature 0.7, maximum 32,000 tokens and timeout 600 seconds. Trace uses CP-A: exact transport with a nonportable, nonpromotable control-plane override. CP-B was excluded because its empty-response fallback changes the token ceiling.', '',
-             'MEASURED RESULT: Eight five-attempt pilots passed. Trace PRISM deployed two generated policies while retaining its population. A Signal Trace S4 diff-format failure is preserved alongside its successful bounded retry. Pilots are excluded from strict quality comparisons.', '',
+             'FACT: Current smoke and pilot outcomes are listed in `artifacts/diagnostic_summary.json`; pilots are excluded from strict quality comparisons.', '',
              'MEASURED RESULT: Strict runs below start from the stock initial solution and consume up to 100 solution HTTP attempts. Partial runs have no 100-attempt AUC and are excluded from contrasts.', '',
              '| Task | Arm | Attempts | Initial | Final best | Gain | Relative gain | AUC / 100 | First / best iteration | Status |',
              '|---|---|---:|---:|---:|---:|---:|---:|---|---|']
@@ -202,8 +203,8 @@ def write_report(report: dict[str, Any]) -> None:
             lines += ['', f'![{task} trajectories and compute](artifacts/{task}_strict_curves.png)']
     lines += ['', 'INFERENCE: ' + ('The strict matrix is complete. See the within-framework contrasts to assess policy evolution; cross-framework score differences alone do not identify the effect of recursion.' if report['comparison']['all_eight_strict_complete'] else 'The strict matrix is incomplete. The unrun within-framework contrasts cannot establish whether Trace or EvoX improves over its fixed policy, or whether Trace matches EvoX at equal budget.'), '',
               'INFERENCE: Advanced phase ' + ('is numerically eligible, pending review of scientific confounds; it has not yet run.' if report['comparison']['advanced_numerically_eligible'] else 'is not authorized by the current evidence gate. It has not run; no additional-freedom benefit has been measured.'), '',
-              'LIMITATION: This is a controlled single-run benchmark, not a statistical replication. No p-values are computed. Equal solution attempts do not equal total compute. The shared session and sequential run order can affect cache, latency and cost. Costs are provider-reported; calls with missing cost are not treated as free. Exact evaluator invocation counts were not separately instrumented; candidate counts cannot recover evaluator retries or cascaded stage calls.', '',
-              f"MEASURED RESULT: Entire current low-effort series, including diagnostics and pilots: {report['completion_requests']} completion requests, {report['reported_tokens']} reported tokens, ${report['reported_cost_usd']:.8f} reported cost; {report['calls_missing_cost']} calls have unknown cost. Historical DeepInfra and default-reasoning Novita evidence is excluded.", '',
+              'LIMITATION: This is a controlled single-run benchmark, not a statistical replication. No p-values are computed. Equal solution attempts do not equal total compute. The shared session and sequential run order can affect cache, latency and cost. Costs are provider-reported; calls with missing cost are not treated as free. Process-series evaluator invocation and stage counts are recorded separately in the detailed metrics.', '',
+              f"MEASURED RESULT: Current evaluator series, including diagnostics and pilots: {report['completion_requests']} completion requests, {report['reported_tokens']} reported tokens, ${report['reported_cost_usd']:.8f} reported cost; {report['calls_missing_cost']} calls have unknown cost. Historical evaluator/provider/reasoning series are excluded; unchanged transport smoke evidence is reused and its cost remains in the historical series.", '',
               'FACT: Detailed curves, role accounting, semantic retries, policy validation and per-window gains are in `artifacts/diagnostic_summary.json`. Runtime source hashes are frozen in `artifacts/strict_source_hashes.json`. Each immutable run directory retains source, requests, results and logs.', '',
               'Validation commands: `experiments/recursive_opt/EXP22/.venv/bin/python -I -m unittest discover -s experiments/recursive_opt/EXP22/tests -v`; `ruff check experiments/recursive_opt/EXP22/src experiments/recursive_opt/EXP22/scripts experiments/recursive_opt/EXP22/tests`; `python3 experiments/recursive_opt/EXP22/scripts/analyze.py`; `python3 experiments/recursive_opt/EXP22/scripts/plot_results.py`. Existing targeted Trace tests: 162 passed, six unrelated integration cases deselected. Credential scan required before publication. Generated stock YAML/log whitespace is preserved as execution evidence.']
     if report['status'].startswith('STOPPED'):
@@ -258,15 +259,22 @@ def analyze() -> dict[str, Any]:
     transport = json.loads((ROOT/'artifacts/openrouter_transport_validation.json').read_text())
     routing = transport['direct']['outbound_body']['provider']
     reasoning_effort = transport['direct']['outbound_body'].get('reasoning_effort')
+    evaluator_protocol = json.loads((ROOT/'manifest.json').read_text()).get('evaluator_protocol')
     if routing == {'only': ['DeepInfra']}:
         return analyze_deepinfra()
     records = [transport['direct']] + [row for client in ('skydiscover', 'trace_cp_a', 'trace_cp_b') for row in transport.get(client, {}).get('requests', [])]
+    if evaluator_protocol:
+        records = []
     attempts = []
     for directory in sorted((ROOT/'runs').glob('*')):
         config_path = directory/'openrouter_config_sanitized.json'
         if not config_path.exists() or json.loads(config_path.read_text())['provider'] != routing:
             continue
         if json.loads(config_path.read_text()).get('reasoning_effort') != reasoning_effort:
+            continue
+        if not (directory/'config.json').exists():
+            raise ValueError('Cannot seal analysis while a matching run is unfinished')
+        if json.loads((directory/'config.json').read_text()).get('evaluator_protocol') != evaluator_protocol:
             continue
         if not (directory/'final_result.json').exists():
             raise ValueError('Cannot seal analysis while a matching run is unfinished')
@@ -295,8 +303,10 @@ def analyze() -> dict[str, Any]:
     execution_stop = json.loads(execution_stop_path.read_text()) if execution_stop_path.exists() else None
     if execution_stop and any(row['directory'] == execution_stop['directory'] for row in failed):
         status = execution_stop['status']
+    else:
+        execution_stop = None
     report = {
-        'status': status, 'provider': routing, 'reasoning_effort': reasoning_effort, 'primary_control_plane': transport['trace'],
+        'status': status, 'provider': routing, 'reasoning_effort': reasoning_effort, 'evaluator_protocol': evaluator_protocol, 'primary_control_plane': transport['trace'],
         'completion_requests': len(records), 'successful_http_responses': sum(row['http_status'] == 200 for row in records),
         'reported_tokens': sum((row.get('usage') or {}).get('total_tokens', 0) for row in records),
         'reported_cost_usd': sum((row.get('usage') or {}).get('cost', 0) or 0 for row in records),
@@ -315,6 +325,8 @@ def analyze() -> dict[str, Any]:
             'evidence': ['artifacts/diagnostic_summary.json', *(['artifacts/evaluator_execution_stop.json', 'artifacts/timeout_diagnostic.json', f"runs/{last['directory']}/candidate_history.jsonl", f"runs/{last['directory']}/diagnostic_recovery.json"] if execution_stop else []), *[f"runs/{row['directory']}/http_requests.json" for row in failed]],
             'recommended_fix': 'Run unchanged benchmark evaluators inside an owned process boundary with enforceable termination on timeout, prove parity and no surviving workers on both arms, then preregister and rerun strict comparisons from stock initial programs.' if execution_stop else 'Establish usable generation under the frozen settings before S4/S5 or strict runs; any request-parameter change requires an explicit protocol amendment.',
         })
+    else:
+        (ROOT/'artifacts/STOP.json').unlink(missing_ok=True)
     manifest = json.loads((ROOT/'manifest.json').read_text())
     manifest.update({key: report[key] for key in ('status', 'provider', 'completion_requests', 'gates')})
     manifest.update({'successful_completions': report['successful_http_responses'], 'paid_calls': report['successful_http_responses'], 'completed_runs': report['strict_runs_completed']})

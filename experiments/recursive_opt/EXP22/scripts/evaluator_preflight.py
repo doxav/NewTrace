@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.preflight import write_json
 from src.evaluation import (
+    EVALUATOR_PROTOCOL,
     SKY,
     TASKS,
     TraceEvaluatorAdapter,
@@ -46,7 +47,7 @@ async def run() -> dict[str, Any]:
     """Measure stock full evaluation and identical stock-cascade adapter paths."""
     from skydiscover.optimize.utils.metrics import get_score
 
-    report: dict[str, Any] = {"passed": True, "repetitions": 10, "tolerance": 1e-12, "tasks": {}}
+    report: dict[str, Any] = {"passed": True, "evaluator_protocol": EVALUATOR_PROTOCOL, "repetitions": 10, "tolerance": 1e-12, "tasks": {}}
     for task, relative in TASKS.items():
         stock = stock_evaluator(task)
         adapter = TraceEvaluatorAdapter(task)
