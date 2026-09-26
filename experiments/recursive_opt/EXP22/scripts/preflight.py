@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-SECRET = re.compile(rb"sk-(?:or-v1-)?[A-Za-z0-9_-]{20,}")
+SECRET = re.compile(rb"(?<![A-Za-z0-9_-])sk-(?:or-v1-[a-f0-9]{64}|(?:proj-|svcacct-)?[A-Za-z0-9_-]{48,})(?![A-Za-z0-9_-])")
 BENCHMARKS = {
     "benchmarks/ADRS/prism/": {
         "config.yaml": "ce9257aae14f1e1f865ed08b2a47d4c30d98beb477c308b4b38f249ce86432c9",
@@ -37,15 +37,16 @@ def git(repo: Path, *args: str) -> str:
     return SECRET.sub(b"[REDACTED]", result.stdout).decode().rstrip("\n")
 
 
-def branch_gate(branch: str, head: str, required_head: str | None) -> dict[str, Any]:
+def branch_gate(branch: str, head: str, required_head: str | None, *, isolated: bool = False) -> dict[str, Any]:
     """Reject missing, detached, or substituted Trace branch identities."""
-    passed = branch == "recursive_opt" and required_head is not None and head == required_head
+    passed = (branch == "recursive_opt" or (isolated and branch == "")) and required_head is not None and head == required_head
     return {
         "passed": passed,
         "required_branch": "recursive_opt",
         "actual_branch": branch,
         "actual_head": head,
         "required_head": required_head,
+        "isolated_execution_checkout": isolated,
         "reason": None if passed else "Trace checkout does not resolve to the required recursive_opt branch",
     }
 
@@ -83,7 +84,7 @@ def secret_scan(root: Path) -> list[str]:
     )
 
 
-def audit(trace: Path, sky: Path, output: Path) -> int:
+def audit(trace: Path, sky: Path, output: Path, *, isolated: bool = False) -> int:
     """Persist an immutable source audit; never launch an optimizer."""
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
     evidence = output / "artifacts" / "preflight" / stamp
@@ -108,7 +109,9 @@ def audit(trace: Path, sky: Path, output: Path) -> int:
         required_head = git(trace, "rev-parse", "--verify", "refs/heads/recursive_opt^{commit}")
     except ValueError:
         required_head = None
-    gate = branch_gate(repositories["trace"]["branch"], repositories["trace"]["head"], required_head)
+    if isolated and git(trace, "status", "--porcelain", "--untracked-files=no"):
+        raise ValueError("Isolated baseline checkout must have no tracked changes")
+    gate = branch_gate(repositories["trace"]["branch"], repositories["trace"]["head"], required_head, isolated=isolated)
     benchmarks = {}
     for prefix, expected in BENCHMARKS.items():
         for name, digest in expected.items():
@@ -140,7 +143,7 @@ def audit(trace: Path, sky: Path, output: Path) -> int:
         "scope": "stdlib provenance audit only; benchmark environment not created",
     })
     for name in ("manifest.json", "source_hashes.json", "environment.json"):
-        target = output / name if name == "manifest.json" else output / "artifacts" / name
+        target = output / name if name == "manifest.json" else output / "artifacts" / ("audit_environment.json" if name == "environment.json" else name)
         target.write_bytes((evidence / name).read_bytes())
     if not gate["passed"]:
         write_json(output / "artifacts" / "STOP.json", {
@@ -160,8 +163,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--trace", type=Path, default=Path.home() / "code/Trace")
     parser.add_argument("--sky", type=Path, default=Path.home() / "code/evo-compare/repos/skydiscover")
+    parser.add_argument("--isolated", action="store_true", help="Accept detached HEAD only at the exact recursive_opt ref")
     args = parser.parse_args()
-    return audit(args.trace, args.sky, ROOT)
+    return audit(args.trace, args.sky, ROOT, isolated=args.isolated)
 
 
 if __name__ == "__main__":

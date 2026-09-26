@@ -44,26 +44,18 @@
     }
   },
   "completed_runs": [],
-  "completion_requests": 10,
   "evidence_directory": "artifacts/preflight/20260926T100458.395061Z",
   "execution_authorized_by_this_script": false,
   "experiment": "EXP22 SkyDiscover/Trace PRISM and Signal comparison",
-  "gates": {
-    "S0": true,
-    "S1": true,
-    "S2": true,
-    "S3": true,
-    "S4": false,
-    "S5": false
-  },
   "gates_not_run": [
-    "S4 remaining task/framework candidates",
-    "S5 pilots",
-    "strict runs",
-    "advanced phase"
+    "S0 dependency imports",
+    "S1 evaluator parity",
+    "S2 transport",
+    "S3 compile",
+    "S4 candidate",
+    "S5 pilot"
   ],
-  "paid_calls": 4,
-  "primary_control_plane": "CP-B (transport/runtime/mocked parity validated; full execution unvalidated)",
+  "paid_calls": 0,
   "repositories": {
     "skydiscover": {
       "branch": "",
@@ -78,8 +70,7 @@
       "status_porcelain": ""
     }
   },
-  "status": "STOPPED_PROVIDER",
-  "successful_completions": 4,
+  "status": "S0_BRANCH_PASSED_ONLY",
   "timestamp_utc": "20260926T100458.395061Z",
   "trace_branch_gate": {
     "actual_branch": "",
@@ -89,11 +80,5 @@
     "reason": null,
     "required_branch": "recursive_opt",
     "required_head": "846580defe935195c1f5f39d6336079ef6ff1e10"
-  },
-  "trace_cp_b": {
-    "head": "846580defe935195c1f5f39d6336079ef6ff1e10",
-    "patch": "artifacts/trace_cp_b.patch",
-    "path": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/worktrees/trace_cp_b",
-    "status": " M opto/features/recursive_opt/spec.py"
   }
 }

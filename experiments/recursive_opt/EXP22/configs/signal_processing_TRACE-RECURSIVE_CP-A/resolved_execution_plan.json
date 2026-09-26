@@ -1,0 +1,63 @@
+{
+  "fingerprint": "abfc3e64aa04a0511247b782750c0ffdea676e7a15b05142635f6b5bd67d2383",
+  "execution_units": 1,
+  "engines": [
+    "exp22.engine.coevolution@1"
+  ],
+  "module_refs": [
+    "exp22.module.discovery_policy@1"
+  ],
+  "level_ids": [
+    "coevolution"
+  ],
+  "unit_ids": [
+    "default:seed-42:matrix-0"
+  ],
+  "units": [
+    {
+      "datasets": {
+        "train": [
+          {
+            "task": "signal_processing"
+          }
+        ],
+        "validation": [],
+        "holdout": []
+      },
+      "roles": {
+        "feedback": null,
+        "forward": null,
+        "judge": null,
+        "optimizer": {
+          "openrouter_routing": null,
+          "provider": "openrouter",
+          "model": "z-ai/glm-5.3-flash",
+          "resolved_model": "openrouter/z-ai/glm-5.3-flash",
+          "api_key_ref": "env:OPENROUTER_API_KEY",
+          "fallbacks": [],
+          "temperature": 0.7,
+          "max_tokens": 32000,
+          "base_url": null,
+          "request_params": {
+            "extra_body": {
+              "session_id": "benchmark-PRIMS-SIGNAL-run-001"
+            }
+          },
+          "request_timeout_s": 600,
+          "transport_max_attempts": 1,
+          "transport_base_delay_s": 1.0,
+          "profile": "main"
+        }
+      },
+      "budget": {
+        "optimizer_llm_calls": null,
+        "eval_llm_calls": null,
+        "candidates": 100,
+        "evaluator_runs": null,
+        "wall_time_s": null,
+        "total_tokens": null,
+        "on_exceed": "fail"
+      }
+    }
+  ]
+}

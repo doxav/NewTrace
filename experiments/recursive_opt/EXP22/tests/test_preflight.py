@@ -28,12 +28,18 @@ class PreflightTests(unittest.TestCase):
             with self.subTest(branch=branch, required=required):
                 self.assertFalse(PREFLIGHT.branch_gate(branch, head, required)["passed"])
 
+    def test_explicit_isolation_requires_exact_reference(self) -> None:
+        """Continuation accepts isolation without accepting an unrelated commit."""
+        self.assertTrue(PREFLIGHT.branch_gate("", "a", "a", isolated=True)["passed"])
+        self.assertFalse(PREFLIGHT.branch_gate("", "a", "b", isolated=True)["passed"])
+        self.assertFalse(PREFLIGHT.branch_gate("other", "a", "a", isolated=True)["passed"])
+
     def test_secret_rejected_before_write(self) -> None:
         """Evidence must not persist API credentials, even accidentally."""
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "evidence.json"
             with self.assertRaisesRegex(ValueError, "Credential-like"):
-                PREFLIGHT.write_json(path, {"value": "".join(("sk-or-v1-", "x" * 64))})
+                PREFLIGHT.write_json(path, {"value": "".join(("sk-or-v1-", "a1" * 32))})
             self.assertFalse(path.exists())
 
     def test_recursive_scan_and_safe_json(self) -> None:
@@ -43,7 +49,7 @@ class PreflightTests(unittest.TestCase):
             PREFLIGHT.write_json(root / "safe.json", {"model": "z-ai/glm-5.3-flash"})
             self.assertEqual(PREFLIGHT.secret_scan(root), [])
             (root / "nested").mkdir()
-            (root / "nested/leak.txt").write_text("".join(("sk-", "x" * 30)))
+            (root / "nested/leak.txt").write_text("".join(("sk-", "Ab1" * 20)))
             self.assertEqual(PREFLIGHT.secret_scan(root), ["nested/leak.txt"])
 
     def test_git_failure_is_descriptive(self) -> None:

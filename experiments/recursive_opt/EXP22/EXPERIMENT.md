@@ -1,7 +1,7 @@
 # EXP22 protocol v1 — 2026-09-26
 
-Status: preregistered intent; stopped during S0 source identity audit. No full
-benchmark has begun. This document does not certify an implemented benchmark.
+Current status: STOPPED_PROVIDER at S4 after the continuation amendments below.
+The initial S0 source stop is historical; no full benchmark has begun. This document does not certify an implemented benchmark.
 All experiment files belong under this directory. Source repositories remain unchanged.
 
 ## Objective and hypotheses
@@ -155,3 +155,122 @@ commands are intentionally unavailable: their runners are not implemented.
 Claiming runnable commands for unbuilt stages would misrepresent reproducibility.
 Complete the protocol with exact commands before any full execution; append dated
 amendments if anything changes after a full run begins.
+
+## Continuation amendment v2 — 2026-09-26, before any live call
+
+The user requested commit, push, then continuation. Commit 3004bf10ba was pushed
+to origin/codex/exp22-evox-comparison. Execution now uses the EXP22-owned detached
+worktree at exactly refs/heads/recursive_opt (846580defe935195c1f5f39d6336079ef6ff1e10).
+The original dirty checkout remains untouched; no later HEAD is substituted.
+The explicit --isolated preflight option accepts only a clean tracked tree at
+that exact reference. The historical S0 stop and evidence remain archived.
+
+An EXP22 .venv contains editable Trace and SkyDiscover with their declared
+dependencies and SciPy. Isolated Python (-I) prevents this workspace's unrelated
+Trace code from shadowing the chosen version. Ten golden/parity repetitions
+passed for each task, using the stock evaluator itself inside the Trace adapter.
+Stock PRISM defaults cascade on but has no stage1 and falls back to full evaluate;
+Signal uses the stock stage1 threshold and stage2 merge. No subprocess adapter
+is used. Source and provider-catalog inspections made zero completion calls.
+
+S2 begins with the direct exact-routing HTTP request. The tiny transport smoke
+uses max_tokens=32 and prompt 'Reply with OK.'; optimization remains 32000.
+Temperature remains stock 0.7, timeout 600 seconds, no seed. A failure stops
+before framework smokes or implementation spending; this is not a passed S2.
+Completion content is not required to establish transport identity. Actual
+model and serving provider must be present in the response or generation metadata.
+
+## Implementation clarification v3 — before S4 optimizer calls
+
+Both CP variants send identical complete mocked HTTP bodies; the real native
+OptoPrimeV2 parser formats Python using Black before activation. Mock comparisons
+use the actual formatted policy hash. CP-B is selected provisionally after its
+162 relevant runtime tests pass; optional GEPA/notebook tests and two existing
+provenance-lock failures are recorded separately, without changing old locks.
+The narrow CP-B patch also routes the mandatory startup probe, which otherwise
+would omit provider/session. All four live transport clients passed.
+
+Trace declares an EXP22 versioned module/engine/evaluator/dataset and replaces
+only the inherited controller's meta proposer. The trainable value contains the
+complete database source and a real OptoPrimeV2 backward/step observes the measured
+window. Stock validation and migration remain inherited. Budget horizon is in
+solution attempts: the final stock retry count is capped by remaining attempts
+on both paths, avoiding an overshoot of the requested 100. Invalid retry attempts
+retain the preceding best score in the quality curve. Stock strategy scoring is
+unchanged. A no-op Trace source update sets the shutdown event and fails the run.
+
+S4 uses one solution generation per task/framework; S5 uses five per arm. These
+pilot results are separate from immutable strict run directories and never reused
+as starting programs. No strict run is enabled until all gate booleans pass.
+
+## Transient provider diagnostic — 2026-09-26, before retry
+
+The first S4 PRISM/SD-EVOX attempt received three HTTP 429 engine_overloaded
+responses (startup guide/meta probes and solution request), with zero candidate
+generations. Preserve that attempt and retry the same one-generation smoke once
+after at least 30 seconds in a new directory. If the provider rejects it again,
+stop as STOPPED_PROVIDER. No alternate provider, model, session or token settings
+are permitted. A failed availability probe must not qualify a fixed-policy fallback
+as a successful EvoX smoke. Neither attempt is a quality comparison.
+
+## Current commands and stop record — continuation amendment v4
+
+Both delayed S4 attempts were refused. Stop as STOPPED_PROVIDER; no further paid
+calls are authorized by a passed stage in this record. This is the protocol's
+mandatory gate failure, not a negative quality conclusion. RESULTS.md and
+artifacts/diagnostic_summary.json contain observed counts and exact failures.
+The initial implementation's broad secret regex matched dependency CSS identifiers,
+package documentation and wheel hashes. Final scanning uses token boundaries and
+provider key lengths, still traversing every file. Provider account IDs in failed
+SDK error logs were redacted before sealing/publication; no quality/error code changed.
+
+All commands below assume the repository working directory and an environment
+OPENROUTER_API_KEY loaded without printing it. Never put the key on a command line.
+Owned worktrees and the environment are ignored by Git; the patch and package
+versions are committed. To reconstruct them from a fresh experiment directory:
+
+```bash
+git -C /home/xav/code/Trace worktree add --detach "$PWD/experiments/recursive_opt/EXP22/worktrees/trace" 846580defe935195c1f5f39d6336079ef6ff1e10
+git -C /home/xav/code/Trace worktree add --detach "$PWD/experiments/recursive_opt/EXP22/worktrees/trace_cp_b" 846580defe935195c1f5f39d6336079ef6ff1e10
+git -C experiments/recursive_opt/EXP22/worktrees/trace_cp_b apply --unidiff-zero "$PWD/experiments/recursive_opt/EXP22/artifacts/trace_cp_b.patch"
+python3 -m venv experiments/recursive_opt/EXP22/.venv
+experiments/recursive_opt/EXP22/.venv/bin/python -m pip install -e experiments/recursive_opt/EXP22/worktrees/trace -e /home/xav/code/evo-compare/repos/skydiscover scipy
+```
+
+For exact environment replay, constrain every package to the versions recorded in
+artifacts/environment.json; the install command alone is not a version lock.
+
+Preflight and mocked parity:
+
+```bash
+python3 experiments/recursive_opt/EXP22/scripts/preflight.py --trace experiments/recursive_opt/EXP22/worktrees/trace --isolated
+experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/evaluator_preflight.py
+experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/policy_fixture.py --variant CP-A
+experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/policy_fixture.py --variant CP-B
+```
+
+Resume S4 (one fresh directory per command), only after provider availability:
+
+```bash
+experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/run_stage.py --stage one --task prism --arm SD-EVOX
+experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/run_stage.py --stage one --task prism --arm TRACE-RECURSIVE
+experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/run_stage.py --stage one --task signal_processing --arm SD-EVOX
+experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/run_stage.py --stage one --task signal_processing --arm TRACE-RECURSIVE
+```
+
+`--stage pilot` selects five solution attempts. Run all four arms per task only
+after S4, then assess S5 and remaining full-run checks. The per-task strict commands
+use `--stage strict --task prism` or `--task signal_processing`, with each arm
+in the preregistered order; they intentionally reject the current gate file.
+No all-strict orchestration or advanced-phase runner is claimed as finished.
+There is no basis for running an advanced phase. Analysis-only for the current
+provider stop is reproducible without network:
+
+```bash
+python3 experiments/recursive_opt/EXP22/scripts/analyze.py
+```
+
+This diagnostic analyzer refuses evidence that no longer matches the two recorded
+failed attempts. Extend it explicitly if resumed execution produces new evidence.
+The remaining full-run metering/checkpoint/analysis requirements still need
+validation before any strict gate can be marked passed.
