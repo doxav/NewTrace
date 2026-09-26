@@ -44,7 +44,7 @@
     }
   },
   "completed_runs": [],
-  "completion_requests": 0,
+  "completion_requests": 97,
   "evaluator_protocol": "process-stage-v1",
   "evidence_directory": "artifacts/preflight/20260926T100458.395061Z",
   "execution_authorized_by_this_script": false,
@@ -54,19 +54,15 @@
     "S1": true,
     "S2": true,
     "S3": true,
-    "S4": false,
-    "S5": false
+    "S4": true,
+    "S5": true
   },
   "gates_not_run": [
-    "S1 process parity",
-    "S3 process validation",
-    "S4 process smokes",
-    "S5 process pilots",
     "strict process matrix",
-    "advanced phase"
+    "conditional advanced phase"
   ],
   "historical_series": "artifacts/deepinfra_pre_novita/manifest.json",
-  "paid_calls": 0,
+  "paid_calls": 97,
   "primary_control_plane": "CP-A: exact transport, non-portable/non-promotable",
   "protocol_amendment": "v7",
   "provider": {
@@ -90,7 +86,7 @@
     }
   },
   "status": "PARTIAL",
-  "successful_completions": 0,
+  "successful_completions": 97,
   "timestamp_utc": "20260926T100458.395061Z",
   "trace_branch_gate": {
     "actual_branch": "",

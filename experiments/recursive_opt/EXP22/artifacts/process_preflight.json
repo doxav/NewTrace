@@ -8,5 +8,17 @@
     "trace": true,
     "trace_cp_b": true
   },
-  "transport_evidence_reused": "artifacts/thread_evaluator_low/openrouter_transport_validation.json"
+  "transport_evidence_reused": "artifacts/thread_evaluator_low/openrouter_transport_validation.json",
+  "unit_tests": {
+    "command": "experiments/recursive_opt/EXP22/.venv/bin/python -I -m unittest discover -s experiments/recursive_opt/EXP22/tests -v",
+    "passed": 37
+  },
+  "lint": {
+    "command": "ruff check experiments/recursive_opt/EXP22/src experiments/recursive_opt/EXP22/scripts experiments/recursive_opt/EXP22/tests",
+    "passed": true
+  },
+  "compileall": {
+    "command": "python3 -m compileall -q experiments/recursive_opt/EXP22/src experiments/recursive_opt/EXP22/scripts experiments/recursive_opt/EXP22/tests",
+    "passed": true
+  }
 }

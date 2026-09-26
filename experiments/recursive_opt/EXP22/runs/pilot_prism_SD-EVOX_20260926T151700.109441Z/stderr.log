@@ -1,0 +1,61 @@
+WARNING:skydiscover.optimize.evaluation.evaluator:cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+WARNING:skydiscover.optimize.evaluation.evaluator:cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=4, attempt 1/2). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Keep the greedy construction as a feasible starting point, then add a steepest-descent local search that repeatedly applies the best improving move (relocate a model to another GPU) or pairwise swap, only when it reduces the maximum KVPR and preserves memory feasibility. This directly targets the minimax objective, which greedy alone ignores.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def _kvpr(load, mem):
+    """KVPR of a GPU: weighted load over free memory."""
+    free = GPU_MEM_SIZE - mem
+    return load / free if free > 0 else float("inf")
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Greedy construction followed by steepest-descent local search.
+
+    Phase 1: place models (sorted by req_rate/slo desc) on the GPU with the
+    lowest current KVPR that has room (guarantees a feasible start).
+    Phase 2: repeatedly apply the best improving single-model move or
+    pairwise swap that lowers the maximum KVPR, until no improvement.
+    """
+
+    # --- Phase 1: greedy construction ---
+    placement = {g: [] for g in range(gpu_num)}
+    load = [0.0] * gpu_num
+    mem = [0.0] * gpu_num
+    for m in sorted(models, key=lambda x: x.req_rate / x.slo, reverse=True):
+        best, best_r = None, float("inf")
+        for g in range(gpu_num):
+            if mem[g] + m.model_size <= GPU_MEM_SIZE:
+                r = _kvpr(load[g], mem[g] + m.model_size)
+                if r < best_r:
+                    best_r, best = r, g
+        if best is None:
+            raise ValueError("Model does not fit on any GPU")
+        placement[best].append(m)
+        load[best] += m.req_rate / m.slo
+        mem[best] += m.model_size
+
+    # --- Phase 2: local search on max KVPR ---
+    def max_kvpr():
+        return max(_kvpr(load[g], mem[g]) for g in range(gpu_num))
+
+    improved = True
+    while improved:
+        improved = False
+        cur = max_kvpr()
+        best_move = None
+        best_val = cur
+
+        # single-model moves
+        for g in range(gpu
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:Diff blocks found but none matched parent solution (iteration=4, attempt 2/2).
+ERROR:skydiscover.optimize.search.default_discovery_controller:All 2 retry attempts failed due to parse/validation error: Diff SEARCH blocks did not match parent solution - no changes applied
+WARNING:skydiscover.optimize.search.evox.controller:Iteration 4 failed (used 2 attempts): Diff SEARCH blocks did not match parent solution - no changes applied (after 2 attempts)

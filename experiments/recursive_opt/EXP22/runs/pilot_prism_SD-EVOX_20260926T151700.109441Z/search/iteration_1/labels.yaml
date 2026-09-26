@@ -1,0 +1,70 @@
+iteration: 1
+diverge_label_length: 2841
+refine_label_length: 2229
+
+diverge_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.
+  This may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.
+  You can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.
+  Think through what is needed to achieve a BREAKTHROUGH SCORE.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  - **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Greedy construction heuristics**: sort models by load density (req_rate/slo) or size descending; place each on GPU minimizing resulting max KVPR ↔ place on GPU with most free memory ↔ best-fit by size with load tiebreak.
+  - **Bin-packing style formulations**: first-fit-decreasing on model_size then rebalance ↔ partition models into feasible bins via classic LPT scheduling on weighted load ↔ treat as vector bin-packing with (size, load) two dimensions.
+  - **Local search / metaheuristics**: random restarts with pairwise model swaps between GPUs ↔ simulated annealing on move/swap moves ↔ steepest-descent local search minimizing max KVPR until no improving move.
+  - **Multi-phase pipeline**: greedy initial placement → local-search polish → targeted repair of the bottleneck GPU (move its models out) → final feasibility check.
+  - **Minimax / bottleneck-focused strategies**: iteratively split the worst GPU's models to other GPUs ↔ binary search on target KVPR threshold with feasibility packing per threshold ↔ prioritize reducing the argmax GPU each iteration.
+  - **Randomized multi-start**: run many randomized greedy placements (shuffled order, random tiebreaks), keep best; cheap since only numpy available and tests are small (≤18 models, ≤9 GPUs).
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken "creative" solution is worthless.
+  
+  Format:
+  1. APPROACH: Describe your different approach.
+  2. CODE: Implementation.
+
+refine_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You should keep the same fundamental approach and algorithm structure.
+  DO NOT switch to a different problem formulation.
+  Focus on REFINING / EXPLOITING the current approach: better inputs, additional polish, etc.
+  Think through what is needed to SQUEEZE the last few percent of performance.
+  Use sufficient computational budget for refinement.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF REFINEMENT strategies (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Computational budget**: increase local-search iterations / restart count within 10s timeout; iterate until no improving swap exists.
+  - **Local polish moves**: exhaustive pairwise swaps between all GPU pairs ↔ single-model reassignment to best GPU ↔ targeted moves out of the max-KVPR GPU only.
+  - **Tiebreak / ordering tuning**: vary sort keys (load density, size, load/size ratio, descending) and randomize order across restarts, keep best.
+  - **Objective sharpening**: evaluate candidate moves by full max-KVPR, not average; prefer moves reducing second-highest KVPR when max is tied.
+  - **Robustness / validity**: ensure all models placed exactly once, memory constraint checked before returning; fall back to a safe greedy placement if search fails.
+  
+  Key insight: combined_score = 1/avg_max_kvpr + success_rate, so correctness (all models placed, memory fits) is mandatory and minimizing the bottleneck GPU's KVPR is the sole quality lever. Instance sizes are tiny, so exhaustive local search is affordable.
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken solution is worthless.
+  
+  Format:
+  1. REFINEMENT: Describe what you are refining.
+  2. CODE: Implementation with refinement.

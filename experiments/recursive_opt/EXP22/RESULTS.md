@@ -1,6 +1,6 @@
 STATUS: PARTIAL
 
-FACT: Current gates: {'S0': True, 'S1': True, 'S2': True, 'S3': True, 'S4': False, 'S5': False}. The process-stage-v1 amendment isolates stock evaluation stages for both frameworks. Earlier thread-evaluator results and the timeout diagnosis are archived in `artifacts/thread_evaluator_low/` and excluded from this comparison.
+FACT: Current gates: {'S0': True, 'S1': True, 'S2': True, 'S3': True, 'S4': True, 'S5': True}. The process-stage-v1 amendment isolates stock evaluation stages for both frameworks. Earlier thread-evaluator results and the timeout diagnosis are archived in `artifacts/thread_evaluator_low/` and excluded from this comparison.
 
 FACT: The fixed route is `z-ai/glm-5.3-flash` through OpenRouter, provider `novita`, reasoning effort `low`, session `benchmark-PRIMS-SIGNAL-run-001`, temperature 0.7, maximum 32,000 tokens and timeout 600 seconds. Trace uses CP-A: exact transport with a nonportable, nonpromotable control-plane override. CP-B was excluded because its empty-response fallback changes the token ceiling.
 
@@ -37,7 +37,7 @@ INFERENCE: Advanced phase is not authorized by the current evidence gate. It has
 
 LIMITATION: This is a controlled single-run benchmark, not a statistical replication. No p-values are computed. Equal solution attempts do not equal total compute. The shared session and sequential run order can affect cache, latency and cost. Costs are provider-reported; calls with missing cost are not treated as free. Process-series evaluator invocation and stage counts are recorded separately in the detailed metrics.
 
-MEASURED RESULT: Current evaluator series, including diagnostics and pilots: 0 completion requests, 0 reported tokens, $0.00000000 reported cost; 0 calls have unknown cost. Historical evaluator/provider/reasoning series are excluded; unchanged transport smoke evidence is reused and its cost remains in the historical series.
+MEASURED RESULT: Current evaluator series, including diagnostics and pilots: 97 completion requests, 619105 reported tokens, $0.08638801 reported cost; 0 calls have unknown cost. Historical evaluator/provider/reasoning series are excluded; unchanged transport smoke evidence is reused and its cost remains in the historical series.
 
 FACT: Detailed curves, role accounting, semantic retries, policy validation and per-window gains are in `artifacts/diagnostic_summary.json`. Runtime source hashes are frozen in `artifacts/strict_source_hashes.json`. Each immutable run directory retains source, requests, results and logs.
 

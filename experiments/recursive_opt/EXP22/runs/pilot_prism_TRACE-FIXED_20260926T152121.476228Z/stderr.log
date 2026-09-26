@@ -1,0 +1,43 @@
+WARNING:skydiscover.optimize.evaluation.evaluator:cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+WARNING:skydiscover.optimize.evaluation.evaluator:cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=4, attempt 1/2). Expected SEARCH/REPLACE blocks. Preview:
+Looking at the results, Program 1 (simple greedy sorted by r/s desc) achieved 20.89 max_kvpr with 100% success, while the current multi-order version gets 22.15 with 90% success. This suggests the extra orders sometimes pick worse results and the failure path hurts success rate. I'll add a robust fallback (size-descending first-fit ensures feasibility) plus a local-improvement pass that moves/swap models between the max-KVPR GPU and others to reduce the max.
+
+Reasoning:
+1. Always run size-descending greedy as a guaranteed-feasible baseline (fixes the 10% failures).
+2. Keep the KVPR-greedy orders that worked well.
+3. Add a cheap local search: repeatedly try moving a model off the GPU with max KVPR to another GPU (or swapping two models) if it lowers max KVPR. This directly targets the objective and is fast.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Minimize max KVPR via multi-order greedy + local improvement.
+    Greedy: assign each model to the GPU minimizing resulting KVPR
+    ((w + r/s) / (mem - size)) while fitting in memory. Try several sort
+    orders (size-desc first guarantees feasibility). Then improve the best
+    placement by moving/swapping models off the max-KVPR GPU when it lowers
+    the global max KVPR.
+    """
+
+    def try_order(sorted_models):
+        placement = {g: [] for g in range(gpu_num)}
+        mem = [GPU_MEM_SIZE] * gpu_num
+        w = [0.0] * gpu_num
+        for model in sorted_models:
+            best_idx, best_kvpr = None, float("inf")
+            for g in range(gpu_num):
+                if model.model_size <= mem[g]:
+                    kvpr = (w[g] + model.req_rate / model.slo) / (mem[g] - model.model_size)
+                    if kvpr < best_kvpr:
+                        best_kvpr, best_idx = kvpr, g
+            if best_idx is None:
+                return None
+            placement[best_idx].append(model)
+            w[best_idx] += model.req_rate / model.slo
+   
+... (truncated) ...

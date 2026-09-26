@@ -1,0 +1,684 @@
+[
+  {
+    "content_lengths": [
+      0
+    ],
+    "error": null,
+    "finish_reasons": [
+      "length"
+    ],
+    "finished_at_unix": 1790435822.2226021,
+    "generation_id": "gen-1790435820-THh9io7Sv1JTIPE5l7BZ",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 1,
+      "messages": [
+        {
+          "content": "",
+          "role": "system"
+        },
+        {
+          "content": "ping",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "guide",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435820.8072448,
+    "usage": {
+      "completion_tokens": 1,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 1
+      },
+      "cost": 1.8375e-06,
+      "cost_details": {
+        "upstream_inference_completions_cost": 3.75e-07,
+        "upstream_inference_cost": 1.8375e-06,
+        "upstream_inference_prompt_cost": 1.4625e-06
+      },
+      "is_byok": false,
+      "prompt_tokens": 13,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "video_tokens": 0
+      },
+      "total_tokens": 14
+    }
+  },
+  {
+    "content_lengths": [
+      0
+    ],
+    "error": null,
+    "finish_reasons": [
+      "length"
+    ],
+    "finished_at_unix": 1790435822.3796964,
+    "generation_id": "gen-1790435820-iXxEbdCXQRRvMyT2ztZg",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 1,
+      "messages": [
+        {
+          "content": "",
+          "role": "system"
+        },
+        {
+          "content": "ping",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "meta",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435820.807976,
+    "usage": {
+      "completion_tokens": 1,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 1
+      },
+      "cost": 1.8375e-06,
+      "cost_details": {
+        "upstream_inference_completions_cost": 3.75e-07,
+        "upstream_inference_cost": 1.8375e-06,
+        "upstream_inference_prompt_cost": 1.4625e-06
+      },
+      "is_byok": false,
+      "prompt_tokens": 13,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "video_tokens": 0
+      },
+      "total_tokens": 14
+    }
+  },
+  {
+    "content_lengths": [
+      2500
+    ],
+    "error": null,
+    "finish_reasons": [
+      "stop"
+    ],
+    "finished_at_unix": 1790435836.7172031,
+    "generation_id": "gen-1790435822-bEKrlEY47JRYnFdUGK7m",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 32000,
+      "messages": [
+        {
+          "content": "You must generate TWO separate guidance blocks in a single response. Output them as two clearly separated sections.\n\n## OUTPUT STRUCTURE\nYour response must have exactly two sections:\n1. First section: \"### EXPLORATION (diverge_label)\" followed by the exploration guidance\n2. Second section: \"### EXPLOITATION (refine_label)\" followed by the exploitation guidance\n\n---\n\n## INSTRUCTIONS FOR SECTION 1 (EXPLORATION):\n\nYou are an expert at analyzing problems and suggesting diverse algorithmic approaches.\n\nGiven a problem description and the evaluator setup and code, generate a concise \"different approaches\" guidance block that will help an LLM generate diverse solutions.\n\n## STEP 1: ANALYZE THE PROBLEM TYPE (do this internally, don't output)\nBefore suggesting anything, you MUST determine: \n- What kinds of problems are you dealing with? \n    - **Optimization problem**: continuous vs discrete, constrained vs unconstrained, what variables and constraints, and what optimization family, ...\n    - **Algorithm/heuristic design**: what decisions, what tradeoffs\n    - **System design**: what resources, what objectives\n    - And anything else that is related to the problem type and context.\n- What is the objective? \n    - Read the evaluator's scoring function (e.g., `combined_score`) to understand ALL components of the objective.\n    - If the objective combines multiple sub-scores, what are the weights and tradeoffs between them?\n- What are the constraints or requirements? \n    - E.g., bounds, accuracy, time limits, correctness criteria, etc.\n- Does this problem have multiple decision stages? \n- What tradeoffs exist? \n    - E.g. size vs weight, cost vs quality, speed vs accuracy, ...\n- For optimization problems specifically:\n    - Are the decisions discrete or continuous (real-valued parameters)?\n    - What variables are being optimized and what are the constraint types?\n\n## STEP 2: PROVIDE SUGGESTIONS FOR DIFFERENT APPROACHES \n\n### STEP 2a: IDENTIFY STANDARD TOOLKIT\nBefore suggesting anything, think like a DOMAIN EXPERT. Ask yourself:\n- \"What would a textbook or survey paper list as the main approaches?\"\n- \"What is the standard toolkit, or major libraries and functions for this problem domain?\" (not just what context programs use)\n- For optimization problems specifically\n    - What type? (constrained/unconstrained, local/global, gradient/derivative-free)\n    - What methods handle the constraint types? (bounds, equality, inequality)\n    - How are constraints ENFORCED? Penalty methods, projection/repair, barrier methods, and exact constraint solvers are fundamentally different paradigms. Treat constraint handling as a distinct design axis, separate from the choice of optimizer.\n    - What are ALL the decision variables? Not just the final output \u2014 also intermediate/structural variables (positions, configurations, orderings) that the output depends on. The FULL joint optimization over all these variables is the real problem.\n    - Does the problem DECOMPOSE? Often the full problem has a HARD core (nonlinear, jointly over many variables with constraints) + EASIER sub-problems (one set of variables given another fixed). Identify the hardest sub-problem \u2014 the solver for that is the MAIN solver. Simpler methods (LP, closed-form) can serve as sub-routines for the easier parts.\n    - What metaheuristic/evolutionary algorithms are available?\n\n### STEP 2b: GENERATE SUGGESTIONS (based on problem & evaluator)\nYour suggestions should be driven primarily by analyzing the PROBLEM and EVALUATOR from Step 1. Enumerate the landscape of known, proven techniques for this problem type. \n- In the Libraries bullet: include the canonical/standard library for this problem domain, with its key functions. Do not skip it.\n- For multi-objective problems, include at least ONE category named after a KEY QUALITY DIMENSION from the evaluator's `combined_score`. Name the category after the objective, then list diverse techniques that target it.\n- Consider MULTIPLE PARADIGMS: Your suggestions should span at least two distinct approach families. Don't anchor on one paradigm.\n- Consider MULTI-PHASE / PIPELINE approaches: Chaining methods sequentially (e.g., one for an initial solution, another to refine it) can help.\n- Consider MULTI-START / ENSEMBLE strategies: Running the same method from many different starting points and keeping the best result can be a simple but powerful technique.\n- Do NOT dismiss simple approaches just because advanced ones exist. Simple methods with good tuning often beat complex methods.\n\n## STEP 3: OUTPUT FORMAT (follow exactly)\n```\n\nEXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):\n- **[Category 1]**: [describe 3-5 alternative specific techniques], e.g. A \u2194 B \u2194 C, D \u2194 E, etc.\n- **[Category 2]**: [describe 3-5 alternative specific techniques], e.g. A \u2194 B \u2194 C, D \u2194 E, etc.\n- ... (3-6 bullet points total)\n\n```\n\nYour goal is to come up with the \"DIFFERENT APPROACHES\" sections, with the problem specific guidance, e.g. \ndifferent structural components (e.g. initialization, objective design, search strategy to balance multiple factors, anything else that \nis related to the problem type and context).\n\nEXAMPLE CATEGORIES (do not blindly copy, tailor to problem):\n```\nEXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):\n- **Libraries / solvers**: \n- **Multi-phase pipeline**: \n- **Algorithm family / strategy**: \n- **Runtime optimization (if applicable to the problem objective)** \n- **Construction / search method**: \n- **Constraint handling**: \n... Or anything else you can think of. \n```\nDo not just blindly copy from the example; tailor the categories and ideas specifically to the problem type and context.\n\n## RULES\n1. LIBRARIES / TOOLS - Include for problems where libraries provide algorithmic solutions. \n    - **CRITICAL**: ONLY suggest libraries that appear in the \"Available Packages in Environment\" section. Do NOT suggest libraries that are not installed.\n    - Always list it in the first category if applicable.\n    - **USE THIS EXACT FORMAT**: `library.submodule: func1, func2 \u2194 another_lib: funcA, funcB`. Use \u2192 to wire dependent functions: `setup_func \u2192 apply_func`.\n        - **CRITICAL** For wrapper functions that accept a `method` parameter: you MUST specify the exact method names. \n            - The LLM needs to know WHICH specific solver to use. Format: `wrapper(method='X'), wrapper(method='Y')`.\n    - **BE FOCUSED, NOT EXHAUSTIVE**: Do not list every possible methods, but DO include those from DIFFERENT library ecosystems when they offer distinct algorithms for the problem.\n        - **CRITICAL**: ONLY list functions that directly SOLVE the problem . Do NOT list low-level building blocks (linear algebra routines, random generators, data structures, geometry computations, plotting, etc.).\n        - For optimization problems specifically:\n            - First identify the constraints on the actual decision variables (not evaluation metrics like combined_score), then include solvers for each constraint level present (bounds, general). Do not list solvers that cannot handle the problem's constraints.\n            - **KEY**: Match the complexity of the tool to the problem structure. If the problem has complex interactions or constraints, the PRIMARY tool must be capable of handling that full complexity \u2014 simpler/restricted methods should only be listed as complementary sub-routines for easier sub-problems. When a lightweight specialised variant exists for a simpler sub-task (e.g., a final refinement step with fewer constraints), include it too \u2014 it can be significantly faster.\n            - If the problem decomposes (e.g., fixing one set of variables makes the remaining problem simpler), list the methods for those sub-problems too.\n    - **INCLUDE COMPLEMENTARY VARIANTS**: Standard libraries often have PAIRS for the same operation (e.g., local vs global, forward-only vs bidirectional, online vs batch). ALWAYS list **both** sides of each pair \u2014 never omit the complement.\n\n2. HIGH-LEVEL IDEAS ONLY - short, abstract concepts (stay within 15 words).\n    -  Within each category just list 3-5 alternative ideas. \n3. Tailor categories to the problem; try to focus on a few different categories, and within each category focus on actionable and simple approaches not parameter tweaks\n4. Only assume constraints explicitly stated in the problem.\n5. 3-6 bullet points, order them based on ease of implementation and relevance to the problem.\n6. Use \u2194 to separate alternatives \n7. **BALANCE**: Include libraries with SPECIFIC algorithms when they provide solutions, but EQUALLY emphasize domain-specific algorithmic strategies. Both are important.\n8. If the evaluator passes input data for processing, add a **separate bullet** after Libraries: state that the full input is available and library functions can be applied directly to it.\n\n\n---\n\n## INSTRUCTIONS FOR SECTION 2 (EXPLOITATION):\n\nYou are an expert at analyzing problems and suggesting ways to INTENSIFY and REFINE within an existing approach.\n\nGiven a problem description and evaluator, generate a concise \"refinement strategies\" guidance block that will help an LLM squeeze more performance from the CURRENT approach without changing its fundamental structure.\n\n## GOAL: EXPLOITATION, NOT EXPLORATION\nThe LLM receiving this guidance already has a working solution. Your job is to help it, for example:\n- Tune hyperparameters more aggressively (iterations, batch size, population, etc.)\n- Improve the quality of inputs (seeds, initializations, candidates)\n- Improve the quality of the solution (post-processing, validation, polish)\n- Refine tradeoff parameters: If the approach uses parameters to balance competing factors, tuning strategies in different ways (e.g., search ranges, convergence criteria, adaptive schedules)\n- Explore composite metrics: If the approach combines multiple factors, varying different ways in how they're combined (e.g., weights, normalization, thresholds) \n\n## STEP 1: ANALYZE THE PROBLEM TYPE (do this internally, don't output)\nBefore suggesting anything, you MUST determine:\n- What type of problem is this? \n- What are the \"knobs\" that can be tuned without changing the core algorithm? For example,\n  - Tradeoff parameters: If the approach balances multiple factors, what parameters control the tradeoff? \n  - Composite metrics: If the approach combines multiple factors, how are they combined? \n  - Search strategies: If the approach searches for parameter values, what can be refined? \n- What does \"better\" mean for this problem? Read the evaluator's scoring function (e.g., `combined_score`) and understand ALL components.\n  - **PRINCIPLE**: Only include suggestions that DIRECTLY improve a component of `combined_score`. \n    If something is NOT measured in the score (e.g., runtime when only quality matters), do NOT suggest directions that do not improve the score.\n- What post-processing, validation, or polish stages could help? \n- If the problem objective is only to improve the quality of the solution, where can more computation budget be spent to improve the quality?\n\n## STEP 2: GENERATE REFINEMENT STRATEGIES (based on problem & evaluator)\nYour suggestions should be driven primarily by analyzing the PROBLEM and EVALUATOR from Step 1.\nThink about what \"knobs\" exist in typical solutions for this problem type:\n- Iteration counts, population sizes, step sizes, convergence thresholds\n- Input quality (initializations, seeds, candidates)\n- Post-processing and polish stages\n- Tradeoff parameters and composite metric weights\n\n## STEP 3: OUTPUT FORMAT (follow exactly)\n```\n\nEXAMPLES OF REFINEMENT strategies (NOT LIMITED TO, PROPOSE YOUR OWN):\n- **[Category 1]**: [describe 3-5 specific tuning techniques]\n- **[Category 2]**: [describe 3-5 specific tuning techniques]\n- ... (3-5 bullet points total, only include categories that actually apply)\n... Or anything else you can think of. \n\n```\n\nEXAMPLE CATEGORIES (do not blindly copy, tailor to problem):\n```\nREFINEMENT strategies examples:\n- **Libraries / tools**: (`library.submodule: func1, func2 \u2194 another_lib: funcA`; for wrapper functions that accept a `method` parameter: you MUST specify the exact method names. Format: `wrapper(method='X'), wrapper(method='Y')`).\n- **Computational budget**: \n- **Hyperparameter tuning**: \n- **Dynamic scheduling**: \n- **Multi-objective weights / tradeoff balancing**: \n- **Input quality / initialization**: \n- **Solver tolerances / convergence**: \n- **Post-processing / polish**: \n```\nDo not just blindly copy from the example; tailor the categories and ideas specifically to the problem type and context.\n\n## RULES:\n1. **STRICT**: DO NOT suggest changing the core algorithm or problem formulation. You CAN suggest library tools that REFINE/POLISH within the same approach.\n2. **TAILOR**: Only suggest categories that actually exist in this problem type - do NOT invent knobs that don't apply\n    - Do NOT invent hyperparameters that don't exist in the code\n3. **EVALUATOR ALIGNMENT**: Only suggest strategies that DIRECTLY improve metrics in the evaluator's scoring function\n4. Keep each bullet concise (max 15 words per alternative)\n5. 3-5 bullet points only\n6. Use \u2194 to separate alternatives\n7. Only give high-level directions, not specific numbers\n\n\n---\n\n## CROSS-REFERENCE RULE\nThe EXPLOITATION section MUST be consistent with the EXPLORATION section AND must be self-sufficient (usable even if the user never sees the exploration section).\n- If the EXPLORATION section suggests optimization solvers or libraries, it is recommended for the EXPLOITATION section to include: \n    - (1) a \"Libraries / tools for refinement\" category that is the same list and order as the one in the EXPLORATION section\n          - ALSO INCLUDE ADDITIONAL optimizers, libraries, and/or polish methods for polishing and refining existing solutions.\n    - (2) solver-specific refinement knobs: for example, maxiter, convergence tolerances, different initializations and polish passes. \n- The EXPLOITATION section should contain enough concrete, actionable ideas that the LLM can make meaningful improvements even without seeing the EXPLORATION section.\n- These can be general knobs, not specific numbers.\n\nGenerate BOTH sections now, clearly separated with the headers above.\n",
+          "role": "system"
+        },
+        {
+          "content": "Please analyze this problem and generate BOTH guidance blocks.\n\n## Problem Description:\n```\nYou are an expert for model placement on GPUs. Your task is to improve a model placement algorithm by improve the function named compute_model_placement in the intial program that places models to available GPUs.\nThe algorithm must MINIMIZE the maximum KVPR across all GPUs while ensuring models can fit into the GPUs' memory. Note that KVPR is KV cache pressure for a GPU. It indicates how crowded a GPU is. For a specific GPU, its KVPR is computed as sum(model.req_rate/model.slo for model in models) / (GPU_MEM_SIZE - sum(model.model_size for model in models)), where models are the models on this GPU. The generated program should be as simple as possible and the code should be executed correctly without errors.\n```\n\n## Available Packages in Environment\nThe following packages are available in the current uv environment:\n```\nnumpy\n```\n\n## Evaluator Code:\n```python\nimport concurrent.futures\nimport importlib.util\nimport time\nimport traceback\nfrom dataclasses import dataclass\n\nimport numpy as np\n\nGPU_MEM_SIZE = 80  # GB\nMIN_INT = float(\"-inf\")  # Define MIN_INT as negative infinity\n\n\n@dataclass\nclass Model:\n    model_name: str\n    model_size: int\n    req_rate: int\n    slo: int\n    cur_gpu_id: int\n\n\ndef run_with_timeout(func, args=(), kwargs={}, timeout_seconds=30):\n    \"\"\"\n    Run a function with a timeout using concurrent.futures\n    \"\"\"\n    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:\n        future = executor.submit(func, *args, **kwargs)\n        try:\n            result = future.result(timeout=timeout_seconds)\n            return result\n        except concurrent.futures.TimeoutError:\n            raise TimeoutError(f\"Function timed out after {timeout_seconds} seconds\")\n\n\ndef safe_float(value):\n    \"\"\"Convert a value to float safely\"\"\"\n    try:\n        if np.isnan(value) or np.isinf(value):\n            return 0.0\n        return float(value)\n    except (TypeError, ValueError):\n        return 0.0\n\n\ndef verify_gpu_mem_constraint(placement_data: dict[int, list[Model]]) -> bool:\n    \"\"\"\n    Verify the whether models can fit into GPU memory\n    \"\"\"\n    # Check if the placement data is valid\n    if placement_data is None:\n        return False\n\n    # Check if the placement data is valid\n    for gpu_id, models in placement_data.items():\n        if sum(model.model_size for model in models) > GPU_MEM_SIZE:\n            return False\n\n    return True\n\n\ndef calculate_kvcache_pressure(placement_data: dict[int, list[Model]]) -> float:\n    \"\"\"\n    Calculate the KVCache pressure\n    \"\"\"\n    max_kvpr = MIN_INT\n    for gpu_id, models in placement_data.items():\n        total_model_size = sum(model.model_size for model in models)\n        total_weighted_req_rate = sum(model.req_rate / model.slo for model in models)\n        if GPU_MEM_SIZE - total_model_size > 0:\n            kvpr = total_weighted_req_rate / (GPU_MEM_SIZE - total_model_size)\n        else:\n            kvpr = 1000000\n        max_kvpr = max(max_kvpr, kvpr)\n\n    return max_kvpr\n\n\ndef generate_test_gpu_models(num_tests=50):\n    \"\"\"\n    Generate multiple test signals with different characteristics\n    \"\"\"\n    test_cases = []\n    np.random.seed(42)\n\n    for i in range(num_tests):\n        gpu_num = np.random.randint(5, 10)\n        gpu_models = []\n        for j in range(gpu_num * 2):\n            model_size = np.random.randint(10, 30)\n            req_rate = np.random.randint(1, 10)\n            slo = np.random.randint(5, 10)\n            gpu_models.append(\n                Model(\n                    model_name=f\"model_{j}\",\n                    model_size=model_size,\n                    req_rate=req_rate,\n                    slo=slo,\n                    cur_gpu_id=j,\n                )\n            )\n\n        test_cases.append((gpu_num, gpu_models))\n\n    return test_cases\n\n\ndef evaluate(program_path):\n    \"\"\"\n    Main evaluation function that tests the signal processing algorithm\n    on multiple test signals and calculates the composite performance metric.\n    \"\"\"\n    try:\n        # Load the program\n        spec = importlib.util.spec_from_file_location(\"program\", program_path)\n        program = importlib.util.module_from_spec(spec)\n        spec.loader.exec_module(program)\n\n        # Check if required function exists\n        if not hasattr(program, \"compute_model_placement\"):\n            return {\n                \"max_kvpr\": 0.0,\n                \"success_rate\": 0.0,\n                \"combined_score\": 0.0,\n                \"error\": \"Missing compute_model_placement function\",\n            }\n\n        # Generate test gpu and models\n        test_gpu_models = generate_test_gpu_models()\n\n        # Collect metrics across all tests\n        all_kvpr = []\n        all_metrics = []\n        successful_runs = 0\n\n        for i, (gpu_num, gpu_models) in enumerate(test_gpu_models):\n            try:\n                # Run the algorithm with timeout\n                start_time = time.time()\n\n                # Call the program's main function\n                result = run_with_timeout(\n                    program.compute_model_placement,\n                    kwargs={\"gpu_num\": gpu_num, \"models\": gpu_models},\n                    timeout_seconds=10,\n                )\n\n                execution_time = time.time() - start_time\n\n                # Validate result format\n                if not isinstance(result, dict):\n                    return {\n                        \"max_kvpr\": 0.0,\n                        \"success_rate\": 0.0,\n                        \"combined_score\": 0.0,\n                        \"error\": f\"Placement {i}: Expected dict, got {type(result).__name__}\",\n                    }\n\n                # Validate all models are placed\n                placed_models = []\n                for gpu_id, assigned_models in result.items():\n                    if not isinstance(assigned_models, list):\n                        return {\n                            \"max_kvpr\": 0.0,\n                            \"success_rate\": 0.0,\n                            \"combined_score\": 0.0,\n                            \"error\": f\"GPU {gpu_id} value must be list, got {type(assigned_models).__name__}\",\n                        }\n                    placed_models.extend(assigned_models)\n\n                if len(placed_models) != len(gpu_models):\n                    return {\n                        \"max_kvpr\": 0.0,\n                        \"success_rate\": 0.0,\n                        \"combined_score\": 0.0,\n                        \"error\": f\"Not all models placed: {len(placed_models)}/{len(gpu_models)}\",\n                    }\n\n                # Check for duplicate placements (by object identity)\n                placed_ids = [id(m) for m in placed_models]\n                if len(set(placed_ids)) != len(placed_ids):\n                    return {\n                        \"max_kvpr\": 0.0,\n                        \"success_rate\": 0.0,\n                        \"combined_score\": 0.0,\n                        \"error\": f\"Duplicate models detected\",\n                    }\n\n                # Check placed models are the exact input objects\n                original_ids = {id(m) for m in gpu_models}\n                if set(placed_ids) != original_ids:\n                    return {\n                        \"max_kvpr\": 0.0,\n                        \"success_rate\": 0.0,\n                        \"combined_score\": 0.0,\n                        \"error\": \"Placed models don't match input models (missing or foreign models)\",\n                    }\n\n                # Verify GPU memory constraints\n                if not verify_gpu_mem_constraint(result):\n                    return {\n                        \"max_kvpr\": 0.0,\n                        \"success_rate\": 0.0,\n                        \"combined_score\": 0.0,\n                        \"error\": f\"GPU memory constraint violated\",\n                    }\n\n                # Calculate metrics using the generated test signal\n                max_kvpr = calculate_kvcache_pressure(result)\n\n                # Store metrics\n                metrics = {\n                    \"max_kvpr\": safe_float(max_kvpr),\n                    \"execution_time\": safe_float(execution_time),\n                }\n\n                all_kvpr.append(safe_float(max_kvpr))\n                all_metrics.append(metrics)\n                successful_runs += 1\n\n            except TimeoutError:\n                print(f\"Placement {i}: Timeout\")\n                continue\n            except Exception as e:\n                print(f\"Placement {i}: Error - {str(e)}\")\n                continue\n\n        # If no successful runs, return minimal scores\n        if successful_runs == 0:\n            return {\n                \"max_kvpr\": 0.0,\n                \"success_rate\": 0.0,\n                \"combined_score\": 0.0,\n                \"error\": \"All test signals failed\",\n            }\n\n        print(all_metrics)\n        # Calculate aggregate metrics\n        avg_kvpr = np.mean(all_kvpr)\n        if avg_kvpr != 0:\n            avg_kvpr = 1.0 / avg_kvpr\n        avg_execution_time = np.mean([m[\"execution_time\"] for m in all_metrics])\n        success_rate = successful_runs / len(test_gpu_models)\n\n        return {\n            \"max_kvpr\": safe_float(avg_kvpr),\n            \"execution_time\": safe_float(avg_execution_time),\n            \"success_rate\": safe_float(success_rate),\n            \"combined_score\": safe_float(avg_kvpr) + safe_float(success_rate),\n        }\n\n    except Exception as e:\n        print(f\"Evaluation failed: {str(e)}\")\n        print(traceback.format_exc())\n        return {\"max_kvpr\": 0.0, \"success_rate\": 0.0, \"combined_score\": 0.0, \"error\": str(e)}\n\n\nif __name__ == \"__main__\":\n    # Backwards-compat: bridges old evaluate() -> dict to the container JSON\n    # protocol.  wrapper.py is auto-injected at build time from\n    # skydiscover/evaluation/wrapper.py.\n    from wrapper import run\n\n    run(evaluate)\n\n```\n\nGenerate BOTH the EXPLORATION (different approaches) and EXPLOITATION (refinement/intensification) guidance blocks now.\n\nFor EXPLORATION guidance block, focus on DIFFERENT algorithmic approaches and structural changes.\nFor EXPLOITATION guidance block, focus on INTENSIFYING within existing approaches - e.g., computational budget (e.g., increase max iterations), better seeds, tighter tolerances, local polish stages.\n",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "guide",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435822.3814273,
+    "usage": {
+      "completion_tokens": 538,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "cost": 0.000789675,
+      "cost_details": {
+        "upstream_inference_completions_cost": 0.00020175,
+        "upstream_inference_cost": 0.000789675,
+        "upstream_inference_prompt_cost": 0.000587925
+      },
+      "is_byok": false,
+      "prompt_tokens": 5226,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "video_tokens": 0
+      },
+      "total_tokens": 5764
+    }
+  },
+  {
+    "content_lengths": [
+      4471
+    ],
+    "error": null,
+    "finish_reasons": [
+      "stop"
+    ],
+    "finished_at_unix": 1790435844.6748345,
+    "generation_id": "gen-1790435836-s2zoX93IpPaJc0lkcbXH",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 32000,
+      "messages": [
+        {
+          "content": "You are an expert for model placement on GPUs. Your task is to improve a model placement algorithm by improve the function named compute_model_placement in the intial program that places models to available GPUs.\nThe algorithm must MINIMIZE the maximum KVPR across all GPUs while ensuring models can fit into the GPUs' memory. Note that KVPR is KV cache pressure for a GPU. It indicates how crowded a GPU is. For a specific GPU, its KVPR is computed as sum(model.req_rate/model.slo for model in models) / (GPU_MEM_SIZE - sum(model.model_size for model in models)), where models are the models on this GPU. The generated program should be as simple as possible and the code should be executed correctly without errors.",
+          "role": "system"
+        },
+        {
+          "content": "# Current Solution Information\n- Main Metrics: \n- combined_score: 21.8916\n\nMetrics:\n  - max_kvpr: 20.8916\n  - execution_time: 0.0001\n  - success_rate: 1.0000\n- Focus areas: - Combined score unchanged at 21.8916\n- Solution is long (>500 chars); consider simplifying while preserving quality\n\n# Program Generation History\n## Previous Attempts\n\n### Attempt 1\n- Changes: Unknown changes\n- Metrics: max_kvpr: 20.8916, execution_time: 0.0001, success_rate: 1.0000, combined_score: 21.8916\n- Outcome: Improvement in combined_score\n\n\n\n\n\n# Current Solution\n\n## Program Information\ncombined_score: 21.8916\nScore breakdown:\n  - max_kvpr: 20.8916\n  - execution_time: 0.0001\n  - success_rate: 1.0000\n\n```python\nGPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    # Greedy KVPR-minimizing placement based on Algorithm 1 (without \u03c4 check)\n    # 1) Sort models by r_j / s_j in descending order\n    sorted_models = sorted(models, key=lambda m: (m.req_rate / m.slo), reverse=True)\n\n    # 2) Initialize per-GPU states\n    placement = {gpu_id: [] for gpu_id in range(gpu_num)}\n    shared_kv = [GPU_MEM_SIZE for _ in range(gpu_num)]  # remaining memory per GPU\n    weighted_req_rate = [0.0 for _ in range(gpu_num)]  # sum of r_j / s_j per GPU\n\n    # 3) Assign each model to the GPU that minimizes current KVPR while fitting in memory\n    for model in sorted_models:\n        best_idx = None\n        best_ratio = float(\"inf\")\n\n        for gpu_id in range(gpu_num):\n            if model.model_size <= shared_kv[gpu_id] and shared_kv[gpu_id] > 0:\n                current_ratio = weighted_req_rate[gpu_id] / shared_kv[gpu_id]\n                if current_ratio < best_ratio:\n                    best_ratio = current_ratio\n                    best_idx = gpu_id\n\n        # Failure: if no GPU can fit, raise an error instead of overcommitting\n        if best_idx is None:\n            raise ValueError(\n                f\"Unable to place model of size {model.model_size} GB on any GPU. \"\n                f\"Remaining per-GPU memory: {shared_kv}\"\n            )\n\n        placement[best_idx].append(model)\n        weighted_req_rate[best_idx] += model.req_rate / model.slo\n        shared_kv[best_idx] -= model.model_size\n\n    return placement\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n\n```\n\n\n# Task\nSuggest improvements to the program that will improve its COMBINED_SCORE.\nThe system maintains diversity across these dimensions: score, complexity.\nDifferent solutions with similar combined_score but different features are valuable.\n\nYou MUST use the exact SEARCH/REPLACE diff format shown below to indicate changes:\n\n<<<<<<< SEARCH\n# Original code to find and replace (must match exactly)\n=======\n# New replacement code\n>>>>>>> REPLACE\n\nExample of valid diff format:\n<<<<<<< SEARCH\nfor i in range(m):\n    for j in range(p):\n        for k in range(n):\n            C[i, j] += A[i, k] * B[k, j]\n=======\n# Reorder loops for better memory access pattern\nfor i in range(m):\n    for k in range(n):\n        for j in range(p):\n            C[i, j] += A[i, k] * B[k, j]\n>>>>>>> REPLACE\n\n**CRITICAL**: You can suggest multiple changes. Each SEARCH section must EXACTLY match code in \"# Current Solution\" - copy it character-for-character, preserving all whitespace and indentation. Do NOT paraphrase or reformat.\nBe thoughtful about your changes and explain your reasoning thoroughly.\nInclude a concise docstring at the start of functions describing the exact approach taken.\n\nIMPORTANT: If an instruction header of \"## IMPORTANT: ...\" is given below the \"# Current Solution\", you MUST follow it. Otherwise, \nfocus on targeted improvements of the program. \n\n- Time limit: Programs should complete execution within 360 seconds; otherwise, they will timeout.",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "solution",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435836.7189186,
+    "usage": {
+      "completion_tokens": 1135,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 57
+      },
+      "cost": 0.000456225,
+      "cost_details": {
+        "upstream_inference_completions_cost": 0.000425625,
+        "upstream_inference_cost": 0.000456225,
+        "upstream_inference_prompt_cost": 3.06e-05
+      },
+      "is_byok": false,
+      "prompt_tokens": 1296,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 1280,
+        "video_tokens": 0
+      },
+      "total_tokens": 2431
+    }
+  },
+  {
+    "content_lengths": [
+      1753
+    ],
+    "error": null,
+    "finish_reasons": [
+      "stop"
+    ],
+    "finished_at_unix": 1790435852.3015928,
+    "generation_id": "gen-1790435845-MkSRJwN5tY1xcSEUb4kH",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 32000,
+      "messages": [
+        {
+          "content": "You are an expert for model placement on GPUs. Your task is to improve a model placement algorithm by improve the function named compute_model_placement in the intial program that places models to available GPUs.\nThe algorithm must MINIMIZE the maximum KVPR across all GPUs while ensuring models can fit into the GPUs' memory. Note that KVPR is KV cache pressure for a GPU. It indicates how crowded a GPU is. For a specific GPU, its KVPR is computed as sum(model.req_rate/model.slo for model in models) / (GPU_MEM_SIZE - sum(model.model_size for model in models)), where models are the models on this GPU. The generated program should be as simple as possible and the code should be executed correctly without errors.",
+          "role": "system"
+        },
+        {
+          "content": "# Current Solution Information\n- Main Metrics: \n- combined_score: 22.9028\n\nMetrics:\n  - max_kvpr: 21.9628\n  - execution_time: 0.0002\n  - success_rate: 0.9400\n- Focus areas: - Combined score unchanged at 22.9028\n- Solution is long (>500 chars); consider simplifying while preserving quality\n\n# Program Generation History\n## Previous Attempts\n\n### Attempt 2\n- Changes: Unknown changes\n- Metrics: max_kvpr: 20.8916, execution_time: 0.0001, success_rate: 1.0000, combined_score: 21.8916\n- Outcome: Improvement in combined_score\n\n### Attempt 1\n- Changes: Change 1: Modified function `greedy`: Greedy placement: each model goes to the GPU minimizing resulting KVPR.\n- Metrics: max_kvpr: 21.9628, execution_time: 0.0002, success_rate: 0.9400, combined_score: 22.9028\n- Outcome: Improvement in combined_score\n\n\n\n\n## Other Context Solutions\nThese programs represent diverse approaches and creative solutions that may be relevant to the current task:\n\n### Program 1 (combined_score: 21.8916)\nScore breakdown:  - max_kvpr: 20.8916  - execution_time: 0.0001  - success_rate: 1.0000\n\n```python\nGPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    # Greedy KVPR-minimizing placement based on Algorithm 1 (without \u03c4 check)\n    # 1) Sort models by r_j / s_j in descending order\n    sorted_models = sorted(models, key=lambda m: (m.req_rate / m.slo), reverse=True)\n\n    # 2) Initialize per-GPU states\n    placement = {gpu_id: [] for gpu_id in range(gpu_num)}\n    shared_kv = [GPU_MEM_SIZE for _ in range(gpu_num)]  # remaining memory per GPU\n    weighted_req_rate = [0.0 for _ in range(gpu_num)]  # sum of r_j / s_j per GPU\n\n    # 3) Assign each model to the GPU that minimizes current KVPR while fitting in memory\n    for model in sorted_models:\n        best_idx = None\n        best_ratio = float(\"inf\")\n\n        for gpu_id in range(gpu_num):\n            if model.model_size <= shared_kv[gpu_id] and shared_kv[gpu_id] > 0:\n                current_ratio = weighted_req_rate[gpu_id] / shared_kv[gpu_id]\n                if current_ratio < best_ratio:\n                    best_ratio = current_ratio\n                    best_idx = gpu_id\n\n        # Failure: if no GPU can fit, raise an error instead of overcommitting\n        if best_idx is None:\n            raise ValueError(\n                f\"Unable to place model of size {model.model_size} GB on any GPU. \"\n                f\"Remaining per-GPU memory: {shared_kv}\"\n            )\n\n        placement[best_idx].append(model)\n        weighted_req_rate[best_idx] += model.req_rate / model.slo\n        shared_kv[best_idx] -= model.model_size\n\n    return placement\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n\n```\n\n\n\n# Current Solution\n\n## Program Information\ncombined_score: 22.9028\nScore breakdown:\n  - max_kvpr: 21.9628\n  - execution_time: 0.0002\n  - success_rate: 0.9400\n\n```python\nGPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    def greedy(order):\n        \"\"\"Greedy placement: each model goes to the GPU minimizing resulting KVPR.\"\"\"\n        placement = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        load = [0.0] * gpu_num  # sum of req_rate/slo per GPU\n        for m in order:\n            best, best_kvpr = None, float(\"inf\")\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    new_kvpr = (load[g] + m.req_rate / m.slo) / (free_mem[g] - m.model_size)\n                    if new_kvpr < best_kvpr:\n                        best_kvpr, best = new_kvpr, g\n            if best is None:\n                return None  # infeasible for this ordering\n            placement[best].append(m)\n            load[best] += m.req_rate / m.slo\n            free_mem[best] -= m.model_size\n        return placement\n\n    def max_kvpr(placement):\n        \"\"\"Compute max KVPR across GPUs for a placement.\"\"\"\n        worst = 0.0\n        for g in range(gpu_num):\n            mem = GPU_MEM_SIZE - sum(m.model_size for m in placement[g])\n            load = sum(m.req_rate / m.slo for m in placement[g])\n            worst = max(worst, load / mem if mem > 0 else float(\"inf\"))\n        return worst\n\n    # Try multiple orderings; keep the placement with the lowest max KVPR\n    keys = [\n        lambda m: m.req_rate / m.slo,        # highest pressure ratio first\n        lambda m: m.model_size,              # largest model first\n        lambda m: (m.req_rate / m.slo) / m.model_size,\n    ]\n    best = None\n    best_score = float(\"inf\")\n    for key in keys:\n        p = greedy(sorted(models, key=key, reverse=True))\n        if p is not None:\n            s = max_kvpr(p)\n            if s < best_score:\n                best_score, best = s, p\n    if best is None:\n        raise ValueError(\"Unable to place all models on the GPUs\")\n    return best\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n\n```\n\n\n# Task\nSuggest improvements to the program that will improve its COMBINED_SCORE.\nThe system maintains diversity across these dimensions: score, complexity.\nDifferent solutions with similar combined_score but different features are valuable.\n\nYou MUST use the exact SEARCH/REPLACE diff format shown below to indicate changes:\n\n<<<<<<< SEARCH\n# Original code to find and replace (must match exactly)\n=======\n# New replacement code\n>>>>>>> REPLACE\n\nExample of valid diff format:\n<<<<<<< SEARCH\nfor i in range(m):\n    for j in range(p):\n        for k in range(n):\n            C[i, j] += A[i, k] * B[k, j]\n=======\n# Reorder loops for better memory access pattern\nfor i in range(m):\n    for k in range(n):\n        for j in range(p):\n            C[i, j] += A[i, k] * B[k, j]\n>>>>>>> REPLACE\n\n**CRITICAL**: You can suggest multiple changes. Each SEARCH section must EXACTLY match code in \"# Current Solution\" - copy it character-for-character, preserving all whitespace and indentation. Do NOT paraphrase or reformat.\nBe thoughtful about your changes and explain your reasoning thoroughly.\nInclude a concise docstring at the start of functions describing the exact approach taken.\n\nIMPORTANT: If an instruction header of \"## IMPORTANT: ...\" is given below the \"# Current Solution\", you MUST follow it. Otherwise, \nfocus on targeted improvements of the program. \n\n- Time limit: Programs should complete execution within 360 seconds; otherwise, they will timeout.",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "solution",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435845.2452173,
+    "usage": {
+      "completion_tokens": 485,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 56
+      },
+      "cost": 0.0004265625,
+      "cost_details": {
+        "upstream_inference_completions_cost": 0.000181875,
+        "upstream_inference_cost": 0.0004265625,
+        "upstream_inference_prompt_cost": 0.0002446875
+      },
+      "is_byok": false,
+      "prompt_tokens": 2175,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "video_tokens": 0
+      },
+      "total_tokens": 2660
+    }
+  },
+  {
+    "content_lengths": [
+      4598
+    ],
+    "error": null,
+    "finish_reasons": [
+      "stop"
+    ],
+    "finished_at_unix": 1790435878.406963,
+    "generation_id": "gen-1790435852-FqT4yfWTiffvMaTnV1Mz",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 32000,
+      "messages": [
+        {
+          "content": "You are an expert for model placement on GPUs. Your task is to improve a model placement algorithm by improve the function named compute_model_placement in the intial program that places models to available GPUs.\nThe algorithm must MINIMIZE the maximum KVPR across all GPUs while ensuring models can fit into the GPUs' memory. Note that KVPR is KV cache pressure for a GPU. It indicates how crowded a GPU is. For a specific GPU, its KVPR is computed as sum(model.req_rate/model.slo for model in models) / (GPU_MEM_SIZE - sum(model.model_size for model in models)), where models are the models on this GPU. The generated program should be as simple as possible and the code should be executed correctly without errors.",
+          "role": "system"
+        },
+        {
+          "content": "# Current Solution Information\n- Main Metrics: \n- combined_score: 21.8916\n\nMetrics:\n  - max_kvpr: 20.8916\n  - execution_time: 0.0001\n  - success_rate: 1.0000\n- Focus areas: - Combined score declined: 24.1912 \u2192 21.8916. Consider revising recent changes.\n- Solution is long (>500 chars); consider simplifying while preserving quality\n\n# Program Generation History\n## Previous Attempts\n\n### Attempt 3\n- Changes: Unknown changes\n- Metrics: max_kvpr: 20.8916, execution_time: 0.0001, success_rate: 1.0000, combined_score: 21.8916\n- Outcome: Improvement in combined_score\n\n### Attempt 2\n- Changes: Change 1: Modified function `greedy`: Greedy placement: each model goes to the GPU minimizing resulting KVPR.\n- Metrics: max_kvpr: 21.9628, execution_time: 0.0002, success_rate: 0.9400, combined_score: 22.9028\n- Outcome: Improvement in combined_score\n\n### Attempt 1\n- Changes: Change 1: Near `# Try multiple orderings; keep the placement with ...` (17\u219226 lines)\n- Metrics: max_kvpr: 23.5512, execution_time: 0.0008, success_rate: 0.6400, combined_score: 24.1912\n- Outcome: Improvement in combined_score\n\n\n\n\n## Other Context Solutions\nThese programs represent diverse approaches and creative solutions that may be relevant to the current task:\n\n### Program 1 (combined_score: 24.1912)\nScore breakdown:  - max_kvpr: 23.5512  - execution_time: 0.0008  - success_rate: 0.6400\n\n```python\nGPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    def greedy(order):\n        \"\"\"Greedy placement: each model goes to the GPU minimizing resulting KVPR.\"\"\"\n        placement = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        load = [0.0] * gpu_num  # sum of req_rate/slo per GPU\n        for m in order:\n            best, best_kvpr = None, float(\"inf\")\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    new_kvpr = (load[g] + m.req_rate / m.slo) / (free_mem[g] - m.model_size)\n                    if new_kvpr < best_kvpr:\n                        best_kvpr, best = new_kvpr, g\n            if best is None:\n                return None  # infeasible for this ordering\n            placement[best].append(m)\n            load[best] += m.req_rate / m.slo\n            free_mem[best] -= m.model_size\n        return placement\n\n    def max_kvpr(placement):\n        \"\"\"Compute max KVPR across GPUs for a placement.\"\"\"\n        worst = 0.0\n        for g in range(gpu_num):\n            mem = GPU_MEM_SIZE - sum(m.model_size for m in placement[g])\n            load = sum(m.req_rate / m.slo for m in placement[g])\n            worst = max(worst, load / mem if mem > 0 else float(\"inf\"))\n        return worst\n\n    # Try multiple orderings (deterministic + randomized restarts); keep the best\n    import random\n    rng = random.Random(42)\n    orders = [\n        sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True),\n        sorted(models, key=lambda m: m.model_size, reverse=True),\n        sorted(models, key=lambda m: (m.req_rate / m.slo) / m.model_size, reverse=True),\n        sorted(models, key=lambda m: m.model_size / (m.req_rate / m.slo), reverse=True),\n    ]\n    base = list(models)\n    for _ in range(30):\n        shuffled = base[:]\n        rng.shuffle(shuffled)\n        orders.append(shuffled)\n\n    best = None\n    best_score = float(\"inf\")\n    for order in orders:\n        p = greedy(order)\n        if p is not None:\n            s = max_kvpr(p)\n            if s < best_score:\n                best_score, best = s, p\n    if best is None:\n        raise ValueError(\"Unable to place all models on the GPUs\")\n    return best\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n\n```\n\n### Program 2 (combined_score: 22.9028)\nScore breakdown:  - max_kvpr: 21.9628  - execution_time: 0.0002  - success_rate: 0.9400\n\n```python\nGPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    def greedy(order):\n        \"\"\"Greedy placement: each model goes to the GPU minimizing resulting KVPR.\"\"\"\n        placement = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        load = [0.0] * gpu_num  # sum of req_rate/slo per GPU\n        for m in order:\n            best, best_kvpr = None, float(\"inf\")\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    new_kvpr = (load[g] + m.req_rate / m.slo) / (free_mem[g] - m.model_size)\n                    if new_kvpr < best_kvpr:\n                        best_kvpr, best = new_kvpr, g\n            if best is None:\n                return None  # infeasible for this ordering\n            placement[best].append(m)\n            load[best] += m.req_rate / m.slo\n            free_mem[best] -= m.model_size\n        return placement\n\n    def max_kvpr(placement):\n        \"\"\"Compute max KVPR across GPUs for a placement.\"\"\"\n        worst = 0.0\n        for g in range(gpu_num):\n            mem = GPU_MEM_SIZE - sum(m.model_size for m in placement[g])\n            load = sum(m.req_rate / m.slo for m in placement[g])\n            worst = max(worst, load / mem if mem > 0 else float(\"inf\"))\n        return worst\n\n    # Try multiple orderings; keep the placement with the lowest max KVPR\n    keys = [\n        lambda m: m.req_rate / m.slo,        # highest pressure ratio first\n        lambda m: m.model_size,              # largest model first\n        lambda m: (m.req_rate / m.slo) / m.model_size,\n    ]\n    best = None\n    best_score = float(\"inf\")\n    for key in keys:\n        p = greedy(sorted(models, key=key, reverse=True))\n        if p is not None:\n            s = max_kvpr(p)\n            if s < best_score:\n                best_score, best = s, p\n    if best is None:\n        raise ValueError(\"Unable to place all models on the GPUs\")\n    return best\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n\n```\n\n\n\n# Current Solution\n\n## Program Information\ncombined_score: 21.8916\nScore breakdown:\n  - max_kvpr: 20.8916\n  - execution_time: 0.0001\n  - success_rate: 1.0000\n\n```python\nGPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    # Greedy KVPR-minimizing placement based on Algorithm 1 (without \u03c4 check)\n    # 1) Sort models by r_j / s_j in descending order\n    sorted_models = sorted(models, key=lambda m: (m.req_rate / m.slo), reverse=True)\n\n    # 2) Initialize per-GPU states\n    placement = {gpu_id: [] for gpu_id in range(gpu_num)}\n    shared_kv = [GPU_MEM_SIZE for _ in range(gpu_num)]  # remaining memory per GPU\n    weighted_req_rate = [0.0 for _ in range(gpu_num)]  # sum of r_j / s_j per GPU\n\n    # 3) Assign each model to the GPU that minimizes current KVPR while fitting in memory\n    for model in sorted_models:\n        best_idx = None\n        best_ratio = float(\"inf\")\n\n        for gpu_id in range(gpu_num):\n            if model.model_size <= shared_kv[gpu_id] and shared_kv[gpu_id] > 0:\n                current_ratio = weighted_req_rate[gpu_id] / shared_kv[gpu_id]\n                if current_ratio < best_ratio:\n                    best_ratio = current_ratio\n                    best_idx = gpu_id\n\n        # Failure: if no GPU can fit, raise an error instead of overcommitting\n        if best_idx is None:\n            raise ValueError(\n                f\"Unable to place model of size {model.model_size} GB on any GPU. \"\n                f\"Remaining per-GPU memory: {shared_kv}\"\n            )\n\n        placement[best_idx].append(model)\n        weighted_req_rate[best_idx] += model.req_rate / model.slo\n        shared_kv[best_idx] -= model.model_size\n\n    return placement\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n\n```\n\n\n# Task\nSuggest improvements to the program that will improve its COMBINED_SCORE.\nThe system maintains diversity across these dimensions: score, complexity.\nDifferent solutions with similar combined_score but different features are valuable.\n\nYou MUST use the exact SEARCH/REPLACE diff format shown below to indicate changes:\n\n<<<<<<< SEARCH\n# Original code to find and replace (must match exactly)\n=======\n# New replacement code\n>>>>>>> REPLACE\n\nExample of valid diff format:\n<<<<<<< SEARCH\nfor i in range(m):\n    for j in range(p):\n        for k in range(n):\n            C[i, j] += A[i, k] * B[k, j]\n=======\n# Reorder loops for better memory access pattern\nfor i in range(m):\n    for k in range(n):\n        for j in range(p):\n            C[i, j] += A[i, k] * B[k, j]\n>>>>>>> REPLACE\n\n**CRITICAL**: You can suggest multiple changes. Each SEARCH section must EXACTLY match code in \"# Current Solution\" - copy it character-for-character, preserving all whitespace and indentation. Do NOT paraphrase or reformat.\nBe thoughtful about your changes and explain your reasoning thoroughly.\nInclude a concise docstring at the start of functions describing the exact approach taken.\n\nIMPORTANT: If an instruction header of \"## IMPORTANT: ...\" is given below the \"# Current Solution\", you MUST follow it. Otherwise, \nfocus on targeted improvements of the program. \n\n- Time limit: Programs should complete execution within 360 seconds; otherwise, they will timeout.",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "solution",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435852.8503613,
+    "usage": {
+      "completion_tokens": 1224,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 113
+      },
+      "cost": 0.0008091,
+      "cost_details": {
+        "upstream_inference_completions_cost": 0.000459,
+        "upstream_inference_cost": 0.0008091,
+        "upstream_inference_prompt_cost": 0.0003501
+      },
+      "is_byok": false,
+      "prompt_tokens": 3112,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "video_tokens": 0
+      },
+      "total_tokens": 4336
+    }
+  },
+  {
+    "content_lengths": [
+      1017
+    ],
+    "error": null,
+    "finish_reasons": [
+      "stop"
+    ],
+    "finished_at_unix": 1790435885.985584,
+    "generation_id": "gen-1790435879-viAr3PLMWCppxPb9bUMa",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 32000,
+      "messages": [
+        {
+          "content": "Summarize the population state with NUMBER-BACKED observations.\n\nOUTPUT FORMAT:\n\n\ud83d\udcca **State:** [One-sentence description based on numbers]\n\n**Key Numbers:** [3-4 bullet points]\n\u2022 Report key metrics from the stats (score range, spread, trajectory)\n\n**Patterns Observed:** [2-3 bullet points]\n\u2022 Describe factual patterns in the data (gaps, trends, anything)\n\u2022 State what the numbers show, not what they mean\n\u2022 Show a few numbers in the text; do not repeat the full list of numbers.\n\nExample: \n\u2022 Parent selection: what parents were typically chosen recently? \n\u2022 Context selection: what context programs were used recently?\n\u2022 Outcomes: compare scores across parent, context, and resulting child programs.\n\u2022 If any particular program is overused in parent or context selection, flag it.\n\u2022 Label usage: when self.DIVERGE_LABEL / self.REFINE_LABEL was used (if any). \n\nRULES:\n- Every statement MUST cite a specific number FROM THE STATS PROVIDED\n- Report observations only\u2014no recommendations or interpretations\n- NO made-up numbers\n- NO summary paragraph at the end",
+          "role": "system"
+        },
+        {
+          "content": "Population Statistics:\n\n- population_size: 4\n- score_distribution: current_best=24.1912, 75th_pct=24.1912 (100%), 50th_pct=23.5470 (97%), 25th_pct=22.1444 (92%), worst=21.8916\n- programs_by_score_tier: top (score >= 24.1912): 50%, upper_mid (23.5470 <= score < 24.1912): 0%, lower_mid (22.1444 <= score < 23.5470): 25%, bottom (score < 22.1444): 25%\n- unique_score_values: 3\n- 37.5% of solutions share the same parent on average\n- top_4_scores: ['24.1912', '24.1912', '22.9028', '21.8916']\n  - Top score (24.1912) repeated 2x\n- No improvement by more than 0.0100 for 1 iterations\n- parent: 67% reuse rate, score 0-25th\n- context: 50% reuse rate, score 0-25th\n- recent_scores (last 4): ['21.8916', '22.9028', '24.1912', '24.1912']\n- recent_parent_scores: ['N/A', '21.8916', '22.9028', '21.8916']",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "trace_meta_or_preflight",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435878.956947,
+    "usage": {
+      "completion_tokens": 322,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "cost": 0.0001856625,
+      "cost_details": {
+        "upstream_inference_completions_cost": 0.00012075,
+        "upstream_inference_cost": 0.0001856625,
+        "upstream_inference_prompt_cost": 6.49125e-05
+      },
+      "is_byok": false,
+      "prompt_tokens": 577,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "video_tokens": 0
+      },
+      "total_tokens": 899
+    }
+  },
+  {
+    "content_lengths": [
+      714
+    ],
+    "error": null,
+    "finish_reasons": [
+      "stop"
+    ],
+    "finished_at_unix": 1790435885.2475748,
+    "generation_id": "gen-1790435879-anvvK9gh8kzuytU5Imuy",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 32000,
+      "messages": [
+        {
+          "content": "Summarize the downstream problem context for a search algorithm designer.\n\nProvide a concise summary (under 100 words) covering:\n- [Read ## Problem Description] What problem is being solved. Be accurate and detailed; describe the problem in a way that is easy to understand at a high level.\n- [Read ## Problem Evaluator] How solutions are evaluated/scored\n\nINSTRUCTIONS FOR SCORING FORMULA:\n1. Find the FINAL return statement in the evaluate() function - this is the ONLY source of truth for metric names.\n2. Trace how `combined_score` is calculated using ONLY the metric names that appear as KEYS in that final return dict.\n3. DO NOT expose internal/intermediate variable names (e.g., internal variable names within the function) that don't appear in the return statement.\n4. In your answer, highlight the metric names in the return statement by ``\n\nOUTPUT FORMAT:\n**Task:** <one sentence: what the solution must optimize>\n\n**Scoring:** combined_score = <formula with weights and metric names>\n\n**Goal:** Maximize `combined_score`",
+          "role": "system"
+        },
+        {
+          "content": "## Problem Description\nYou are an expert for model placement on GPUs. Your task is to improve a model placement algorithm by improve the function named compute_model_placement in the intial program that places models to available GPUs.\nThe algorithm must MINIMIZE the maximum KVPR across all GPUs while ensuring models can fit into the GPUs' memory. Note that KVPR is KV cache pressure for a GPU. It indicates how crowded a GPU is. For a specific GPU, its KVPR is computed as sum(model.req_rate/model.slo for model in models) / (GPU_MEM_SIZE - sum(model.model_size for model in models)), where models are the models on this GPU. The generated program should be as simple as possible and the code should be executed correctly without errors.\n\n## Problem Evaluator \n```python\nimport concurrent.futures\nimport importlib.util\nimport time\nimport traceback\nfrom dataclasses import dataclass\n\nimport numpy as np\n\nGPU_MEM_SIZE = 80  # GB\nMIN_INT = float(\"-inf\")  # Define MIN_INT as negative infinity\n\n\n@dataclass\nclass Model:\n    model_name: str\n    model_size: int\n    req_rate: int\n    slo: int\n    cur_gpu_id: int\n\n\ndef run_with_timeout(func, args=(), kwargs={}, timeout_seconds=30):\n    \"\"\"\n    Run a function with a timeout using concurrent.futures\n    \"\"\"\n    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:\n        future = executor.submit(func, *args, **kwargs)\n        try:\n            result = future.result(timeout=timeout_seconds)\n            return result\n        except concurrent.futures.TimeoutError:\n            raise TimeoutError(f\"Function timed out after {timeout_seconds} seconds\")\n\n\ndef safe_float(value):\n    \"\"\"Convert a value to float safely\"\"\"\n    try:\n        if np.isnan(value) or np.isinf(value):\n            return 0.0\n        return float(value)\n    except (TypeError, ValueError):\n        return 0.0\n\n\ndef verify_gpu_mem_constraint(placement_data: dict[int, list[Model]]) -> bool:\n    \"\"\"\n    Verify the whether models can fit into GPU memory\n    \"\"\"\n    # Check if the placement data is valid\n    if placement_data is None:\n        return False\n\n    # Check if the placement data is valid\n    for gpu_id, models in placement_data.items():\n        if sum(model.model_size for model in models) > GPU_MEM_SIZE:\n            return False\n\n    return True\n\n\ndef calculate_kvcache_pressure(placement_data: dict[int, list[Model]]) -> float:\n    \"\"\"\n    Calculate the KVCache pressure\n    \"\"\"\n    max_kvpr = MIN_INT\n    for gpu_id, models in placement_data.items():\n        total_model_size = sum(model.model_size for model in models)\n        total_weighted_req_rate = sum(model.req_rate / model.slo for model in models)\n        if GPU_MEM_SIZE - total_model_size > 0:\n            kvpr = total_weighted_req_rate / (GPU_MEM_SIZE - total_model_size)\n        else:\n            kvpr = 1000000\n        max_kvpr = max(max_kvpr, kvpr)\n\n    return max_kvpr\n\n\ndef generate_test_gpu_models(num_tests=50):\n    \"\"\"\n    Generate multiple test signals with different characteristics\n    \"\"\"\n    test_cases = []\n    np.random.seed(42)\n\n    for i in range(num_tests):\n        gpu_num = np.random.randint(5, 10)\n        gpu_models = []\n        for j in range(gpu_num * 2):\n            model_size = np.random.randint(10, 30)\n            req_rate = np.random.randint(1, 10)\n            slo = np.random.randint(5, 10)\n            gpu_models.append(\n                Model(\n                    model_name=f\"model_{j}\",\n                    model_size=model_size,\n                    req_rate=req_rate,\n                    slo=slo,\n                    cur_gpu_id=j,\n                )\n            )\n\n        test_cases.append((gpu_num, gpu_models))\n\n    return test_cases\n\n\ndef evaluate(program_path):\n    \"\"\"\n    Main evaluation function that tests the signal processing algorithm\n    on multiple test signals and calculates the composite performance metric.\n    \"\"\"\n    try:\n        # Load the program\n        spec = importlib.util.spec_from_file_location(\"program\", program_path)\n        program = importlib.util.module_from_spec(spec)\n        spec.loader.exec_module(program)\n\n        # Check if required function exists\n        if not hasattr(program, \"compute_model_placement\"):\n            return {\n                \"max_kvpr\": 0.0,\n                \"success_rate\": 0.0,\n                \"combined_score\": 0.0,\n                \"error\": \"Missing compute_model_placement function\",\n            }\n\n        # Generate test gpu and models\n        test_gpu_models = generate_test_gpu_models()\n\n        # Collect metrics across all tests\n        all_kvpr = []\n        all_metrics = []\n        successful_runs = 0\n\n        for i, (gpu_num, gpu_models) in enumerate(test_gpu_models):\n            try:\n                # Run the algorithm with timeout\n                start_time = time.time()\n\n                # Call the program's main function\n                result = run_with_timeout(\n                    program.compute_model_placement,\n                    kwargs={\"gpu_num\": gpu_num, \"models\": gpu_models},\n                    timeout_seconds=10,\n                )\n\n                execution_time = time.time() - start_time\n\n                # Validate result format\n                if not isinstance(result, dict):\n                    return {\n                        \"max_kvpr\": 0.0,\n                        \"success_rate\": 0.0,\n                        \"combined_score\": 0.0,\n                        \"error\": f\"Placement {i}: Expected dict, got {type(result).__name__}\",\n                    }\n\n                # Validate all models are placed\n                placed_models = []\n                for gpu_id, assigned_models in result.items():\n                    if not isinstance(assigned_models, list):\n                        return {\n                            \"max_kvpr\": 0.0,\n                            \"success_rate\": 0.0,\n                            \"combined_score\": 0.0,\n                            \"error\": f\"GPU {gpu_id} value must be list, got {type(assigned_models).__name__}\",\n                        }\n                    placed_models.extend(assigned_models)\n\n                if len(placed_models) != len(gpu_models):\n                    return {\n                        \"max_kvpr\": 0.0,\n                        \"success_rate\": 0.0,\n                        \"combined_score\": 0.0,\n                        \"error\": f\"Not all models placed: {len(placed_models)}/{len(gpu_models)}\",\n                    }\n\n                # Check for duplicate placements (by object identity)\n                placed_ids = [id(m) for m in placed_models]\n                if len(set(placed_ids)) != len(placed_ids):\n                    return {\n                        \"max_kvpr\": 0.0,\n                        \"success_rate\": 0.0,\n                        \"combined_score\": 0.0,\n                        \"error\": f\"Duplicate models detected\",\n                    }\n\n                # Check placed models are the exact input objects\n                original_ids = {id(m) for m in gpu_models}\n                if set(placed_ids) != original_ids:\n                    return {\n                        \"max_kvpr\": 0.0,\n                        \"success_rate\": 0.0,\n                        \"combined_score\": 0.0,\n                        \"error\": \"Placed models don't match input models (missing or foreign models)\",\n                    }\n\n                # Verify GPU memory constraints\n                if not verify_gpu_mem_constraint(result):\n                    return {\n                        \"max_kvpr\": 0.0,\n                        \"success_rate\": 0.0,\n                        \"combined_score\": 0.0,\n                        \"error\": f\"GPU memory constraint violated\",\n                    }\n\n                # Calculate metrics using the generated test signal\n                max_kvpr = calculate_kvcache_pressure(result)\n\n                # Store metrics\n                metrics = {\n                    \"max_kvpr\": safe_float(max_kvpr),\n                    \"execution_time\": safe_float(execution_time),\n                }\n\n                all_kvpr.append(safe_float(max_kvpr))\n                all_metrics.append(metrics)\n                successful_runs += 1\n\n            except TimeoutError:\n                print(f\"Placement {i}: Timeout\")\n                continue\n            except Exception as e:\n                print(f\"Placement {i}: Error - {str(e)}\")\n                continue\n\n        # If no successful runs, return minimal scores\n        if successful_runs == 0:\n            return {\n                \"max_kvpr\": 0.0,\n                \"success_rate\": 0.0,\n                \"combined_score\": 0.0,\n                \"error\": \"All test signals failed\",\n            }\n\n        print(all_metrics)\n        # Calculate aggregate metrics\n        avg_kvpr = np.mean(all_kvpr)\n        if avg_kvpr != 0:\n            avg_kvpr = 1.0 / avg_kvpr\n        avg_execution_time = np.mean([m[\"execution_time\"] for m in all_metrics])\n        success_rate = successful_runs / len(test_gpu_models)\n\n        return {\n            \"max_kvpr\": safe_float(avg_kvpr),\n            \"execution_time\": safe_float(avg_execution_time),\n            \"success_rate\": safe_float(success_rate),\n            \"combined_score\": safe_float(avg_kvpr) + safe_float(success_rate),\n        }\n\n    except Exception as e:\n        print(f\"Evaluation failed: {str(e)}\")\n        print(traceback.format_exc())\n        return {\"max_kvpr\": 0.0, \"success_rate\": 0.0, \"combined_score\": 0.0, \"error\": str(e)}\n\n\nif __name__ == \"__main__\":\n    # Backwards-compat: bridges old evaluate() -> dict to the container JSON\n    # protocol.  wrapper.py is auto-injected at build time from\n    # skydiscover/evaluation/wrapper.py.\n    from wrapper import run\n\n    run(evaluate)\n\n```",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "trace_meta_or_preflight",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435878.95829,
+    "usage": {
+      "completion_tokens": 191,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 0
+      },
+      "cost": 0.000326775,
+      "cost_details": {
+        "upstream_inference_completions_cost": 7.1625e-05,
+        "upstream_inference_cost": 0.000326775,
+        "upstream_inference_prompt_cost": 0.00025515
+      },
+      "is_byok": false,
+      "prompt_tokens": 2268,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "video_tokens": 0
+      },
+      "total_tokens": 2459
+    }
+  },
+  {
+    "content_lengths": [
+      4530
+    ],
+    "error": null,
+    "finish_reasons": [
+      "stop"
+    ],
+    "finished_at_unix": 1790435903.4163249,
+    "generation_id": "gen-1790435886-IxOYNe1SKXHNHoDnKVUa",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 32000,
+      "messages": [
+        {
+          "content": "You are an expert coder evolving a search algorithm for program optimization. \nYour task is to improve the EvolvedProgramDatabase class, which implements a search algorithm that helps the LLM leverage past experience to generate better solutions.\n\n========================\nHIGH-LEVEL CONTEXT\n========================\n- You are evolving the *search algorithm itself*.\n- The search algorithm is implemented as a database that:\n  (1) manages candidate programs (solutions), and\n  (2) decides which program to mutate next and how, and which programs to sample (if any) as context for the next program generation\n- The search algorithm will run on the downstream problem for a number of iterations.\n- Search algorithms that fail to improve past a meaningful threshold within a time window may be replaced.\n\n========================\nSCORING OBJECTIVE\n========================\nYour search algorithm is evaluated based on how much the best solution improves over time. The quality of your search algorithm is measured by:\n\n    Search Algorithm Score = ((best_score - initial_score) * (1 + log(1 + initial_score))) / sqrt(iterations)\n    \n    - Where best_score is the best score found on the downstream problem, and initial_score is the starting score before search begins.\n\n========================\nCLASS & FUNCTIONS\n========================\nYou must implement a class named EvolvedProgramDatabase that inherits from ProgramDatabase.\n\nThis class defines the search algorithm by deciding:\n- add() function: How programs are added to the population\n- sample() function\n    - Which program to mutate next and how (the parent)\n    - What past programs to provide as context (if any) to the LLM when generating new candidate programs\n\nEvolvedProgram extends Program (from skydiscover.optimize.search.base_database).\n\nImportant Program fields:\n- id: str\n- solution: str\n    - The solution to the problem, can be code, prompt, etc.\n- language: str = \"python\"\n- metrics: Dict[str, Any]\n    - Task evaluation metrics; the main metric is \"combined_score\"\n- iteration_found: int\n- parent_id: str\n    - ID of the parent program it was mutated from \n- other_context_ids: List[str]\n    - IDs of other programs used as context for this program generation \n- parent_info: Tuple[str, str]\n    - (label, id) tuple tracking the label assigned to the parent for generating this program.\n    - If label is non-empty, it indicates either `self.DIVERGE_LABEL` or `self.REFINE_LABEL` was used.\n- timestamp: float\n- metadata: Dict[str, Any]\n\nNOTE:\n- You can read these attributes directly from any EvolvedProgram. \n- The program passed to add() already has these fields populated. You can use them as needed, but do \nnot overwrite them.\n\nEvolvedProgramDatabase extends ProgramDatabase.\n\nAvailable attributes and helpers from ProgramDatabase:\n- self.programs: Dict[str, EvolvedProgram] - access to all programs\n- self.DIVERGE_LABEL: str - a predefined label for signaling divergence from parent program (DO NOT modify)\n- self.REFINE_LABEL: str - a predefined label for signaling refinement over the parent program (DO NOT modify)\n- Helper methods (use these rather than re-implementing):\n  get(program_id: str) -> Optional[EvolvedProgram] - get Program by its program_id\n\n========================\nREQUIRED METHODS\n========================\nYou MUST implement the following methods exactly (do not change signatures):\n\n1) add \n    def add(self, program: EvolvedProgram, iteration: Optional[int] = None, **kwargs: Any) -> str\n    \nThe add() method controls how programs enter and remain in the population.\n\n2) sample\n    def sample(self, num_context_programs: Optional[int] = 4, **kwargs) -> Tuple[\n        Dict[str, EvolvedProgram],\n        Dict[str, List[EvolvedProgram]]\n    ]\n\nThe sample() method selects which program to mutate next and how, and which past programs to use as context. \n\n    Returns a tuple of:\n    - parent_dict: Dict[str, EvolvedProgram]\n        A dict mapping a label string to EXACTLY ONE program to mutate.\n\n    - context_programs_dict: Dict[str, List[EvolvedProgram]]\n        A dict mapping label strings to lists of past programs to provide as additional context for the next program mutation.\n        \n    LABEL RULES FOR PARENT and CONTEXT:\n        - Parent labels MUST be empty string \"\" by default. \n        - Context labels MUST ALWAYS be empty strings \"\".\n    \n    PARENT + CONTEXT SELECTION PRINCIPLES:\n    \n    The parent and context together determine what the LLM sees when generating the next solution.\n    \n    1) Parent selection: what to mutate \n        - Main program to mutate for the next generation.\n    2) Context selection: what else the LLM sees \n        - Complementary perspectives to inform the next generation. E.g. different approaches, contrasting examples, different score ranges.\n    3) Avoid deterministic selections that would always pick the same program across iterations.\n\n================================================\nPREDEFINED LABELS (DIVERGE & REFINE)\n================================================\n- Parent labels MUST be empty string \"\" by default.\n\n- `self.DIVERGE_LABEL`: Signals the LLM to try something fundamentally different. \n- `self.REFINE_LABEL`: Signals the LLM to refine the current approach. \n\n- **USE LABELS ONLY WHEN APPROPRIATE**: \n    - Default should be empty string \"\" for parent label - let smart parent/context selection do the work.\n    - Use DIVERGE_LABEL or REFINE_LABEL when progress is stagnating -- consider why: \n        - Fundamentally limited approaches may need a new direction.\n        - A promising candidate solution may need refinement to reach its potential. \n        - A new idea often needs a few iterations of refinement to work.\n    - Be careful not to overuse any particular program to apply the labels.\n    - Choose label and the targeted program based on the search state, not a fixed rule.\n\n- ONLY WHEN using self.DIVERGE_LABEL or self.REFINE_LABEL, you can optionally return empty {} context for targeted divergence or refinement on the parent program.\n\n========================\nDESIGN IDEAS\n========================\nKEEP IT SIMPLE: Match your algorithm to the population size and iteration window (Read \"Your Algorithm's Search Window\").\n    - NOTE: You can define helper state in __init__ for use in add/sample.\n\nPARENT and CONTEXT SELECTION DIVERSITY (PRIMARY MECHANISM):\n    - Use `parent_id`, `other_context_ids`, or `parent_info` to check which parent and context were used, or whether a label has been tried.\n    - Think about different combinations of diverse parents and varied context, and consider what works best.\n        - Sometimes failure programs can also provide useful insights. \n    - Be careful not to overuse any particular program or set of programs from the database.\n    - Adjust the search strategy based on the search state - try different approaches (parent, label, and context selection) when progress is deeply stuck.\n    \nREADING THE POPULATION:\n    - Exploit or explore? \n        - Consolidate gains or explore more? \n    - What parents/contexts led to improvements? Which led nowhere or showed little improvement? \n    - How far are we from SOTA? When close to SOTA, what parent should I select and refine? \n    - How are the scores distributed? \n    - Is the population diverse or converging? Consider whether diversity itself (not just score) should be a selection signal.\n    - When progress stalls, ask: is the issue with parent and context selection, or a fundamental plateau (reasonable \n    variations exhausted)? Adjust the selection strategy, and consider using DIVERGE and REFINE labels as part of your toolkit.\n        \n========================\nCONSTRAINTS\n========================\n- DO NOT change class names (EvolvedProgramDatabase, EvolvedProgram) or method signatures. Preserve all imports and dataclass definitions.\n- All variables used in add() or sample() MUST be initialized in __init__ with safe default values to avoid runtime errors.\n- DO NOT modify, overwrite, or recompute any existing values in program.metrics.\n    - Existing metrics (e.g., \"combined_score\") MUST remain unchanged.\n    - You may add new internal metrics or metadata keys if useful.\n- When accessing metrics:\n    - Always validate the type before use: check isinstance(value, (int, float)) before converting to float or performing arithmetic.\n    - Filter out non-numeric values (like error strings) when computing averages or scores.\n- LABEL CONSTRAINTS (CRITICAL):\n    - Parent label: MUST be \"\" (empty string) by default. Use self.DIVERGE_LABEL or self.REFINE_LABEL when population signals warrant it. \n    - Context labels: MUST ALWAYS be \"\" (empty string). No exceptions.\n    - self.DIVERGE_LABEL and self.REFINE_LABEL are predefined constants. DO NOT redefine or modify them.\n- Track progress state (e.g., best score history, parent usage) in add(), not sample(). This persists correctly across checkpoint resumes.\n- Be aware that all programs share a single root ancestor (the initial seed); the lineage forms a tree, so tracing parent_id always leads back to the same root.\n- Program objects are NOT hashable: do not put them in sets or use them as dict keys. Use program.id (a string) for deduplication and lookups instead.\n\n========================\nCRITICAL INSTRUCTION\n========================\n- Design a search algorithm that performs parent and context selection wisely and adaptively.\n- Only count improvements as meaningful if they exceed 1% relative or 0.01 absolute.",
+          "role": "system"
+        },
+        {
+          "content": "# DOWNSTREAM PROBLEM CONTEXT\nYour search algorithm evolves solutions for the downstream problem. Use this to inform your search strategy.\n\n**Task:** Implement `compute_model_placement(gpu_num, models)` that assigns each model (each with `model_size`, `req_rate`, `slo`) to one of `gpu_num` GPUs so that every GPU's total model size \u2264 80 GB, minimizing the maximum KV cache pressure (KVPR = \u03a3(req_rate/slo) / (80 \u2212 \u03a3 model_size) per GPU) across GPUs. Must run within 10s and return a valid dict of gpu_id \u2192 model list.\n\n**Scoring:** combined_score = `max_kvpr` + `success_rate`, where `max_kvpr` = 1/mean(max KVPR over 50 test cases) (so lower max KVPR is better) and `success_rate` = fraction of test cases producing valid placements. Invalid output (missing/duplicate models, memory violation, wrong type) scores 0.\n\n**Goal:** Maximize `combined_score`\n\n---------------------------\n\n# Search Algorithm Information \n\n## Your Algorithm's Search Window\n- Your newly designed search algorithm will start at iteration 3 out of 5. It will run for at least 1 iterations (potentially more if improving), but will be cut to just 1 iterations if it fails to improve the solution score by more than 0.0100.\n- If your algorithm fails to improve the solution score by more than 0.0100 during this window, it will be replaced.\n- Goal: Design a better search strategy (e.g. how to select and manage solution programs) to improve the downstream solution score.\n- NOTE: Exactly one program is generated per iteration. Keep the population size in mind when designing your search algorithm.\n\n## Solution Population Statistics\nThis describes the current state of the solution database your algorithm will work with. \n\n\ud83d\udcca **State:** A 4-program population with a duplicated best score (24.1912 \u00d72) that has plateaued for 1 iteration, and a clear gap of ~1.29 points between the top pair and the rest.\n\n**Key Numbers:**\n\u2022 Score range: 21.8916 \u2192 24.1912 (spread of 2.2996)\n\u2022 50% of programs sit in the top tier (score \u2265 24.1912); 25% in lower_mid, 25% in bottom; upper_mid is empty (0%)\n\u2022 Only 3 unique score values across 4 programs; top score repeated 2x\n\u2022 No improvement > 0.0100 for 1 iterations\n\n**Patterns Observed:**\n\u2022 Recent scores trend upward then flatten: 21.8916 \u2192 22.9028 \u2192 24.1912 \u2192 24.1912 (last two identical)\n\u2022 Parents are drawn mostly from the bottom tier: recent parent scores were ['N/A', '21.8916', '22.9028', '21.8916'] \u2014 two of three known parents scored 21.8916, yet parent reuse rate is 67% and context reuse rate is 50%, both selecting from the 0\u201325th score band\n\u2022 37.5% of solutions share the same parent on average, and the two best programs (24.1912) are duplicates, indicating lineage concentration at the top\n\n# What You Are Writing \n\n## Current Search Program\n\n### Metrics\nFocus areas:\n- Search algorithm score declined: 24.1912 \u2192 9.4990. Consider revising.\n- Consider simplifying - solution length exceeds 500 characters\n\nSearch Algorithm Score = 9.4990\nThis search algorithm ran from iteration 0 to 0 (0 iterations)\nThis search algorithm changed the downstream solution combined_score by: 21.8916 -> 24.1912 (+2.2996)\n\n### Solution\n```python\n# EVOLVE-BLOCK-START\nimport logging\nfrom dataclasses import dataclass\nfrom typing import Dict, List, Optional, Tuple\n\nfrom skydiscover.optimize.config import DatabaseConfig\nfrom skydiscover.optimize.search.base_database import Program, ProgramDatabase\n\nlogger = logging.getLogger(__name__)\n\n\n@dataclass\nclass EvolvedProgram(Program):\n    \"\"\"Program for the evolved database.\"\"\"\n\n\nclass EvolvedProgramDatabase(ProgramDatabase):\n    \"\"\"Initial search strategy database.\n\n    When ``config.pareto_objectives`` is set, sampling prefers members of the\n    global Pareto front (issue #42) while still mixing in non-front programs\n    for exploration. Scalar mode keeps the original uniform random sample.\n    \"\"\"\n\n    def __init__(self, name: str, config: DatabaseConfig):\n        super().__init__(name, config)\n        self.initial_program = None\n\n    def add(self, program: EvolvedProgram, iteration: Optional[int] = None, **kwargs) -> str:\n        \"\"\"Add a program to the database.\"\"\"\n        if iteration == 0 or program.iteration_found == 0:\n            self.initial_program = program\n\n        self.programs[program.id] = program\n\n        if iteration is not None:\n            self.last_iteration = max(self.last_iteration, iteration)\n\n        if self.config.db_path:\n            self._save_program(program)\n\n        self._update_best_program(program)\n\n        logger.debug(f\"Added program {program.id} to the evolve database\")\n        return program.id\n\n    def sample(\n        self, num_context_programs: Optional[int] = 4, **kwargs\n    ) -> Tuple[Dict[str, EvolvedProgram], Dict[str, List[EvolvedProgram]]]:\n        \"\"\"\n        Picks a parent and set of context programs.\n\n        Multiobjective: parent is drawn from the Pareto front when available;\n        context mixes front members with the broader population.\n        \"\"\"\n        candidates = list(self.programs.values())\n\n        if len(candidates) == 0:\n            raise ValueError(\"No candidates available for sampling\")\n\n        front: List[EvolvedProgram] = []\n        if self.is_multiobjective_enabled():\n            front = [p for p in self.get_pareto_front() if p.id in self.programs]\n\n        if front:\n            parent = self.rng.choice(front)\n            # Prefer other front members for context, then fill from population.\n            pool = [p for p in front if p.id != parent.id]\n            if len(pool) < (num_context_programs or 0):\n                extras = [p for p in candidates if p.id != parent.id and p not in pool]\n                self.rng.shuffle(extras)\n                pool.extend(extras)\n            examples = pool[:num_context_programs]\n            if len(examples) < (num_context_programs or 0):\n                # Extremely small front \u2014 allow duplicates avoidance only.\n                examples = [p for p in candidates if p.id != parent.id][:num_context_programs]\n        else:\n            parent = self.rng.choice(candidates)\n            sample_size = min((num_context_programs or 0) + 1, len(candidates))\n            examples = self.rng.sample(candidates, sample_size)\n            examples = [p for p in examples if p.id != parent.id][:num_context_programs]\n\n        parent_dict = {\"\": parent}\n        context_programs_dict = {\"\": examples}\n\n        return parent_dict, context_programs_dict\n\n\n# EVOLVE-BLOCK-END\n\n```\n\n\n\n## Other Reference Programs\n\nDiverse search programs that may inspire new ideas:\n\n\n---------------------------\n# Task\n\nRewrite the program to improve search algorithm score based on the population state.\n\nProvide the complete new program solution, and explain high-level 1-2 principals on what you have done \nand why.\n\nKeep things SIMPLE. \n\nIMPORTANT: Make sure your rewritten program maintains the same inputs and outputs\nas the original program, but with improved internal implementation.\n\n```python\n# Your rewritten search algorithm here\n```",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "meta",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435885.988074,
+    "usage": {
+      "completion_tokens": 1068,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 29
+      },
+      "cost": 0.0008092125,
+      "cost_details": {
+        "upstream_inference_completions_cost": 0.0004005,
+        "upstream_inference_cost": 0.0008092125,
+        "upstream_inference_prompt_cost": 0.0004087125
+      },
+      "is_byok": false,
+      "prompt_tokens": 3633,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "video_tokens": 0
+      },
+      "total_tokens": 4701
+    }
+  },
+  {
+    "content_lengths": [
+      5133
+    ],
+    "error": null,
+    "finish_reasons": [
+      "stop"
+    ],
+    "finished_at_unix": 1790435924.1703405,
+    "generation_id": "gen-1790435903-LUV1hCHHJYUavGRga4Xr",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 32000,
+      "messages": [
+        {
+          "content": "You are an expert for model placement on GPUs. Your task is to improve a model placement algorithm by improve the function named compute_model_placement in the intial program that places models to available GPUs.\nThe algorithm must MINIMIZE the maximum KVPR across all GPUs while ensuring models can fit into the GPUs' memory. Note that KVPR is KV cache pressure for a GPU. It indicates how crowded a GPU is. For a specific GPU, its KVPR is computed as sum(model.req_rate/model.slo for model in models) / (GPU_MEM_SIZE - sum(model.model_size for model in models)), where models are the models on this GPU. The generated program should be as simple as possible and the code should be executed correctly without errors.",
+          "role": "system"
+        },
+        {
+          "content": "# Current Solution Information\n- Main Metrics: \n- combined_score: 21.8916\n\nMetrics:\n  - max_kvpr: 20.8916\n  - execution_time: 0.0001\n  - success_rate: 1.0000\n- Focus areas: - Combined score declined: 24.1912 \u2192 21.8916. Consider revising recent changes.\n- Solution is long (>500 chars); consider simplifying while preserving quality\n\n# Program Generation History\n## Previous Attempts\n\n### Attempt 3\n- Changes: Change 1: Modified function `greedy`: Greedy placement: each model goes to the GPU minimizing resulting KVPR.\n- Metrics: max_kvpr: 21.9628, execution_time: 0.0002, success_rate: 0.9400, combined_score: 22.9028\n- Outcome: Improvement in combined_score\n\n### Attempt 2\n- Changes: Change 1: Modified function `greedy`: Greedy: each model goes to the GPU minimizing its resulting KVPR.\n- Metrics: max_kvpr: 23.5512, execution_time: 0.0008, success_rate: 0.6400, combined_score: 24.1912\n- Outcome: Improvement in combined_score\n\n### Attempt 1\n- Changes: Change 1: Near `# Try multiple orderings; keep the placement with ...` (17\u219226 lines)\n- Metrics: max_kvpr: 23.5512, execution_time: 0.0008, success_rate: 0.6400, combined_score: 24.1912\n- Outcome: Improvement in combined_score\n\n\n\n\n\n# Current Solution\n\n## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.\n\n### Goal\nYou MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.\nThis may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.\nYou can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.\nThink through what is needed to achieve a BREAKTHROUGH SCORE.\n\n**Tools Available:**\nYou have access to a list of libraries. Use these tools to your advantage.\n- Choose library functions appropriate to the problem's structure and constraints.\n- Feel free to break from the existing code entirely \u2014 focus on correct library usage for the problem, not on preserving the current code's structure.\n- **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.\n\n**CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**\n\n### Examples\nEXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):\n- **Greedy construction heuristics**: sort models by load density (req_rate/slo) or size descending; place each on GPU minimizing resulting max KVPR \u2194 place on GPU with most free memory \u2194 best-fit by size with load tiebreak.\n- **Bin-packing style formulations**: first-fit-decreasing on model_size then rebalance \u2194 partition models into feasible bins via classic LPT scheduling on weighted load \u2194 treat as vector bin-packing with (size, load) two dimensions.\n- **Local search / metaheuristics**: random restarts with pairwise model swaps between GPUs \u2194 simulated annealing on move/swap moves \u2194 steepest-descent local search minimizing max KVPR until no improving move.\n- **Multi-phase pipeline**: greedy initial placement \u2192 local-search polish \u2192 targeted repair of the bottleneck GPU (move its models out) \u2192 final feasibility check.\n- **Minimax / bottleneck-focused strategies**: iteratively split the worst GPU's models to other GPUs \u2194 binary search on target KVPR threshold with feasibility packing per threshold \u2194 prioritize reducing the argmax GPU each iteration.\n- **Randomized multi-start**: run many randomized greedy placements (shuffled order, random tiebreaks), keep best; cheap since only numpy available and tests are small (\u226418 models, \u22649 GPUs).\n\n### Output\nYour solution MUST still be VALID / CORRECT for the same problem. A broken \"creative\" solution is worthless.\n\nFormat:\n1. APPROACH: Describe your different approach.\n2. CODE: Implementation.\n\n\n## Program Information\ncombined_score: 21.8916\nScore breakdown:\n  - max_kvpr: 20.8916\n  - execution_time: 0.0001\n  - success_rate: 1.0000\n\n```python\nGPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    # Greedy KVPR-minimizing placement based on Algorithm 1 (without \u03c4 check)\n    # 1) Sort models by r_j / s_j in descending order\n    sorted_models = sorted(models, key=lambda m: (m.req_rate / m.slo), reverse=True)\n\n    # 2) Initialize per-GPU states\n    placement = {gpu_id: [] for gpu_id in range(gpu_num)}\n    shared_kv = [GPU_MEM_SIZE for _ in range(gpu_num)]  # remaining memory per GPU\n    weighted_req_rate = [0.0 for _ in range(gpu_num)]  # sum of r_j / s_j per GPU\n\n    # 3) Assign each model to the GPU that minimizes current KVPR while fitting in memory\n    for model in sorted_models:\n        best_idx = None\n        best_ratio = float(\"inf\")\n\n        for gpu_id in range(gpu_num):\n            if model.model_size <= shared_kv[gpu_id] and shared_kv[gpu_id] > 0:\n                current_ratio = weighted_req_rate[gpu_id] / shared_kv[gpu_id]\n                if current_ratio < best_ratio:\n                    best_ratio = current_ratio\n                    best_idx = gpu_id\n\n        # Failure: if no GPU can fit, raise an error instead of overcommitting\n        if best_idx is None:\n            raise ValueError(\n                f\"Unable to place model of size {model.model_size} GB on any GPU. \"\n                f\"Remaining per-GPU memory: {shared_kv}\"\n            )\n\n        placement[best_idx].append(model)\n        weighted_req_rate[best_idx] += model.req_rate / model.slo\n        shared_kv[best_idx] -= model.model_size\n\n    return placement\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n\n```\n\n\n# Task\nSuggest improvements to the program that will improve its COMBINED_SCORE.\nThe system maintains diversity across these dimensions: score, complexity.\nDifferent solutions with similar combined_score but different features are valuable.\n\nYou MUST use the exact SEARCH/REPLACE diff format shown below to indicate changes:\n\n<<<<<<< SEARCH\n# Original code to find and replace (must match exactly)\n=======\n# New replacement code\n>>>>>>> REPLACE\n\nExample of valid diff format:\n<<<<<<< SEARCH\nfor i in range(m):\n    for j in range(p):\n        for k in range(n):\n            C[i, j] += A[i, k] * B[k, j]\n=======\n# Reorder loops for better memory access pattern\nfor i in range(m):\n    for k in range(n):\n        for j in range(p):\n            C[i, j] += A[i, k] * B[k, j]\n>>>>>>> REPLACE\n\n**CRITICAL**: You can suggest multiple changes. Each SEARCH section must EXACTLY match code in \"# Current Solution\" - copy it character-for-character, preserving all whitespace and indentation. Do NOT paraphrase or reformat.\nBe thoughtful about your changes and explain your reasoning thoroughly.\nInclude a concise docstring at the start of functions describing the exact approach taken.\n\nIMPORTANT: If an instruction header of \"## IMPORTANT: ...\" is given below the \"# Current Solution\", you MUST follow it. Otherwise, \nfocus on targeted improvements of the program. \n\n- Time limit: Programs should complete execution within 360 seconds; otherwise, they will timeout.",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "solution",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435903.9287949,
+    "usage": {
+      "completion_tokens": 1373,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 91
+      },
+      "cost": 0.0007501125,
+      "cost_details": {
+        "upstream_inference_completions_cost": 0.000514875,
+        "upstream_inference_cost": 0.0007501125,
+        "upstream_inference_prompt_cost": 0.0002352375
+      },
+      "is_byok": false,
+      "prompt_tokens": 2091,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "video_tokens": 0
+      },
+      "total_tokens": 3464
+    }
+  },
+  {
+    "content_lengths": [
+      6380
+    ],
+    "error": null,
+    "finish_reasons": [
+      "stop"
+    ],
+    "finished_at_unix": 1790435956.8326898,
+    "generation_id": "gen-1790435924-GsWiuwjelp2MMRtudlrg",
+    "http_status": 200,
+    "outbound_body": {
+      "max_tokens": 32000,
+      "messages": [
+        {
+          "content": "You are an expert for model placement on GPUs. Your task is to improve a model placement algorithm by improve the function named compute_model_placement in the intial program that places models to available GPUs.\nThe algorithm must MINIMIZE the maximum KVPR across all GPUs while ensuring models can fit into the GPUs' memory. Note that KVPR is KV cache pressure for a GPU. It indicates how crowded a GPU is. For a specific GPU, its KVPR is computed as sum(model.req_rate/model.slo for model in models) / (GPU_MEM_SIZE - sum(model.model_size for model in models)), where models are the models on this GPU. The generated program should be as simple as possible and the code should be executed correctly without errors.",
+          "role": "system"
+        },
+        {
+          "content": "# Current Solution Information\n- Main Metrics: \n- combined_score: 21.8916\n\nMetrics:\n  - max_kvpr: 20.8916\n  - execution_time: 0.0001\n  - success_rate: 1.0000\n- Focus areas: - Combined score declined: 24.1912 \u2192 21.8916. Consider revising recent changes.\n- Solution is long (>500 chars); consider simplifying while preserving quality\n\n# Program Generation History\n## Previous Attempts\n\n### Attempt 3\n- Changes: Change 1: Modified function `greedy`: Greedy placement: each model goes to the GPU minimizing resulting KVPR.\n- Metrics: max_kvpr: 21.9628, execution_time: 0.0002, success_rate: 0.9400, combined_score: 22.9028\n- Outcome: Improvement in combined_score\n\n### Attempt 2\n- Changes: Change 1: Modified function `greedy`: Greedy: each model goes to the GPU minimizing its resulting KVPR.\n- Metrics: max_kvpr: 23.5512, execution_time: 0.0008, success_rate: 0.6400, combined_score: 24.1912\n- Outcome: Improvement in combined_score\n\n### Attempt 1\n- Changes: Change 1: Near `# Try multiple orderings; keep the placement with ...` (17\u219226 lines)\n- Metrics: max_kvpr: 23.5512, execution_time: 0.0008, success_rate: 0.6400, combined_score: 24.1912\n- Outcome: Improvement in combined_score\n\n\n\n\n## \u274c Previous Failed Attempts (this retry):\nThe following attempts failed. Avoid these errors:\n\n### Attempt 1:\n**Error:** No valid diffs found in response\n\n\n# Current Solution\n\n## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.\n\n### Goal\nYou MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.\nThis may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.\nYou can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.\nThink through what is needed to achieve a BREAKTHROUGH SCORE.\n\n**Tools Available:**\nYou have access to a list of libraries. Use these tools to your advantage.\n- Choose library functions appropriate to the problem's structure and constraints.\n- Feel free to break from the existing code entirely \u2014 focus on correct library usage for the problem, not on preserving the current code's structure.\n- **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.\n\n**CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**\n\n### Examples\nEXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):\n- **Greedy construction heuristics**: sort models by load density (req_rate/slo) or size descending; place each on GPU minimizing resulting max KVPR \u2194 place on GPU with most free memory \u2194 best-fit by size with load tiebreak.\n- **Bin-packing style formulations**: first-fit-decreasing on model_size then rebalance \u2194 partition models into feasible bins via classic LPT scheduling on weighted load \u2194 treat as vector bin-packing with (size, load) two dimensions.\n- **Local search / metaheuristics**: random restarts with pairwise model swaps between GPUs \u2194 simulated annealing on move/swap moves \u2194 steepest-descent local search minimizing max KVPR until no improving move.\n- **Multi-phase pipeline**: greedy initial placement \u2192 local-search polish \u2192 targeted repair of the bottleneck GPU (move its models out) \u2192 final feasibility check.\n- **Minimax / bottleneck-focused strategies**: iteratively split the worst GPU's models to other GPUs \u2194 binary search on target KVPR threshold with feasibility packing per threshold \u2194 prioritize reducing the argmax GPU each iteration.\n- **Randomized multi-start**: run many randomized greedy placements (shuffled order, random tiebreaks), keep best; cheap since only numpy available and tests are small (\u226418 models, \u22649 GPUs).\n\n### Output\nYour solution MUST still be VALID / CORRECT for the same problem. A broken \"creative\" solution is worthless.\n\nFormat:\n1. APPROACH: Describe your different approach.\n2. CODE: Implementation.\n\n\n## Program Information\ncombined_score: 21.8916\nScore breakdown:\n  - max_kvpr: 20.8916\n  - execution_time: 0.0001\n  - success_rate: 1.0000\n\n```python\nGPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    # Greedy KVPR-minimizing placement based on Algorithm 1 (without \u03c4 check)\n    # 1) Sort models by r_j / s_j in descending order\n    sorted_models = sorted(models, key=lambda m: (m.req_rate / m.slo), reverse=True)\n\n    # 2) Initialize per-GPU states\n    placement = {gpu_id: [] for gpu_id in range(gpu_num)}\n    shared_kv = [GPU_MEM_SIZE for _ in range(gpu_num)]  # remaining memory per GPU\n    weighted_req_rate = [0.0 for _ in range(gpu_num)]  # sum of r_j / s_j per GPU\n\n    # 3) Assign each model to the GPU that minimizes current KVPR while fitting in memory\n    for model in sorted_models:\n        best_idx = None\n        best_ratio = float(\"inf\")\n\n        for gpu_id in range(gpu_num):\n            if model.model_size <= shared_kv[gpu_id] and shared_kv[gpu_id] > 0:\n                current_ratio = weighted_req_rate[gpu_id] / shared_kv[gpu_id]\n                if current_ratio < best_ratio:\n                    best_ratio = current_ratio\n                    best_idx = gpu_id\n\n        # Failure: if no GPU can fit, raise an error instead of overcommitting\n        if best_idx is None:\n            raise ValueError(\n                f\"Unable to place model of size {model.model_size} GB on any GPU. \"\n                f\"Remaining per-GPU memory: {shared_kv}\"\n            )\n\n        placement[best_idx].append(model)\n        weighted_req_rate[best_idx] += model.req_rate / model.slo\n        shared_kv[best_idx] -= model.model_size\n\n    return placement\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n\n```\n\n\n# Task\nSuggest improvements to the program that will improve its COMBINED_SCORE.\nThe system maintains diversity across these dimensions: score, complexity.\nDifferent solutions with similar combined_score but different features are valuable.\n\nYou MUST use the exact SEARCH/REPLACE diff format shown below to indicate changes:\n\n<<<<<<< SEARCH\n# Original code to find and replace (must match exactly)\n=======\n# New replacement code\n>>>>>>> REPLACE\n\nExample of valid diff format:\n<<<<<<< SEARCH\nfor i in range(m):\n    for j in range(p):\n        for k in range(n):\n            C[i, j] += A[i, k] * B[k, j]\n=======\n# Reorder loops for better memory access pattern\nfor i in range(m):\n    for k in range(n):\n        for j in range(p):\n            C[i, j] += A[i, k] * B[k, j]\n>>>>>>> REPLACE\n\n**CRITICAL**: You can suggest multiple changes. Each SEARCH section must EXACTLY match code in \"# Current Solution\" - copy it character-for-character, preserving all whitespace and indentation. Do NOT paraphrase or reformat.\nBe thoughtful about your changes and explain your reasoning thoroughly.\nInclude a concise docstring at the start of functions describing the exact approach taken.\n\nIMPORTANT: If an instruction header of \"## IMPORTANT: ...\" is given below the \"# Current Solution\", you MUST follow it. Otherwise, \nfocus on targeted improvements of the program. \n\n- Time limit: Programs should complete execution within 360 seconds; otherwise, they will timeout.",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "reasoning_effort": "low",
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    },
+    "passed": true,
+    "returned_model": "z-ai/glm-5.3-flash",
+    "role": "solution",
+    "serving_provider": "Novita",
+    "started_at_unix": 1790435924.1717777,
+    "usage": {
+      "completion_tokens": 1719,
+      "completion_tokens_details": {
+        "audio_tokens": 0,
+        "image_tokens": 0,
+        "reasoning_tokens": 102
+      },
+      "cost": 0.0008836875,
+      "cost_details": {
+        "upstream_inference_completions_cost": 0.000644625,
+        "upstream_inference_cost": 0.0008836875,
+        "upstream_inference_prompt_cost": 0.0002390625
+      },
+      "is_byok": false,
+      "prompt_tokens": 2125,
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "video_tokens": 0
+      },
+      "total_tokens": 3844
+    }
+  }
+]

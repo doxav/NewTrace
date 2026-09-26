@@ -1,0 +1,318 @@
+{
+  "complete": true,
+  "identity": {
+    "levels": [
+      "e94ec5672a7c15f8ab718c053c4851ddb3f0d2c65100db05e764df914e0bb9f2"
+    ],
+    "registry_sha256": "dff4f8d7dc74f3b3c387348db3ea1abf78a3ba0aa198ceefd134d880b31f8934",
+    "runtime_tree_sha256": "02a15ed115380e058bacd9b21f225d3cd27e61423b6b7ed8a1bbfdfab1a8f43f",
+    "spec_fingerprint": "8857255b465b133d77e16e28807640f04ee74bb1facb75b18ba6a058a5f1e3fc",
+    "unit_id": "default:seed-42:matrix-0"
+  },
+  "result": {
+    "artifact": {
+      "policy_source": "# EVOLVE-BLOCK-START\nimport logging\nfrom dataclasses import dataclass\nfrom typing import Dict, List, Optional, Tuple\n\nfrom skydiscover.optimize.config import DatabaseConfig\nfrom skydiscover.optimize.search.base_database import Program, ProgramDatabase\n\nlogger = logging.getLogger(__name__)\n\n\n@dataclass\nclass EvolvedProgram(Program):\n    \"\"\"Program for the evolved database.\"\"\"\n\n\ndef _score_of(program: EvolvedProgram) -> float:\n    \"\"\"Best available scalar score for a program (defaults to 0.0).\"\"\"\n    metrics = getattr(program, \"metrics\", None) or {}\n    for key in (\"combined_score\", \"overall_score\", \"composite_score\"):\n        if key in metrics and metrics[key] is not None:\n            return float(metrics[key])\n    return 0.0\n\n\nclass EvolvedProgramDatabase(ProgramDatabase):\n    \"\"\"Tournament-based, diversity-rotating search strategy database.\n\n    Informed by the measured window (stalled progress: 3 iterations without\n    improvement; best parent over-reuse ratio 0.5; context anchor reuse 1.0):\n    - Parents are drawn via tournament selection (size 3): stronger quality\n      pressure than flat rank weighting to escape stagnation, while weaker\n      programs still win occasionally (no degenerate softmax lock-in).\n    - A HARD recency exclusion: the immediately previous parent can never be\n      re-chosen on the next sample unless it is the only candidate. The soft\n      50/50 re-draw of the previous policy left the reuse ratio at 0.5.\n    - Context programs mix elite anchors with diversity fill biased toward\n      under-sampled programs, and the most-reused context anchor is dropped\n      half the time so the mutator sees fresh neighborhoods.\n    - Multiobjective mode prefers the global Pareto front with tournaments.\n    \"\"\"\n\n    def __init__(self, name: str, config: DatabaseConfig):\n        super().__init__(name, config)\n        self.initial_program = None\n        self._last_parent_id: Optional[str] = None\n        self._context_use: Dict[str, int] = {}\n\n    def add(\n        self, program: EvolvedProgram, iteration: Optional[int] = None, **kwargs\n    ) -> str:\n        \"\"\"Add a program to the database.\"\"\"\n        if iteration == 0 or program.iteration_found == 0:\n            self.initial_program = program\n\n        self.programs[program.id] = program\n\n        if iteration is not None:\n            self.last_iteration = max(self.last_iteration, iteration)\n\n        if self.config.db_path:\n            self._save_program(program)\n\n        self._update_best_program(program)\n\n        logger.debug(f\"Added program {program.id} to the evolve database\")\n        return program.id\n\n    def _tournament_choice(self, candidates: List[EvolvedProgram]) -> EvolvedProgram:\n        \"\"\"Tournament selection: best of k=3 random draws (or fewer).\"\"\"\n        if not candidates:\n            raise ValueError(\"Empty candidate pool\")\n        k = min(3, len(candidates))\n        pool = self.rng.sample(candidates, k)\n        return max(pool, key=_score_of)\n\n    def sample(\n        self, num_context_programs: Optional[int] = 4, **kwargs\n    ) -> Tuple[Dict[str, EvolvedProgram], Dict[str, List[EvolvedProgram]]]:\n        \"\"\"\n        Picks a parent and set of context programs.\n\n        Parent: tournament selection (Pareto front in multiobjective mode)\n        with a hard exclusion of the previous parent.\n        Context: elite anchors plus diversity fill toward under-sampled\n        programs, excluding the parent; the most-reused anchor is dropped\n        half the time.\n        \"\"\"\n        candidates = list(self.programs.values())\n\n        if len(candidates) == 0:\n            raise ValueError(\"No candidates available for sampling\")\n\n        n_ctx = num_context_programs or 0\n\n        if self.is_multiobjective_enabled():\n            front = [p for p in self.get_pareto_front() if p.id in self.programs]\n            parent_pool = front if front else candidates\n        else:\n            parent_pool = candidates\n\n        # Hard recency exclusion: previous parent cannot be redrawn unless\n        # it is the only available candidate.\n        pool = [p for p in parent_pool if p.id != self._last_parent_id]\n        if not pool:\n            pool = list(parent_pool)\n        parent = self._tournament_choice(pool)\n        self._last_parent_id = parent.id\n\n        # Context: elite anchors first, then diversity fill biased toward\n        # under-sampled programs.\n        others = [p for p in candidates if p.id != parent.id]\n        examples: List[EvolvedProgram] = []\n        if n_ctx > 0 and others:\n            num_elite = max(1, n_ctx // 2)\n            elites = sorted(others, key=_score_of, reverse=True)[:num_elite]\n            # Drop the most-reused anchor half the time to rotate context.\n            if len(elites) > 1 and self.rng.random() < 0.5:\n                most_used = max(elites, key=lambda p: self._context_use.get(p.id, 0))\n                if self._context_use.get(most_used.id, 0) > 0:\n                    elites = [p for p in elites if p.id != most_used.id] or elites\n            for elite in elites:\n                if elite.id not in {e.id for e in examples}:\n                    examples.append(elite)\n            remaining = [p for p in others if p.id not in {e.id for e in examples}]\n            # Bias fill toward least-used programs (under-explored neighbors).\n            remaining.sort(key=lambda p: self._context_use.get(p.id, 0))\n            for p in remaining:\n                if len(examples) >= n_ctx:\n                    break\n                examples.append(p)\n            for e in examples:\n                self._context_use[e.id] = self._context_use.get(e.id, 0) + 1\n\n        parent_dict = {\"\": parent}\n        context_programs_dict = {\"\": examples}\n\n        return parent_dict, context_programs_dict\n\n\n# EVOLVE-BLOCK-END\n"
+    },
+    "budget": {
+      "accounted": {
+        "candidates": 5,
+        "candidates_evaluated": 0,
+        "candidates_proposed": 0,
+        "candidates_reserved": 0,
+        "eval_llm_calls": 0,
+        "evaluator_runs": 0,
+        "optimizer_llm_calls": 3,
+        "total_tokens": 221172,
+        "wall_time_s": 190.114211
+      },
+      "candidates": 5,
+      "eval_llm_calls": null,
+      "evaluator_runs": null,
+      "exceeded": [],
+      "on_exceed": "fail",
+      "optimizer_llm_calls": null,
+      "total_tokens": null,
+      "wall_time_s": null
+    },
+    "engine": "exp22.engine.coevolution@1",
+    "error": null,
+    "evaluation": {
+      "artifacts": {},
+      "error": null,
+      "feedback": "",
+      "metrics": {
+        "accuracy_score": 0.9330281350165157,
+        "avg_error": 0.2774140932179478,
+        "combined_score": 0.5235897113268453,
+        "composite_score": 0.43859617411292795,
+        "correlation": 0.9330281350165157,
+        "efficiency_score": 1.0,
+        "execution_time": 0.0006814002990722656,
+        "false_reversals": 234.4,
+        "lag_error": 0.12318550944163605,
+        "noise_reduction": 0.4882296836793838,
+        "output_length": 91.0,
+        "overall_score": 0.5235897113268453,
+        "responsiveness_score": 0.8903248765176157,
+        "runs_successfully": 1.0,
+        "slope_changes": 294.4,
+        "smoothness_score": 0.06361323155216285,
+        "success_rate": 1.0
+      },
+      "status": "ok",
+      "trace": null,
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "valid": true
+    },
+    "level_results": [
+      {
+        "artifact": {
+          "policy_source": "# EVOLVE-BLOCK-START\nimport logging\nfrom dataclasses import dataclass\nfrom typing import Dict, List, Optional, Tuple\n\nfrom skydiscover.optimize.config import DatabaseConfig\nfrom skydiscover.optimize.search.base_database import Program, ProgramDatabase\n\nlogger = logging.getLogger(__name__)\n\n\n@dataclass\nclass EvolvedProgram(Program):\n    \"\"\"Program for the evolved database.\"\"\"\n\n\ndef _score_of(program: EvolvedProgram) -> float:\n    \"\"\"Best available scalar score for a program (defaults to 0.0).\"\"\"\n    metrics = getattr(program, \"metrics\", None) or {}\n    for key in (\"combined_score\", \"overall_score\", \"composite_score\"):\n        if key in metrics and metrics[key] is not None:\n            return float(metrics[key])\n    return 0.0\n\n\nclass EvolvedProgramDatabase(ProgramDatabase):\n    \"\"\"Tournament-based, diversity-rotating search strategy database.\n\n    Informed by the measured window (stalled progress: 3 iterations without\n    improvement; best parent over-reuse ratio 0.5; context anchor reuse 1.0):\n    - Parents are drawn via tournament selection (size 3): stronger quality\n      pressure than flat rank weighting to escape stagnation, while weaker\n      programs still win occasionally (no degenerate softmax lock-in).\n    - A HARD recency exclusion: the immediately previous parent can never be\n      re-chosen on the next sample unless it is the only candidate. The soft\n      50/50 re-draw of the previous policy left the reuse ratio at 0.5.\n    - Context programs mix elite anchors with diversity fill biased toward\n      under-sampled programs, and the most-reused context anchor is dropped\n      half the time so the mutator sees fresh neighborhoods.\n    - Multiobjective mode prefers the global Pareto front with tournaments.\n    \"\"\"\n\n    def __init__(self, name: str, config: DatabaseConfig):\n        super().__init__(name, config)\n        self.initial_program = None\n        self._last_parent_id: Optional[str] = None\n        self._context_use: Dict[str, int] = {}\n\n    def add(\n        self, program: EvolvedProgram, iteration: Optional[int] = None, **kwargs\n    ) -> str:\n        \"\"\"Add a program to the database.\"\"\"\n        if iteration == 0 or program.iteration_found == 0:\n            self.initial_program = program\n\n        self.programs[program.id] = program\n\n        if iteration is not None:\n            self.last_iteration = max(self.last_iteration, iteration)\n\n        if self.config.db_path:\n            self._save_program(program)\n\n        self._update_best_program(program)\n\n        logger.debug(f\"Added program {program.id} to the evolve database\")\n        return program.id\n\n    def _tournament_choice(self, candidates: List[EvolvedProgram]) -> EvolvedProgram:\n        \"\"\"Tournament selection: best of k=3 random draws (or fewer).\"\"\"\n        if not candidates:\n            raise ValueError(\"Empty candidate pool\")\n        k = min(3, len(candidates))\n        pool = self.rng.sample(candidates, k)\n        return max(pool, key=_score_of)\n\n    def sample(\n        self, num_context_programs: Optional[int] = 4, **kwargs\n    ) -> Tuple[Dict[str, EvolvedProgram], Dict[str, List[EvolvedProgram]]]:\n        \"\"\"\n        Picks a parent and set of context programs.\n\n        Parent: tournament selection (Pareto front in multiobjective mode)\n        with a hard exclusion of the previous parent.\n        Context: elite anchors plus diversity fill toward under-sampled\n        programs, excluding the parent; the most-reused anchor is dropped\n        half the time.\n        \"\"\"\n        candidates = list(self.programs.values())\n\n        if len(candidates) == 0:\n            raise ValueError(\"No candidates available for sampling\")\n\n        n_ctx = num_context_programs or 0\n\n        if self.is_multiobjective_enabled():\n            front = [p for p in self.get_pareto_front() if p.id in self.programs]\n            parent_pool = front if front else candidates\n        else:\n            parent_pool = candidates\n\n        # Hard recency exclusion: previous parent cannot be redrawn unless\n        # it is the only available candidate.\n        pool = [p for p in parent_pool if p.id != self._last_parent_id]\n        if not pool:\n            pool = list(parent_pool)\n        parent = self._tournament_choice(pool)\n        self._last_parent_id = parent.id\n\n        # Context: elite anchors first, then diversity fill biased toward\n        # under-sampled programs.\n        others = [p for p in candidates if p.id != parent.id]\n        examples: List[EvolvedProgram] = []\n        if n_ctx > 0 and others:\n            num_elite = max(1, n_ctx // 2)\n            elites = sorted(others, key=_score_of, reverse=True)[:num_elite]\n            # Drop the most-reused anchor half the time to rotate context.\n            if len(elites) > 1 and self.rng.random() < 0.5:\n                most_used = max(elites, key=lambda p: self._context_use.get(p.id, 0))\n                if self._context_use.get(most_used.id, 0) > 0:\n                    elites = [p for p in elites if p.id != most_used.id] or elites\n            for elite in elites:\n                if elite.id not in {e.id for e in examples}:\n                    examples.append(elite)\n            remaining = [p for p in others if p.id not in {e.id for e in examples}]\n            # Bias fill toward least-used programs (under-explored neighbors).\n            remaining.sort(key=lambda p: self._context_use.get(p.id, 0))\n            for p in remaining:\n                if len(examples) >= n_ctx:\n                    break\n                examples.append(p)\n            for e in examples:\n                self._context_use[e.id] = self._context_use.get(e.id, 0) + 1\n\n        parent_dict = {\"\": parent}\n        context_programs_dict = {\"\": examples}\n\n        return parent_dict, context_programs_dict\n\n\n# EVOLVE-BLOCK-END\n"
+        },
+        "budget": {
+          "accounted": {
+            "candidates": 5,
+            "candidates_evaluated": 0,
+            "candidates_proposed": 0,
+            "candidates_reserved": 0,
+            "eval_llm_calls": 0,
+            "evaluator_runs": 0,
+            "optimizer_llm_calls": 3,
+            "total_tokens": 221172,
+            "wall_time_s": 190.11269
+          },
+          "candidates": 5,
+          "eval_llm_calls": null,
+          "evaluator_runs": null,
+          "exceeded": [],
+          "on_exceed": "fail",
+          "optimizer_llm_calls": null,
+          "total_tokens": null,
+          "wall_time_s": null
+        },
+        "engine": "exp22.engine.coevolution@1",
+        "error": null,
+        "evaluation": {
+          "artifacts": {},
+          "error": null,
+          "feedback": "",
+          "metrics": {
+            "accuracy_score": 0.9330281350165157,
+            "avg_error": 0.2774140932179478,
+            "combined_score": 0.5235897113268453,
+            "composite_score": 0.43859617411292795,
+            "correlation": 0.9330281350165157,
+            "efficiency_score": 1.0,
+            "execution_time": 0.0006814002990722656,
+            "false_reversals": 234.4,
+            "lag_error": 0.12318550944163605,
+            "noise_reduction": 0.4882296836793838,
+            "output_length": 91.0,
+            "overall_score": 0.5235897113268453,
+            "responsiveness_score": 0.8903248765176157,
+            "runs_successfully": 1.0,
+            "slope_changes": 294.4,
+            "smoothness_score": 0.06361323155216285,
+            "success_rate": 1.0
+          },
+          "status": "ok",
+          "trace": null,
+          "usage": {
+            "feedback": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "forward": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "judge": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            },
+            "optimizer": {
+              "completion_tokens": 0,
+              "cost_usd": 0.0,
+              "prompt_tokens": 0,
+              "total_tokens": 0
+            }
+          },
+          "valid": true
+        },
+        "level_results": [],
+        "lineage": [],
+        "metadata": {
+          "kernel_result": {
+            "arm": "TRACE-RECURSIVE",
+            "final_best_score": 0.5235897113268453,
+            "final_metrics": {
+              "accuracy_score": 0.9330281350165157,
+              "avg_error": 0.2774140932179478,
+              "combined_score": 0.5235897113268453,
+              "composite_score": 0.43859617411292795,
+              "correlation": 0.9330281350165157,
+              "efficiency_score": 1.0,
+              "execution_time": 0.0006814002990722656,
+              "false_reversals": 234.4,
+              "lag_error": 0.12318550944163605,
+              "noise_reduction": 0.4882296836793838,
+              "output_length": 91.0,
+              "overall_score": 0.5235897113268453,
+              "responsiveness_score": 0.8903248765176157,
+              "runs_successfully": 1.0,
+              "slope_changes": 294.4,
+              "smoothness_score": 0.06361323155216285,
+              "success_rate": 1.0
+            },
+            "final_window_metrics": {
+              "combined_score": 0.0,
+              "search_horizon": 1,
+              "search_window_end_score": 0.5235897113268453,
+              "search_window_start_score": 0.5235897113268453,
+              "window_start_iteration": 4
+            },
+            "gate_failure": null,
+            "horizon": 5,
+            "initial_score": 0.49904861783269006,
+            "iterations_observed": 5,
+            "meta_proposal_failures": 0,
+            "policy_switches": 3,
+            "task": "signal_processing",
+            "wall_time": 187.3446948810015
+          },
+          "level_id": "coevolution"
+        },
+        "module_ref": "exp22.module.discovery_policy@1",
+        "plan_fingerprint": "8857255b465b133d77e16e28807640f04ee74bb1facb75b18ba6a058a5f1e3fc",
+        "portable": false,
+        "promotable": false,
+        "spec_fingerprint": "8857255b465b133d77e16e28807640f04ee74bb1facb75b18ba6a058a5f1e3fc",
+        "status": "success",
+        "unit_id": "default:seed-42:matrix-0",
+        "usage": {
+          "optimizer": {
+            "calls": 3,
+            "completion_tokens": 4703,
+            "empty_text_responses": 0,
+            "prompt_tokens": 216469,
+            "semantic_retries": 0,
+            "semantic_retry_completion_tokens": 0,
+            "semantic_retry_cost_usd": 0.0,
+            "semantic_retry_prompt_tokens": 0,
+            "semantic_retry_total_tokens": 0,
+            "total_tokens": 221172
+          }
+        },
+        "valid": true
+      }
+    ],
+    "lineage": [],
+    "metadata": {
+      "arm_id": "default",
+      "kernel_result": {
+        "arm": "TRACE-RECURSIVE",
+        "final_best_score": 0.5235897113268453,
+        "final_metrics": {
+          "accuracy_score": 0.9330281350165157,
+          "avg_error": 0.2774140932179478,
+          "combined_score": 0.5235897113268453,
+          "composite_score": 0.43859617411292795,
+          "correlation": 0.9330281350165157,
+          "efficiency_score": 1.0,
+          "execution_time": 0.0006814002990722656,
+          "false_reversals": 234.4,
+          "lag_error": 0.12318550944163605,
+          "noise_reduction": 0.4882296836793838,
+          "output_length": 91.0,
+          "overall_score": 0.5235897113268453,
+          "responsiveness_score": 0.8903248765176157,
+          "runs_successfully": 1.0,
+          "slope_changes": 294.4,
+          "smoothness_score": 0.06361323155216285,
+          "success_rate": 1.0
+        },
+        "final_window_metrics": {
+          "combined_score": 0.0,
+          "search_horizon": 1,
+          "search_window_end_score": 0.5235897113268453,
+          "search_window_start_score": 0.5235897113268453,
+          "window_start_iteration": 4
+        },
+        "gate_failure": null,
+        "horizon": 5,
+        "initial_score": 0.49904861783269006,
+        "iterations_observed": 5,
+        "meta_proposal_failures": 0,
+        "policy_switches": 3,
+        "task": "signal_processing",
+        "wall_time": 187.3446948810015
+      },
+      "level_id": "coevolution",
+      "level_ids": [
+        "coevolution"
+      ],
+      "matrix": {},
+      "resolved_models": {
+        "coevolution": {}
+      },
+      "seed": 42,
+      "test_overrides": {
+        "llm_factory": "src.transport.TraceOpenRouter"
+      }
+    },
+    "module_ref": "exp22.module.discovery_policy@1",
+    "plan_fingerprint": "8857255b465b133d77e16e28807640f04ee74bb1facb75b18ba6a058a5f1e3fc",
+    "portable": false,
+    "promotable": false,
+    "spec_fingerprint": "8857255b465b133d77e16e28807640f04ee74bb1facb75b18ba6a058a5f1e3fc",
+    "status": "success",
+    "unit_id": "default:seed-42:matrix-0",
+    "usage": {
+      "optimizer": {
+        "calls": 3,
+        "completion_tokens": 4703,
+        "empty_text_responses": 0,
+        "prompt_tokens": 216469,
+        "semantic_retries": 0,
+        "semantic_retry_completion_tokens": 0,
+        "semantic_retry_cost_usd": 0.0,
+        "semantic_retry_prompt_tokens": 0,
+        "semantic_retry_total_tokens": 0,
+        "total_tokens": 221172
+      }
+    },
+    "valid": true
+  },
+  "result_sha256": "3cd6e154b47a0fc230ca73d39fb7c648262cad0c0a15db729e4b669432c30072"
+}

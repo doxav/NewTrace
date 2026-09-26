@@ -1,10 +1,48 @@
 {
   "passed": true,
+  "evaluator_protocol": "process-stage-v1",
+  "attempts": [
+    {
+      "directory": "one_prism_SD-EVOX_20260926T151209.346756Z",
+      "task": "prism",
+      "arm": "SD-EVOX",
+      "passed": true,
+      "all_workers_reaped": true
+    },
+    {
+      "directory": "one_prism_TRACE-RECURSIVE_20260926T151245.600442Z",
+      "task": "prism",
+      "arm": "TRACE-RECURSIVE",
+      "passed": true,
+      "all_workers_reaped": true
+    },
+    {
+      "directory": "one_signal_processing_SD-EVOX_20260926T151310.942603Z",
+      "task": "signal_processing",
+      "arm": "SD-EVOX",
+      "passed": true,
+      "all_workers_reaped": true
+    },
+    {
+      "directory": "one_signal_processing_TRACE-RECURSIVE_20260926T151404.282879Z",
+      "task": "signal_processing",
+      "arm": "TRACE-RECURSIVE",
+      "passed": false,
+      "all_workers_reaped": true
+    },
+    {
+      "directory": "one_signal_processing_TRACE-RECURSIVE_20260926T151524.676687Z",
+      "task": "signal_processing",
+      "arm": "TRACE-RECURSIVE",
+      "passed": true,
+      "all_workers_reaped": true
+    }
+  ],
   "successful_runs": {
-    "prism/SD-EVOX": "one_prism_SD-EVOX_20260926T120725.007647Z",
-    "prism/TRACE-RECURSIVE": "one_prism_TRACE-RECURSIVE_20260926T120815.057620Z",
-    "signal_processing/SD-EVOX": "one_signal_processing_SD-EVOX_20260926T120836.564868Z",
-    "signal_processing/TRACE-RECURSIVE": "one_signal_processing_TRACE-RECURSIVE_20260926T121010.705116Z"
+    "prism/SD-EVOX": "one_prism_SD-EVOX_20260926T151209.346756Z",
+    "prism/TRACE-RECURSIVE": "one_prism_TRACE-RECURSIVE_20260926T151245.600442Z",
+    "signal_processing/SD-EVOX": "one_signal_processing_SD-EVOX_20260926T151310.942603Z",
+    "signal_processing/TRACE-RECURSIVE": "one_signal_processing_TRACE-RECURSIVE_20260926T151524.676687Z"
   },
   "failed_attempts_retained": true
 }

@@ -1,0 +1,540 @@
+{
+  "iteration": 1,
+  "program_id": "7d1f8340-584a-40c6-b96c-9dc7e448553c",
+  "score": null,
+  "metrics": {
+    "validity": 1,
+    "combined_score": 0.0,
+    "window_start_iteration": 3,
+    "search_window_start_score": 24.191203411722565,
+    "search_window_end_score": 24.191203411722565,
+    "search_horizon": 1
+  },
+  "pending_score": false,
+  "combined_score": 0.0,
+  "is_new_best": false,
+  "start_db_stats": {
+    "previous_programs": [
+      {
+        "id": "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+        "solution": "GPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    # Greedy KVPR-minimizing placement based on Algorithm 1 (without \u03c4 check)\n    # 1) Sort models by r_j / s_j in descending order\n    sorted_models = sorted(models, key=lambda m: (m.req_rate / m.slo), reverse=True)\n\n    # 2) Initialize per-GPU states\n    placement = {gpu_id: [] for gpu_id in range(gpu_num)}\n    shared_kv = [GPU_MEM_SIZE for _ in range(gpu_num)]  # remaining memory per GPU\n    weighted_req_rate = [0.0 for _ in range(gpu_num)]  # sum of r_j / s_j per GPU\n\n    # 3) Assign each model to the GPU that minimizes current KVPR while fitting in memory\n    for model in sorted_models:\n        best_idx = None\n        best_ratio = float(\"inf\")\n\n        for gpu_id in range(gpu_num):\n            if model.model_size <= shared_kv[gpu_id] and shared_kv[gpu_id] > 0:\n                current_ratio = weighted_req_rate[gpu_id] / shared_kv[gpu_id]\n                if current_ratio < best_ratio:\n                    best_ratio = current_ratio\n                    best_idx = gpu_id\n\n        # Failure: if no GPU can fit, raise an error instead of overcommitting\n        if best_idx is None:\n            raise ValueError(\n                f\"Unable to place model of size {model.model_size} GB on any GPU. \"\n                f\"Remaining per-GPU memory: {shared_kv}\"\n            )\n\n        placement[best_idx].append(model)\n        weighted_req_rate[best_idx] += model.req_rate / model.slo\n        shared_kv[best_idx] -= model.model_size\n\n    return placement\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n",
+        "language": "python",
+        "metrics": {
+          "max_kvpr": 20.891622105209393,
+          "execution_time": 0.00014558792114257812,
+          "success_rate": 1.0,
+          "combined_score": 21.891622105209393
+        },
+        "iteration_found": 0,
+        "parent_id": null,
+        "other_context_ids": null,
+        "parent_info": null,
+        "context_info": null,
+        "timestamp": 1790435820.7856793,
+        "metadata": {},
+        "artifacts": {},
+        "prompts": null,
+        "generation": 0
+      },
+      {
+        "id": "0e8d7f4e-41c1-4ee9-af2b-81838420163a",
+        "solution": "GPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    def greedy(order):\n        \"\"\"Greedy placement: each model goes to the GPU minimizing resulting KVPR.\"\"\"\n        placement = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        load = [0.0] * gpu_num  # sum of req_rate/slo per GPU\n        for m in order:\n            best, best_kvpr = None, float(\"inf\")\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    new_kvpr = (load[g] + m.req_rate / m.slo) / (free_mem[g] - m.model_size)\n                    if new_kvpr < best_kvpr:\n                        best_kvpr, best = new_kvpr, g\n            if best is None:\n                return None  # infeasible for this ordering\n            placement[best].append(m)\n            load[best] += m.req_rate / m.slo\n            free_mem[best] -= m.model_size\n        return placement\n\n    def max_kvpr(placement):\n        \"\"\"Compute max KVPR across GPUs for a placement.\"\"\"\n        worst = 0.0\n        for g in range(gpu_num):\n            mem = GPU_MEM_SIZE - sum(m.model_size for m in placement[g])\n            load = sum(m.req_rate / m.slo for m in placement[g])\n            worst = max(worst, load / mem if mem > 0 else float(\"inf\"))\n        return worst\n\n    # Try multiple orderings; keep the placement with the lowest max KVPR\n    keys = [\n        lambda m: m.req_rate / m.slo,        # highest pressure ratio first\n        lambda m: m.model_size,              # largest model first\n        lambda m: (m.req_rate / m.slo) / m.model_size,\n    ]\n    best = None\n    best_score = float(\"inf\")\n    for key in keys:\n        p = greedy(sorted(models, key=key, reverse=True))\n        if p is not None:\n            s = max_kvpr(p)\n            if s < best_score:\n                best_score, best = s, p\n    if best is None:\n        raise ValueError(\"Unable to place all models on the GPUs\")\n    return best\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n",
+        "language": "python",
+        "metrics": {
+          "max_kvpr": 21.962760104869858,
+          "execution_time": 0.00018811733164685837,
+          "success_rate": 0.94,
+          "combined_score": 22.90276010486986
+        },
+        "iteration_found": 1,
+        "parent_id": "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+        "other_context_ids": [],
+        "parent_info": [
+          "",
+          "0c58370a-fa0d-4196-ba8a-d54cc348bf06"
+        ],
+        "context_info": [],
+        "timestamp": 1790435845.243416,
+        "metadata": {
+          "changes": "Change 1: Modified function `greedy`: Greedy placement: each model goes to the GPU minimizing resulting KVPR.",
+          "parent_metrics": {
+            "max_kvpr": 20.891622105209393,
+            "execution_time": 0.00014558792114257812,
+            "success_rate": 1.0,
+            "combined_score": 21.891622105209393
+          }
+        },
+        "artifacts": {},
+        "prompts": null,
+        "generation": 0
+      },
+      {
+        "id": "2c40dddf-2adc-4353-83d9-4eedf52d1d4e",
+        "solution": "GPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    def greedy(order):\n        \"\"\"Greedy placement: each model goes to the GPU minimizing resulting KVPR.\"\"\"\n        placement = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        load = [0.0] * gpu_num  # sum of req_rate/slo per GPU\n        for m in order:\n            best, best_kvpr = None, float(\"inf\")\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    new_kvpr = (load[g] + m.req_rate / m.slo) / (free_mem[g] - m.model_size)\n                    if new_kvpr < best_kvpr:\n                        best_kvpr, best = new_kvpr, g\n            if best is None:\n                return None  # infeasible for this ordering\n            placement[best].append(m)\n            load[best] += m.req_rate / m.slo\n            free_mem[best] -= m.model_size\n        return placement\n\n    def max_kvpr(placement):\n        \"\"\"Compute max KVPR across GPUs for a placement.\"\"\"\n        worst = 0.0\n        for g in range(gpu_num):\n            mem = GPU_MEM_SIZE - sum(m.model_size for m in placement[g])\n            load = sum(m.req_rate / m.slo for m in placement[g])\n            worst = max(worst, load / mem if mem > 0 else float(\"inf\"))\n        return worst\n\n    # Try multiple orderings (deterministic + randomized restarts); keep the best\n    import random\n    rng = random.Random(42)\n    orders = [\n        sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True),\n        sorted(models, key=lambda m: m.model_size, reverse=True),\n        sorted(models, key=lambda m: (m.req_rate / m.slo) / m.model_size, reverse=True),\n        sorted(models, key=lambda m: m.model_size / (m.req_rate / m.slo), reverse=True),\n    ]\n    base = list(models)\n    for _ in range(30):\n        shuffled = base[:]\n        rng.shuffle(shuffled)\n        orders.append(shuffled)\n\n    best = None\n    best_score = float(\"inf\")\n    for order in orders:\n        p = greedy(order)\n        if p is not None:\n            s = max_kvpr(p)\n            if s < best_score:\n                best_score, best = s, p\n    if best is None:\n        raise ValueError(\"Unable to place all models on the GPUs\")\n    return best\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n",
+        "language": "python",
+        "metrics": {
+          "max_kvpr": 23.551203411722565,
+          "execution_time": 0.0008106827735900879,
+          "success_rate": 0.64,
+          "combined_score": 24.191203411722565
+        },
+        "iteration_found": 2,
+        "parent_id": "0e8d7f4e-41c1-4ee9-af2b-81838420163a",
+        "other_context_ids": [
+          "0c58370a-fa0d-4196-ba8a-d54cc348bf06"
+        ],
+        "parent_info": [
+          "",
+          "0e8d7f4e-41c1-4ee9-af2b-81838420163a"
+        ],
+        "context_info": [
+          [
+            "",
+            "0c58370a-fa0d-4196-ba8a-d54cc348bf06"
+          ]
+        ],
+        "timestamp": 1790435852.848932,
+        "metadata": {
+          "changes": "Change 1: Near `# Try multiple orderings; keep the placement with ...` (17\u219226 lines)",
+          "parent_metrics": {
+            "max_kvpr": 21.962760104869858,
+            "execution_time": 0.00018811733164685837,
+            "success_rate": 0.94,
+            "combined_score": 22.90276010486986
+          }
+        },
+        "artifacts": {},
+        "prompts": null,
+        "generation": 0
+      },
+      {
+        "id": "020f1b59-c2c7-416e-8e0f-8f8d06d988cb",
+        "solution": "GPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    def greedy(order):\n        \"\"\"Greedy: each model goes to the GPU minimizing its resulting KVPR.\"\"\"\n        placement = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        load = [0.0] * gpu_num\n        for m in order:\n            need = m.req_rate / m.slo\n            best, best_kvpr = None, float(\"inf\")\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    kvpr = (load[g] + need) / (free_mem[g] - m.model_size)\n                    if kvpr < best_kvpr:\n                        best_kvpr, best = kvpr, g\n            if best is None:\n                return None\n            placement[best].append(m)\n            load[best] += need\n            free_mem[best] -= m.model_size\n        return placement\n\n    def worst_kvpr(placement):\n        \"\"\"Max KVPR across GPUs for a placement.\"\"\"\n        worst = 0.0\n        for g in range(gpu_num):\n            mem = GPU_MEM_SIZE - sum(m.model_size for m in placement[g])\n            load = sum(m.req_rate / m.slo for m in placement[g])\n            worst = max(worst, load / mem if mem > 0 else float(\"inf\"))\n        return worst\n\n    # Multiple orderings: deterministic heuristics + random restarts (fixed seed)\n    import random\n    rng = random.Random(42)\n    orders = [\n        sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True),\n        sorted(models, key=lambda m: m.model_size, reverse=True),\n        sorted(models, key=lambda m: (m.req_rate / m.slo) / m.model_size, reverse=True),\n        sorted(models, key=lambda m: m.model_size / (m.req_rate / m.slo), reverse=True),\n    ]\n    base = list(models)\n    for _ in range(30):\n        shuffled = base[:]\n        rng.shuffle(shuffled)\n        orders.append(shuffled)\n\n    best, best_score = None, float(\"inf\")\n    for order in orders:\n        p = greedy(order)\n        if p is not None:\n            s = worst_kvpr(p)\n            if s < best_score:\n                best_score, best = s, p\n\n    # Fallback: first-fit to guarantee a valid placement\n    if best is None:\n        best = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        for m in sorted(models, key=lambda m: m.model_size, reverse=True):\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    best[g].append(m)\n                    free_mem[g] -= m.model_size\n                    break\n            else:\n                raise ValueError(\"Unable to place all models on the GPUs\")\n    return best\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n",
+        "language": "python",
+        "metrics": {
+          "max_kvpr": 23.551203411722565,
+          "execution_time": 0.0007864758372306824,
+          "success_rate": 0.64,
+          "combined_score": 24.191203411722565
+        },
+        "iteration_found": 3,
+        "parent_id": "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+        "other_context_ids": [
+          "2c40dddf-2adc-4353-83d9-4eedf52d1d4e",
+          "0e8d7f4e-41c1-4ee9-af2b-81838420163a"
+        ],
+        "parent_info": [
+          "",
+          "0c58370a-fa0d-4196-ba8a-d54cc348bf06"
+        ],
+        "context_info": [
+          [
+            "",
+            "2c40dddf-2adc-4353-83d9-4eedf52d1d4e"
+          ],
+          [
+            "",
+            "0e8d7f4e-41c1-4ee9-af2b-81838420163a"
+          ]
+        ],
+        "timestamp": 1790435878.95449,
+        "metadata": {
+          "changes": "Change 1: Modified function `greedy`: Greedy: each model goes to the GPU minimizing its resulting KVPR.",
+          "parent_metrics": {
+            "max_kvpr": 20.891622105209393,
+            "execution_time": 0.00014558792114257812,
+            "success_rate": 1.0,
+            "combined_score": 21.891622105209393
+          }
+        },
+        "artifacts": {},
+        "prompts": null,
+        "generation": 0
+      }
+    ],
+    "population_size": 4,
+    "solution_score_summary": {
+      "best": 24.191203411722565,
+      "q75": 24.191203411722565,
+      "q50": 23.546981758296212,
+      "q25": 22.14440660512451,
+      "worst": 21.891622105209393,
+      "score_tiers": {
+        "top": {
+          "threshold": "score >= 24.1912",
+          "pct_programs": 50.0
+        },
+        "upper_mid": {
+          "threshold": "23.5470 <= score < 24.1912",
+          "pct_programs": 0.0
+        },
+        "lower_mid": {
+          "threshold": "22.1444 <= score < 23.5470",
+          "pct_programs": 25.0
+        },
+        "bottom": {
+          "threshold": "score < 22.1444",
+          "pct_programs": 25.0
+        }
+      },
+      "unique_scores": 3
+    },
+    "avg_solutions_per_parent": 1.5,
+    "top_solution_scores": [
+      24.191203411722565,
+      24.191203411722565,
+      22.90276010486986,
+      21.891622105209393
+    ],
+    "recent_solution_stats": {
+      "num_recent_iterations": 4,
+      "execution_trace": [
+        {
+          "iteration": 0,
+          "program": [
+            "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+            21.891622105209393
+          ],
+          "parent": null,
+          "context": null
+        },
+        {
+          "iteration": 1,
+          "program": [
+            "0e8d7f4e-41c1-4ee9-af2b-81838420163a",
+            22.90276010486986
+          ],
+          "parent": [
+            "",
+            "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+            21.891622105209393
+          ],
+          "context": null
+        },
+        {
+          "iteration": 2,
+          "program": [
+            "2c40dddf-2adc-4353-83d9-4eedf52d1d4e",
+            24.191203411722565
+          ],
+          "parent": [
+            "",
+            "0e8d7f4e-41c1-4ee9-af2b-81838420163a",
+            22.90276010486986
+          ],
+          "context": [
+            [
+              "",
+              "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+              21.891622105209393
+            ]
+          ]
+        },
+        {
+          "iteration": 3,
+          "program": [
+            "020f1b59-c2c7-416e-8e0f-8f8d06d988cb",
+            24.191203411722565
+          ],
+          "parent": [
+            "",
+            "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+            21.891622105209393
+          ],
+          "context": [
+            [
+              "",
+              "2c40dddf-2adc-4353-83d9-4eedf52d1d4e",
+              24.191203411722565
+            ],
+            [
+              "",
+              "0e8d7f4e-41c1-4ee9-af2b-81838420163a",
+              22.90276010486986
+            ]
+          ]
+        }
+      ],
+      "score_trajectory": [
+        21.891622105209393,
+        22.90276010486986,
+        24.191203411722565,
+        24.191203411722565
+      ],
+      "parent_scores": [
+        null,
+        21.891622105209393,
+        22.90276010486986,
+        21.891622105209393
+      ],
+      "iterations_without_improvement": 1,
+      "improvement_threshold": 0.01,
+      "most_reused_parent_ratio": 0.6666666666666666,
+      "most_reused_parent_score": 21.891622105209393,
+      "most_reused_context_ratio": 0.5,
+      "most_reused_context_score": 21.891622105209393
+    }
+  },
+  "end_db_stats": {
+    "previous_programs": [
+      {
+        "id": "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+        "solution": "GPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    # Greedy KVPR-minimizing placement based on Algorithm 1 (without \u03c4 check)\n    # 1) Sort models by r_j / s_j in descending order\n    sorted_models = sorted(models, key=lambda m: (m.req_rate / m.slo), reverse=True)\n\n    # 2) Initialize per-GPU states\n    placement = {gpu_id: [] for gpu_id in range(gpu_num)}\n    shared_kv = [GPU_MEM_SIZE for _ in range(gpu_num)]  # remaining memory per GPU\n    weighted_req_rate = [0.0 for _ in range(gpu_num)]  # sum of r_j / s_j per GPU\n\n    # 3) Assign each model to the GPU that minimizes current KVPR while fitting in memory\n    for model in sorted_models:\n        best_idx = None\n        best_ratio = float(\"inf\")\n\n        for gpu_id in range(gpu_num):\n            if model.model_size <= shared_kv[gpu_id] and shared_kv[gpu_id] > 0:\n                current_ratio = weighted_req_rate[gpu_id] / shared_kv[gpu_id]\n                if current_ratio < best_ratio:\n                    best_ratio = current_ratio\n                    best_idx = gpu_id\n\n        # Failure: if no GPU can fit, raise an error instead of overcommitting\n        if best_idx is None:\n            raise ValueError(\n                f\"Unable to place model of size {model.model_size} GB on any GPU. \"\n                f\"Remaining per-GPU memory: {shared_kv}\"\n            )\n\n        placement[best_idx].append(model)\n        weighted_req_rate[best_idx] += model.req_rate / model.slo\n        shared_kv[best_idx] -= model.model_size\n\n    return placement\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n",
+        "language": "python",
+        "metrics": {
+          "max_kvpr": 20.891622105209393,
+          "execution_time": 0.00014558792114257812,
+          "success_rate": 1.0,
+          "combined_score": 21.891622105209393
+        },
+        "iteration_found": 0,
+        "parent_id": null,
+        "other_context_ids": null,
+        "parent_info": null,
+        "context_info": null,
+        "timestamp": 1790435820.7856793,
+        "metadata": {},
+        "artifacts": {},
+        "prompts": null,
+        "generation": 0
+      },
+      {
+        "id": "0e8d7f4e-41c1-4ee9-af2b-81838420163a",
+        "solution": "GPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    def greedy(order):\n        \"\"\"Greedy placement: each model goes to the GPU minimizing resulting KVPR.\"\"\"\n        placement = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        load = [0.0] * gpu_num  # sum of req_rate/slo per GPU\n        for m in order:\n            best, best_kvpr = None, float(\"inf\")\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    new_kvpr = (load[g] + m.req_rate / m.slo) / (free_mem[g] - m.model_size)\n                    if new_kvpr < best_kvpr:\n                        best_kvpr, best = new_kvpr, g\n            if best is None:\n                return None  # infeasible for this ordering\n            placement[best].append(m)\n            load[best] += m.req_rate / m.slo\n            free_mem[best] -= m.model_size\n        return placement\n\n    def max_kvpr(placement):\n        \"\"\"Compute max KVPR across GPUs for a placement.\"\"\"\n        worst = 0.0\n        for g in range(gpu_num):\n            mem = GPU_MEM_SIZE - sum(m.model_size for m in placement[g])\n            load = sum(m.req_rate / m.slo for m in placement[g])\n            worst = max(worst, load / mem if mem > 0 else float(\"inf\"))\n        return worst\n\n    # Try multiple orderings; keep the placement with the lowest max KVPR\n    keys = [\n        lambda m: m.req_rate / m.slo,        # highest pressure ratio first\n        lambda m: m.model_size,              # largest model first\n        lambda m: (m.req_rate / m.slo) / m.model_size,\n    ]\n    best = None\n    best_score = float(\"inf\")\n    for key in keys:\n        p = greedy(sorted(models, key=key, reverse=True))\n        if p is not None:\n            s = max_kvpr(p)\n            if s < best_score:\n                best_score, best = s, p\n    if best is None:\n        raise ValueError(\"Unable to place all models on the GPUs\")\n    return best\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n",
+        "language": "python",
+        "metrics": {
+          "max_kvpr": 21.962760104869858,
+          "execution_time": 0.00018811733164685837,
+          "success_rate": 0.94,
+          "combined_score": 22.90276010486986
+        },
+        "iteration_found": 1,
+        "parent_id": "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+        "other_context_ids": [],
+        "parent_info": [
+          "",
+          "0c58370a-fa0d-4196-ba8a-d54cc348bf06"
+        ],
+        "context_info": [],
+        "timestamp": 1790435845.243416,
+        "metadata": {
+          "changes": "Change 1: Modified function `greedy`: Greedy placement: each model goes to the GPU minimizing resulting KVPR.",
+          "parent_metrics": {
+            "max_kvpr": 20.891622105209393,
+            "execution_time": 0.00014558792114257812,
+            "success_rate": 1.0,
+            "combined_score": 21.891622105209393
+          }
+        },
+        "artifacts": {},
+        "prompts": null,
+        "generation": 0
+      },
+      {
+        "id": "2c40dddf-2adc-4353-83d9-4eedf52d1d4e",
+        "solution": "GPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    def greedy(order):\n        \"\"\"Greedy placement: each model goes to the GPU minimizing resulting KVPR.\"\"\"\n        placement = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        load = [0.0] * gpu_num  # sum of req_rate/slo per GPU\n        for m in order:\n            best, best_kvpr = None, float(\"inf\")\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    new_kvpr = (load[g] + m.req_rate / m.slo) / (free_mem[g] - m.model_size)\n                    if new_kvpr < best_kvpr:\n                        best_kvpr, best = new_kvpr, g\n            if best is None:\n                return None  # infeasible for this ordering\n            placement[best].append(m)\n            load[best] += m.req_rate / m.slo\n            free_mem[best] -= m.model_size\n        return placement\n\n    def max_kvpr(placement):\n        \"\"\"Compute max KVPR across GPUs for a placement.\"\"\"\n        worst = 0.0\n        for g in range(gpu_num):\n            mem = GPU_MEM_SIZE - sum(m.model_size for m in placement[g])\n            load = sum(m.req_rate / m.slo for m in placement[g])\n            worst = max(worst, load / mem if mem > 0 else float(\"inf\"))\n        return worst\n\n    # Try multiple orderings (deterministic + randomized restarts); keep the best\n    import random\n    rng = random.Random(42)\n    orders = [\n        sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True),\n        sorted(models, key=lambda m: m.model_size, reverse=True),\n        sorted(models, key=lambda m: (m.req_rate / m.slo) / m.model_size, reverse=True),\n        sorted(models, key=lambda m: m.model_size / (m.req_rate / m.slo), reverse=True),\n    ]\n    base = list(models)\n    for _ in range(30):\n        shuffled = base[:]\n        rng.shuffle(shuffled)\n        orders.append(shuffled)\n\n    best = None\n    best_score = float(\"inf\")\n    for order in orders:\n        p = greedy(order)\n        if p is not None:\n            s = max_kvpr(p)\n            if s < best_score:\n                best_score, best = s, p\n    if best is None:\n        raise ValueError(\"Unable to place all models on the GPUs\")\n    return best\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n",
+        "language": "python",
+        "metrics": {
+          "max_kvpr": 23.551203411722565,
+          "execution_time": 0.0008106827735900879,
+          "success_rate": 0.64,
+          "combined_score": 24.191203411722565
+        },
+        "iteration_found": 2,
+        "parent_id": "0e8d7f4e-41c1-4ee9-af2b-81838420163a",
+        "other_context_ids": [
+          "0c58370a-fa0d-4196-ba8a-d54cc348bf06"
+        ],
+        "parent_info": [
+          "",
+          "0e8d7f4e-41c1-4ee9-af2b-81838420163a"
+        ],
+        "context_info": [
+          [
+            "",
+            "0c58370a-fa0d-4196-ba8a-d54cc348bf06"
+          ]
+        ],
+        "timestamp": 1790435852.848932,
+        "metadata": {
+          "changes": "Change 1: Near `# Try multiple orderings; keep the placement with ...` (17\u219226 lines)",
+          "parent_metrics": {
+            "max_kvpr": 21.962760104869858,
+            "execution_time": 0.00018811733164685837,
+            "success_rate": 0.94,
+            "combined_score": 22.90276010486986
+          }
+        },
+        "artifacts": {},
+        "prompts": null,
+        "generation": 0
+      },
+      {
+        "id": "020f1b59-c2c7-416e-8e0f-8f8d06d988cb",
+        "solution": "GPU_MEM_SIZE = 80  # GB\n\n# EVOLVE-BLOCK-START\n\n\ndef compute_model_placement(gpu_num, models):\n    \"\"\"\n    Compute a model placement that minimizes the maximum KVPR across all GPUs.\n\n    Args:\n        gpu_num: Number of GPUs\n        models: List of models to place\n\n    Returns:\n        A placement of models to GPUs\n    \"\"\"\n\n    def greedy(order):\n        \"\"\"Greedy: each model goes to the GPU minimizing its resulting KVPR.\"\"\"\n        placement = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        load = [0.0] * gpu_num\n        for m in order:\n            need = m.req_rate / m.slo\n            best, best_kvpr = None, float(\"inf\")\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    kvpr = (load[g] + need) / (free_mem[g] - m.model_size)\n                    if kvpr < best_kvpr:\n                        best_kvpr, best = kvpr, g\n            if best is None:\n                return None\n            placement[best].append(m)\n            load[best] += need\n            free_mem[best] -= m.model_size\n        return placement\n\n    def worst_kvpr(placement):\n        \"\"\"Max KVPR across GPUs for a placement.\"\"\"\n        worst = 0.0\n        for g in range(gpu_num):\n            mem = GPU_MEM_SIZE - sum(m.model_size for m in placement[g])\n            load = sum(m.req_rate / m.slo for m in placement[g])\n            worst = max(worst, load / mem if mem > 0 else float(\"inf\"))\n        return worst\n\n    # Multiple orderings: deterministic heuristics + random restarts (fixed seed)\n    import random\n    rng = random.Random(42)\n    orders = [\n        sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True),\n        sorted(models, key=lambda m: m.model_size, reverse=True),\n        sorted(models, key=lambda m: (m.req_rate / m.slo) / m.model_size, reverse=True),\n        sorted(models, key=lambda m: m.model_size / (m.req_rate / m.slo), reverse=True),\n    ]\n    base = list(models)\n    for _ in range(30):\n        shuffled = base[:]\n        rng.shuffle(shuffled)\n        orders.append(shuffled)\n\n    best, best_score = None, float(\"inf\")\n    for order in orders:\n        p = greedy(order)\n        if p is not None:\n            s = worst_kvpr(p)\n            if s < best_score:\n                best_score, best = s, p\n\n    # Fallback: first-fit to guarantee a valid placement\n    if best is None:\n        best = {g: [] for g in range(gpu_num)}\n        free_mem = [GPU_MEM_SIZE] * gpu_num\n        for m in sorted(models, key=lambda m: m.model_size, reverse=True):\n            for g in range(gpu_num):\n                if m.model_size <= free_mem[g]:\n                    best[g].append(m)\n                    free_mem[g] -= m.model_size\n                    break\n            else:\n                raise ValueError(\"Unable to place all models on the GPUs\")\n    return best\n\n\n# EVOLVE-BLOCK-END\n\n\nif __name__ == \"__main__\":\n    # Test the algorithm\n\n    import numpy as np\n    from evaluator import calculate_kvcache_pressure, generate_test_gpu_models, safe_float\n\n    test_cases = generate_test_gpu_models()\n    all_kvpr = []\n    for i, (gpu_num, gpu_models) in enumerate(test_cases):\n\n        results = compute_model_placement(gpu_num, gpu_models)\n        max_kvpr = calculate_kvcache_pressure(results)\n        all_kvpr.append(safe_float(max_kvpr))\n\n    avg_kvpr = np.mean(all_kvpr)\n    if avg_kvpr != 0:\n        avg_kvpr = 1.0 / avg_kvpr\n\n    print(f\"Max KVPR: {avg_kvpr:.3f}\")\n",
+        "language": "python",
+        "metrics": {
+          "max_kvpr": 23.551203411722565,
+          "execution_time": 0.0007864758372306824,
+          "success_rate": 0.64,
+          "combined_score": 24.191203411722565
+        },
+        "iteration_found": 3,
+        "parent_id": "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+        "other_context_ids": [
+          "2c40dddf-2adc-4353-83d9-4eedf52d1d4e",
+          "0e8d7f4e-41c1-4ee9-af2b-81838420163a"
+        ],
+        "parent_info": [
+          "",
+          "0c58370a-fa0d-4196-ba8a-d54cc348bf06"
+        ],
+        "context_info": [
+          [
+            "",
+            "2c40dddf-2adc-4353-83d9-4eedf52d1d4e"
+          ],
+          [
+            "",
+            "0e8d7f4e-41c1-4ee9-af2b-81838420163a"
+          ]
+        ],
+        "timestamp": 1790435878.95449,
+        "metadata": {
+          "changes": "Change 1: Modified function `greedy`: Greedy: each model goes to the GPU minimizing its resulting KVPR.",
+          "parent_metrics": {
+            "max_kvpr": 20.891622105209393,
+            "execution_time": 0.00014558792114257812,
+            "success_rate": 1.0,
+            "combined_score": 21.891622105209393
+          }
+        },
+        "artifacts": {},
+        "prompts": null,
+        "generation": 0
+      }
+    ],
+    "population_size": 4,
+    "solution_score_summary": {
+      "best": 24.191203411722565,
+      "q75": 24.191203411722565,
+      "q50": 23.546981758296212,
+      "q25": 22.14440660512451,
+      "worst": 21.891622105209393,
+      "score_tiers": {
+        "top": {
+          "threshold": "score >= 24.1912",
+          "pct_programs": 50.0
+        },
+        "upper_mid": {
+          "threshold": "23.5470 <= score < 24.1912",
+          "pct_programs": 0.0
+        },
+        "lower_mid": {
+          "threshold": "22.1444 <= score < 23.5470",
+          "pct_programs": 25.0
+        },
+        "bottom": {
+          "threshold": "score < 22.1444",
+          "pct_programs": 25.0
+        }
+      },
+      "unique_scores": 3
+    },
+    "avg_solutions_per_parent": 1.5,
+    "top_solution_scores": [
+      24.191203411722565,
+      24.191203411722565,
+      22.90276010486986,
+      21.891622105209393
+    ],
+    "recent_solution_stats": {
+      "num_recent_iterations": 4,
+      "execution_trace": [
+        {
+          "iteration": 0,
+          "program": [
+            "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+            21.891622105209393
+          ],
+          "parent": null,
+          "context": null
+        },
+        {
+          "iteration": 1,
+          "program": [
+            "0e8d7f4e-41c1-4ee9-af2b-81838420163a",
+            22.90276010486986
+          ],
+          "parent": [
+            "",
+            "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+            21.891622105209393
+          ],
+          "context": null
+        },
+        {
+          "iteration": 2,
+          "program": [
+            "2c40dddf-2adc-4353-83d9-4eedf52d1d4e",
+            24.191203411722565
+          ],
+          "parent": [
+            "",
+            "0e8d7f4e-41c1-4ee9-af2b-81838420163a",
+            22.90276010486986
+          ],
+          "context": [
+            [
+              "",
+              "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+              21.891622105209393
+            ]
+          ]
+        },
+        {
+          "iteration": 3,
+          "program": [
+            "020f1b59-c2c7-416e-8e0f-8f8d06d988cb",
+            24.191203411722565
+          ],
+          "parent": [
+            "",
+            "0c58370a-fa0d-4196-ba8a-d54cc348bf06",
+            21.891622105209393
+          ],
+          "context": [
+            [
+              "",
+              "2c40dddf-2adc-4353-83d9-4eedf52d1d4e",
+              24.191203411722565
+            ],
+            [
+              "",
+              "0e8d7f4e-41c1-4ee9-af2b-81838420163a",
+              22.90276010486986
+            ]
+          ]
+        }
+      ],
+      "score_trajectory": [
+        21.891622105209393,
+        22.90276010486986,
+        24.191203411722565,
+        24.191203411722565
+      ],
+      "parent_scores": [
+        null,
+        21.891622105209393,
+        22.90276010486986,
+        21.891622105209393
+      ],
+      "iterations_without_improvement": 1,
+      "improvement_threshold": 0.1,
+      "most_reused_parent_ratio": 0.6666666666666666,
+      "most_reused_parent_score": 21.891622105209393,
+      "most_reused_context_ratio": 0.5,
+      "most_reused_context_score": 21.891622105209393
+    }
+  }
+}

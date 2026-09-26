@@ -1,0 +1,26 @@
+[
+  {
+    "task": "prism",
+    "arm": "SD-EVOX",
+    "stage": "one",
+    "exit_code": 0
+  },
+  {
+    "task": "prism",
+    "arm": "TRACE-RECURSIVE",
+    "stage": "one",
+    "exit_code": 0
+  },
+  {
+    "task": "signal_processing",
+    "arm": "SD-EVOX",
+    "stage": "one",
+    "exit_code": 0
+  },
+  {
+    "task": "signal_processing",
+    "arm": "TRACE-RECURSIVE",
+    "stage": "one",
+    "exit_code": 2
+  }
+]

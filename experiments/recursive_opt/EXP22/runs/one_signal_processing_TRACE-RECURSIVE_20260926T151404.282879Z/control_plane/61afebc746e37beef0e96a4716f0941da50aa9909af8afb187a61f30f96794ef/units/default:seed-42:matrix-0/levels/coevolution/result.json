@@ -1,0 +1,171 @@
+{
+  "complete": true,
+  "identity": {
+    "dataset_refs": {
+      "holdout": {
+        "inline_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "train": {
+        "config": {
+          "task": "signal_processing"
+        },
+        "ref": "exp22.dataset.signal_processing@1"
+      },
+      "validation": {
+        "inline_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    "engine": "exp22.engine.coevolution@1",
+    "evaluator_ref": "exp22.evaluator.coevolution@1",
+    "level_fingerprint": "04c9a2a2a02253caa97c4870285a17ec64c08d60be45050714773ec95a9f0359",
+    "level_id": "coevolution",
+    "module_ref": "exp22.module.discovery_policy@1",
+    "registry_sha256": "dff4f8d7dc74f3b3c387348db3ea1abf78a3ba0aa198ceefd134d880b31f8934",
+    "runtime_tree_sha256": "02a15ed115380e058bacd9b21f225d3cd27e61423b6b7ed8a1bbfdfab1a8f43f",
+    "spec_fingerprint": "61afebc746e37beef0e96a4716f0941da50aa9909af8afb187a61f30f96794ef",
+    "unit_id": "default:seed-42:matrix-0"
+  },
+  "result": {
+    "artifact": {
+      "policy_source": "# EVOLVE-BLOCK-START\nimport logging\nfrom dataclasses import dataclass\nfrom typing import Dict, List, Optional, Tuple\n\nfrom skydiscover.optimize.config import DatabaseConfig\nfrom skydiscover.optimize.search.base_database import Program, ProgramDatabase\n\nlogger = logging.getLogger(__name__)\n\n\n@dataclass\nclass EvolvedProgram(Program):\n    \"\"\"Program for the evolved database.\"\"\"\n\n\nclass EvolvedProgramDatabase(ProgramDatabase):\n    \"\"\"Initial search strategy database.\n\n    When ``config.pareto_objectives`` is set, sampling prefers members of the\n    global Pareto front (issue #42) while still mixing in non-front programs\n    for exploration. Scalar mode keeps the original uniform random sample.\n    \"\"\"\n\n    def __init__(self, name: str, config: DatabaseConfig):\n        super().__init__(name, config)\n        self.initial_program = None\n\n    def add(self, program: EvolvedProgram, iteration: Optional[int] = None, **kwargs) -> str:\n        \"\"\"Add a program to the database.\"\"\"\n        if iteration == 0 or program.iteration_found == 0:\n            self.initial_program = program\n\n        self.programs[program.id] = program\n\n        if iteration is not None:\n            self.last_iteration = max(self.last_iteration, iteration)\n\n        if self.config.db_path:\n            self._save_program(program)\n\n        self._update_best_program(program)\n\n        logger.debug(f\"Added program {program.id} to the evolve database\")\n        return program.id\n\n    def sample(\n        self, num_context_programs: Optional[int] = 4, **kwargs\n    ) -> Tuple[Dict[str, EvolvedProgram], Dict[str, List[EvolvedProgram]]]:\n        \"\"\"\n        Picks a parent and set of context programs.\n\n        Multiobjective: parent is drawn from the Pareto front when available;\n        context mixes front members with the broader population.\n        \"\"\"\n        candidates = list(self.programs.values())\n\n        if len(candidates) == 0:\n            raise ValueError(\"No candidates available for sampling\")\n\n        front: List[EvolvedProgram] = []\n        if self.is_multiobjective_enabled():\n            front = [p for p in self.get_pareto_front() if p.id in self.programs]\n\n        if front:\n            parent = self.rng.choice(front)\n            # Prefer other front members for context, then fill from population.\n            pool = [p for p in front if p.id != parent.id]\n            if len(pool) < (num_context_programs or 0):\n                extras = [p for p in candidates if p.id != parent.id and p not in pool]\n                self.rng.shuffle(extras)\n                pool.extend(extras)\n            examples = pool[:num_context_programs]\n            if len(examples) < (num_context_programs or 0):\n                # Extremely small front \u2014 allow duplicates avoidance only.\n                examples = [p for p in candidates if p.id != parent.id][:num_context_programs]\n        else:\n            parent = self.rng.choice(candidates)\n            sample_size = min((num_context_programs or 0) + 1, len(candidates))\n            examples = self.rng.sample(candidates, sample_size)\n            examples = [p for p in examples if p.id != parent.id][:num_context_programs]\n\n        parent_dict = {\"\": parent}\n        context_programs_dict = {\"\": examples}\n\n        return parent_dict, context_programs_dict\n\n\n# EVOLVE-BLOCK-END\n"
+    },
+    "budget": {
+      "accounted": {
+        "candidates": 1,
+        "candidates_evaluated": 0,
+        "candidates_proposed": 0,
+        "candidates_reserved": 0,
+        "eval_llm_calls": 0,
+        "evaluator_runs": 0,
+        "optimizer_llm_calls": 0,
+        "total_tokens": 0,
+        "wall_time_s": 56.203313
+      },
+      "candidates": 1,
+      "eval_llm_calls": null,
+      "evaluator_runs": null,
+      "exceeded": [],
+      "on_exceed": "fail",
+      "optimizer_llm_calls": null,
+      "total_tokens": null,
+      "wall_time_s": null
+    },
+    "engine": "exp22.engine.coevolution@1",
+    "error": null,
+    "evaluation": {
+      "artifacts": {},
+      "error": null,
+      "feedback": "",
+      "metrics": {
+        "accuracy_score": 0.8420816095203836,
+        "avg_error": 0.4664988183834896,
+        "combined_score": 0.49904861783269006,
+        "composite_score": 0.4518100150842093,
+        "correlation": 0.8420816095203836,
+        "efficiency_score": 1.0,
+        "execution_time": 0.002604103088378906,
+        "false_reversals": 175.4,
+        "lag_error": 0.3090769071827435,
+        "noise_reduction": 0.3347443615622788,
+        "output_length": 91.0,
+        "overall_score": 0.49904861783269006,
+        "responsiveness_score": 0.7638970594570291,
+        "runs_successfully": 1.0,
+        "slope_changes": 223.4,
+        "smoothness_score": 0.08216926869350863,
+        "success_rate": 1.0
+      },
+      "status": "ok",
+      "trace": null,
+      "usage": {
+        "feedback": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "forward": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "judge": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        },
+        "optimizer": {
+          "completion_tokens": 0,
+          "cost_usd": 0.0,
+          "prompt_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "valid": true
+    },
+    "level_results": [],
+    "lineage": [],
+    "metadata": {
+      "kernel_result": {
+        "arm": "TRACE-RECURSIVE",
+        "final_best_score": 0.49904861783269006,
+        "final_metrics": {
+          "accuracy_score": 0.8420816095203836,
+          "avg_error": 0.4664988183834896,
+          "combined_score": 0.49904861783269006,
+          "composite_score": 0.4518100150842093,
+          "correlation": 0.8420816095203836,
+          "efficiency_score": 1.0,
+          "execution_time": 0.002604103088378906,
+          "false_reversals": 175.4,
+          "lag_error": 0.3090769071827435,
+          "noise_reduction": 0.3347443615622788,
+          "output_length": 91.0,
+          "overall_score": 0.49904861783269006,
+          "responsiveness_score": 0.7638970594570291,
+          "runs_successfully": 1.0,
+          "slope_changes": 223.4,
+          "smoothness_score": 0.08216926869350863,
+          "success_rate": 1.0
+        },
+        "final_window_metrics": {
+          "combined_score": 0.0,
+          "search_horizon": 1,
+          "search_window_end_score": 0.49904861783269006,
+          "search_window_start_score": 0.49904861783269006,
+          "window_start_iteration": null
+        },
+        "gate_failure": null,
+        "horizon": 1,
+        "initial_score": 0.49904861783269006,
+        "iterations_observed": 1,
+        "meta_proposal_failures": 0,
+        "policy_switches": 0,
+        "task": "signal_processing",
+        "wall_time": 53.31948678698973
+      },
+      "level_id": "coevolution"
+    },
+    "module_ref": "exp22.module.discovery_policy@1",
+    "plan_fingerprint": "61afebc746e37beef0e96a4716f0941da50aa9909af8afb187a61f30f96794ef",
+    "portable": false,
+    "promotable": false,
+    "spec_fingerprint": "61afebc746e37beef0e96a4716f0941da50aa9909af8afb187a61f30f96794ef",
+    "status": "success",
+    "unit_id": "default:seed-42:matrix-0",
+    "usage": {
+      "optimizer": {
+        "empty_text_responses": 0,
+        "semantic_retries": 0,
+        "semantic_retry_completion_tokens": 0,
+        "semantic_retry_cost_usd": 0.0,
+        "semantic_retry_prompt_tokens": 0,
+        "semantic_retry_total_tokens": 0
+      }
+    },
+    "valid": true
+  },
+  "result_sha256": "accfbc9446ebc75c6aa651aba54da7c79cc97aa5dd0b52695bfe18b35658320e"
+}

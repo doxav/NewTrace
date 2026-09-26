@@ -1,6 +1,6 @@
 # EXP22 protocol v1 — 2026-09-26
 
-Current status: amendment v7 repairs evaluator lifecycle; affected gates are being revalidated. See RESULTS.md for execution status.
+Current status: amendment v7 evaluator repair and all S0–S5 gates passed. See RESULTS.md for execution status.
 The initial S0 source stop is historical; no full benchmark has begun. This document does not certify an implemented benchmark.
 All experiment files belong under this directory. Source repositories remain unchanged.
 

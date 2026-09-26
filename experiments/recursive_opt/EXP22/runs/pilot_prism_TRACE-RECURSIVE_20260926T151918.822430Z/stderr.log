@@ -1,0 +1,48 @@
+WARNING:skydiscover.optimize.evaluation.evaluator:cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+WARNING:skydiscover.optimize.evaluation.evaluator:cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=4, attempt 1/2). Expected SEARCH/REPLACE blocks. Preview:
+Looking at the history, the best max_kvpr (18.9746, success 1.0) came from the greedy that minimizes the *post-placement* KVPR with size-descending order. I'll improve it by trying several sort orders (keeping the reliable size-descending order as a guaranteed fallback) and picking the placement with the lowest max KVPR. This strictly dominates the current solution while preserving the 100% success rate.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def _greedy(gpu_num, models, sort_key):
+    """Greedy placement: process models in the given sort order, assigning
+    each to the feasible GPU minimizing the post-placement KVPR."""
+    placement = {gpu_id: [] for gpu_id in range(gpu_num)}
+    free = [GPU_MEM_SIZE for _ in range(gpu_num)]
+    load = [0.0 for _ in range(gpu_num)]
+    for model in sorted(models, key=sort_key):
+        best_idx, best_ratio = None, float("inf")
+        for gpu_id in range(gpu_num):
+            if model.model_size <= free[gpu_id]:
+                ratio = (load[gpu_id] + model.req_rate / model.slo) / (
+                    free[gpu_id] - model.model_size
+                )
+                # Tie-break: prefer the GPU with more remaining memory
+                if ratio < best_ratio - 1e-12 or (
+                    abs(ratio - best_ratio) <= 1e-12
+                    and best_idx is not None
+                    and free[gpu_id] > free[best_idx]
+                ):
+                    best_ratio, best_idx = ratio, gpu_id
+        if best_idx is None:
+            return None
+        placement[best_idx].append(model)
+        load[best_idx] += model.req_rate / model.slo
+        free[best_idx] -= model.model_size
+    return placement
+
+
+def _max_kvpr(placement):
+    """Return the maximum KVPR across all GPUs for a placement."""
+    worst = 0.0
+    for gpu_models in placement.values():
+        l = sum(m.req_rate / m.slo for m in gpu_models)
+        f = GPU_MEM_SIZE - sum(m.model_size for m in gpu_models)
+        worst = max(worst, l / f)
+    r
+... (truncated) ...
