@@ -1,0 +1,23 @@
+{
+  "timeout_fix_completed": true,
+  "root_cause": "Local thread cancellation did not terminate evaluation; unrelated to Novita",
+  "evaluator_protocol": "process-stage-v1",
+  "unit_tests_passed": 37,
+  "all_six_gates_passed": true,
+  "pilots_passed": 8,
+  "experiment_resumed": true,
+  "strict_outcome": "STOPPED_PROVIDER",
+  "strict_solution_http_attempts": 91,
+  "strict_recorded_outcomes": 88,
+  "strict_worker_cleanup_failures": 0,
+  "strict_evaluator_timeouts": 0,
+  "remaining_strict_arms_not_started": 7,
+  "advanced_phase_run": false,
+  "reason_remaining_work_not_run": "Original protocol requires stopping on provider/transport or accounting validity failure; Novita HTTP 429 was followed by a stock fallback accounting failure",
+  "original_run_files_preserved": true,
+  "current_series_completion_requests": 202,
+  "current_series_reported_cost_usd": 0.20054529,
+  "calls_missing_cost": 1,
+  "report": "RESULTS.md",
+  "validation": "artifacts/final_validation.json"
+}

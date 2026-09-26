@@ -44,7 +44,7 @@
     }
   },
   "completed_runs": [],
-  "completion_requests": 97,
+  "completion_requests": 202,
   "evaluator_protocol": "process-stage-v1",
   "evidence_directory": "artifacts/preflight/20260926T100458.395061Z",
   "execution_authorized_by_this_script": false,
@@ -58,11 +58,14 @@
     "S5": true
   },
   "gates_not_run": [
-    "strict process matrix",
+    "remaining seven strict arms",
     "conditional advanced phase"
   ],
   "historical_series": "artifacts/deepinfra_pre_novita/manifest.json",
-  "paid_calls": 97,
+  "paid_calls": 201,
+  "partial_runs": [
+    "strict_prism_SD-EVOX_20260926T153856.917970Z"
+  ],
   "primary_control_plane": "CP-A: exact transport, non-portable/non-promotable",
   "protocol_amendment": "v7",
   "provider": {
@@ -85,8 +88,8 @@
       "status_porcelain": ""
     }
   },
-  "status": "PARTIAL",
-  "successful_completions": 97,
+  "status": "STOPPED_PROVIDER",
+  "successful_completions": 201,
   "timestamp_utc": "20260926T100458.395061Z",
   "trace_branch_gate": {
     "actual_branch": "",

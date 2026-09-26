@@ -1,0 +1,28 @@
+{
+  "best_solution_stock_process_parity": true,
+  "commands": {
+    "analysis": "python3 experiments/recursive_opt/EXP22/scripts/analyze.py",
+    "compile": "python3 -m compileall -q experiments/recursive_opt/EXP22/src experiments/recursive_opt/EXP22/scripts experiments/recursive_opt/EXP22/tests",
+    "lint": "ruff check experiments/recursive_opt/EXP22/src experiments/recursive_opt/EXP22/scripts experiments/recursive_opt/EXP22/tests",
+    "plot": "python3 experiments/recursive_opt/EXP22/scripts/plot_results.py",
+    "unit_tests": "experiments/recursive_opt/EXP22/.venv/bin/python -I -m unittest discover -s experiments/recursive_opt/EXP22/tests -v"
+  },
+  "credential_scan_matches": [],
+  "evaluator_protocol": "process-stage-v1",
+  "experiment_status": "STOPPED_PROVIDER",
+  "frozen_runtime_unchanged": true,
+  "limitations": [
+    "Strict run is partial after Novita HTTP 429; no complete comparison pair",
+    "Three failed solution calls are absent from the raw 88-point curve because stock fallback skipped their bookkeeping",
+    "Advanced phase remains gated off"
+  ],
+  "no_owned_runner_or_worker": true,
+  "passed": true,
+  "plot_visual_review_passed": true,
+  "source_hashes_unchanged": {
+    "skydiscover": true,
+    "trace": true,
+    "trace_cp_b": true
+  },
+  "test_count": 37
+}

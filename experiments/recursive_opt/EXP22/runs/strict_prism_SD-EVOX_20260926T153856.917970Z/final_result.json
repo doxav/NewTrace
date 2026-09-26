@@ -1,0 +1,28 @@
+{
+  "arm": "SD-EVOX",
+  "final_best_score": 25.96590682442097,
+  "final_metrics": {
+    "combined_score": 25.96590682442097,
+    "execution_time": 0.00023857752482096353,
+    "max_kvpr": 25.00590682442097,
+    "success_rate": 0.96
+  },
+  "final_window_metrics": {
+    "combined_score": 0.0,
+    "search_horizon": 10,
+    "search_window_end_score": 25.96590682442097,
+    "search_window_start_score": 25.96590682442097,
+    "window_start_iteration": 65
+  },
+  "gate_failure": "HTTP solution calls and recorded attempt budget diverged",
+  "horizon": 100,
+  "initial_score": 21.891622105209393,
+  "invalid_attempts": 53,
+  "iterations_observed": 88,
+  "meta_proposal_failures": 0,
+  "passed": false,
+  "policy_switches": 3,
+  "task": "prism",
+  "valid_candidates": 38,
+  "wall_time": 2193.7199537049746
+}

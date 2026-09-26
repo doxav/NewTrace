@@ -154,7 +154,7 @@ def write_report(report: dict[str, Any]) -> None:
              'FACT: The fixed route is `z-ai/glm-5.3-flash` through OpenRouter, provider `novita`, reasoning effort `low`, session `benchmark-PRIMS-SIGNAL-run-001`, temperature 0.7, maximum 32,000 tokens and timeout 600 seconds. Trace uses CP-A: exact transport with a nonportable, nonpromotable control-plane override. CP-B was excluded because its empty-response fallback changes the token ceiling.', '',
              'FACT: Current smoke and pilot outcomes are listed in `artifacts/diagnostic_summary.json`; pilots are excluded from strict quality comparisons.', '',
              'MEASURED RESULT: Strict runs below start from the stock initial solution and consume up to 100 solution HTTP attempts. Partial runs have no 100-attempt AUC and are excluded from contrasts.', '',
-             '| Task | Arm | Attempts | Initial | Final best | Gain | Relative gain | AUC / 100 | First / best iteration | Status |',
+             '| Task | Arm | Solution calls / outcomes | Initial | Final best | Gain | Relative gain | AUC / 100 | First / best iteration | Status |',
              '|---|---|---:|---:|---:|---:|---:|---:|---|---|']
     if report.get('execution_stop'):
         lines[2:2] = [
@@ -163,12 +163,19 @@ def write_report(report: dict[str, Any]) -> None:
             'FACT: A bounded unpaid reproduction in `artifacts/timeout_diagnostic.json` confirms that the stock outer timeout leaves its thread active and permits a subsequent evaluation; PRISM’s inner executor context also waits for its worker after its nominal timeout. Every reproduction worker was released and joined. No frozen runtime source or source repository was patched after strict execution started.', '',
             'LIMITATION: The full timed-out candidate was not retained: stock retry prompts truncate failed source. Its surviving excerpt is labelled accordingly. The interrupted Trace run has no completed canonical control-plane result or comparable normal kernel wall-time measurement. No missing artifact is represented as a successful result.', '',
         ]
+    if report.get('provider_stop'):
+        diagnostic = report['provider_stop']
+        lines[2:2] = [
+            f"FACT: The local evaluator timeout leak was repaired and validated before resumption. The resumed strict run stopped on a separate provider failure: {diagnostic['primary_failure']}. Its {diagnostic['solution_http_attempts']} solution HTTP attempts produced {diagnostic['recorded_outcomes']} recorded curve outcomes; the final failed batch is retained without inventing missing curve points.", '',
+            f"FACT: {diagnostic['secondary_failure']}", '',
+            f"MEASURED RESULT: All {diagnostic['completed_evaluator_stages']} evaluator stages in the strict run completed and their workers were reaped; no evaluator timeout occurred. The remaining seven strict arms and the advanced phase were not run. This incomplete run cannot establish a Trace-versus-SkyDiscover contrast.", '',
+        ]
     def number(value: Any) -> str:
         """Format missing measurements explicitly rather than displaying zero."""
         return 'unmeasured' if value is None else f'{value:.8g}'
     for row in strict:
         m, c = row['metrics'], row['config']
-        lines.append(f"| {c['task']} | {c['arm']} | {m['observed_attempts']} | {number(m['initial_score'])} | {number(m['final_best_score'])} | {number(m['absolute_gain'])} | {number(m['relative_gain'])} | {number(m['mean_best_score_100'])} | {m['first_improvement_iteration']} / {m['best_solution_iteration']} | {'complete' if m['complete'] else 'diagnostic stop'} |")
+        lines.append(f"| {c['task']} | {c['arm']} | {m['usage']['roles'].get('solution', 0)} / {m['observed_attempts']} | {number(m['initial_score'])} | {number(m['final_best_score'])} | {number(m['absolute_gain'])} | {number(m['relative_gain'])} | {number(m['mean_best_score_100'])} | {m['first_improvement_iteration']} / {m['best_solution_iteration']} | {'complete' if m['complete'] else 'diagnostic stop'} |")
     lines += ['', '| Task / arm | Valid / invalid | Policy switches | Valid proposals / total | Improving windows | Solution / meta / guide calls | Input / output / cached tokens | Cost USD | Wall seconds |',
               '|---|---|---:|---|---:|---|---|---:|---:|']
     for row in strict:
@@ -214,7 +221,7 @@ def write_report(report: dict[str, Any]) -> None:
                   'Reproduce the timeout diagnosis without paid calls: `experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/timeout_diagnostic.py`.']
     validation_path = ROOT/'artifacts/final_validation.json'
     if validation_path.exists() and json.loads(validation_path.read_text()).get('passed'):
-        lines += ['', 'FACT: Final validation passed: 32 EXP22 tests, lint, bytecode compilation, unchanged source hashes and frozen runtime, credential scan, saved-source re-evaluation, and visual plot review. No owned benchmark process remains active. Evidence: `artifacts/final_validation.json`.']
+        lines += ['', 'FACT: Final validation passed: EXP22 tests, lint, bytecode compilation, unchanged source hashes and frozen runtime, credential scan, saved-source re-evaluation, and visual plot review. No owned benchmark process remains active. Exact commands and counts: `artifacts/final_validation.json`.']
     (ROOT/'RESULTS.md').write_text('\n'.join(lines) + '\n')
 
 
@@ -283,6 +290,7 @@ def analyze() -> dict[str, Any]:
         records.extend(requests)
         history = [json.loads(line) for line in (directory/'candidate_history.jsonl').read_text().splitlines()]
         row = {'directory': directory.name, 'config': json.loads((directory/'config.json').read_text()), 'result': result, 'http_passed': bool(requests) and all(row['passed'] for row in requests), 'candidate_errors': [row['error'] for row in history if row.get('error')]}
+        row['http_failures'] = [{'request_index': index, 'http_status': request['http_status'], 'role': request.get('role'), 'provider': ((request.get('error') or {}).get('metadata') or {}).get('provider_name', request.get('serving_provider')), 'limit_source': ((request.get('error') or {}).get('metadata') or {}).get('limit_source')} for index, request in enumerate(requests) if not request['passed']]
         if row['config']['stage'] == 'strict':
             row['metrics'] = strict_metrics(directory, result, requests)
         attempts.append(row)
@@ -305,6 +313,10 @@ def analyze() -> dict[str, Any]:
         status = execution_stop['status']
     else:
         execution_stop = None
+    provider_stop_path = ROOT/'artifacts/provider_stop_diagnostic.json'
+    provider_stop = json.loads(provider_stop_path.read_text()) if provider_stop_path.exists() else None
+    if provider_stop and not any(row['directory'] == provider_stop['directory'] for row in failed):
+        provider_stop = None
     report = {
         'status': status, 'provider': routing, 'reasoning_effort': reasoning_effort, 'evaluator_protocol': evaluator_protocol, 'primary_control_plane': transport['trace'],
         'completion_requests': len(records), 'successful_http_responses': sum(row['http_status'] == 200 for row in records),
@@ -313,17 +325,25 @@ def analyze() -> dict[str, Any]:
         'calls_missing_cost': sum((row.get('usage') or {}).get('cost') is None for row in records),
         'valid_generated_candidates': sum(row['result'].get('valid_candidates', 0) for row in attempts),
         'strict_runs_completed': [row['directory'] for row in attempts if row['config']['stage'] == 'strict' and row['result']['passed']],
-        'attempts': attempts, 'gates': gates, 'comparison': comparison, 'execution_stop': execution_stop,
+        'attempts': attempts, 'gates': gates, 'comparison': comparison, 'execution_stop': execution_stop, 'provider_stop': provider_stop,
     }
     write_json(ROOT/'artifacts/diagnostic_summary.json', report)
     if failed:
         last = failed[-1]
+        reason = last['result'].get('gate_failure') or last['result'].get('error') or ('Fixed-parameter generation returned no candidate' if empty_generation else 'Required execution gate failed')
+        recommendation = 'Establish usable generation under the frozen settings before S4/S5 or strict runs; any request-parameter change requires an explicit protocol amendment.'
+        if last['http_failures']:
+            failure = last['http_failures'][0]
+            reason = f"Provider/transport validation failed: HTTP {failure['http_status']}, provider {failure['provider']}, limit source {failure['limit_source']}"
+            recommendation = 'Wait for the frozen provider route to be available. Before another strict run, address the stock fallback path that can skip counting failed HTTP batches; preserve this stopped run and preregister any runtime amendment. Do not disable the accounting or serving-identity guards.'
+        if execution_stop:
+            recommendation = 'Run unchanged benchmark evaluators inside an owned process boundary with enforceable termination on timeout, prove parity and no surviving workers on both arms, then preregister and rerun strict comparisons from stock initial programs.'
         write_json(ROOT/'artifacts/STOP.json', {
-            'status': status, 'reason': last['result'].get('gate_failure') or last['result'].get('error') or ('Fixed-parameter generation returned no candidate' if empty_generation else 'Required execution gate failed'),
+            'status': status, 'reason': reason, 'runtime_gate_failure': last['result'].get('gate_failure'),
             'iteration': last['result'].get('iterations_observed'), 'last_valid_score': last['result'].get('final_best_score'),
             'last_active_policy': f"runs/{last['directory']}/best_policy.py",
-            'evidence': ['artifacts/diagnostic_summary.json', *(['artifacts/evaluator_execution_stop.json', 'artifacts/timeout_diagnostic.json', f"runs/{last['directory']}/candidate_history.jsonl", f"runs/{last['directory']}/diagnostic_recovery.json"] if execution_stop else []), *[f"runs/{row['directory']}/http_requests.json" for row in failed]],
-            'recommended_fix': 'Run unchanged benchmark evaluators inside an owned process boundary with enforceable termination on timeout, prove parity and no surviving workers on both arms, then preregister and rerun strict comparisons from stock initial programs.' if execution_stop else 'Establish usable generation under the frozen settings before S4/S5 or strict runs; any request-parameter change requires an explicit protocol amendment.',
+            'evidence': ['artifacts/diagnostic_summary.json', *(['artifacts/provider_stop_diagnostic.json'] if provider_stop else []), *(['artifacts/evaluator_execution_stop.json', 'artifacts/timeout_diagnostic.json', f"runs/{last['directory']}/candidate_history.jsonl", f"runs/{last['directory']}/diagnostic_recovery.json"] if execution_stop else []), *[f"runs/{row['directory']}/http_requests.json" for row in failed]],
+            'recommended_fix': recommendation,
         })
     else:
         (ROOT/'artifacts/STOP.json').unlink(missing_ok=True)

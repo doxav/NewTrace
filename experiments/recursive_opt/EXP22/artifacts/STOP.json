@@ -1,0 +1,14 @@
+{
+  "evidence": [
+    "artifacts/diagnostic_summary.json",
+    "artifacts/provider_stop_diagnostic.json",
+    "runs/strict_prism_SD-EVOX_20260926T153856.917970Z/http_requests.json"
+  ],
+  "iteration": 88,
+  "last_active_policy": "runs/strict_prism_SD-EVOX_20260926T153856.917970Z/best_policy.py",
+  "last_valid_score": 25.96590682442097,
+  "reason": "Provider/transport validation failed: HTTP 429, provider Novita, limit source upstream_provider_shared_pool",
+  "recommended_fix": "Wait for the frozen provider route to be available. Before another strict run, address the stock fallback path that can skip counting failed HTTP batches; preserve this stopped run and preregister any runtime amendment. Do not disable the accounting or serving-identity guards.",
+  "runtime_gate_failure": "HTTP solution calls and recorded attempt budget diverged",
+  "status": "STOPPED_PROVIDER"
+}

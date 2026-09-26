@@ -1,0 +1,26 @@
+{
+  "iteration": 60,
+  "best_score": 25.96590682442097,
+  "population_size": 32,
+  "active_policy_hash": "5d9d30884eafe38bef4f6eab6334e48de944cc90ecfc39be3ce6daffca526c4a",
+  "policy_switches": 2,
+  "current_score": null,
+  "valid_candidates": 31,
+  "invalid_candidates": 29,
+  "policy_validation_failures": 0,
+  "llm_usage": {
+    "total_calls": 71,
+    "roles": {
+      "guide": 2,
+      "meta": 4,
+      "solution": 60,
+      "trace_meta_or_preflight": 5
+    },
+    "input_tokens": 355277,
+    "output_tokens": 84646,
+    "cached_tokens": 1280,
+    "reported_cost": 0.07159571249999999,
+    "calls_missing_cost": 0
+  },
+  "gate_failure": null
+}

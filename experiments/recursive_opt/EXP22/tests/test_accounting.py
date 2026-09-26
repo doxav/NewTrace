@@ -137,6 +137,16 @@ class AccountingTests(unittest.TestCase):
                 self.assertEqual(report['completion_requests'], 2)
                 self.assertEqual(report['valid_generated_candidates'], 0)
                 self.assertTrue((root/'artifacts/STOP.json').exists())
+                failed_request = {**row, 'passed': False, 'http_status': 429, 'error': {'metadata': {'provider_name': 'Novita', 'limit_source': 'upstream_provider_shared_pool'}}}
+                (current/'http_requests.json').write_text(json.dumps([failed_request]))
+                result = json.loads((current/'final_result.json').read_text())
+                result['gate_failure'] = 'HTTP solution calls and recorded attempt budget diverged'
+                (current/'final_result.json').write_text(json.dumps(result))
+                report = analyze.analyze()
+                stop = json.loads((root/'artifacts/STOP.json').read_text())
+                self.assertEqual(report['status'], 'STOPPED_PROVIDER')
+                self.assertIn('HTTP 429, provider Novita', stop['reason'])
+                self.assertEqual(stop['runtime_gate_failure'], result['gate_failure'])
                 (root/'manifest.json').write_text(json.dumps({'evaluator_protocol': 'process-stage-v1'}))
                 report = analyze.analyze()
                 self.assertEqual(report['attempts'], [])

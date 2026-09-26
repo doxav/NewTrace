@@ -1,0 +1,25 @@
+{
+  "directory": "strict_prism_SD-EVOX_20260926T153856.917970Z",
+  "status": "STOPPED_PROVIDER",
+  "primary_failure": "Novita returned HTTP 429 (upstream_provider_shared_pool) on solution HTTP attempt 91",
+  "secondary_failure": "The stock EvoX fallback treats an error result with no prompt as a database failure. It restored its fallback database and retried before recording the three consumed attempts; the EXP22 HTTP-versus-curve accounting guard then stopped further calls. The raw result and 88-point curve are unchanged. This is separate from the repaired evaluator timeout leak.",
+  "solution_http_attempts": 91,
+  "recorded_outcomes": 88,
+  "completed_evaluator_stages": 44,
+  "all_workers_reaped": true,
+  "evaluator_timeouts": 0,
+  "http_request_count": 105,
+  "successful_http_requests": 104,
+  "failed_request_index": 104,
+  "raw_final_result_sha256": "a1763694d4cbee96af189085f4b7477363226193cc7aeedf1292d071b0c9a356",
+  "evidence": [
+    "runs/strict_prism_SD-EVOX_20260926T153856.917970Z/http_requests.json",
+    "runs/strict_prism_SD-EVOX_20260926T153856.917970Z/candidate_history.jsonl",
+    "runs/strict_prism_SD-EVOX_20260926T153856.917970Z/evaluations/solution/stages.jsonl",
+    "runs/strict_prism_SD-EVOX_20260926T153856.917970Z/evaluations/policy/stages.jsonl"
+  ],
+  "stock_fallback_source": "/home/xav/code/evo-compare/repos/skydiscover/skydiscover/optimize/search/evox/controller.py:193",
+  "final_policy_hash": "5d9d30884eafe38bef4f6eab6334e48de944cc90ecfc39be3ce6daffca526c4a",
+  "last_curve_policy_hash": "4afab0f377b863c741169f9f5d01d0fba00ea45c9afcbd14e4f0ccd335e09d40",
+  "restored_fallback_policy": true
+}
