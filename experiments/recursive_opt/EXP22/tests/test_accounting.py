@@ -16,6 +16,53 @@ from scripts.run_stage import redact_diagnostics, usage_summary
 class AccountingTests(unittest.TestCase):
     """Keep refused calls distinct from measured usage and preserve scientific data."""
 
+    def test_summary_role_requires_exact_stock_prompt(self) -> None:
+        """Resolve stock guide calls without changing raw evidence or guessing roles."""
+        request = {'role': 'trace_meta_or_preflight', 'outbound_body': {'messages': [{'role': 'system', 'content': 'Known guide prompt'}]}}
+        rows, evidence = analyze.resolve_roles([request], {'stock-template.txt': 'Known guide prompt'})
+        self.assertEqual(rows[0]['role'], 'guide')
+        self.assertEqual(evidence[0]['source_template'], 'stock-template.txt')
+        self.assertEqual(request['role'], 'trace_meta_or_preflight')
+        with self.assertRaisesRegex(ValueError, 'Unclassified'):
+            analyze.resolve_roles([request], {'stock-template.txt': 'Different prompt'})
+
+    def test_strict_trajectory_metrics_and_failures(self) -> None:
+        """Verify known AUC, improvement timing and rejection of corrupted evidence."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            curve = [{'iteration': i, 'best_score': 1 if i < 4 else 3} for i in range(1, 101)]
+            path = root/'solution_curve.jsonl'
+            path.write_text(''.join(json.dumps(row)+'\n' for row in curve))
+            result = {'passed': True, 'initial_score': 1, 'final_best_score': 3}
+            requests = [{'role': 'solution', 'usage': {'cost': 0.01}} for _ in curve]
+            measured = analyze.strict_metrics(root, result, requests)
+            self.assertEqual(measured['auc_100'], 294)
+            self.assertEqual(measured['first_improvement_iteration'], 4)
+            self.assertEqual(measured['best_solution_iteration'], 4)
+            self.assertEqual(measured['relative_gain'], 2)
+            self.assertIsNone(measured['policy_validation_failure_rate'])
+            partial = analyze.strict_metrics(root, {**result, 'passed': False}, requests)
+            self.assertIsNone(partial['auc_100'])
+            with self.assertRaisesRegex(ValueError, '100 observed'):
+                analyze.strict_metrics(root, result, requests[:-1])
+            curve[-1]['best_score'] = 2
+            path.write_text(''.join(json.dumps(row)+'\n' for row in curve))
+            with self.assertRaisesRegex(ValueError, 'decreases'):
+                analyze.strict_metrics(root, result, requests)
+
+    def test_advanced_requires_complete_matrix_and_deployment(self) -> None:
+        """Positive pilot or incomplete strict results cannot authorize exploration."""
+        attempts = []
+        for task in ('prism', 'signal_processing'):
+            for arm in ('SD-EVOX', 'SD-FIXED', 'TRACE-RECURSIVE', 'TRACE-FIXED'):
+                score = 2 if arm == 'TRACE-RECURSIVE' else 1
+                attempts.append({'config': {'stage': 'strict', 'task': task, 'arm': arm}, 'metrics': {'complete': True, 'final_best_score': score, 'relative_gain': score-1, 'auc_100': score*100, 'policy_switches': 1 if arm == 'TRACE-RECURSIVE' else 0}})
+        self.assertTrue(analyze.comparisons(attempts)['advanced_numerically_eligible'])
+        self.assertFalse(analyze.comparisons(attempts[:-1])['advanced_numerically_eligible'])
+        for row in attempts:
+            row['metrics']['policy_switches'] = 0
+        self.assertFalse(analyze.comparisons(attempts)['advanced_numerically_eligible'])
+
     def test_rejected_cost_is_unknown(self) -> None:
         """Absent usage is not evidence that a rejected request was free."""
         result = usage_summary([{'role': 'solution', 'usage': {'prompt_tokens': 10, 'completion_tokens': 5, 'cost': 0.01}}, {'role': 'guide', 'usage': None}])

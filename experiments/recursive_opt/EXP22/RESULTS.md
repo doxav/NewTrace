@@ -2,7 +2,7 @@ STATUS: PARTIAL
 
 Low reasoning effort resolved the two observed PRISM empty-output failures. Two independent SkyDiscover PRISM one-attempt checks and one Trace check produced valid candidates; completion lengths were 886–996 tokens, including 51–74 reasoning tokens. The earlier default-reasoning failures consumed 32,000 completion tokens each and produced no code. This establishes usable generation, not a guarantee against later failures.
 
-All S0–S5 gates passed. All eight five-attempt pilots completed. No strict run has started; the validated runtime is frozen in `artifacts/strict_source_hashes.json`.
+All S0–S5 gates passed. All eight five-attempt pilots completed. The first strict run, PRISM SD-EVOX, is in progress; the validated runtime is frozen in `artifacts/strict_source_hashes.json`.
 
 | Task | Arm | Best score | Valid / 5 | Policy switches |
 |---|---|---:|---:|---:|
@@ -25,4 +25,6 @@ Trace uses CP-A with explicit nonportable/nonpromotable control-plane override. 
 
 Strict and advanced outcomes: not yet measured. No conclusion about Trace versus fixed policy, EvoX versus fixed policy, or additional freedom is warranted.
 
-Validation: 27 EXP22 unit tests and 162 targeted Trace tests passed (six integration cases deselected). All eight pilot gates passed. See `artifacts/exp22_unit_tests.txt`, `artifacts/s4_validation.json`, and `artifacts/s5_validation.json`.
+Validation: 30 EXP22 unit tests and 162 targeted Trace tests passed (six integration cases deselected). All eight pilot gates passed. See `artifacts/exp22_unit_tests.txt`, `artifacts/s4_validation.json`, and `artifacts/s5_validation.json`.
+
+Reporting audit: stock EvoX also creates a guide pool inside its context builder. Raw HTTP records retain the fallback role label for that pool. Derived analysis resolves those records only by exact matches against the source-hashed stock guide prompts, and stores request-index evidence. Total calls and cost already include these requests. No runtime code changed.
