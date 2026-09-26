@@ -10,6 +10,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.evaluator_preflight import equivalent, stable
+from scripts.timeout_diagnostic import diagnose
 from scripts.transport_smoke import MODEL, payload, request_json
 from src.evaluation import TraceEvaluatorAdapter, stock_evaluator
 from src.transport import SESSION
@@ -17,6 +18,12 @@ from src.transport import SESSION
 
 class EvaluationTests(unittest.TestCase):
     """Cover cascade boundaries, missing entry points and metric comparison."""
+
+    def test_bounded_timeout_diagnostic(self) -> None:
+        """Reproduce stock worker leakage while cleaning up every fixture thread."""
+        result = asyncio.run(diagnose())
+        for key in ('outer_timeout_raised', 'subsequent_call_overlapped_worker', 'fixture_worker_cleaned_up', 'inner_timeout_raised', 'inner_context_waited_for_worker'):
+            self.assertTrue(result[key], key)
 
     def test_cascade_thresholds(self) -> None:
         """Stock threshold includes equality and treats absent metrics as failure."""

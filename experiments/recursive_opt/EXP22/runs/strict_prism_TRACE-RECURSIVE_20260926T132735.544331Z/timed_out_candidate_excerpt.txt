@@ -1,0 +1,42 @@
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Compute a model placement that minimizes the maximum KVPR across all GPUs.
+
+    Args:
+        gpu_num: Number of GPUs
+        models: List of models to place
+
+    Returns:
+        A placement of models to GPUs
+    """
+
+    def greedy(order):
+        """Greedy placement: assign each model (in given order) to the feasible
+        GPU with the lowest current KVPR; fallback to most free memory."""
+        placement = {g: [] for g in range(gpu_num)}
+        shared_kv = [GPU_MEM_SIZE for _ in range(gpu_num)]
+        wrr = [0.0 for _ in range(gpu_num)]
+        for model in order:
+            best_idx, best_ratio = None, float("inf")
+            for g in range(gpu_num):
+                if model.model_size <= shared_kv[g] and shared_kv[g] > 0:
+                    ratio = wrr[g] / shared_kv[g]
+                    if ratio < best_ratio:
+                        best_ratio, best_idx = ratio, g
+            if best_idx is None:
+                best_idx = max(range(gpu_num), key=lambda g: shared_kv[g])
+            placement[best_idx].append(model)
+            wrr[best_idx] += model.req_rate / model.slo
+            shared_kv[best_idx] -= model.model_size
+        return placement, shared_kv, wrr
+
+    # Multi-start: try several orderings, keep the one with best lexicographic
+    # objective (max KVPR, then sum of squared KVPRs).
+    def score_of(shared_kv, wrr):
+        ks = [wrr[g] / share
+... (truncated)

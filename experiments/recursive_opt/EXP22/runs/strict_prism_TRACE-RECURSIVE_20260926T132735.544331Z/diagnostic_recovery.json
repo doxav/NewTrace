@@ -1,0 +1,50 @@
+{
+  "contamination_boundary": "Candidate 20 timed out and kept running; candidate 21 completed while it was active. The selected best source first appeared before this boundary.",
+  "initial_score_origin": "S1 golden baseline; exact baseline value is also present in the first solution request prompt",
+  "raw_final_result_sha256": "dd0502c3df95e8ac328a976189357a7440285784d843b2950e910815ee87b0d0",
+  "raw_runtime_result_preserved": true,
+  "result": {
+    "arm": "TRACE-RECURSIVE",
+    "final_best_score": 26.16034671095043,
+    "final_metrics": {
+      "combined_score": 26.16034671095043,
+      "execution_time": 0.0020210790634155274,
+      "max_kvpr": 25.16034671095043,
+      "success_rate": 1.0
+    },
+    "gate_failure": "The stock outer evaluator returned timeout after 360 seconds while candidate worker 20272 stayed CPU-active. Attempt 21 subsequently completed evaluation before that worker stopped, violating sequential evaluation.",
+    "horizon": 100,
+    "initial_score": 21.891622105209393,
+    "invalid_attempts": 7,
+    "iterations_observed": 21,
+    "passed": false,
+    "policy_switches": 0,
+    "solution_http_attempts": 22,
+    "task": "prism",
+    "unobserved_solution_attempts": 1,
+    "valid_candidates": 14,
+    "wall_time": null,
+    "wall_time_note": "Normal kernel timer was interrupted; no comparable wall-time measurement is available."
+  },
+  "source_recovery": {
+    "best_policy": {
+      "origin": "source-hashed stock initial_search_strategy.py; all observed active hashes match",
+      "sha256": "14c81186333820bfb74c423dd63d8d2c4c37bd6d6006e789689f3fc9782c86b3"
+    },
+    "best_solution": {
+      "completed_attempt": 12,
+      "line": 9,
+      "origin": "candidate_history.jsonl",
+      "sha256": "a19d5f29d246352adc52124e70ae8dac2051f09c8a2f831feac6a680e0fdee19"
+    },
+    "timed_out_candidate_excerpt": {
+      "complete": false,
+      "limitation": "The stock retry prompt truncates failed source; this is an excerpt, not executable recovered source.",
+      "origin": "http_requests.json",
+      "request_index": 23,
+      "section": "Previous Failed Attempts / Generated solution that failed",
+      "sha256": "e41778aea75a68bd282d91b2d36077c459f7d4e1161acc2d83ec82cd048f3a73",
+      "solution_request_number": 21
+    }
+  }
+}

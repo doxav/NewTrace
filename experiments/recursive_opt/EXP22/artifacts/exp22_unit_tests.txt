@@ -6,6 +6,8 @@ test_analysis_separates_provider_series (test_accounting.AccountingTests.test_an
 Historical runs must not affect current-route counts or outcomes. ... ok
 test_old_transport_gate_cannot_authorize_new_provider (test_accounting.AccountingTests.test_old_transport_gate_cannot_authorize_new_provider)
 A previously passed DeepInfra gate cannot enable a Novita run. ... ok
+test_recovery_preserves_failure_and_raw_result (test_accounting.AccountingTests.test_recovery_preserves_failure_and_raw_result)
+Recovery may add measured diagnostics but never promote or replace evidence. ... ok
 test_rejected_cost_is_unknown (test_accounting.AccountingTests.test_rejected_cost_is_unknown)
 Absent usage is not evidence that a rejected request was free. ... ok
 test_strict_trajectory_metrics_and_failures (test_accounting.AccountingTests.test_strict_trajectory_metrics_and_failures)
@@ -14,6 +16,9 @@ test_summary_role_requires_exact_stock_prompt (test_accounting.AccountingTests.t
 Resolve stock guide calls without changing raw evidence or guessing roles. ... ok
 test_usage_curve_does_not_include_future_retry (test_accounting.AccountingTests.test_usage_curve_does_not_include_future_retry)
 A failed attempt's cumulative cost stops before the later successful retry. ... ok
+test_bounded_timeout_diagnostic (test_evaluation_transport.EvaluationTests.test_bounded_timeout_diagnostic)
+Reproduce stock worker leakage while cleaning up every fixture thread. ... cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+ok
 test_cascade_thresholds (test_evaluation_transport.EvaluationTests.test_cascade_thresholds)
 Stock threshold includes equality and treats absent metrics as failure. ... ok
 test_comparison_rejects_changed_or_missing_quality (test_evaluation_transport.EvaluationTests.test_comparison_rejects_changed_or_missing_quality)
@@ -64,6 +69,6 @@ test_substitutions_and_missing_ref_fail (test_preflight.PreflightTests.test_subs
 Reject mismatched names, revisions, detached HEAD and absent refs. ... ok
 
 ----------------------------------------------------------------------
-Ran 30 tests in 2.008s
+Ran 32 tests in 2.212s
 
 OK

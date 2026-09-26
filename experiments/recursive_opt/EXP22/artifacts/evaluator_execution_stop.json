@@ -1,0 +1,19 @@
+{
+  "status": "STOPPED_PRECHECK",
+  "reason": "The stock outer evaluator returned timeout after 360 seconds while candidate worker 20272 stayed CPU-active. Attempt 21 subsequently completed evaluation before that worker stopped, violating sequential evaluation.",
+  "directory": "strict_prism_TRACE-RECURSIVE_20260926T132735.544331Z",
+  "observed_at_unix": 1790430119.859432,
+  "process_id": 4137,
+  "thread_snapshot": "    TID     TIME STAT WCHAN\n   4137 00:00:02 Sl   ep_poll\n   4209 00:00:00 Sl   futex_do_wait\n   4210 00:00:00 Sl   futex_do_wait\n   4211 00:00:00 Sl   futex_do_wait\n   4212 00:00:00 Sl   futex_do_wait\n   4213 00:00:00 Sl   futex_do_wait\n   4214 00:00:00 Sl   futex_do_wait\n   4215 00:00:00 Sl   futex_do_wait\n   4216 00:00:00 Sl   futex_do_wait\n   4220 00:00:00 Sl   futex_do_wait\n   4223 00:00:00 Sl   futex_do_wait\n   4224 00:00:00 Sl   futex_do_wait\n   4225 00:00:00 Sl   futex_do_wait\n   4226 00:00:00 Sl   futex_do_wait\n   4227 00:00:00 Sl   futex_do_wait\n   4228 00:00:00 Sl   futex_do_wait\n   4229 00:00:00 Sl   futex_do_wait\n   4230 00:00:00 Sl   futex_do_wait\n   4232 00:00:00 Sl   futex_do_wait\n   4233 00:00:00 Sl   futex_do_wait\n   4373 00:00:00 Sl   futex_do_wait\n   4425 00:00:00 Sl   poll_schedule_timeout.constprop.0\n  20272 00:06:39 Rl   -\n",
+  "timeout_log_lines": [
+    "ERROR:skydiscover.optimize.evaluation.evaluator:Program 757d8fd1-214f-449b-b262-9740d1b38853 timed out after 360s (limit: 360s)"
+  ],
+  "curve_iterations_at_stop": 21,
+  "stock_outer_evaluator_sha256": "84471c1312e1789ccce2101d622ba0ccdb86ed4d765738de754158371b266dfa",
+  "action": "First SIGINT cancelled search; second SIGINT interrupts executor shutdown so the outer runner can flush diagnostic evidence.",
+  "quality_interpretation": "Diagnostic execution stop, not a negative Trace quality result.",
+  "second_interrupt_at_unix": 1790430190.9031289,
+  "evidence_flushed_before_termination": true,
+  "terminated_at_unix": 1790430219.0755913,
+  "termination_signal": "SIGTERM"
+}

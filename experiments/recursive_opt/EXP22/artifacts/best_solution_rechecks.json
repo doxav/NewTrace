@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "runs": [
+    {
+      "directory": "strict_prism_SD-EVOX_20260926T123925.700329Z",
+      "expected": {
+        "combined_score": 29.90579426683391,
+        "max_kvpr": 29.76579426683391,
+        "success_rate": 0.14
+      },
+      "observed": {
+        "combined_score": 29.90579426683391,
+        "max_kvpr": 29.76579426683391,
+        "success_rate": 0.14
+      },
+      "passed": true
+    },
+    {
+      "directory": "strict_prism_TRACE-RECURSIVE_20260926T132735.544331Z",
+      "expected": {
+        "combined_score": 26.16034671095043,
+        "max_kvpr": 25.16034671095043,
+        "success_rate": 1.0
+      },
+      "observed": {
+        "combined_score": 26.16034671095043,
+        "max_kvpr": 25.16034671095043,
+        "success_rate": 1.0
+      },
+      "passed": true
+    }
+  ],
+  "scope": "Unchanged saved best sources; no LLM calls; all live runs stopped before verification",
+  "sequential": true,
+  "tolerance": 1e-12
+}

@@ -35,13 +35,16 @@ def main() -> None:
                     score = curve[iteration - 1]['best_score'] if iteration else m['initial_score']
                     axes[0, 0].scatter([iteration], [score], marker='D', color=color, s=30, zorder=3)
             usage = [point['llm_usage'] for point in curve]
+            final_attempt = m['usage']['roles'].get('solution', x[-1])
             axes[0, 1].step(x, [u['roles'].get('solution', 0) for u in usage], where='post', color=color, label=arm+' solution')
             axes[0, 1].step(x, [u['roles'].get('meta', 0) for u in usage], where='post', color=color, linestyle='--', label=arm+' meta')
+            for role in ('solution', 'meta'):
+                axes[0, 1].scatter([final_attempt], [m['usage']['roles'].get(role, 0)], color=color, s=16)
             axes[1, 0].step(x, [(u['input_tokens'] + u['output_tokens']) / 1000 for u in usage], where='post', color=color, label=label)
             axes[1, 1].step(x, [u['reported_cost'] for u in usage], where='post', color=color, label=label)
             # Include any guide/meta work after the final solution boundary.
-            axes[1, 0].scatter([x[-1]], [(m['usage']['input_tokens'] + m['usage']['output_tokens']) / 1000], color=color, s=16)
-            axes[1, 1].scatter([x[-1]], [m['usage']['reported_cost']], color=color, s=16)
+            axes[1, 0].scatter([final_attempt], [(m['usage']['input_tokens'] + m['usage']['output_tokens']) / 1000], color=color, s=16)
+            axes[1, 1].scatter([final_attempt], [m['usage']['reported_cost']], color=color, s=16)
         titles = ('Best native score (diamonds: policy switches)', 'Cumulative calls (solid: solution; dashed: meta)', 'Cumulative input + output tokens', 'Cumulative provider-reported cost')
         labels = ('Combined score', 'HTTP calls', 'Thousands of tokens', 'USD')
         for axis, title, label in zip(axes.flat, titles, labels):

@@ -1,0 +1,28 @@
+{
+  "advanced_not_run": "Strict matrix incomplete and unresolved evaluator timeout isolation failure",
+  "best_sources_rechecked": true,
+  "credential_scan_offending_paths": [],
+  "credential_scan_passed": true,
+  "live_run_stage_pids": [],
+  "no_live_run_stage_process": true,
+  "passed": true,
+  "plots_visually_reviewed": [
+    "artifacts/prism_strict_curves.png"
+  ],
+  "process_verification": "Exact argv element matched against the EXP22 run_stage.py absolute path; shell command text is excluded.",
+  "source_drift": [],
+  "strict_completed": 1,
+  "strict_interrupted": 1,
+  "strict_not_started": 6,
+  "strict_runtime_lock_unchanged": true,
+  "timeout_worker_terminated": true,
+  "unit_tests": "32 passed; artifacts/exp22_unit_tests.txt",
+  "verification_commands": {
+    "experiments/recursive_opt/EXP22/.venv/bin/python -I -m unittest discover -s experiments/recursive_opt/EXP22/tests -v": "32 passed",
+    "experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/timeout_diagnostic.py": "stock timeout leakage reproduced; all fixture workers cleaned up",
+    "python3 -m compileall -q experiments/recursive_opt/EXP22/src experiments/recursive_opt/EXP22/scripts experiments/recursive_opt/EXP22/tests": "passed",
+    "python3 experiments/recursive_opt/EXP22/scripts/analyze.py": "STOPPED_PRECHECK diagnostic report produced",
+    "python3 experiments/recursive_opt/EXP22/scripts/plot_results.py": "PNG/SVG rendered and visually inspected",
+    "ruff check experiments/recursive_opt/EXP22/src experiments/recursive_opt/EXP22/scripts experiments/recursive_opt/EXP22/tests": "passed"
+  }
+}

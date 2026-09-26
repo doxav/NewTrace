@@ -1,5 +1,6 @@
 """Check diagnostic metering and publication redaction without network calls."""
 
+import hashlib
 import json
 import sys
 import tempfile
@@ -15,6 +16,27 @@ from scripts.run_stage import redact_diagnostics, usage_summary
 
 class AccountingTests(unittest.TestCase):
     """Keep refused calls distinct from measured usage and preserve scientific data."""
+
+    def test_recovery_preserves_failure_and_raw_result(self) -> None:
+        """Recovery may add measured diagnostics but never promote or replace evidence."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            raw = root/'final_result.json'
+            raw.write_text('{"passed": false}')
+            recovery = {'raw_final_result_sha256': hashlib.sha256(raw.read_bytes()).hexdigest(), 'result': {'passed': False, 'final_best_score': 2}}
+            sidecar = root/'diagnostic_recovery.json'
+            sidecar.write_text(json.dumps(recovery))
+            self.assertEqual(analyze.run_result(root)['final_best_score'], 2)
+            self.assertEqual(raw.read_text(), '{"passed": false}')
+            recovery['result']['passed'] = True
+            sidecar.write_text(json.dumps(recovery))
+            with self.assertRaisesRegex(ValueError, 'passed run'):
+                analyze.run_result(root)
+            recovery['result']['passed'] = False
+            sidecar.write_text(json.dumps(recovery))
+            raw.write_text('{"passed": false, "changed": true}')
+            with self.assertRaisesRegex(ValueError, 'preserved raw result'):
+                analyze.run_result(root)
 
     def test_summary_role_requires_exact_stock_prompt(self) -> None:
         """Resolve stock guide calls without changing raw evidence or guessing roles."""

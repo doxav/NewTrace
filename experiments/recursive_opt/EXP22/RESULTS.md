@@ -1,34 +1,70 @@
-STATUS: PARTIAL
+STATUS: STOPPED_PRECHECK
 
-Low reasoning effort resolved the two observed PRISM empty-output failures. Two independent SkyDiscover PRISM one-attempt checks and one Trace check produced valid candidates; completion lengths were 886–996 tokens, including 51–74 reasoning tokens. The earlier default-reasoning failures consumed 32,000 completion tokens each and produced no code. This establishes usable generation, not a guarantee against later failures.
+FACT: Execution stopped because the stock evaluator reported a 360-second timeout while its candidate worker continued running. Candidate 21 completed evaluation while that earlier worker was still CPU-active, violating the required sequential execution. The owned process was cancelled; all HTTP evidence was flushed before its remaining worker was terminated. This is an execution-validity failure, not a negative result about Trace meta-optimization.
 
-All S0–S5 gates passed. All eight five-attempt pilots completed. The first strict run, PRISM SD-EVOX, completed 100 attempts; PRISM TRACE-RECURSIVE is now in progress; the validated runtime is frozen in `artifacts/strict_source_hashes.json`.
+MEASURED RESULT: PRISM SD-EVOX completed 100 attempts. PRISM TRACE-RECURSIVE recorded 21 outcomes and 22 solution HTTP calls; the last returned call was interrupted before evaluation. Its raw `final_result.json` is preserved, with explicitly hashed recovery metadata for the best source and metrics. The best source first appeared at attempt 12, before the timeout. No strict Trace policy proposal had yet occurred. The six remaining strict runs and the advanced phase did not start.
 
-| Task | Arm | Best score | Valid / 5 | Policy switches |
+FACT: A bounded unpaid reproduction in `artifacts/timeout_diagnostic.json` confirms that the stock outer timeout leaves its thread active and permits a subsequent evaluation; PRISM’s inner executor context also waits for its worker after its nominal timeout. Every reproduction worker was released and joined. No frozen runtime source or source repository was patched after strict execution started.
+
+LIMITATION: The full timed-out candidate was not retained: stock retry prompts truncate failed source. Its surviving excerpt is labelled accordingly. The interrupted Trace run has no completed canonical control-plane result or comparable normal kernel wall-time measurement. No missing artifact is represented as a successful result.
+
+FACT: All low-effort S0–S5 gates passed before strict execution. Two independent SkyDiscover PRISM checks and one Trace check returned valid code with 886–996 completion tokens (51–74 reasoning tokens). The two earlier default-reasoning PRISM calls each exhausted 32,000 completion tokens without code. Their evidence is archived separately.
+
+FACT: The fixed route is `z-ai/glm-5.3-flash` through OpenRouter, provider `novita`, reasoning effort `low`, session `benchmark-PRIMS-SIGNAL-run-001`, temperature 0.7, maximum 32,000 tokens and timeout 600 seconds. Trace uses CP-A: exact transport with a nonportable, nonpromotable control-plane override. CP-B was excluded because its empty-response fallback changes the token ceiling.
+
+MEASURED RESULT: Eight five-attempt pilots passed. Trace PRISM deployed two generated policies while retaining its population. A Signal Trace S4 diff-format failure is preserved alongside its successful bounded retry. Pilots are excluded from strict quality comparisons.
+
+MEASURED RESULT: Strict runs below start from the stock initial solution and consume up to 100 solution HTTP attempts. Partial runs have no 100-attempt AUC and are excluded from contrasts.
+
+| Task | Arm | Attempts | Initial | Final best | Gain | Relative gain | AUC / 100 | First / best iteration | Status |
+|---|---|---:|---:|---:|---:|---:|---:|---|---|
+| prism | SD-EVOX | 100 | 21.891622 | 29.905794 | 8.0141722 | 0.36608398 | 27.992702 | 1 / 44 | complete |
+| prism | TRACE-RECURSIVE | 21 | 21.891622 | 26.160347 | 4.2687246 | 0.19499353 | unmeasured | 4 / 12 | diagnostic stop |
+
+| Task / arm | Valid / invalid | Policy switches | Valid proposals / total | Improving windows | Solution / meta / guide calls | Input / output / cached tokens | Cost USD | Wall seconds |
+|---|---|---:|---|---:|---|---|---:|---:|
+| prism / SD-EVOX | 58 / 42 | 5 | 5 / 5 | 0.5 | 100 / 6 / 12 | 554227 / 184144 / 5184 | 0.13093798 | 2887.4764 |
+| prism / TRACE-RECURSIVE | 14 / 7 | 0 | 0 / 0 | unmeasured | 22 / 1 / 2 | 126274 / 30483 / 0 | 0.02563695 | unmeasured |
+
+MEASURED RESULT: PRISM native components. The stock `max_kvpr` field is inverse mean maximum pressure over successful cases; lower implied pressure is better, but success rate must also be considered.
+
+| Arm | Combined score | Inverse pressure | Implied mean maximum pressure | Success rate |
+|---|---:|---:|---:|---:|
+| SD-EVOX | 29.905794 | 29.765794 | 0.033595609 | 0.14 |
+| TRACE-RECURSIVE | 26.160347 | 25.160347 | 0.03974508 | 1 |
+
+INFERENCE: SD-EVOX’s higher native score came with placement success falling from 100% to 14%; it does not establish better placement reliability. The partial Trace best retained 100% success, but unequal budgets and the execution stop prevent an optimizer comparison. `artifacts/best_solution_rechecks.json` records separate sequential stock-evaluator checks of both saved best sources.
+
+MEASURED RESULT: Signal Processing native components.
+
+| Arm | combined_score | composite_score | correlation | noise_reduction | slope_changes | lag_error | success_rate |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| No strict Signal run executed | unmeasured | unmeasured | unmeasured | unmeasured | unmeasured | unmeasured | unmeasured |
+
+MEASURED RESULT: Completed strict contrasts only. Positive score differences favor the first arm.
+
+| Task | Contrast | Final score difference | Relative-gain difference | AUC difference |
 |---|---|---:|---:|---:|
-| prism | SD-EVOX | 24.46738724 | 2 | 1 |
-| prism | SD-FIXED | 25.80596345 | 3 | 0 |
-| prism | TRACE-FIXED | 24.04223387 | 4 | 0 |
-| prism | TRACE-RECURSIVE | 23.31466986 | 5 | 2 |
-| signal_processing | SD-EVOX | 0.50011137 | 5 | 3 |
-| signal_processing | SD-FIXED | 0.50493377 | 5 | 0 |
-| signal_processing | TRACE-FIXED | 0.50325736 | 4 | 0 |
-| signal_processing | TRACE-RECURSIVE | 0.59696759 | 5 | 0 |
+| Unmeasured | No completed strict pair | unmeasured | unmeasured | unmeasured |
 
-These pilots validate execution only. They do not establish relative optimizer quality. One Signal Trace S4 attempt failed because generated SEARCH blocks did not match the parent; the bounded retry passed, and both attempts remain recorded. Trace PRISM deployed two real optimizer proposals with the solution population preserved. Signal Trace made no switch because stock stagnation conditions did not fire.
+![prism trajectories and compute](artifacts/prism_strict_curves.png)
 
-PRISM combined score must be read alongside success rate: pilot final success rates range from 0.56 to 1.00. A higher combined score can reflect successful placements on fewer cases. Full comparisons will retain native component metrics.
+INFERENCE: The strict matrix is incomplete. The unrun within-framework contrasts cannot establish whether Trace or EvoX improves over its fixed policy, or whether Trace matches EvoX at equal budget.
 
-Novita/low diagnostics and pilots before strict execution: 105 HTTP attempts, 462716 reported tokens, $0.06353948 reported cost; 0 calls lack cost. Earlier provider/default-reasoning series are archived separately.
+INFERENCE: Advanced phase is not authorized by the current evidence gate. It has not run; no additional-freedom benefit has been measured.
 
-Trace uses CP-A with explicit nonportable/nonpromotable control-plane override. CP-B is excluded from live execution because its empty-response fallback changes the frozen token limit. Model, provider, session, temperature, token ceiling and timeout otherwise remain fixed.
+LIMITATION: This is a controlled single-run benchmark, not a statistical replication. No p-values are computed. Equal solution attempts do not equal total compute. The shared session and sequential run order can affect cache, latency and cost. Costs are provider-reported; calls with missing cost are not treated as free. Exact evaluator invocation counts were not separately instrumented; candidate counts cannot recover evaluator retries or cascaded stage calls.
 
-MEASURED RESULT: PRISM SD-EVOX completed 100 solution attempts, with 58 valid candidates, 42 invalid attempts and five accepted policies. Final combined score: 29.90579427 (initial 21.89162211); AUC: 2799.27021667; first improvement: attempt 1; best solution: attempt 44. Final placement success is 0.14, down from 1.00. The higher stock combined score does not establish improved placement reliability.
+MEASURED RESULT: Entire current low-effort series, including diagnostics and pilots: 248 completion requests, 1357844 reported tokens, $0.22011441 reported cost; 0 calls have unknown cost. Historical DeepInfra and default-reasoning Novita evidence is excluded.
 
-MEASURED RESULT: This strict arm used 100 solution, six meta (including startup probe), and 12 guide calls: 118 total; 554,227 input and 184,144 output tokens, including 5,184 cached input tokens; $0.13093798 reported cost; 2,887.48 seconds. All four checkpoints, routing and policy-source checks passed. See `artifacts/strict_prism_SD-EVOX_review.json`.
+FACT: Detailed curves, role accounting, semantic retries, policy validation and per-window gains are in `artifacts/diagnostic_summary.json`. Runtime source hashes are frozen in `artifacts/strict_source_hashes.json`. Each immutable run directory retains source, requests, results and logs.
 
-INFERENCE: Strict comparisons and advanced outcomes remain unmeasured. No conclusion about Trace versus fixed policy, EvoX versus fixed policy, or additional freedom is warranted. This is a controlled single-run benchmark, not a statistical replication.
+Validation commands: `experiments/recursive_opt/EXP22/.venv/bin/python -I -m unittest discover -s experiments/recursive_opt/EXP22/tests -v`; `ruff check experiments/recursive_opt/EXP22/src experiments/recursive_opt/EXP22/scripts experiments/recursive_opt/EXP22/tests`; `python3 experiments/recursive_opt/EXP22/scripts/analyze.py`; `python3 experiments/recursive_opt/EXP22/scripts/plot_results.py`. Existing targeted Trace tests: 162 passed, six unrelated integration cases deselected. Credential scan required before publication. Generated stock YAML/log whitespace is preserved as execution evidence.
 
-Validation: 30 EXP22 unit tests and 162 targeted Trace tests passed (six integration cases deselected). All eight pilot gates passed. See `artifacts/exp22_unit_tests.txt`, `artifacts/s4_validation.json`, and `artifacts/s5_validation.json`.
+Diagnostic stop: The stock outer evaluator returned timeout after 360 seconds while candidate worker 20272 stayed CPU-active. Attempt 21 subsequently completed evaluation before that worker stopped, violating sequential evaluation. Last recorded iteration: 21; last valid score: 26.16034671095043. See `artifacts/STOP.json`.
 
-Reporting audit: stock EvoX also creates a guide pool inside its context builder. Raw HTTP records retain the fallback role label for that pool. Derived analysis resolves those records only by exact matches against the source-hashed stock guide prompts, and stores request-index evidence. Total calls and cost already include these requests. No runtime code changed.
+Recommended next experiment: Run unchanged benchmark evaluators inside an owned process boundary with enforceable termination on timeout, prove parity and no surviving workers on both arms, then preregister and rerun strict comparisons from stock initial programs.
+
+Reproduce the timeout diagnosis without paid calls: `experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/timeout_diagnostic.py`.
+
+FACT: Final validation passed: 32 EXP22 tests, lint, bytecode compilation, unchanged source hashes and frozen runtime, credential scan, saved-source re-evaluation, and visual plot review. No owned benchmark process remains active. Evidence: `artifacts/final_validation.json`.

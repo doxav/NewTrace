@@ -1,0 +1,37 @@
+{
+  "goal_outcome": "Completed the explicitly allowed diagnostic-stop branch; full strict/advanced benchmark is not claimed complete.",
+  "status": "STOPPED_PRECHECK",
+  "requirement_review": {
+    "0_scope": "All experiment changes and artifacts are under EXP22; source repositories remain untouched.",
+    "1_2_transport": "User amendments pin Novita and low reasoning. All retained live HTTP requests in the current Novita/low series passed identity checks; CP-A is explicit nonportable/nonpromotable; CP-B excluded due token escalation.",
+    "3_provenance": "Final source drift list is empty; exact Trace and Sky revisions retained.",
+    "4_5_evaluation": "Golden repeated evaluator/cascade parity passed. New live timeout failure is separately diagnosed, not hidden by initial parity.",
+    "6_environment": "Owned virtual environment and pinned package inventory retained; existing system Matplotlib used for figures.",
+    "7_8_9_kernel_and_meta": "Frozen shared stock EvoX kernel; real OptoPrimeV2 proposal path proven in S5 pilots and deterministic fixtures; no strict Trace update occurred before the stop.",
+    "10_11_control_plane": "All intended specs compiled; CP-A/CP-B mocked equivalence passed. Interrupted Trace canonical result is unavailable and explicitly disclosed.",
+    "12_13_14_arms_budget_order": "First strict arm completed 100 calls; next arm interrupted with 22 solution HTTP calls, 21 observed outcomes and one unevaluated call. Remaining six arms did not start. Required order respected.",
+    "15_gates": "S0 through S5 passed before full execution; all eight pilots retained.",
+    "16_stop": "Actual 360-second evaluator timeout left a CPU-active worker while a subsequent candidate evaluated. Process stopped; HTTP records flushed; worker terminated. STOP.json records cause and remedy.",
+    "17_18_metrics_artifacts": "Observed curves, native metrics, policy events, costs and logs retained. Partial run has no 100-attempt AUC. Recovered best source provenance is hashed; timed-out source only survives as a labelled truncated excerpt. Exact evaluator call count and interrupted wall time are unknown.",
+    "19_analysis": "Observed tables and PNG/SVG plots, policy markers, role/cost accounting, cache/order caveat, single-run caveat and no unsupported contrasts. Both saved best sources reproduced their native metrics.",
+    "20_21_22_advanced": "Not eligible: strict matrix incomplete and evaluator execution confound unresolved. Advanced surfaces and richer observations were not run.",
+    "23_tests": "32 EXP22 tests passed; prior targeted Trace checks: 162 passed/6 deselected; code-artifact checks: 18 passed/51 deselected. Source hashes unchanged. Credential scan clean.",
+    "24_protocol": "Protocol and low-effort amendments committed before strict execution; strict runtime lock unchanged. Post-run diagnostic commands are in RESULTS.md.",
+    "25_results": "RESULTS.md states STOPPED_PRECHECK, completed/interrupted/unrun arms, native success-rate caveat, limits and recommended process-isolation remedy.",
+    "26_27_source_truth": "Local stock source and exact request evidence govern claims. Scientific stop is reported instead of an invalid comparison."
+  },
+  "evidence": [
+    "EXPERIMENT.md",
+    "RESULTS.md",
+    "manifest.json",
+    "artifacts/final_validation.json",
+    "artifacts/STOP.json",
+    "artifacts/diagnostic_summary.json",
+    "artifacts/evaluator_execution_stop.json",
+    "artifacts/timeout_diagnostic.json",
+    "artifacts/best_solution_rechecks.json",
+    "artifacts/s5_validation.json",
+    "artifacts/control_plane_equivalence.json"
+  ],
+  "remaining_scientific_blocker": "A future strict series needs killable evaluator process isolation, renewed parity tests and a new preregistration."
+}

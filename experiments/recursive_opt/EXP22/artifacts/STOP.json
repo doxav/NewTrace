@@ -1,0 +1,16 @@
+{
+  "evidence": [
+    "artifacts/diagnostic_summary.json",
+    "artifacts/evaluator_execution_stop.json",
+    "artifacts/timeout_diagnostic.json",
+    "runs/strict_prism_TRACE-RECURSIVE_20260926T132735.544331Z/candidate_history.jsonl",
+    "runs/strict_prism_TRACE-RECURSIVE_20260926T132735.544331Z/diagnostic_recovery.json",
+    "runs/strict_prism_TRACE-RECURSIVE_20260926T132735.544331Z/http_requests.json"
+  ],
+  "iteration": 21,
+  "last_active_policy": "runs/strict_prism_TRACE-RECURSIVE_20260926T132735.544331Z/best_policy.py",
+  "last_valid_score": 26.16034671095043,
+  "reason": "The stock outer evaluator returned timeout after 360 seconds while candidate worker 20272 stayed CPU-active. Attempt 21 subsequently completed evaluation before that worker stopped, violating sequential evaluation.",
+  "recommended_fix": "Run unchanged benchmark evaluators inside an owned process boundary with enforceable termination on timeout, prove parity and no surviving workers on both arms, then preregister and rerun strict comparisons from stock initial programs.",
+  "status": "STOPPED_PRECHECK"
+}
