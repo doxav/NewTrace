@@ -1,0 +1,1677 @@
+WARNING:skydiscover.optimize.evaluation.evaluator:cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=8, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+The current solution has the best success rate (1.0) because its ratio-based greedy always places models. The multi-ordering variants scored worse mainly due to infeasibility. Improvement: keep the robust ratio-based greedy (which guarantees feasibility) but evaluate multiple orderings under this same rule, returning the placement with the lowest resulting max KVPR. Ordering by model size descending can improve packing, and since the assignment rule is feasibility-first, success stays at 1.0.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Compute a model placement that minimizes the maximum KVPR across all GPUs.
+
+    Args:
+        gpu_num: Number of GPUs
+        models: List of models to place
+
+    Returns:
+        A placement of models to GPUs
+    """
+
+    """Multi-ordering ratio greedy: for each candidate ordering, assign each
+    model to the feasible GPU with the lowest current KVPR (load / remaining
+    memory). This feasibility-first rule always succeeds, so we can safely
+    try several orderings (req_rate/slo desc, model_size desc, model_size asc)
+    and return the placement with the lowest resulting max KVPR."""
+
+    def run(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            best, best_ratio = None, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g]:
+                    ratio = load[g] / rem[g]
+                    if ratio < best_ratio:
+                        best_ratio, best = ratio, g
+            if best is None:
+                return None, float("inf")
+            placement[best].append(m)
+            load[best] += m.req_rate / m.slo
+            rem[best] -= m.model_size
+        return placement, max(load[g] / rem[g] for g in range(gpu_num))
+
+    orders = [
+        sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True),
+ 
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:Diff blocks found but none matched parent solution (iteration=11, attempt 1/3).
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=14, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace multi-order greedy with a greedy start plus local search: repeatedly move or swap a model out of the bottleneck (max-KVPR) GPU if it lowers the global max KVPR, preserving feasibility. This directly targets max KVPR rather than only greedy ordering heuristics.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Greedy placement followed by local search (move/swap from the
+    bottleneck GPU) that directly minimizes the maximum KVPR while
+    keeping all models within GPU memory.
+    """
+    def kvpr(rem, load, g):
+        return load[g] / rem[g] if rem[g] > 0 else float("inf")
+
+    # Greedy start: highest load-density first, place on least-pressured GPU
+    placement = {g: [] for g in range(gpu_num)}
+    rem = [GPU_MEM_SIZE] * gpu_num
+    load = [0.0] * gpu_num
+    for m in sorted(models, key=lambda x: x.req_rate / x.slo, reverse=True):
+        best = min(
+            (g for g in range(gpu_num) if m.model_size <= rem[g]),
+            key=lambda g: kvpr(rem, load, g),
+            default=None,
+        )
+        if best is None:
+            raise ValueError("Unable to place all models on any GPU")
+        placement[best].append(m)
+        load[best] += m.req_rate / m.slo
+        rem[best] -= m.model_size
+
+    # Local search: improve bottleneck GPU via moves and swaps
+    def max_kvpr():
+        return max(kvpr(rem, load, g) for g in range(gpu_num))
+
+    improved = True
+    while improved:
+        improved = False
+        cur = max_kvpr()
+        b = max(range(gpu_num), key=lambda g: kvpr(rem, load, g))
+        # Try moving each model from bottleneck GPU to another GPU
+        for m in list(placement[b]):
+            for g in range(gpu_num):
+                if g == b or m.model_size > rem[g]:
+                    continue
+                if kvpr(rem, load, g) >= cur:
+                    continue
+                # simulate
+                load[b] -= m.req_rate / m.slo
+                load[
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=16, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+The current solution's main problem is the 0.06 success rate — the randomized greedy often fails to find a feasible assignment, and it raises ValueError. I'll replace it with a robust multi-order greedy (100% success, like Program 2) plus a fast local-search improvement pass that moves models off the bottleneck GPU to reduce max KVPR.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Compute a model placement that minimizes the maximum KVPR across all GPUs.
+
+    Args:
+        gpu_num: Number of GPUs
+        models: List of models to place
+
+    Returns:
+        A placement of models to GPUs
+    """
+
+    """Multi-ordering greedy followed by local search. First, several
+    greedy orderings assign each model to the feasible GPU with the lowest
+    current KVPR (load / remaining memory); a robust fallback guarantees a
+    feasible placement. Then a local search repeatedly moves a model from
+    the bottleneck GPU to another feasible GPU whenever it lowers the max
+    KVPR, improving the objective while preserving feasibility."""
+    def run(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            best, best_ratio = None, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g] and rem[g] > 0:
+                    ratio = load[g] / rem[g]
+                    if ratio < best_ratio:
+                        best_ratio, best = ratio, g
+            if best is None:
+                return None
+            placement[best].append(m)
+            load[best] += m.req_rate / m.slo
+            rem[best] -= m.model_size
+        return placement, load, rem
+
+    orders = [
+        sorted(models, key=lambda x: x.req_rate / x.slo, reverse=True),
+        sorted(models, key=lambda x: x.req_rate / x.slo),
+        sorted(models, key=lambda x: x.model_size, reverse=True),
+        sorted(
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=21, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The current solution's main weakness is the low success rate (0.06) — the randomized greedy often fails to find any feasible placement (returns None), raising an error even when feasible placements exist. I keep the multi-start + local-search approach but add a robust fallback (ratio-greedy, which succeeds whenever a feasible placement exists) used both as a guaranteed seed and as a final fallback. This preserves the algorithm structure while fixing feasibility and improving max_kvpr.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Randomized multi-start greedy + local search (move/swap) minimizing
+    max KVPR. A robust ratio-greedy (always feasible when a placement
+    exists) serves as a guaranteed seed and final fallback, so success
+    rate is 1.0 whenever any feasible placement exists."""
+    import random
+
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def score(assign):
+        load = [0.0] * gpu_num
+        mem = [0.0] * gpu_num
+        for m, g in assign:
+            load[g] += m.req_rate / m.slo
+            mem[g] += m.model_size
+        return max(load[g] / (GPU_MEM_SIZE - mem[g]) for g in range(gpu_num))
+
+    def greedy(order, eps):
+        assign = []
+        mem = [0.0] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            cands = [g for g in range(gpu_num) if mem[g] + m.model_size <= GPU_MEM_SIZE]
+            if not cands:
+                return None
+            if random.random() < eps:
+                g = random.choice(cands)
+            else:
+                g = min(cands, key=lambda g: load[g] / (GPU_MEM_SIZE - mem[g] - m.model_size))
+            assign.append((m, g))
+            mem[g] += m.model_size
+            load[g] += m.req_rate / m.slo
+        return assign
+
+    def ratio_greedy():
+        # Robust: assign each model (by weight desc) to feasible GPU with
+        # lowest current KVPR; succeeds whenever any placement e
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:Evaluation failed (attempt 2/3): validity=None, error=All test signals failed
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=21, attempt 3/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The current solution's success rate collapsed (0.06) because its randomized greedy often fails to fit all models and raises ValueError. I'll restore the robust ratio-greedy (which succeeds whenever a feasible placement exists) as a guaranteed baseline, then polish the best of several greedy seeds with an efficient move/swap local search that keeps memory feasibility. This keeps high success rate while lowering max KVPR.
+
+CODE:
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Robust multi-seed greedy + move/swap local search minimizing max KVPR.
+
+    Seeds: greedy assigning each model (several orderings) to the feasible
+    GPU minimizing resulting KVPR, plus a robust ratio greedy (lowest
+    load/remaining-memory) that always succeeds when feasible. Each seed
+    is polished by moving/swapping models off the bottleneck GPU whenever
+    it strictly lowers max KVPR and memory fits. Best result returned."""
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def weights():
+        return [m.req_rate / m.slo for m in models]
+
+    def greedy(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            best, best_v = None, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g]:
+                    v = (load[g] + m.req_rate / m.slo) / (rem[g] - m.model_size)
+                    if v < best_v:
+                        best_v, best = v, g
+            if best is None:
+                return None, None, None
+            placement[best].append(m)
+            load[best] += m.req_rate / m.slo
+            rem[best] -= m.model_size
+        return placement, rem, load
+
+    def ratio_greedy():
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in sorted(models, key=lamb
+... (truncated) ...
+ERROR:skydiscover.optimize.search.default_discovery_controller:All 3 retry attempts failed due to parse/validation error: No valid diffs found in response
+WARNING:skydiscover.optimize.search.evox.controller:Iteration 21 failed (used 3 attempts): No valid diffs found in response (after 3 attempts)
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=24, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace the deterministic greedy with a randomized multi-start construction plus a targeted local-search improvement phase. Each restart shuffles model order (biased by load density), assigns each model to the GPU minimizing the resulting max KVPR (with a feasibility fallback to the GPU with most free memory), then iteratively moves/swap models off the bottleneck GPU if it reduces max KVPR. Keep the best feasible placement found.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+import random
+
+
+def _kvprs(loads, mems):
+    return [l / m if m > 0 else float("inf") for l, m in zip(loads, mems)]
+
+
+def _construct(gpu_num, models, order):
+    """Greedy construction: place each model on GPU minimizing resulting max KVPR."""
+    placement = {g: [] for g in range(gpu_num)}
+    loads = [0.0] * gpu_num
+    mems = [float(GPU_MEM_SIZE)] * gpu_num
+    for model in order:
+        best_g, best_key = None, None
+        for g in range(gpu_num):
+            if model.model_size <= mems[g]:
+                new_kvpr = max(_kvprs(loads, mems) + [0.0])
+                loads[g] += model.req_rate / model.slo
+                mems[g] -= model.model_size
+                cand = max(_kvprs(loads, mems))
+                # tie-break: prefer more remaining memory
+                key = (cand, -mems[g])
+                if best_key is None or key < best_key:
+                    best_key, best_g = key, g
+                loads[g] -= model.req_rate / model.slo
+                mems[g] += model.model_size
+        if best_g is None:
+            # feasibility fallback: GPU with most free memory
+            best_g = max(range(gpu_num), key=lambda g: mems[g])
+            if model.model_size > mems[best_g]:
+                return None
+        placement[best_g].append(model)
+        loads[best_g] += model.req_rate / model.slo
+        mems[best_g] -= model.model_size
+    return placement, loads, mems
+
+
+def _local_search(gpu_num, placement, loads, mems, iters=200):
+    """Move models off the bott
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=24, attempt 2/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace the single deterministic greedy with a randomized multi-start greedy: each restart uses a random priority order and assigns each model to the GPU whose resulting KVPR is minimized (rather than current KVPR, which ignores the model's own load). Track only feasible restarts, keep the placement with lowest max KVPR, with the deterministic greedy as a guaranteed fallback.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+import random
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Randomized multi-start greedy placement.
+
+    Each restart uses a random model order and assigns each model to the GPU
+    that minimizes the resulting KVPR ((load + r/s) / (mem - size)) while
+    fitting in remaining memory. Feasible placements are scored by max KVPR;
+    the best across restarts is returned. Deterministic greedy is the fallback.
+    """
+    if gpu_num <= 0:
+        raise ValueError("gpu_num must be positive")
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    loads = [m.req_rate / m.slo for m in models]
+
+    def greedy(order):
+        placement = {g: [] for g in range(gpu_num)}
+        load = [0.0] * gpu_num
+        mem = [GPU_MEM_SIZE] * gpu_num
+        for j in order:
+            m = models[j]
+            best, best_kvpr = None, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= mem[g]:
+                    kvpr = (load[g] + loads[j]) / (mem[g] - m.model_size)
+                    if kvpr < best_kvpr:
+                        best_kvpr, best = kvpr, g
+            if best is None:
+                return None  # infeasible for this order
+            placement[best].append(m)
+            load[best] += loads[j]
+            mem[best] -= m.model_size
+        return placement, max(load[g] / (GPU_MEM_SIZE - sum(
+            mm.model_size for mm in placement[g])) if placement[g] else 0.0
+            for g in range(gpu_num))
+
+    base_order = sorted(range(len(models)),
+                        k
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=27, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The current solution's low success_rate (0.06) comes from crashes: `score()` divides by `GPU_MEM_SIZE - mem[g]`, which hits ZeroDivisionError when a GPU is fully packed, and it raises `ValueError` when all greedy attempts fail. I add epsilon-guarded denominators, a robust first-fit-decreasing fallback, and keep the multi-start + local search structure (with fewer wasted iterations for speed).
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Randomized multi-start greedy + local search (moves from the bottleneck
+    GPU) minimizing max KVPR, with epsilon-guarded denominators and a robust
+    first-fit-decreasing fallback to guarantee feasibility."""
+    import random
+
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def kvpr(load, mem):
+        return max(load[g] / max(GPU_MEM_SIZE - mem[g], 1e-9) for g in range(gpu_num))
+
+    def greedy(order, eps):
+        assign = []
+        mem = [0.0] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            cands = [g for g in range(gpu_num) if mem[g] + m.model_size <= GPU_MEM_SIZE]
+            if not cands:
+                return None
+            if random.random() < eps:
+                g = random.choice(cands)
+            else:
+                g = min(cands, key=lambda g: (load[g] + m.req_rate / m.slo) / max(GPU_MEM_SIZE - mem[g] - m.model_size, 1e-9))
+            assign.append((m, g))
+            mem[g] += m.model_size
+            load[g] += m.req_rate / m.slo
+        return assign
+
+    def local_search(assign, load, mem):
+        for _ in range(200):
+            cur = kvpr(load, mem)
+            improved = False
+            bg = max(range(gpu_num), key=lambda g: load[g] / max(GPU_MEM_SIZE - mem[g], 1e-9))
+            for i, (m, g) in enumerate(assign):
+                if g != bg:
+                    continue
+                r = m.req_rate / m.slo
+                for h in range(gpu_num):
+                    if
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=27, attempt 2/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The current solution's main weakness is the 0.06 success rate — the randomized greedy often fails to fit all models and raises ValueError instead of falling back. I refine it by keeping the multi-start randomized greedy + local search (which achieved good max_kvpr) but adding Program 1's robust first-fit-decreasing fallback so a valid placement is always returned, and reducing iterations for faster execution.
+
+CODE:
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+import random
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Multi-start randomized greedy construction followed by local search
+    (moves from the bottleneck GPU), minimizing max KVPR. Always falls back
+    to a robust first-fit-decreasing placement if randomized starts fail.
+
+    Args:
+        gpu_num: Number of GPUs
+        models: List of models to place
+
+    Returns:
+        A placement of models to GPUs
+    """
+    random.seed(42)
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def kvpr(load, mem):
+        return max(load[g] / max(GPU_MEM_SIZE - mem[g], 1e-9) for g in range(gpu_num))
+
+    def build(order):
+        placement = {g: [] for g in range(gpu_num)}
+        load = [0.0] * gpu_num
+        mem = [0.0] * gpu_num
+        for m in order:
+            cands = [g for g in range(gpu_num) if mem[g] + m.model_size <= GPU_MEM_SIZE]
+            if not cands:
+                return None
+            r = m.req_rate / m.slo
+            g = min(cands, key=lambda g: (load[g] + r) / max(GPU_MEM_SIZE - mem[g] - m.model_size, 1e-9))
+            placement[g].append(m)
+            load[g] += r
+            mem[g] += m.model_size
+        return placement, load, mem
+
+    dens = sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True)
+    sizes = sorted(models, key=lambda m: m.model_size, reverse=True)
+
+    best = None
+    best_kv = float("inf")
+    for it in range(40):
+        if it == 0:
+            order = dens
+        elif it == 1:
+            order = 
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=31, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The current solution's main problem is the low success rate (0.06) — the randomized greedy often fails to find any feasible placement, and when all attempts fail it raises ValueError. The simple lowest-KVPR greedy (Program 2) achieves 100% success with kvpr ~20.9. I'll keep that robust greedy as the base (guaranteed feasibility), then add a focused move/swap local search on the bottleneck GPU to squeeze max KVPR down, with a memory-feasibility check on every move.
+
+CODE:
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Greedy lowest-KVPR placement (guaranteed feasible) followed by
+    move/swap local search on the bottleneck GPU to minimize max KVPR.
+    Each candidate move is checked against the memory constraint."""
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    placement = {g: [] for g in range(gpu_num)}
+    rem = [GPU_MEM_SIZE] * gpu_num
+    load = [0.0] * gpu_num
+    for m in sorted(models, key=lambda x: x.req_rate / x.slo, reverse=True):
+        best, best_ratio = None, float("inf")
+        for g in range(gpu_num):
+            if m.model_size <= rem[g] and rem[g] > 0:
+                ratio = load[g] / rem[g]
+                if ratio < best_ratio:
+                    best_ratio, best = ratio, g
+        if best is None:
+            raise ValueError("Unable to place all models on any GPU")
+        placement[best].append(m)
+        load[best] += m.req_rate / m.slo
+        rem[best] -= m.model_size
+
+    # Local search: move one model off the max-KVPR GPU if it lowers max KVPR
+    def kvprs():
+        return [load[g] / rem[g] if rem[g] > 0 else float("inf") for g in range(gpu_num)]
+
+    improved = True
+    while improved:
+        improved = False
+        k = kvprs()
+        src = max(range(gpu_num), key=lambda g: k[g])
+        cur_max = k[src]
+        for m in list(placement[src]):
+            r = m.req_rate / m.slo
+            s = m.model_size
+            for g in ran
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=33, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace multi-order greedy with a fundamentally different technique: binary search on the answer T (max KVPR) combined with a slack-based feasibility heuristic. For a candidate T, each GPU has "slack" = T*remaining_mem − load; we repeatedly place the densest model on the GPU with the most slack where it fits (and stays feasible). Binary search converges to the minimal achievable max KVPR, with a final greedy fallback for infeasible instances.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Binary-search the minimal feasible max-KVPR threshold T. For each T,
+    feasibility is tested with a slack-greedy heuristic: repeatedly place
+    the highest-density (req_rate/slo per remaining memory) model on the
+    GPU with the largest slack (T*rem - load) that can hold it. Falls
+    back to a simple best-fit greedy if no T admits a placement.
+    """
+
+    def feasible(T, return_place=False):
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        placement = {g: [] for g in range(gpu_num)}
+        pending = sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True)
+        for _ in range(len(pending)):
+            # pick densest remaining model
+            m = max(pending, key=lambda x: (x.req_rate / x.slo) / (x.model_size + 1e-9))
+            pending.remove(m)
+            w = m.req_rate / m.slo
+            best, best_slack = None, -float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g]:
+                    s = T * (rem[g] - m.model_size) - load[g]
+                    if s >= 0 and s > best_slack:
+                        best_slack, best = s, g
+            if best is None:
+                return (None, False) if return_place else False
+            placement[best].append(m)
+            load[best] += w
+            rem[best] -= m.model_size
+        if return_place:
+            return placement, True
+        return True
+
+    lo, hi = 0.0, 
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=33, attempt 2/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace the multi-ordering greedy with an exhaustive search over all possible assignments (itertools.product) when the search space is small enough, which finds the true optimal max-KVPR placement; otherwise fall back to a randomized multi-start greedy. This is a fundamentally different method (exact enumeration vs. heuristic ordering).
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+import itertools
+import random
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Exhaustive placement search: enumerate all gpu_num**len(models) assignments
+    when the space is small (<= ~200k), keeping the feasible assignment with the
+    lowest max KVPR. Otherwise, randomized multi-start greedy as fallback.
+    """
+    n = len(models)
+    if gpu_num ** n <= 200000:
+        best_p, best_s = None, float("inf")
+        for assign in itertools.product(range(gpu_num), repeat=n):
+            load = [0.0] * gpu_num
+            mem = [0.0] * gpu_num
+            ok = True
+            for m, g in zip(models, assign):
+                load[g] += m.req_rate / m.slo
+                mem[g] += m.model_size
+                if mem[g] > GPU_MEM_SIZE:
+                    ok = False
+                    break
+            if not ok:
+                continue
+            s = max(load[g] / (GPU_MEM_SIZE - mem[g]) for g in range(gpu_num))
+            if s < best_s:
+                best_s, best_p = s, assign
+        if best_p is not None:
+            placement = {g: [] for g in range(gpu_num)}
+            for m, g in zip(models, best_p):
+                placement[g].append(m)
+            return placement
+
+    # Randomized multi-start greedy fallback
+    rng = random.Random(0)
+    best_p, best_s = None, float("inf")
+    for _ in range(200):
+        order = list(models)
+        rng.shuffle(order)
+        placement = {g: [] for g in range(gpu_num)}
+        load = [0.0] * gpu_num
+        rem = [float(GPU_MEM_SIZE)] * gpu_num
+        ok = True
+        for m in order:
+            cands 
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=36, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace the multi-order greedy with a depth-first branch-and-bound exhaustive search: enumerate assignments model-by-model, prune branches whose current max KVPR already exceeds the best found, and cap explored nodes with a greedy fallback for large instances. This finds the true optimal placement on small instances (boosting success rate and max_kvpr) while staying fast.
+
+```python
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """DFS branch-and-bound over all assignments, pruning when the partial
+    max KVPR exceeds the best found. Node budget caps the search; a greedy
+    fallback (lowest-KVPR-first) handles instances too large to search."""
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    n = len(models)
+    items = [(m, m.model_size, m.req_rate / m.slo) for m in models]
+    rem = [GPU_MEM_SIZE] * gpu_num
+    load = [0.0] * gpu_num
+    assign = [0] * n
+    best = {"kvpr": float("inf"), "assign": None}
+    budget = [200000]
+
+    def dfs(i):
+        if budget[0] <= 0:
+            return
+        budget[0] -= 1
+        if i == n:
+            cur = max(load[g] / rem[g] for g in range(gpu_num) if rem[g] < GPU_MEM_SIZE)
+            if cur < best["kvpr"]:
+                best["kvpr"] = cur
+                best["assign"] = assign[:]
+            return
+        m, sz, w = items[i]
+        # try GPUs sorted by current KVPR (good ordering -> strong pruning)
+        for g in sorted(range(gpu_num), key=lambda x: load[x] / max(rem[x], 1e-9)):
+            if sz > rem[g]:
+                continue
+            new_kvpr = (load[g] + w) / (rem[g] - sz)
+            if max(new_kvpr, max(load[x] / rem[x] for x in range(gpu_num) if rem[x] < GPU_MEM_SIZE)) >= best["kvpr"]:
+                continue
+            assign[i] = g
+            rem[g] -= sz
+            load[g] += w
+            dfs(i + 1)
+            rem[g] += sz
+            load[g] -= w
+
+    dfs(0)
+    if best["assign"] is not None:
+        placement = {g: [] for g in range
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=43, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The current solution has the best max_kvpr but a very low success_rate (0.12), likely from greedy restarts failing feasibility and/or heavy search. The sweet spot is Program 2's robust multi-order greedy (0.94 success, good KVPR). I refine it: keep its deterministic orderings and always-feasible fallback, add a handful of seeded random orderings for KVPR polish, and a light strictly-improving move-based local search — all fast and guaranteed feasible.
+
+CODE:
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Multi-ordering greedy: for each candidate ordering (deterministic
+    keys plus seeded shuffles), assign each model to the feasible GPU
+    minimizing the KVPR *after* placement; keep the best max-KVPR result.
+    A light move-based local search then polishes the best assignment.
+    If no ordering fits, a first-fit-decreasing fallback guarantees a
+    feasible placement."""
+    import random
+
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def run(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            best, best_kvpr = None, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g]:
+                    kvpr = (load[g] + m.req_rate / m.slo) / (rem[g] - m.model_size)
+                    if kvpr < best_kvpr:
+                        best_kvpr, best = kvpr, g
+            if best is None:
+                return None, float("inf")
+            placement[best].append(m)
+            load[best] += m.req_rate / m.slo
+            rem[best] -= m.model_size
+        return placement, max(load[g] / rem[g] for g in range(gpu_num))
+
+    orders = [
+        sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True),
+        sorted(models, key=lambda m: m.req_rate / m.slo),
+        sorted(models, key=lambda m: m.model_size, reverse=True),
+   
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:Evaluation failed (attempt 1/3): validity=None, error=GPU memory constraint violated
+WARNING:skydiscover.optimize.search.default_discovery_controller:Evaluation failed (attempt 1/3): validity=None, error=All test signals failed
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=51, attempt 2/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: The current solution fails on ~12% of cases (raising when no GPU fits during greedy). I'll fix feasibility by adding a fallback (place on GPU with most remaining memory, and try best-fit-decreasing first), and strengthen local search with swap moves between GPUs in addition to moves, plus more orderings. This is a rewrite of the placement function with a fundamentally more robust feasibility strategy.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Two-phase placement: (1) feasibility-first greedy packing over
+    multiple orderings — each model goes to the GPU minimizing resulting
+    KVPR, but if no GPU can fit it, fall back to the GPU with the most
+    remaining memory (guarantees a placement whenever total size allows);
+    (2) local search with both single-model moves and pairwise swaps out
+    of the max-KVPR GPU, accepting only strict improvements."""
+    def run(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            w = m.req_rate / m.slo
+            best, best_kvpr = None, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g]:
+                    kvpr = (load[g] + w) / (rem[g] - m.model_size)
+                    if kvpr < best_kvpr:
+                        best_kvpr, best = kvpr, g
+            if best is None:
+                # fallback: most remaining memory (feasibility first)
+                best = max(range(gpu_num), key=lambda g: rem[g])
+                if m.model_size > rem[best]:
+                    return None, None, None, float("inf")
+            placement[best].append(m)
+            load[best] += w
+            rem[best] -= m.model_size
+        return placement, rem, load, max(load[g] / rem[g] for g in range(gpu_num))
+
+    def local_search(placement, rem, load):
+        cur = max(load[g] / rem[g] for g in range(gpu_num))
+        
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=54, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The current randomized multi-start approach has a poor success rate (0.14) and worse max_kvpr than the deterministic multi-ordering greedy (Program 3, 0.86 success). I refine the current approach by replacing random restarts with deterministic diverse orderings (which almost always fit), keeping the move+swap local search out of the bottleneck GPU, and retaining the FFD feasibility fallback. This improves both success rate and max KVPR while staying simple and fast.
+
+CODE:
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Deterministic multi-ordering greedy + local search minimizing max KVPR.
+
+    Several diverse orderings greedily assign each model to the feasible GPU
+    with the lowest resulting KVPR; the best placement is improved by moving
+    or swapping models out of the bottleneck GPU whenever that strictly lowers
+    max KVPR. A first-fit-decreasing fallback guarantees feasibility.
+    """
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def run(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            r = m.req_rate / m.slo
+            best, best_kv = None, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g] and rem[g] > 0:
+                    kv = (load[g] + r) / (rem[g] - m.model_size)
+                    if kv < best_kv:
+                        best_kv, best = kv, g
+            if best is None:
+                return None, None, None
+            placement[best].append(m)
+            load[best] += r
+            rem[best] -= m.model_size
+        return placement, load, rem
+
+    orders = [
+        sorted(models, key=lambda x: x.model_size, reverse=True),
+        sorted(models, key=lambda x: x.model_size),
+        sorted(models, key=lambda x: x.req_rate / x.slo, reverse=True),
+        sorted(models, key=lambda x: x.req
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=59, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The main problem is success_rate (0.14). The current fallback (first-fit decreasing) often fails to place all models, while Program 2's ratio-greedy achieves 1.0 success. I'll make the ratio-greedy the guaranteed fallback (it succeeds whenever feasible), seed the multi-start with it, and keep local search to lower max KVPR.
+
+CODE:
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Multi-start greedy + local search minimizing max KVPR.
+    Seeds: ratio-greedy (load/remaining-memory, packing-robust) and
+    size-descending greedy. Local search moves/swaps models out of the
+    bottleneck GPU when it strictly lowers max KVPR. If all greedy
+    attempts fail, the ratio-greedy (which succeeds whenever any
+    feasible placement exists) is used as the guaranteed fallback."""
+    import random
+
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def score(assign):
+        load = [0.0] * gpu_num
+        mem = [0.0] * gpu_num
+        for m, g in assign:
+            load[g] += m.req_rate / m.slo
+            mem[g] += m.model_size
+        ps = sorted((load[g] / max(GPU_MEM_SIZE - mem[g], 1e-9)
+                     for g in range(gpu_num)), reverse=True)
+        return ps[0] + 1e-6 * (ps[1] if len(ps) > 1 else 0.0)
+
+    def greedy(order, eps):
+        assign = []
+        mem = [0.0] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            cands = [g for g in range(gpu_num) if mem[g] + m.model_size <= GPU_MEM_SIZE]
+            if not cands:
+                return None
+            if random.random() < eps:
+                g = random.choice(cands)
+            else:
+                g = min(cands, key=lambda g: load[g] / (GPU_MEM_SIZE - mem[g] - m.model_size))
+            assign.append((m, g))
+            mem[g] += m.model_size
+            load[g] += m.req_rate / m.slo
+        return assign
+
+    def local_search(assign):
+        for _ in range(200):
+            cur = score
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=62, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The combined score is roughly max_kvpr + execution_time + success_rate. The current randomized solution has excellent kvpr but terrible success_rate (0.14), while deterministic solutions (Programs 3/4) achieve ~0.86–0.88. The randomness correlates with failures, so I'll switch to a deterministic multi-ordering greedy + move/swap local search (keeping the same overall structure), which should cut kvpr well below the current 29.77 while restoring the success rate to ~0.86+, giving a much better combined score.
+
+CODE:
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Deterministic multi-ordering greedy + local search minimizing max
+    KVPR. Several sort orderings (size desc/asc, weight desc/asc, density)
+    are greedily packed, each model going to the feasible GPU with the
+    lowest resulting KVPR; the best placement is kept. A first-fit
+    decreasing fallback guarantees feasibility. Local search then
+    repeatedly moves or swaps models out of the bottleneck GPU whenever
+    it strictly lowers the maximum KVPR."""
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def run(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            best, best_kvpr = None, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g] and rem[g] > 0:
+                    kvpr = (load[g] + m.req_rate / m.slo) / (rem[g] - m.model_size)
+                    if kvpr < best_kvpr:
+                        best_kvpr, best = kvpr, g
+            if best is None:
+                return None, None, None
+            placement[best].append(m)
+            load[best] += m.req_rate / m.slo
+            rem[best] -= m.model_size
+        return placement, load, rem
+
+    w = lambda m: m.req_rate / m.slo
+    orders = [
+        sorted(models, key=lambda x: x.model_size, reverse=True
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=64, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace the current solution with a fundamentally different two-phase method: (1) feasibility-first packing using a matrix of ordering×rule strategies (first-fit, best-fit, worst-fit) to maximize the chance of finding a feasible placement (fixing the 0.72 success rate), and (2) bottleneck-driven local search with moves and swaps minimizing max KVPR, keeping the best of all strategies.
+
+```python
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Two-phase approach: (1) feasibility-first packing using several
+    orderings crossed with first-fit/best-fit/worst-fit rules to find a
+    feasible placement; (2) bottleneck-driven local search (moves then
+    swaps out of the max-KVPR GPU) minimizing max KVPR. Returns the best
+    feasible placement found across all strategies."""
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def pack(order, rule):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            w = m.req_rate / m.slo
+            fits = [g for g in range(gpu_num) if m.model_size <= rem[g]]
+            if not fits:
+                return None, None, None
+            if rule == "first":
+                g = fits[0]
+            elif rule == "best":
+                g = min(fits, key=lambda g: rem[g])
+            else:  # worst-fit: keep free memory balanced
+                g = max(fits, key=lambda g: rem[g])
+            placement[g].append(m)
+            load[g] += w
+            rem[g] -= m.model_size
+        return placement, load, rem
+
+    def local_search(placement, load, rem):
+        for _ in range(300):
+            kv = [load[g] / rem[g] if rem[g] > 0 else float("inf")
+                  for g in range(gpu_num)]
+            b = max(range(gpu_num), key=lambda g: kv[g])
+            improved = False
+            for m in list(placement[b]):
+                w = m.req_rate / m.slo
+                for g in range(
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:Diff blocks found but none matched parent solution (iteration=64, attempt 2/3).
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=67, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: Keep the multi-start greedy + local search structure but (1) add a swap neighborhood targeting the bottleneck GPU (not just moves), (2) increase restarts cheaply with incremental score evaluation, (3) strengthen the feasibility fallback with a best-fit-decreasing variant tried before plain FFD, and (4) add a final polish pass. This should reduce max KVPR while keeping runtime low.
+
+CODE:
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Multi-start greedy + local search (moves AND swaps out of the
+    bottleneck GPU) minimizing max KVPR, with feasibility guarantee.
+    Restarts use packing-friendly size-descending orderings with jitter.
+    Fallback: best-fit-decreasing then first-fit-decreasing by size."""
+    import random
+
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def state(assign):
+        load = [0.0] * gpu_num
+        mem = [0.0] * gpu_num
+        for m, g in assign:
+            load[g] += m.req_rate / m.slo
+            mem[g] += m.model_size
+        return load, mem
+
+    def maxkvpr(load, mem):
+        return max(load[g] / max(GPU_MEM_SIZE - mem[g], 1e-9)
+                   for g in range(gpu_num))
+
+    def greedy(order, eps):
+        assign = []
+        mem = [0.0] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            cands = [g for g in range(gpu_num) if mem[g] + m.model_size <= GPU_MEM_SIZE]
+            if not cands:
+                return None
+            if random.random() < eps:
+                g = random.choice(cands)
+            else:
+                g = min(cands, key=lambda g: (load[g] + m.req_rate / m.slo) /
+                                             (GPU_MEM_SIZE - mem[g] - m.model_size))
+            assign.append((m, g))
+            mem[g] += m.model_size
+            load[g] += m.req_rate / m.slo
+        return assign
+
+    def local_search(assign):
+        load, mem = state(assign)
+        cur = maxkvpr(load, mem)
+      
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=70, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The main score loss is success_rate (0.14) — the randomized size-descending greedy restarts often fail to fit. I keep the same multi-start + local-search structure but always include the proven ratio-greedy seed (assign to GPU with lowest load/remaining ratio, which achieves 1.0 success), evaluate its polish too, and use it as guaranteed fallback. This should give ~1.0 success with lower max_kvpr from local search.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Multi-start greedy + local search minimizing max KVPR with guaranteed
+    feasibility. Seeds: (1) ratio-greedy (sort by req_rate/slo desc, place on
+    GPU with lowest load/remaining ratio — highly reliable), (2) size-desc
+    greedy, (3) random restarts. Each seed is polished by local search that
+    moves models off the bottleneck GPU or swaps them, accepting only strict
+    max-KVPR improvements. The ratio-greedy result doubles as a guaranteed
+    feasible fallback if every randomized restart fails."""
+    import random
+
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def kvpr_of(load, mem):
+        return max(load[g] / max(GPU_MEM_SIZE - mem[g], 1e-9)
+                   for g in range(gpu_num))
+
+    def score(assign):
+        load = [0.0] * gpu_num
+        mem = [0.0] * gpu_num
+        for m, g in assign:
+            load[g] += m.req_rate / m.slo
+            mem[g] += m.model_size
+        return kvpr_of(load, mem)
+
+    def greedy(order, eps):
+        assign = []
+        mem = [0.0] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            cands = [g for g in range(gpu_num)
+                     if mem[g] + m.model_size <= GPU_MEM_SIZE]
+            if not cands:
+                return None
+            if random.random() < eps:
+                g = random.choice(cands)
+            else:
+                g = min(cands, key=lambda g: load[g] /
+                        max(GPU_MEM_SIZE - mem[g] - 
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=70, attempt 2/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The combined score is dominated by max_kvpr (score = max_kvpr + time + failure_rate). The current randomized multi-start approach scores *worse* on KVPR (29.8) than the simple deterministic greedy (20.9). I'll replace it with: deterministic greedy seeds (several sort keys, choosing the GPU minimizing post-placement KVPR), then an intensive move/swap local search out of the bottleneck GPU with second-highest-pressure tie-breaking. Deterministic, fast, and much lower KVPR.
+
+CODE:
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Deterministic greedy seeds + local search minimizing max KVPR.
+    Seeds: for several sort keys, assign each model to the feasible GPU
+    minimizing the KVPR after placement. Local search: repeatedly move
+    models out of the bottleneck GPU, then swap bottleneck models with
+    models on other GPUs, accepting only strict improvements in max KVPR
+    (ties broken by second-highest GPU pressure). Returns the best result;
+    first-fit-decreasing fallback guarantees feasibility."""
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def pressures(load, mem):
+        ps = sorted((load[g] / max(GPU_MEM_SIZE - mem[g], 1e-9)
+                     for g in range(gpu_num)), reverse=True)
+        return ps[0], sum(ps[1:]) if len(ps) > 1 else 0.0
+
+    def states(placement):
+        load = [0.0] * gpu_num
+        mem = [0.0] * gpu_num
+        for g in range(gpu_num):
+            for m in placement[g]:
+                load[g] += m.req_rate / m.slo
+                mem[g] += m.model_size
+        return load, mem
+
+    def build(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            w = m.req_rate / m.slo
+            best, key = None, (float("inf"), float("inf"))
+            for g in range(gpu_num):
+                if m.model_size <= rem[g]:
+                 
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=73, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace the binary-search/FFD scheme with a **best-choice greedy with randomized multi-start plus targeted local search**. Each model is placed on the GPU that minimizes the resulting KVPR (tie-break by most free memory), over several deterministic orderings plus 200 random shuffles. Then a local-search pass moves models off the bottleneck GPU whenever it lowers max KVPR. A pure memory FFD fallback guarantees feasibility. This is fundamentally different from the threshold-feasibility search and should raise the success rate while lowering max KVPR.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Best-choice greedy with randomized multi-start and local search.
+
+    Each model is placed on the GPU minimizing the resulting KVPR
+    (tie-break: most free memory). Multiple deterministic orderings plus
+    random shuffles are tried; a local-search pass then moves models off
+    the bottleneck GPU when it reduces max KVPR. A pure-memory FFD
+    fallback guarantees a placement whenever memory allows.
+    """
+    def kvprs(placement):
+        out = []
+        for g in range(gpu_num):
+            ms = placement[g]
+            mem = GPU_MEM_SIZE - sum(m.model_size for m in ms)
+            load = sum(m.req_rate / m.slo for m in ms)
+            out.append(load / mem if mem > 0 else float("inf"))
+        return out
+
+    def greedy(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            r = m.req_rate / m.slo
+            best_g, best_kv = None, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g]:
+                    kv = (load[g] + r) / (rem[g] - m.model_size)
+                    if kv < best_kv - 1e-12 or (abs(kv - best_kv) <= 1e-12
+                                                and rem[g] > rem[best_g]):
+                        best_g, best_kv = g, kv
+ 
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=73, attempt 2/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace the binary-search threshold scheme with a fundamentally different min-max greedy: process models in decreasing load density (req_rate/slo per GB) and assign each to the feasible GPU that yields the lowest resulting KVPR, with randomized multi-start restarts (perturbed orders) keeping the best placement. This directly targets minimizing the maximum KVPR.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Randomized multi-start min-max greedy placement.
+
+    Each restart sorts models by load density (req_rate/slo per GB of model
+    size) with random tie-breaking perturbation, then assigns each model to
+    the feasible GPU whose resulting KVPR is lowest. Best placement over all
+    restarts is returned; a memory-only feasibility fallback guarantees a
+    valid placement whenever total memory allows."""
+    import random
+
+    n = len(models)
+    if n == 0:
+        return {g: [] for g in range(gpu_num)}
+
+    density = [m.req_rate / m.slo / max(m.model_size, 1e-9) for m in models]
+    base_order = sorted(range(n), key=lambda i: density[i], reverse=True)
+
+    def run(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for i in order:
+            m = models[i]
+            r = m.req_rate / m.slo
+            best_g, best_p = -1, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g]:
+                    p = (load[g] + r) / (rem[g] - m.model_size)
+                    if p < best_p:
+                        best_g, best_p = g, p
+            if best_g < 0:
+                return None, float("inf")
+            placement[best_g].append(m)
+            load[best_g] += r
+            rem[best_g] -= m.model_size
+        return placement, max(load[g] / rem[g] for g in range(gpu_num))
+
+    rng = random.Random(0)
+    best, best_score = run(base_order)
+    if best is None:
+        raise Val
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:Evaluation failed (attempt 3/3): validity=None, error=All test signals failed
+ERROR:skydiscover.optimize.search.default_discovery_controller:All 3 retry attempts failed. Final error: All test signals failed
+WARNING:skydiscover.optimize.search.evox.controller:Iteration 73 failed (used 3 attempts): Evaluator failed after 3 attempts: All test signals failed
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=77, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace multi-restart greedy with: (1) FFD packing first to guarantee feasibility, (2) then a deterministic local search (move + swap between bottleneck GPU and others) to minimize max KVPR. This fixes the low success rate (infeasible greedy) and improves max KVPR.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """FFD feasibility packing followed by local search (move/swap)
+    that repeatedly reduces the maximum KVPR across GPUs."""
+
+    def kvprs(placement, rem):
+        return [sum(m.req_rate / m.slo for m in placement[g]) / rem[g]
+                for g in range(gpu_num)]
+
+    # Phase 1: first-fit-decreasing by size for feasibility.
+    placement = {g: [] for g in range(gpu_num)}
+    rem = [GPU_MEM_SIZE] * gpu_num
+    for m in sorted(models, key=lambda x: x.model_size, reverse=True):
+        for g in range(gpu_num):
+            if m.model_size <= rem[g]:
+                placement[g].append(m)
+                rem[g] -= m.model_size
+                break
+        else:
+            raise ValueError("Unable to place all models on any GPU")
+
+    # Phase 2: local search to minimize max KVPR.
+    kv = kvprs(placement, rem)
+    improved = True
+    while improved:
+        improved = False
+        b = max(range(gpu_num), key=lambda g: kv[g])
+        # Try moving each model off the bottleneck GPU.
+        for m in list(placement[b]):
+            candidates = [g for g in range(gpu_num)
+                          if g != b and m.model_size <= rem[g]]
+            if not candidates:
+                continue
+            t = min(candidates, key=lambda g: kv[g])
+            new_kv = kvprs(placement, rem)
+            placement[b].remove(m)
+            rem[b] += m.model_size
+            placement[t].append(m)
+            rem[t] -= m.model_size
+            nk = kvprs(placement, rem)
+            if max(nk) < max(kv) - 1e-12:
+                kv = nk
+                improved = True
+                break
+            # 
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=77, attempt 2/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace multi-order greedy with a simulated annealing search over model→GPU assignments. Objective = max KVPR with a large penalty for memory overflow (so infeasible states get repaired naturally). Start from first-fit-decreasing (guarantees feasibility whenever possible), then anneal with move/swap moves. This both improves feasibility (penalty guides toward fitting) and minimizes max KVPR.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Simulated annealing over model->GPU assignments.
+
+    Objective: max KVPR across GPUs, with heavy penalty for memory overflow.
+    Starts from first-fit-decreasing (feasible start), then anneals with
+    random move and swap moves to reduce the bottleneck GPU's pressure.
+    """
+    import math
+    import random
+
+    n = len(models)
+    if n == 0:
+        return {g: [] for g in range(gpu_num)}
+    sizes = [m.model_size for m in models]
+    loads = [m.req_rate / m.slo for m in models]
+
+    def evaluate(assign):
+        mem = [0.0] * gpu_num
+        ld = [0.0] * gpu_num
+        for i, g in enumerate(assign):
+            mem[g] += sizes[i]
+            ld[g] += loads[i]
+        overflow = sum(max(0.0, mem[g] - GPU_MEM_SIZE) for g in range(gpu_num))
+        free = [GPU_MEM_SIZE - mem[g] for g in range(gpu_num)]
+        kvpr = max(ld[g] / free[g] if free[g] > 0 else float("inf")
+                   for g in range(gpu_num))
+        return kvpr + 1e6 * overflow, kvpr, overflow
+
+    # FFD start
+    assign = [0] * n
+    rem = [GPU_MEM_SIZE] * gpu_num
+    for i in sorted(range(n), key=lambda i: -sizes[i]):
+        for g in range(gpu_num):
+            if sizes[i] <= rem[g]:
+                assign[i] = g
+                rem[g] -= sizes[i]
+                break
+        else:
+            assign[i] = min(range(gpu_num), key=lambda g: rem[g])
+            rem[assign[i]] = min(0.0, rem[assign[i]] - sizes[i])
+
+    rng = random.Random(0)
+    cur, _, cur_ov = evaluate(assign)
+    b
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:Evaluation failed (attempt 3/3): validity=None, error=GPU memory constraint violated
+ERROR:skydiscover.optimize.search.default_discovery_controller:All 3 retry attempts failed. Final error: GPU memory constraint violated
+WARNING:skydiscover.optimize.search.evox.controller:Iteration 77 failed (used 3 attempts): Evaluator failed after 3 attempts: GPU memory constraint violated
+WARNING:skydiscover.optimize.search.default_discovery_controller:Evaluation failed (attempt 1/3): validity=None, error=All test signals failed
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=82, attempt 2/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: The current greedy fails feasibility 38% of the time because it always picks the min-KVPR GPU, which can strand large models. New approach: guarantee feasibility first with best-fit-decreasing by size, then rebalance via local search (moves and swaps from the bottleneck GPU) to minimize max KVPR. This is fundamentally different: feasibility-driven packing + improvement phase instead of KVPR-greedy construction.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Feasibility-first: best-fit-decreasing packing by size, then local
+    search (move/swap from the max-KVPR GPU) to minimize max KVPR."""
+    def kvprs(load, rem):
+        return [load[g] / rem[g] for g in range(gpu_num)]
+
+    # Phase 1: best-fit-decreasing by size (robust feasibility).
+    placement = {g: [] for g in range(gpu_num)}
+    rem = [GPU_MEM_SIZE] * gpu_num
+    load = [0.0] * gpu_num
+    for m in sorted(models, key=lambda x: x.model_size, reverse=True):
+        fits = [g for g in range(gpu_num) if m.model_size <= rem[g]]
+        if not fits:
+            raise ValueError("Unable to place all models on any GPU")
+        g = min(fits, key=lambda x: rem[x])
+        placement[g].append(m)
+        load[g] += m.req_rate / m.slo
+        rem[g] -= m.model_size
+
+    # Phase 2: local search — move/swap from bottleneck GPU.
+    for _ in range(300):
+        kp = kvprs(load, rem)
+        src = max(range(gpu_num), key=lambda g: kp[g])
+        cur = kp[src]
+        best = None  # (new_max, kind, m, dst, m2)
+        for dst in range(gpu_num):
+            if dst == src:
+                continue
+            for m in placement[src]:
+                if m.model_size > rem[dst]:
+                    continue
+                nl = load[:]
+                nl[src] -= m.req_rate / m.slo
+                nl[dst] += m.req_rate / m.slo
+                nrem = rem[:]
+                nrem[src] += m.model_size
+                nrem[dst] -= m.model_size
+              
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=82, attempt 3/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Guarantee feasibility first (success_rate is only 0.62 — the greedy often fails and the FFD fallback raises ValueError), then balance load. Use FFD-by-size packing as the always-feasible base, then a local search that moves/swaps models out of the max-KVPR GPU whenever it strictly reduces the max KVPR.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Feasibility-first: FFD pack by size, then load-balancing local search.
+
+    Always produces a feasible placement (success_rate = 1.0), then iteratively
+    moves/swaps models from the max-KVPR GPU to reduce the maximum KVPR.
+    """
+    # --- Phase 1: FFD by size (guarantees feasibility if possible) ---
+    placement = {g: [] for g in range(gpu_num)}
+    rem = [GPU_MEM_SIZE] * gpu_num
+    load = [0.0] * gpu_num
+    for m in sorted(models, key=lambda x: x.model_size, reverse=True):
+        for g in range(gpu_num):
+            if m.model_size <= rem[g]:
+                placement[g].append(m)
+                rem[g] -= m.model_size
+                load[g] += m.req_rate / m.slo
+                break
+        else:
+            raise ValueError("Unable to place all models on any GPU")
+
+    def kvprs():
+        return [load[g] / rem[g] for g in range(gpu_num)]
+
+    # --- Phase 2: local search from bottleneck GPU ---
+    for _ in range(500):
+        kp = kvprs()
+        src = max(range(gpu_num), key=lambda g: kp[g])
+        cur_max = kp[src]
+        improved = False
+        # try moves
+        for m in list(placement[src]):
+            w = m.req_rate / m.slo
+            for dst in range(gpu_num):
+                if m.model_size <= rem[dst]:
+                    new_max = max(kp[g] for g in range(gpu_num) if g != src) if gpu_num > 1 else 0.0
+                    new_max = max(new_max, (load[src] - w) / (rem[src] + m.model_size),
+                                  (load[dst] + w) / (rem[dst] - m.model_size))
+                    if new_max < cur_max - 1e-12:
+     
+... (truncated) ...
+ERROR:skydiscover.optimize.search.default_discovery_controller:All 3 retry attempts failed due to parse/validation error: No valid diffs found in response
+WARNING:skydiscover.optimize.search.evox.controller:Iteration 82 failed (used 3 attempts): No valid diffs found in response (after 3 attempts)
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=86, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace the deterministic multi-order greedy with a randomized multi-start approach: many random (shuffled) orderings with best-fit greedy placement, keeping the best by max KVPR. This explores a far richer space of orderings than the three fixed ones and remains simple.
+
+```python
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Randomized multi-start greedy placement.
+
+    Runs many candidate orderings: a few deterministic ones (by load density
+    and size, both directions) plus many random shuffles. Each ordering is
+    placed greedily onto the GPU that minimizes KVPR after placement. The
+    placement with the lowest maximum KVPR is returned. A robust fallback
+    (lowest current-KVPR greedy) handles tight feasibility cases.
+    """
+    import random
+
+    def run(order):
+        placement = {g: [] for g in range(gpu_num)}
+        rem = [GPU_MEM_SIZE] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            best, best_kvpr = None, float("inf")
+            for g in range(gpu_num):
+                if m.model_size <= rem[g]:
+                    kvpr = (load[g] + m.req_rate / m.slo) / (rem[g] - m.model_size)
+                    if kvpr < best_kvpr:
+                        best_kvpr, best = kvpr, g
+            if best is None:
+                return None, float("inf")
+            placement[best].append(m)
+            load[best] += m.req_rate / m.slo
+            rem[best] -= m.model_size
+        return placement, max(load[g] / rem[g] for g in range(gpu_num))
+
+    orders = [
+        sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True),
+        sorted(models, key=lambda m: m.req_rate / m.slo),
+        sorted(models, key=lambda m: m.model_size, reverse=True),
+        sorted(models, key=lambda m: m.model_size),
+    ]
+    rng = random.Random(0)
+    for _ in range(200):
+        order = list(models)
+        rng.shuffle(order)
+        orders.append(order)
+
+    best_placement, best_score = None, float("inf
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:Diff blocks found but none matched parent solution (iteration=86, attempt 2/3).
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=94, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace the greedy+local-search with a simulated annealing search over the full assignment vector, using numpy-vectorized KVPR scoring. Feasibility is guaranteed by seeding with first-fit-decreasing (bin-packing) and only accepting moves that keep memory feasible. SA explores move/swap neighborhoods with a temperature schedule, with random restarts.
+
+CODE:
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Simulated annealing over assignment vectors, seeded by
+    first-fit-decreasing for guaranteed feasibility. Moves are single-model
+    reassignments and pairwise swaps; memory feasibility is enforced on
+    every candidate move. Objective is max KVPR (with second-max tiebreak),
+    computed with numpy."""
+    import random
+    import numpy as np
+
+    placement0 = {g: [] for g in range(gpu_num)}
+    if not models:
+        return placement0
+
+    n = len(models)
+    sizes = np.array([m.model_size for m in models], dtype=float)
+    loads = np.array([m.req_rate / m.slo for m in models], dtype=float)
+
+    def kvpr_of(mem, load):
+        free = np.maximum(GPU_MEM_SIZE - mem, 1e-9)
+        return load / free
+
+    def score_vec(mem, load):
+        p = np.sort(kvpr_of(mem, load))[::-1]
+        return p[0] + 1e-6 * (p[1] if len(p) > 1 else 0.0)
+
+    def ffd_seed():
+        assign = np.full(n, -1, dtype=int)
+        mem = np.zeros(gpu_num)
+        order = np.argsort(-sizes)
+        for i in order:
+            fits = np.nonzero(mem + sizes[i] <= GPU_MEM_SIZE)[0]
+            if len(fits) == 0:
+                return None
+            g = fits[np.argmin(mem[fits])]
+            assign[i] = g
+            mem[g] += sizes[i]
+        return assign
+
+    def totals(assign):
+        mem = np.zeros(gpu_num)
+        load = np.zeros(gpu_num)
+        np.add.at(mem, assign, sizes)
+        np.add.at(load, assign, loads)
+        return mem, load
+
+    random.seed(42)
+    np.random.seed(42)
+    best_assign, best_s = None, floa
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=94, attempt 2/3). Expected SEARCH/REPLACE blocks. Preview:
+APPROACH: Replace the multi-start greedy + local search with a simulated annealing optimizer over model→GPU assignments. Moves are random reassignments and swaps; the energy is max KVPR with a large penalty for memory overflow (so feasibility is handled inside the annealing). Start from a first-fit-decreasing placement. Uses `numpy` for vectorized KVPR scoring.
+
+CODE:
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Simulated annealing over model->GPU assignments. Energy = max KVPR
+    plus a large penalty for memory overflow, so infeasible states are
+    pushed out automatically. Initial state is first-fit-decreasing for
+    feasibility; moves are random single-model reassignments and pairwise
+    swaps accepted via the Metropolis criterion."""
+    import random
+    import numpy as np
+
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    n = len(models)
+    sizes = np.array([m.model_size for m in models])
+    dens = np.array([m.req_rate / m.slo for m in models])
+
+    # Initial placement: first-fit-decreasing (feasible packing).
+    assign = np.zeros(n, dtype=int)
+    mem = np.zeros(gpu_num)
+    order = np.argsort(-sizes)
+    for i in order:
+        for g in range(gpu_num):
+            if mem[g] + sizes[i] <= GPU_MEM_SIZE:
+                assign[i] = g
+                mem[g] += sizes[i]
+                break
+
+    def energy(a):
+        m = np.zeros(gpu_num)
+        np.add.at(m, a, sizes)
+        l = np.zeros(gpu_num)
+        np.add.at(l, a, dens)
+        free = GPU_MEM_SIZE - m
+        overflow = np.sum(np.maximum(m - GPU_MEM_SIZE, 0.0)) * 1e6
+        kvpr = np.where(free > 1e-9, l / np.maximum(free, 1e-9), 1e9)
+        return np.max(kvpr) + overflow
+
+    rng = random.Random(42)
+    cur = assign.copy()
+    cur_e = energy(cur)
+    best, best_e = cur.copy(), cur_e
+    T0, T1, iters = 1.0, 1e-4, 4000
+    for it in range(iters):
+        T = T0 * (T1 / T0) ** (it / iters)
+        a = cur.cop
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=98, attempt 1/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: Combine the strongest elements seen so far: (1) a guaranteed feasibility stage (FFD/BFD under multiple orders) so tight-memory cases always succeed, raising success_rate; (2) tie-breaking on second-highest GPU pressure in the score to escape plateaus; (3) more restarts and a final polish pass of the feasible seed, lowering max_kvpr.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Feasibility-first multi-start greedy + local search minimizing max
+    KVPR. A staged packing phase (FFD/BFD under several orders plus
+    randomized restarts) guarantees a feasible placement whenever one is
+    reachable. Then many greedy restarts with move/swap local search
+    refine KVPR, using a tie-break on the second-highest GPU pressure.
+    The best of refined-greedy and polished-feasible is returned."""
+    import random
+
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def score(assign):
+        load = [0.0] * gpu_num
+        mem = [0.0] * gpu_num
+        for m, g in assign:
+            load[g] += m.req_rate / m.slo
+            mem[g] += m.model_size
+        ps = sorted((load[g] / max(GPU_MEM_SIZE - mem[g], 1e-9)
+                     for g in range(gpu_num)), reverse=True)
+        # Tie-break on second-highest pressure to escape plateaus.
+        return ps[0] + 1e-6 * (ps[1] if len(ps) > 1 else 0.0)
+
+    def greedy(order, eps):
+        assign = []
+        mem = [0.0] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            cands = [g for g in range(gpu_num) if mem[g] + m.model_size <= GPU_MEM_SIZE]
+            if not cands:
+                return None
+            if random.random() < eps:
+                g = random.choice(cands)
+            else:
+                g = min(cands, key=lambda g: load[g] / (GPU_MEM_SIZE - mem[g] - m.model_size))
+            assign.append((m, g))
+            mem[g] += m.model_size
+            load[g] += m.req_rate / m.slo
+        return 
+... (truncated) ...
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=98, attempt 2/3). Expected SEARCH/REPLACE blocks. Preview:
+REFINEMENT: The current solution loses quality when greedy restarts fail to find a feasible packing (success_rate is low). I'll add a guaranteed feasible seed via best-fit-decreasing (polished by local search), use a lexicographic score (max KVPR + tie-break on second-highest) to escape plateaus, and allow sideways moves in a final polish phase.
+
+CODE:
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """Multi-start greedy + local search minimizing max KVPR, with a
+    feasibility guarantee. A best-fit-decreasing seed guarantees a valid
+    placement; greedy restarts (size-descending, jittered) plus local
+    search (moves/swaps out of the bottleneck GPU) minimize max KVPR.
+    Score is lexicographic: max KVPR with second-highest as tie-break."""
+    import random
+
+    if not models:
+        return {g: [] for g in range(gpu_num)}
+
+    def score(assign):
+        load = [0.0] * gpu_num
+        mem = [0.0] * gpu_num
+        for m, g in assign:
+            load[g] += m.req_rate / m.slo
+            mem[g] += m.model_size
+        ps = sorted((load[g] / max(GPU_MEM_SIZE - mem[g], 1e-9)
+                     for g in range(gpu_num)), reverse=True)
+        # Tie-break on second-highest pressure to escape plateaus.
+        return ps[0] + 1e-6 * (ps[1] if len(ps) > 1 else 0.0)
+
+    def greedy(order, eps):
+        assign = []
+        mem = [0.0] * gpu_num
+        load = [0.0] * gpu_num
+        for m in order:
+            cands = [g for g in range(gpu_num) if mem[g] + m.model_size <= GPU_MEM_SIZE]
+            if not cands:
+                return None
+            if random.random() < eps:
+                g = random.choice(cands)
+            else:
+                g = min(cands, key=lambda g: load[g] / (GPU_MEM_SIZE - mem[g] - m.model_size))
+            assign.append((m, g))
+            mem[g] += m.model_size
+            load[g] += m.req_rate / m.slo
+        return assign
+
+    def local_search(assign):
+        for _ in range(
+... (truncated) ...

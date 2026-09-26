@@ -2,7 +2,7 @@ STATUS: PARTIAL
 
 Low reasoning effort resolved the two observed PRISM empty-output failures. Two independent SkyDiscover PRISM one-attempt checks and one Trace check produced valid candidates; completion lengths were 886–996 tokens, including 51–74 reasoning tokens. The earlier default-reasoning failures consumed 32,000 completion tokens each and produced no code. This establishes usable generation, not a guarantee against later failures.
 
-All S0–S5 gates passed. All eight five-attempt pilots completed. The first strict run, PRISM SD-EVOX, is in progress; the validated runtime is frozen in `artifacts/strict_source_hashes.json`.
+All S0–S5 gates passed. All eight five-attempt pilots completed. The first strict run, PRISM SD-EVOX, completed 100 attempts; PRISM TRACE-RECURSIVE is now in progress; the validated runtime is frozen in `artifacts/strict_source_hashes.json`.
 
 | Task | Arm | Best score | Valid / 5 | Policy switches |
 |---|---|---:|---:|---:|
@@ -19,11 +19,15 @@ These pilots validate execution only. They do not establish relative optimizer q
 
 PRISM combined score must be read alongside success rate: pilot final success rates range from 0.56 to 1.00. A higher combined score can reflect successful placements on fewer cases. Full comparisons will retain native component metrics.
 
-Current Novita/low series: 105 HTTP attempts, 462716 reported tokens, $0.06353948 reported cost; 0 calls lack cost. Earlier provider/default-reasoning series are archived separately.
+Novita/low diagnostics and pilots before strict execution: 105 HTTP attempts, 462716 reported tokens, $0.06353948 reported cost; 0 calls lack cost. Earlier provider/default-reasoning series are archived separately.
 
 Trace uses CP-A with explicit nonportable/nonpromotable control-plane override. CP-B is excluded from live execution because its empty-response fallback changes the frozen token limit. Model, provider, session, temperature, token ceiling and timeout otherwise remain fixed.
 
-Strict and advanced outcomes: not yet measured. No conclusion about Trace versus fixed policy, EvoX versus fixed policy, or additional freedom is warranted.
+MEASURED RESULT: PRISM SD-EVOX completed 100 solution attempts, with 58 valid candidates, 42 invalid attempts and five accepted policies. Final combined score: 29.90579427 (initial 21.89162211); AUC: 2799.27021667; first improvement: attempt 1; best solution: attempt 44. Final placement success is 0.14, down from 1.00. The higher stock combined score does not establish improved placement reliability.
+
+MEASURED RESULT: This strict arm used 100 solution, six meta (including startup probe), and 12 guide calls: 118 total; 554,227 input and 184,144 output tokens, including 5,184 cached input tokens; $0.13093798 reported cost; 2,887.48 seconds. All four checkpoints, routing and policy-source checks passed. See `artifacts/strict_prism_SD-EVOX_review.json`.
+
+INFERENCE: Strict comparisons and advanced outcomes remain unmeasured. No conclusion about Trace versus fixed policy, EvoX versus fixed policy, or additional freedom is warranted. This is a controlled single-run benchmark, not a statistical replication.
 
 Validation: 30 EXP22 unit tests and 162 targeted Trace tests passed (six integration cases deselected). All eight pilot gates passed. See `artifacts/exp22_unit_tests.txt`, `artifacts/s4_validation.json`, and `artifacts/s5_validation.json`.
 

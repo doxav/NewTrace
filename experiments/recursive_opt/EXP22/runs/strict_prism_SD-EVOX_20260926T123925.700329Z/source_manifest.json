@@ -1,0 +1,107 @@
+{
+  "benchmarks": {
+    "benchmarks/ADRS/prism/config.yaml": {
+      "head_sha256": "ce9257aae14f1e1f865ed08b2a47d4c30d98beb477c308b4b38f249ce86432c9",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "ce9257aae14f1e1f865ed08b2a47d4c30d98beb477c308b4b38f249ce86432c9",
+      "working_sha256": "ce9257aae14f1e1f865ed08b2a47d4c30d98beb477c308b4b38f249ce86432c9"
+    },
+    "benchmarks/ADRS/prism/evaluator/evaluator.py": {
+      "head_sha256": "93a18d0f620038d9ece54ff447a788631572c5db563947605266f523c1cd9c95",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "93a18d0f620038d9ece54ff447a788631572c5db563947605266f523c1cd9c95",
+      "working_sha256": "93a18d0f620038d9ece54ff447a788631572c5db563947605266f523c1cd9c95"
+    },
+    "benchmarks/ADRS/prism/initial_program.py": {
+      "head_sha256": "db9a35fbee16d97055e07594586a9d84817fd7ac63f539a254d282b162f3d819",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "db9a35fbee16d97055e07594586a9d84817fd7ac63f539a254d282b162f3d819",
+      "working_sha256": "db9a35fbee16d97055e07594586a9d84817fd7ac63f539a254d282b162f3d819"
+    },
+    "benchmarks/math/signal_processing/config.yaml": {
+      "head_sha256": "294876fd92aa7486083a23b172671b917b09db1a95cc07edfc72bbd45fd5ec9d",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "294876fd92aa7486083a23b172671b917b09db1a95cc07edfc72bbd45fd5ec9d",
+      "working_sha256": "294876fd92aa7486083a23b172671b917b09db1a95cc07edfc72bbd45fd5ec9d"
+    },
+    "benchmarks/math/signal_processing/evaluator/evaluator.py": {
+      "head_sha256": "c2bfad2a428e79e874d7a5088b7b27a65f1eae9619aa5fa06c4f394e19ff504b",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "c2bfad2a428e79e874d7a5088b7b27a65f1eae9619aa5fa06c4f394e19ff504b",
+      "working_sha256": "c2bfad2a428e79e874d7a5088b7b27a65f1eae9619aa5fa06c4f394e19ff504b"
+    },
+    "benchmarks/math/signal_processing/initial_program.py": {
+      "head_sha256": "9d317dc0fccf93f53ba5db218470322c9ee140314aee465670a881f94db17378",
+      "matches_head": true,
+      "matches_supplied_snapshot": true,
+      "supplied_sha256": "9d317dc0fccf93f53ba5db218470322c9ee140314aee465670a881f94db17378",
+      "working_sha256": "9d317dc0fccf93f53ba5db218470322c9ee140314aee465670a881f94db17378"
+    }
+  },
+  "completed_runs": [],
+  "completion_requests": 105,
+  "evidence_directory": "artifacts/preflight/20260926T100458.395061Z",
+  "execution_authorized_by_this_script": false,
+  "experiment": "EXP22 SkyDiscover/Trace PRISM and Signal comparison",
+  "gates": {
+    "S0": true,
+    "S1": true,
+    "S2": true,
+    "S3": true,
+    "S4": true,
+    "S5": true
+  },
+  "gates_not_run": [
+    "S4 remaining task/framework candidates",
+    "S5 pilots",
+    "strict runs",
+    "advanced phase"
+  ],
+  "historical_series": "artifacts/deepinfra_pre_novita/manifest.json",
+  "paid_calls": 105,
+  "primary_control_plane": "CP-A: exact transport, non-portable/non-promotable",
+  "protocol_amendment": "v6",
+  "provider": {
+    "only": [
+      "novita"
+    ]
+  },
+  "reasoning_effort": "low",
+  "repositories": {
+    "skydiscover": {
+      "branch": "",
+      "head": "3f7a611fe83980970dd14f1d65c49e40de61b7df",
+      "path": "/home/xav/code/evo-compare/repos/skydiscover",
+      "status_porcelain": "?? benchmarks/ADRS/prism.zip\n?? benchmarks/math/signal_processing.zip"
+    },
+    "trace": {
+      "branch": "",
+      "head": "846580defe935195c1f5f39d6336079ef6ff1e10",
+      "path": "experiments/recursive_opt/EXP22/worktrees/trace",
+      "status_porcelain": ""
+    }
+  },
+  "status": "PARTIAL",
+  "successful_completions": 105,
+  "timestamp_utc": "20260926T100458.395061Z",
+  "trace_branch_gate": {
+    "actual_branch": "",
+    "actual_head": "846580defe935195c1f5f39d6336079ef6ff1e10",
+    "isolated_execution_checkout": true,
+    "passed": true,
+    "reason": null,
+    "required_branch": "recursive_opt",
+    "required_head": "846580defe935195c1f5f39d6336079ef6ff1e10"
+  },
+  "trace_cp_b": {
+    "head": "846580defe935195c1f5f39d6336079ef6ff1e10",
+    "patch": "artifacts/trace_cp_b.patch",
+    "path": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/worktrees/trace_cp_b",
+    "status": " M opto/features/recursive_opt/spec.py"
+  }
+}
