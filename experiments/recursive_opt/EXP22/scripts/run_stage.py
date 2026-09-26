@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import contextlib
+import hashlib
 import json
 import logging
 import re
@@ -19,10 +20,16 @@ import httpx
 import httpx2
 from scripts.framework_smoke import observer
 from scripts.preflight import write_json
+from src.accounting import usage_summary
 from src.control_plane import register, specification
 from src.evaluation import SKY, TASKS
 from src.kernel import run_kernel
-from src.transport import EXTRA_BODY, MODEL, TraceOpenRouter
+from src.transport import (
+    EXTRA_BODY,
+    HTTP_RECORDS,
+    MODEL,
+    TraceOpenRouter,
+)
 
 from opto.features.recursive_opt import spec as S
 
@@ -42,23 +49,6 @@ def redact_diagnostics(directory: Path) -> None:
     history.write_text(''.join(json.dumps(row) + '\n' for row in rows))
 
 
-def usage_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
-    """Aggregate observed HTTP attempts, returned tokens and reported cost."""
-    totals: dict[str, Any] = {'total_calls': len(records), 'roles': {}, 'input_tokens': 0, 'output_tokens': 0, 'cached_tokens': 0, 'reported_cost': 0.0, 'calls_missing_cost': 0}
-    for row in records:
-        role = row['role']
-        totals['roles'][role] = totals['roles'].get(role, 0) + 1
-        usage = row.get('usage') or {}
-        totals['input_tokens'] += usage.get('prompt_tokens', 0)
-        totals['output_tokens'] += usage.get('completion_tokens', 0)
-        totals['cached_tokens'] += (usage.get('prompt_tokens_details') or {}).get('cached_tokens', 0)
-        if usage.get('cost') is None:
-            totals['calls_missing_cost'] += 1
-        else:
-            totals['reported_cost'] += usage['cost']
-    return totals
-
-
 def main() -> int:
     """Enforce stage gates and persist a complete result even on diagnostic failure."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -76,6 +66,11 @@ def main() -> int:
         gates = json.loads((ROOT/'artifacts/gates.json').read_text())
         if not all(gates.get(name) is True for name in ('S0', 'S1', 'S2', 'S3', 'S4', 'S5')):
             raise ValueError('Full execution requires all six gates')
+        expected = json.loads((ROOT/'artifacts/strict_source_hashes.json').read_text())
+        paths = [*sorted((ROOT/'src').glob('*.py')), *[ROOT/'scripts'/name for name in ('run_stage.py', 'framework_smoke.py', 'preflight.py')]]
+        actual = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
+        if actual != expected:
+            raise ValueError('Strict runtime source differs from the validated source lock')
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
     directory = ROOT/'runs'/f'{args.stage}_{args.task}_{args.arm}_{stamp}'
     directory.mkdir(parents=True, exist_ok=False)
@@ -85,7 +80,8 @@ def main() -> int:
     write_json(directory/'config.json', {'task': args.task, 'arm': args.arm, 'stage': args.stage, 'horizon': horizon, 'concurrency': 1, 'seed': 42})
     for name in ('solution_curve.jsonl', 'candidate_history.jsonl', 'policy_history.jsonl'):
         (directory/name).touch()
-    records: list[dict[str, Any]] = []
+    HTTP_RECORDS.clear()
+    records = HTTP_RECORDS
     result: dict[str, Any] = {'passed': False}
     register()
     raw = specification(args.task, args.arm, horizon, directory) if args.arm.startswith('TRACE') else None
@@ -106,18 +102,22 @@ def main() -> int:
                         raise ValueError('Canonical Trace execution returned an invalid result')
                     result = dict(canonical.metadata['kernel_result'])
                 else:
-                    result = asyncio.run(run_kernel(args.task, args.arm, horizon, directory))
+                    with S._seed_scope(42):
+                        result = asyncio.run(run_kernel(args.task, args.arm, horizon, directory))
                 result['passed'] = result['iterations_observed'] == horizon and not result.get('gate_failure') and bool(records) and all(record['passed'] for record in records)
-                history = [json.loads(line) for line in (directory/'candidate_history.jsonl').read_text().splitlines()]
-                candidates = [row['candidate'] for row in history if row.get('candidate') and not row.get('error')]
-                initial_source = (SKY/TASKS[args.task]/'initial_program.py').read_text()
-                result['valid_candidates'] = len(candidates)
-                result['invalid_attempts'] = sum(row['attempts_used'] for row in history) - len(candidates)
-                if args.stage == 'one':
-                    result['passed'] = result['passed'] and len(candidates) == 1 and candidates[0]['solution'] != initial_source
         except (ValueError, TypeError, RuntimeError, KeyError, AttributeError) as error:
-            result = {'passed': False, 'error_type': type(error).__name__, 'error': str(error)}
+            kernel_path = directory/'kernel_result.json'
+            diagnostic = json.loads(kernel_path.read_text()) if kernel_path.exists() else {}
+            result = {**diagnostic, 'passed': False, 'error_type': type(error).__name__, 'error': str(error)}
         finally:
+            history = [json.loads(line) for line in (directory/'candidate_history.jsonl').read_text().splitlines()]
+            candidates = [row['candidate'] for row in history if row.get('candidate') and not row.get('error')]
+            result['valid_candidates'] = len(candidates)
+            result['invalid_attempts'] = sum(row['attempts_used'] for row in history) - len(candidates)
+            result['passed'] = result['passed'] and bool(candidates) and sum(row['role'] == 'solution' for row in records) == horizon
+            if args.stage == 'one':
+                initial_source = (SKY/TASKS[args.task]/'initial_program.py').read_text()
+                result['passed'] = result['passed'] and len(candidates) == 1 and candidates[0]['solution'] != initial_source
             write_json(directory/'http_requests.json', records)
             write_json(directory/'llm_usage.json', usage_summary(records))
             write_json(directory/'final_result.json', result)

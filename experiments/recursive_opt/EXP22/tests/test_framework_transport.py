@@ -27,7 +27,7 @@ from opto.features.recursive_opt import spec as S
 
 def normalized_profile() -> dict:
     """Build a routing profile through canonical normalization defaults."""
-    value = {'llm_profiles': {'main': {'provider': 'openrouter', 'model': MODEL, 'openrouter_routing': {'only': ['novita']}, 'request_params': {'extra_body': {'session_id': SESSION}}, 'max_tokens': 32, 'temperature': 0.7, 'request_timeout_s': 600}}}
+    value = {'llm_profiles': {'main': {'provider': 'openrouter', 'model': MODEL, 'openrouter_routing': {'only': ['novita']}, 'request_params': {'extra_body': {'session_id': SESSION, 'reasoning_effort': 'low'}}, 'max_tokens': 32, 'temperature': 0.7, 'request_timeout_s': 600}}}
     S._normalize_llm_profiles(value)
     return value['llm_profiles']['main']
 
@@ -119,3 +119,31 @@ class FrameworkTransportTests(unittest.TestCase):
         self.assertTrue(records[0]['passed'])
         self.assertEqual(records[0]['finish_reasons'], ['length'])
         self.assertEqual(records[0]['content_lengths'], [0])
+
+    def test_observer_rejects_changed_reasoning_before_network(self) -> None:
+        """Missing or conflicting effort cannot silently enter the low-effort series."""
+        import httpx
+
+        for effort in (None, 'high'):
+            body = {'model': MODEL, **EXTRA_BODY}
+            if effort is None:
+                body.pop('reasoning_effort')
+            else:
+                body['reasoning_effort'] = effort
+            request = httpx.Request('POST', BASE_URL + '/chat/completions', json=body)
+            with patch.object(httpx.Client, 'send') as send, self.assertRaisesRegex(ValueError, 'routing'):
+                observer(send, [])(SimpleNamespace(), request)
+            send.assert_not_called()
+
+    def test_transport_failure_remains_an_accounted_attempt(self) -> None:
+        """Timeouts retain the sent body and unknown usage without raw exception text."""
+        import httpx
+
+        request = httpx.Request('POST', BASE_URL + '/chat/completions', json={'model': MODEL, **EXTRA_BODY})
+        records = []
+        with patch.object(httpx.Client, 'send', side_effect=httpx.ReadTimeout('private diagnostic')) as send, self.assertRaises(httpx.ReadTimeout):
+            observer(send, records)(SimpleNamespace(), request)
+        self.assertEqual(len(records), 1)
+        self.assertFalse(records[0]['passed'])
+        self.assertIsNone(records[0]['usage'])
+        self.assertNotIn('private diagnostic', json.dumps(records))

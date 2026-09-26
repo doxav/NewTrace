@@ -1,0 +1,53 @@
+WARNING:skydiscover.optimize.evaluation.evaluator:cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+WARNING:skydiscover.optimize.search.default_discovery_controller:Diff blocks found but none matched parent solution (iteration=2, attempt 1/3).
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=4, attempt 1/2). Expected SEARCH/REPLACE blocks. Preview:
+The current greedy picks the GPU with the lowest pre-assignment KVPR, ignoring the incoming model's own load. I'll keep that robust greedy (100% success) and add a lightweight local-search phase (move/swap from the max-KVPR GPU) that strictly reduces the maximum KVPR — this lowers max_kvpr without risking placement failures.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def compute_model_placement(gpu_num, models):
+    """
+    Greedy KVPR-minimizing placement plus local search:
+    1) Sort models by req_rate/slo descending; assign each to the fitting GPU
+       with the lowest current KVPR.
+    2) Local search: repeatedly move or swap a model out of the max-KVPR GPU
+       whenever it strictly reduces the overall maximum KVPR.
+    """
+    sorted_models = sorted(models, key=lambda m: m.req_rate / m.slo, reverse=True)
+    placement = {g: [] for g in range(gpu_num)}
+    load = [0.0] * gpu_num
+    free = [float(GPU_MEM_SIZE)] * gpu_num
+
+    def kvpr(g):
+        return load[g] / free[g] if free[g] > 0 else float("inf")
+
+    # Phase 1: greedy
+    for model in sorted_models:
+        best_idx, best_ratio = None, float("inf")
+        for g in range(gpu_num):
+            if model.model_size <= free[g]:
+                if load[g] / free[g] < best_ratio:
+                    best_ratio = load[g] / free[g]
+                    best_idx = g
+        if best_idx is None:
+            raise ValueError(f"Cannot place model of size {model.model_size} GB")
+        placement[best_idx].append(model)
+        load[best_idx] += model.req_rate / model.slo
+        free[best_idx] -= model.model_size
+
+    # Phase 2: local search on the max-KVPR GPU
+    improved = True
+    while improved:
+        improved = False
+        cur_max = max(kvpr(g) for g in range(gpu_num))
+        src = max(range(gpu_num), key=kvpr)
+        # Try moving a model from src elsewhere
+        for m in list(placement[src]):
+            r = m.req_rate / m.slo
+            for dst in range(gpu_num):
+                i
+... (truncated) ...

@@ -83,12 +83,54 @@ class KernelTests(unittest.TestCase):
             database.initial_program_id = program.id
             database.initial_program_score = 21.0
             controller.window_observation = {'active_policy_hash': digest(POLICY.read_text()), 'window_metrics': {'combined_score': 0.125, 'search_window_start_score': 21.0, 'search_window_end_score': 22.0}, 'history': [21.0, 22.0]}
-            result = asyncio.run(controller._trace_proposal(1, 1, False))
+            result = asyncio.run(controller.search_controller.run_discovery(1, 1, False))
             self.assertIsNone(result.error)
             self.assertEqual(len(calls), 1)
             self.assertIn('0.125', json.dumps(calls))
             self.assertEqual(result.child_program_dict['metrics']['validity'], 1)
+            proposal = json.loads((directory/'policy_proposals.jsonl').read_text())
+            self.assertTrue(proposal['valid'])
+            self.assertEqual((directory/proposal['source_path']).read_text(), result.child_program_dict['solution'])
             self.assertTrue(controller._switch_to_new_search_algorithm(result))
             self.assertEqual(controller.database.get(program.id).solution, program.solution)
             self.assertEqual(controller.database.get(program.id).metrics, program.metrics)
             self.assertEqual(digest(controller._active_search_algorithm_code), digest(format_str(candidate, mode=FileMode())))
+            controller.window_observation['active_policy_hash'] = 'wrong-policy'
+            with self.assertRaisesRegex(ValueError, 'disconnected'):
+                asyncio.run(controller._trace_proposal(2, 1, False))
+            self.assertEqual(len(calls), 1)
+            with patch('src.kernel.CoEvolutionController._switch_to_new_search_algorithm', return_value=True), patch.object(controller.database, 'get', return_value=None), self.assertRaisesRegex(ValueError, 'lost the existing population'):
+                controller._switch_to_new_search_algorithm(result)
+            self.assertEqual(controller.gate_failure, 'Policy switch changed or lost the existing population')
+            self.assertTrue(controller.shutdown_event.is_set())
+
+    def test_checkpoints_and_structural_stops(self) -> None:
+        """Flat valid search continues; sustained invalidity and budget drift stop."""
+        records = []
+        with tempfile.TemporaryDirectory(dir=ROOT/'artifacts') as temporary, patch.dict('os.environ', {'OPENROUTER_API_KEY': 'fixture'}), patch('src.kernel.HTTP_RECORDS', records):
+            directory = Path(temporary)
+            config = configuration('prism', directory)
+            database = create_database('evox', config.search.database)
+            controller = TraceMetaCoEvolutionController(DiscoveryControllerInput(config, str(SKY/TASKS['prism']/'evaluator/evaluator.py'), database, output_dir=temporary), PolicyModule(POLICY.read_text()), None)
+            self.addCleanup(controller.close)
+            self.addCleanup(controller.search_controller.close)
+            program = get_program(config, 'pass\n', 'audit-fixture', {'combined_score': 21.0}, 0)
+            database.add(program, iteration=0)
+            controller.total_solution_iterations = 101
+            controller._max_solution_iterations = 100
+            for index in range(20):
+                records.append({'role': 'solution', 'passed': True, 'usage': {'prompt_tokens': 2, 'completion_tokens': 3, 'cost': 0.01}})
+                controller.pending_attempt_validity = [index < 10]
+                controller.current_candidate_score = 21.0
+                controller._record_search_window_step()
+                if index < 19:
+                    self.assertFalse(controller.shutdown_event.is_set())
+            checkpoint = json.loads((directory/'checkpoint_010.json').read_text())
+            self.assertEqual(checkpoint['valid_candidates'], 10)
+            self.assertEqual(checkpoint['llm_usage']['total_calls'], 10)
+            self.assertAlmostEqual(checkpoint['llm_usage']['reported_cost'], 0.1)
+            self.assertEqual(controller.gate_failure, 'No valid solution over ten consecutive generation attempts')
+            self.assertTrue(controller.shutdown_event.is_set())
+            records.append({'role': 'solution', 'passed': True})
+            with self.assertRaisesRegex(ValueError, 'budget diverged'):
+                asyncio.run(controller._run_iteration(21))

@@ -1,0 +1,171 @@
+{
+  "budget": {
+    "candidates": 1,
+    "eval_llm_calls": null,
+    "evaluator_runs": null,
+    "on_exceed": "fail",
+    "optimizer_llm_calls": null,
+    "total_tokens": null,
+    "wall_time_s": null
+  },
+  "experiment": {
+    "arms": [],
+    "matrix": {},
+    "seeds": []
+  },
+  "extensions": {},
+  "fingerprint": "59fefee22315833a66de9a3e156852dd488b848cc43a2fdcaf4c2d3361e41f0a",
+  "kind": "recursive_optimization",
+  "knowledge": {
+    "injection_codec": "recursive_opt.codec.artifact_to_prior@1",
+    "promotion_rule": {},
+    "retrieval": "best",
+    "rollback_rule": {},
+    "scope_fields": [
+      "family",
+      "level",
+      "kind"
+    ],
+    "statuses": [
+      "promoted"
+    ],
+    "store": "recursive_opt.knowledge.memory_lite@1",
+    "top_k": 5
+  },
+  "levels": [
+    {
+      "bindings": [],
+      "datasets": {
+        "holdout": [],
+        "train": {
+          "config": {
+            "task": "signal_processing"
+          },
+          "ref": "exp22.dataset.signal_processing@1"
+        },
+        "validation": []
+      },
+      "depends_on": [],
+      "engine": {
+        "config": {},
+        "name": "exp22.engine.coevolution@1"
+      },
+      "id": "coevolution",
+      "llm_roles": {
+        "feedback": null,
+        "forward": null,
+        "judge": null,
+        "optimizer": {
+          "api_key_ref": "env:OPENROUTER_API_KEY",
+          "base_url": null,
+          "fallbacks": [],
+          "max_tokens": 32000,
+          "model": "z-ai/glm-5.3-flash",
+          "openrouter_routing": null,
+          "profile": "main",
+          "provider": "openrouter",
+          "request_params": {
+            "extra_body": {
+              "reasoning_effort": "low",
+              "session_id": "benchmark-PRIMS-SIGNAL-run-001"
+            }
+          },
+          "request_timeout_s": 600,
+          "resolved_model": "openrouter/z-ai/glm-5.3-flash",
+          "temperature": 0.7,
+          "transport_base_delay_s": 1.0,
+          "transport_max_attempts": 1
+        }
+      },
+      "module": {
+        "artifact": null,
+        "config": {
+          "arm": "TRACE-RECURSIVE",
+          "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/runs/one_signal_processing_TRACE-RECURSIVE_20260926T120912.257823Z",
+          "horizon": 1,
+          "task": "signal_processing"
+        },
+        "inputs": {},
+        "ref": "exp22.module.discovery_policy@1"
+      },
+      "objective": {
+        "aggregation": {
+          "mode": "mean"
+        },
+        "evaluator_ref": "exp22.evaluator.coevolution@1",
+        "feedback_channels": [
+          "natural_language",
+          "trace"
+        ],
+        "hard_constraints": [],
+        "intent": "Maximize stock benchmark combined_score at equal solution generation budget.",
+        "metrics": {
+          "combined_score": {
+            "aggregate_examples": "mean",
+            "direction": "maximize",
+            "source": "evaluation.metrics.combined_score"
+          }
+        },
+        "selection": {
+          "mode": "scalar",
+          "score_key": "combined_score"
+        }
+      },
+      "ordering_only": false,
+      "outputs": {
+        "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/runs/one_signal_processing_TRACE-RECURSIVE_20260926T120912.257823Z/control_plane",
+        "format": "json",
+        "save_artifacts": true
+      },
+      "surface": {
+        "kind": "code",
+        "targets": [
+          "policy_source"
+        ]
+      }
+    }
+  ],
+  "llm_profiles": {
+    "main": {
+      "api_key_ref": "env:OPENROUTER_API_KEY",
+      "base_url": null,
+      "fallbacks": [],
+      "max_tokens": 32000,
+      "model": "z-ai/glm-5.3-flash",
+      "openrouter_routing": null,
+      "provider": "openrouter",
+      "request_params": {
+        "extra_body": {
+          "reasoning_effort": "low",
+          "session_id": "benchmark-PRIMS-SIGNAL-run-001"
+        }
+      },
+      "request_timeout_s": 600,
+      "resolved_model": "openrouter/z-ai/glm-5.3-flash",
+      "temperature": 0.7,
+      "transport_base_delay_s": 1.0,
+      "transport_max_attempts": 1
+    }
+  },
+  "outputs": {
+    "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/runs/one_signal_processing_TRACE-RECURSIVE_20260926T120912.257823Z/control_plane",
+    "format": "json",
+    "save_artifacts": true
+  },
+  "runtime": {
+    "memory_root": "./trace_memory",
+    "offline": false,
+    "prior_promotion": {},
+    "reproducible": true,
+    "resume": false,
+    "reuse_priors": false,
+    "run_id": null,
+    "scoring": {},
+    "seed": 42,
+    "strict_refs": true,
+    "test_mode": true,
+    "tracebench": {},
+    "trainer_kwargs": {}
+  },
+  "schema_version": "recursive-opt/v2alpha"
+}

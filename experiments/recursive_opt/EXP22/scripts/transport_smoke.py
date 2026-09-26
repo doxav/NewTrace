@@ -13,13 +13,13 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.preflight import write_json
-from src.transport import BASE_URL, MODEL, PROVIDER, SERVING_PROVIDER, SESSION
+from src.transport import BASE_URL, EXTRA_BODY, MODEL, SERVING_PROVIDER
 
 
 def payload() -> dict[str, Any]:
     """Build the tiny smoke request without credentials or an LLM seed."""
     return {
-        "model": MODEL, "provider": {"only": [PROVIDER]}, "session_id": SESSION,
+        "model": MODEL, **EXTRA_BODY,
         "messages": [{"role": "user", "content": "Reply with OK."}],
         "temperature": 0.7, "max_tokens": 32,
     }

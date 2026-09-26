@@ -1,0 +1,82 @@
+{
+  "budget": {
+    "candidates": 5,
+    "on_exceed": "fail"
+  },
+  "kind": "recursive_optimization",
+  "levels": [
+    {
+      "datasets": {
+        "train": {
+          "config": {
+            "task": "signal_processing"
+          },
+          "ref": "exp22.dataset.signal_processing@1"
+        }
+      },
+      "engine": {
+        "name": "exp22.engine.coevolution@1"
+      },
+      "id": "coevolution",
+      "llm_roles": {
+        "optimizer": "main"
+      },
+      "module": {
+        "config": {
+          "arm": "TRACE-RECURSIVE",
+          "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/runs/pilot_signal_processing_TRACE-RECURSIVE_20260926T122034.237022Z",
+          "horizon": 5,
+          "task": "signal_processing"
+        },
+        "ref": "exp22.module.discovery_policy@1"
+      },
+      "objective": {
+        "evaluator_ref": "exp22.evaluator.coevolution@1",
+        "intent": "Maximize stock benchmark combined_score at equal solution generation budget.",
+        "metrics": {
+          "combined_score": {
+            "aggregate_examples": "mean",
+            "direction": "maximize",
+            "source": "evaluation.metrics.combined_score"
+          }
+        },
+        "selection": {
+          "mode": "scalar",
+          "score_key": "combined_score"
+        }
+      },
+      "surface": {
+        "kind": "code",
+        "targets": [
+          "policy_source"
+        ]
+      }
+    }
+  ],
+  "llm_profiles": {
+    "main": {
+      "api_key_ref": "env:OPENROUTER_API_KEY",
+      "max_tokens": 32000,
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "openrouter",
+      "request_params": {
+        "extra_body": {
+          "reasoning_effort": "low",
+          "session_id": "benchmark-PRIMS-SIGNAL-run-001"
+        }
+      },
+      "request_timeout_s": 600,
+      "temperature": 0.7,
+      "transport_max_attempts": 1
+    }
+  },
+  "outputs": {
+    "directory": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/runs/pilot_signal_processing_TRACE-RECURSIVE_20260926T122034.237022Z/control_plane"
+  },
+  "runtime": {
+    "offline": false,
+    "seed": 42,
+    "test_mode": true
+  },
+  "schema_version": "recursive-opt/v2alpha"
+}

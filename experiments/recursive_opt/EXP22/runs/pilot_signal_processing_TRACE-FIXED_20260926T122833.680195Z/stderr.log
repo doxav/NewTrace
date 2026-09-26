@@ -1,0 +1,50 @@
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=4, attempt 1/2). Expected SEARCH/REPLACE blocks. Preview:
+Looking at the metrics, the key insight is that the harness aligns the filtered output with `clean_signal[delay:]` where `delay = window_size - 1`. The current zero-phase (center-evaluated) SG output corresponds to the window center, creating ~10 samples of systematic lag (lag_error 0.4468, correlation only 0.6348). Program 2's causal (endpoint-evaluated) SG achieved far better lag (0.3091) and correlation (0.8421), but its heavy reversals (175) came from insufficient post-smoothing. The best move: combine causal endpoint SG with a stronger forward-backward EMA to suppress noise-induced reversals while keeping the alignment advantage.
+
+```python
+# EVOLVE-BLOCK-START
+"""
+Real-Time Adaptive Signal Processing Algorithm for Non-Stationary Time Series
+
+This algorithm implements a sliding window approach to filter volatile, non-stationary
+time series data while minimizing noise and preserving signal dynamics.
+"""
+
+import numpy as np
+
+
+def adaptive_filter(x, window_size=20):
+    """
+    Adaptive signal processing algorithm using sliding window approach.
+
+    Args:
+        x: Input signal (1D array of real-valued samples)
+        window_size: Size of the sliding window (W samples)
+
+    Returns:
+        y: Filtered output signal with length = len(x) - window_size + 1
+    """
+    if len(x) < window_size:
+        raise ValueError(f"Input signal length ({len(x)}) must be >= window_size ({window_size})")
+
+    # Initialize output array
+    output_length = len(x) - window_size + 1
+    y = np.zeros(output_length)
+
+    # Simple moving average as baseline
+    for i in range(output_length):
+        window = x[i : i + window_size]
+
+        # Basic moving average filter
+        y[i] = np.mean(window)
+
+    return y
+
+
+def _savitzky_golay_weights(window_size, poly_order=2):
+    """Compute causal (endpoint) Savitzky-Golay weights.
+
+    Returns coefficients such that the polynomial least-squares fit over the
+    window is evaluated at the MOST RECENT sample (window endpoint). This makes
+    
+... (truncated) ...

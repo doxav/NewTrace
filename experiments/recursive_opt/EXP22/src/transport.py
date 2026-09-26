@@ -14,8 +14,10 @@ SESSION = "benchmark-PRIMS-SIGNAL-run-001"
 BASE_URL = "https://openrouter.ai/api/v1"
 PROVIDER = "novita"
 SERVING_PROVIDER = "Novita"
-EXTRA_BODY = {"provider": {"only": [PROVIDER]}, "session_id": SESSION}
+REASONING_EFFORT = "low"
+EXTRA_BODY = {"provider": {"only": [PROVIDER]}, "session_id": SESSION, "reasoning_effort": REASONING_EFFORT}
 HTTP_ROLES: dict[int, str] = {}
+HTTP_RECORDS: list[dict[str, Any]] = []
 
 
 class SkyOpenRouter(OpenAILLM):
@@ -45,6 +47,7 @@ class TraceOpenRouter:
             raise ValueError("EXP22 requires the exact GLM OpenRouter identity")
         self.role = role
         self.client = openai.OpenAI(api_key=os.environ['OPENROUTER_API_KEY'], base_url=BASE_URL, timeout=600, max_retries=0)
+        HTTP_ROLES[id(self.client._client)] = 'meta' if role == 'optimizer' else role
 
     def __call__(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         """Send the guarded role request with the fixed upstream routing."""

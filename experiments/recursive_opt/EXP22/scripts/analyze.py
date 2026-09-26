@@ -50,6 +50,7 @@ def analyze() -> dict[str, Any]:
     """Summarize only the current routing series without pooling historical runs."""
     transport = json.loads((ROOT/'artifacts/openrouter_transport_validation.json').read_text())
     routing = transport['direct']['outbound_body']['provider']
+    reasoning_effort = transport['direct']['outbound_body'].get('reasoning_effort')
     if routing == {'only': ['DeepInfra']}:
         return analyze_deepinfra()
     records = [transport['direct']] + [row for client in ('skydiscover', 'trace_cp_a', 'trace_cp_b') for row in transport.get(client, {}).get('requests', [])]
@@ -57,6 +58,8 @@ def analyze() -> dict[str, Any]:
     for directory in sorted((ROOT/'runs').glob('*')):
         config_path = directory/'openrouter_config_sanitized.json'
         if not config_path.exists() or json.loads(config_path.read_text())['provider'] != routing:
+            continue
+        if json.loads(config_path.read_text()).get('reasoning_effort') != reasoning_effort:
             continue
         if not (directory/'final_result.json').exists():
             raise ValueError('Cannot seal analysis while a matching run is unfinished')
@@ -74,7 +77,7 @@ def analyze() -> dict[str, Any]:
     status = 'STOPPED_PROVIDER' if empty_generation or any(not row['http_passed'] for row in failed) or not transport.get('passed', True) else 'STOPPED_PRECHECK' if failed else 'PARTIAL'
     gates = json.loads((ROOT/'artifacts/gates.json').read_text())
     report = {
-        'status': status, 'provider': routing, 'primary_control_plane': transport['trace'],
+        'status': status, 'provider': routing, 'reasoning_effort': reasoning_effort, 'primary_control_plane': transport['trace'],
         'completion_requests': len(records), 'successful_http_responses': sum(row['http_status'] == 200 for row in records),
         'reported_tokens': sum((row.get('usage') or {}).get('total_tokens', 0) for row in records),
         'reported_cost_usd': sum((row.get('usage') or {}).get('cost', 0) or 0 for row in records),

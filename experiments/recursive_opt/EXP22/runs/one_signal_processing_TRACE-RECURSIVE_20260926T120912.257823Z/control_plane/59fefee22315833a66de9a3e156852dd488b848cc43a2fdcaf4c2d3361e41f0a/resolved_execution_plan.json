@@ -1,0 +1,138 @@
+{
+  "code_provenance": {
+    "entries": {
+      "codecs": [
+        {
+          "implementation_sha256": "10ddc7eb77b925aecd6c4d040cd6e1d3abde29f6772d2bf56c9e8733c8f4ea39",
+          "package_version": "0.2.0",
+          "python_module": "opto.features.recursive_opt.spec",
+          "qualified_name": "_artifact_to_prior",
+          "ref": "recursive_opt.codec.artifact_to_prior@1",
+          "source_file": "opto/features/recursive_opt/spec.py",
+          "source_sha256": "59add791eca2fe6ff2521a6ab8a347992d57b6bbf55584bf3e5626d5506d6e5c"
+        }
+      ],
+      "datasets": [
+        {
+          "implementation_sha256": "66f1b9f61e4be193cd2adfd0e4e8ad49e70065a590d80a01648817cafb9c5033",
+          "package_version": null,
+          "python_module": "src.control_plane",
+          "qualified_name": "dataset",
+          "ref": "exp22.dataset.signal_processing@1",
+          "source_file": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/src/control_plane.py",
+          "source_sha256": "7c2d6a29c75656598e5b4336bcb9a5ddd81e6a95d56625e4d01fa5a245d165ca"
+        }
+      ],
+      "engines": [
+        {
+          "implementation_sha256": "4d2044adbb7967a8ee756637d1ef2ed6e7c12bcb5baee39f800ef4651848433a",
+          "package_version": null,
+          "python_module": "src.control_plane",
+          "qualified_name": "execute",
+          "ref": "exp22.engine.coevolution@1",
+          "source_file": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/src/control_plane.py",
+          "source_sha256": "1cf599066c4b1f1558d42bff2b674609c93e7c591bf8d14b70f626482a398079"
+        }
+      ],
+      "evaluators": [
+        {
+          "implementation_sha256": "80f8371697d44c5a58a9dea0353ee65d64a485c8bec05e4858f7c15b323fb4b5",
+          "package_version": null,
+          "python_module": "src.control_plane",
+          "qualified_name": "evaluate",
+          "ref": "exp22.evaluator.coevolution@1",
+          "source_file": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/src/control_plane.py",
+          "source_sha256": "0cbb3f793390a222f03915d2fb334bfac84292b490dfcc5d0789e1497ed7c5ab"
+        }
+      ],
+      "modules": [
+        {
+          "implementation_sha256": "1e0b61c29f892d42fe100094f5604e5ee63a72e4589ccf59648aec03bf8886e3",
+          "package_version": null,
+          "python_module": "src.control_plane",
+          "qualified_name": "build",
+          "ref": "exp22.module.discovery_policy@1",
+          "source_file": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/src/control_plane.py",
+          "source_sha256": "2d9ff0349b7cb9e8ba9f69256e2ef234dfbbace895d62e011ed6c1f4fe6929df"
+        }
+      ]
+    },
+    "git_commit": "97bb24e118675117851aeec15849add636eacb35",
+    "git_dirty": true,
+    "registry_sha256": "dff4f8d7dc74f3b3c387348db3ea1abf78a3ba0aa198ceefd134d880b31f8934",
+    "runtime_tree_sha256": "02a15ed115380e058bacd9b21f225d3cd27e61423b6b7ed8a1bbfdfab1a8f43f"
+  },
+  "engines": [
+    "exp22.engine.coevolution@1"
+  ],
+  "execution_units": 1,
+  "fingerprint": "59fefee22315833a66de9a3e156852dd488b848cc43a2fdcaf4c2d3361e41f0a",
+  "level_ids": [
+    "coevolution"
+  ],
+  "module_refs": [
+    "exp22.module.discovery_policy@1"
+  ],
+  "test_overrides": {
+    "llm_factory": "src.transport.TraceOpenRouter"
+  },
+  "unit_ids": [
+    "default:seed-42:matrix-0"
+  ],
+  "units": [
+    {
+      "levels": [
+        {
+          "dataset_refs": {
+            "holdout": {
+              "inline_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "train": {
+              "config": {
+                "task": "signal_processing"
+              },
+              "ref": "exp22.dataset.signal_processing@1"
+            },
+            "validation": {
+              "inline_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            }
+          },
+          "engine": "exp22.engine.coevolution@1",
+          "evaluator_ref": "exp22.evaluator.coevolution@1",
+          "fingerprint": "da7aebfccd0f0659f09b51c10deea6487dadc8e2788daaa15c637bd9d28033d3",
+          "id": "coevolution",
+          "llm_roles": {
+            "feedback": null,
+            "forward": null,
+            "judge": null,
+            "optimizer": {
+              "api_key_ref": "env:OPENROUTER_API_KEY",
+              "base_url": null,
+              "fallbacks": [],
+              "max_tokens": 32000,
+              "model": "z-ai/glm-5.3-flash",
+              "openrouter_routing": null,
+              "profile": "main",
+              "provider": "openrouter",
+              "request_params": {
+                "extra_body": {
+                  "reasoning_effort": "low",
+                  "session_id": "benchmark-PRIMS-SIGNAL-run-001"
+                }
+              },
+              "request_timeout_s": 600,
+              "resolved_model": "openrouter/z-ai/glm-5.3-flash",
+              "temperature": 0.7,
+              "transport_base_delay_s": 1.0,
+              "transport_max_attempts": 1
+            }
+          },
+          "module_ref": "exp22.module.discovery_policy@1"
+        }
+      ],
+      "matrix": {},
+      "seed": 42,
+      "unit_id": "default:seed-42:matrix-0"
+    }
+  ]
+}

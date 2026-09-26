@@ -10,8 +10,9 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.evaluator_preflight import equivalent, stable
-from scripts.transport_smoke import MODEL, SESSION, payload, request_json
+from scripts.transport_smoke import MODEL, payload, request_json
 from src.evaluation import TraceEvaluatorAdapter, stock_evaluator
+from src.transport import SESSION
 
 
 class EvaluationTests(unittest.TestCase):
@@ -59,6 +60,7 @@ class TransportTests(unittest.TestCase):
             self.assertEqual(body["model"], MODEL)
             self.assertEqual(body["provider"], {"only": ["novita"]})
             self.assertEqual(body["session_id"], SESSION)
+            self.assertEqual(body["reasoning_effort"], "low")
             self.assertNotIn("seed", body)
             self.assertNotIn("fixture-credential", request.data.decode())
             self.assertEqual(request.full_url, "https://openrouter.ai/api/v1/chat/completions")

@@ -1,0 +1,60 @@
+{
+  "activated": true,
+  "active_policy_hash": "ae73a680c3883ec634bf1040f685ff8a550c44edfdc2bd2189e3253e13d50e6d",
+  "initial_policy_hash": "14c81186333820bfb74c423dd63d8d2c4c37bd6d6006e789689f3fc9782c86b3",
+  "initial_population": {
+    "id": "initial-fixture",
+    "metrics": {
+      "combined_score": 21.0
+    },
+    "solution": "def fixture(): return 1\n"
+  },
+  "observation": {
+    "active_policy_hash": "14c81186333820bfb74c423dd63d8d2c4c37bd6d6006e789689f3fc9782c86b3",
+    "history": [
+      21.0,
+      22.0
+    ],
+    "window_metrics": {
+      "combined_score": 0.125,
+      "search_window_end_score": 22.0,
+      "search_window_start_score": 21.0
+    }
+  },
+  "population_after": {
+    "id": "initial-fixture",
+    "metrics": {
+      "combined_score": 21.0
+    },
+    "solution": "def fixture(): return 1\n"
+  },
+  "requests": [
+    {
+      "max_tokens": 32000,
+      "messages": [
+        {
+          "content": "You're tasked to solve a coding/algorithm problem. You will see the instruction, the code, the documentation of each function used in the code, and the feedback about the execution result.\n\nSpecifically, a problem will be composed of the following parts:\n- #Instruction: the instruction which describes the things you need to do or the question you should answer.\n- #Code: the code defined in the problem.\n- #Documentation: the documentation of each function used in #Code. The explanation might be incomplete and just contain high-level description. You can use the values in #Others to help infer how those functions work.\n- #Variables: the input variables that you can change/tweak (trainable).\n- #Inputs: the values of fixed inputs to the code, which CANNOT be changed (fixed).\n- #Others: the intermediate values created through the code execution.\n- #Outputs: the result of the code output.\n- #Feedback: the feedback about the code's execution result.\n\nIn `#Variables`, `#Inputs`, `#Outputs`, and `#Others`, the format is:\n\nFor variables we express as this:\n\n<variable name=\"variable_name\" type=\"data_type\">\n<value>\nvalue\n</value>\n<constraint>\nconstraint_expression\n</constraint>\n</variable>\n\n\nIf `data_type` is `code`, it means `value` is the source code of a python code, which may include docstring and definitions.\nOutput_format: Your output should be in the following XML/HTML format:\n\n```\n\n<reasoning>\nreasoning\n</reasoning>\n<variable>\n<name>variable_name</name>\n<value>\nvalue\n</value>\n</variable>\n\n```\n\nIn <reasoning>, explain the problem: 1. what the #Instruction means 2. what the #Feedback on #Outputs means to #Variables considering how #Variables are used in #Code and other values in #Documentation, #Inputs, #Others. 3. Reasoning about the suggested changes in #Variables (if needed) and the expected result.\n\nIf you need to suggest a change in the values of #Variables, write down the suggested values in <variable>. Remember you can change only the values in #Variables, not others. When `type` of a variable is `code`, you should write the new definition in the format of python code without syntax errors, and you should not change the function name or the function signature.\n\nIf no changes are needed, just output TERMINATE.\n",
+          "role": "system"
+        },
+        {
+          "content": "\nNow you see problem instance:\n\n================================\n\n# Instruction\nImprove downstream solution search by rewriting the complete EvolvedProgramDatabase Python source. Preserve all interfaces and solution metrics. Use the measured window feedback; return exactly one policy proposal.\n\n# Code\nmeasured_window0 = measured_window(policy_source=policy_source0, observation=observation0)\n\n# Documentation\n[measured_window] Associate measured downstream feedback with its actual deployed policy.\n\n# Variables\n<variable name=\"policy_source0\" type=\"str\">\n<value>\n# EVOLVE-BLOCK-START\nimport logging\nfrom dataclasses import dataclass\nfrom typing import Dict, List, Optional, Tuple\n\nfrom skydiscover.optimize.config import DatabaseConfig\nfrom skydiscover.optimize.search.base_database import Program, ProgramDatabase\n\nlogger = logging.getLogger(__name__)\n\n\n@dataclass\nclass EvolvedProgram(Program):\n    \"\"\"Program for the evolved database.\"\"\"\n\n\nclass EvolvedProgramDatabase(ProgramDatabase):\n    \"\"\"Initial search strategy database.\n\n    When ``config.pareto_objectives`` is set, sampling prefers members of the\n    global Pareto front (issue #42) while still mixing in non-front programs\n    for exploration. Scalar mode keeps the original uniform random sample.\n    \"\"\"\n\n    def __init__(self, name: str, config: DatabaseConfig):\n        super().__init__(name, config)\n        self.initial_program = None\n\n    def add(self, program: EvolvedProgram, iteration: Optional[int] = None, **kwargs) -> str:\n        \"\"\"Add a program to the database.\"\"\"\n        if iteration == 0 or program.iteration_found == 0:\n            self.initial_program = program\n\n        self.programs[program.id] = program\n\n        if iteration is not None:\n            self.last_iteration = max(self.last_iteration, iteration)\n\n        if self.config.db_path:\n            self._save_program(program)\n\n        self._update_best_program(program)\n\n        logger.debug(f\"Added program {program.id} to the evolve database\")\n        return program.id\n\n    def sample(\n        self, num_context_programs: Optional[int] = 4, **kwargs\n    ) -> Tuple[Dict[str, EvolvedProgram], Dict[str, List[EvolvedProgram]]]:\n        \"\"\"\n        Picks a parent and set of context programs.\n\n        Multiobjective: parent is drawn from the Pareto front when available;\n        context mixes front members with the broader population.\n        \"\"\"\n        candidates = list(self.programs.values())\n\n        if len(candidates) == 0:\n            raise ValueError(\"No candidates available for sampling\")\n\n        front: List[EvolvedProgram] = []\n        if self.is_multiobjective_enabled():\n            front = [p for p in self.get_pareto_front() if p.id in self.programs]\n\n        if front:\n            parent = self.rng.choice(front)\n            # Prefer other front members for context, then fill from population.\n            pool = [p for p in front if p.id != parent.id]\n            if len(pool) < (num_context_programs or 0):\n                extras = [p for p in candidates if p.id != parent.id and p not in pool]\n                self.rng.shuffle(extras)\n                pool.extend(extras)\n            examples = pool[:num_context_programs]\n            if len(examples) < (num_context_programs or 0):\n                # Extremely small front \u2014 allow duplicates avoidance only.\n                examples = [p for p in candidates if p.id != parent.id][:num_context_programs]\n        else:\n            parent = self.rng.choice(candidates)\n            sample_size = min((num_context_programs or 0) + 1, len(candidates))\n            examples = self.rng.sample(candidates, sample_size)\n            examples = [p for p in examples if p.id != parent.id][:num_context_programs]\n\n        parent_dict = {\"\": parent}\n        context_programs_dict = {\"\": examples}\n\n        return parent_dict, context_programs_dict\n\n\n# EVOLVE-BLOCK-END\n\n</value>\n<constraint>\nComplete executable Python EvolvedProgramDatabase source; preserve the ProgramDatabase contract.\n</constraint>\n</variable>\n\n\n# Inputs\n<node name=\"observation0\" type=\"dict\">\n<value>\n{'active_policy_hash': '14c81186333820bfb74c423dd63d8d2c4c37bd6d6006e789689f3fc9782c86b3', 'window_metrics': {'combined_score': 0.125, 'search_window_start_score': 21.0, 'search_window_end_score': 22.0}, 'history': [21.0, 22.0]}\n</value>\n</node>\n\n\n# Others\n\n\n# Outputs\n<node name=\"measured_window0\" type=\"dict\">\n<value>\n{'active_policy_hash': '14c81186333820bfb74c423dd63d8d2c4c37bd6d6006e789689f3fc9782c86b3', 'window_metrics': {'combined_score': 0.125, 'search_window_start_score': 21.0, 'search_window_end_score': 22.0}, 'history': [21.0, 22.0]}\n</value>\n</node>\n\n\n# Feedback\n{\"active_policy_hash\": \"14c81186333820bfb74c423dd63d8d2c4c37bd6d6006e789689f3fc9782c86b3\", \"window_metrics\": {\"combined_score\": 0.125, \"search_window_start_score\": 21.0, \"search_window_end_score\": 22.0}, \"history\": [21.0, 22.0]}\n\n================================\n\n\nWhat are your suggestions on variables policy_source0?\n\nYour response:\n",
+          "role": "user"
+        }
+      ],
+      "model": "z-ai/glm-5.3-flash",
+      "provider": {
+        "only": [
+          "novita"
+        ]
+      },
+      "session_id": "benchmark-PRIMS-SIGNAL-run-001",
+      "temperature": 0.7
+    }
+  ],
+  "source_path": "/home/xav/code/Trace-experiment0/experiments/recursive_opt/EXP22/worktrees/trace_cp_b/opto/features/recursive_opt/spec.py",
+  "validation": {
+    "combined_score": 0.0,
+    "validity": 1
+  },
+  "variant": "CP-B"
+}

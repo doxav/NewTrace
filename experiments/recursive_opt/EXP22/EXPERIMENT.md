@@ -1,6 +1,6 @@
 # EXP22 protocol v1 — 2026-09-26
 
-Current status: Novita continuation under amendment v5; see RESULTS.md for observed gates.
+Current status: all low-effort S0–S5 gates passed under amendment v6; see RESULTS.md for execution status.
 The initial S0 source stop is historical; no full benchmark has begun. This document does not certify an implemented benchmark.
 All experiment files belong under this directory. Source repositories remain unchanged.
 
@@ -325,3 +325,116 @@ tokens. Stop as STOPPED_PROVIDER (generation failure; all HTTP routes passed),
 with S4/S5 false. No further paid optimizer run is enabled. RESULTS.md and the
 current provider-filtered analyzer retain every attempt and all returned costs.
 The strict and advanced phases remain unrun; no quality conclusion is supported.
+
+## Reasoning amendment v6 — 2026-09-26, before low-effort paid calls
+
+The user requested testing the failing PRISM cases with reasoning effort `low`
+and continuing if this resolves generation. Add the exact OpenRouter parameter
+`reasoning_effort="low"` to every active client, including guide/meta calls.
+No other request parameter changes: Novita only, same model/session, 0.7
+temperature, 32000 generation tokens and 600-second timeout. OpenRouter documents
+this field at https://openrouter.ai/docs/api_reference/parameters#reasoning-effort.
+The endpoint catalog already advertises support; outgoing HTTP bodies are checked.
+Acceptance of a field is not proof that the provider honors it; judge the observed
+completion/finish reason and stock candidate evaluation.
+
+Archive previous Novita/default-effort report and mutable evidence under
+artifacts/novita_default_reasoning; retain original runs untouched. Revalidate
+active S2 clients, compile S3 specs and verify mocked CP equivalence. Keep CP-A
+primary (non-portable) because CP-B's token-escalation behavior is unchanged; do
+not spend more live calls rechecking the excluded variant. Then run two sequential
+PRISM/SD-EVOX one-generation diagnostics with low effort. If both produce changed,
+valid stock-evaluated candidates, continue the remaining S4/S5 checks and eligible
+strict work with low effort consistently across all arms. If generation stays
+empty or invalid, preserve both attempts and stop before full execution.
+Analyze low-effort runs separately from default-effort or DeepInfra history.
+
+### S4 stochastic diff-format retry clarification — before retry
+
+Both requested low-effort PRISM repetitions and Trace/PRISM passed. Signal/SD
+passed, but Signal/Trace returned a nonempty diff whose SEARCH blocks did not
+match its stock parent. This is ordinary candidate-format failure, not evaluator
+or transport divergence. Stock generation permits up to three attempts; S4
+intentionally caps each isolated run at one. Allow at most three such isolated
+one-attempt smokes per task/framework for diff-format failures, preserving all
+failures and costs. Stop if no valid candidate is obtained within that bound.
+This gate establishes executable plumbing only; smoke scores are not comparative
+quality estimates, and all later pilots/strict runs still start from stock source.
+
+### Population audit correction before Trace pilot
+
+The existing population-preservation check raised on lost/mutated programs, but
+stock EvoX catches meta-evolution exceptions and continues. Make that same audit
+also set the experiment failure and shutdown flags. This implements the existing
+mandatory stop rule without changing successful policy proposal/migration behavior.
+The regression fixture simulates a missing retained program and requires shutdown.
+
+### Full-run audit completion — before any strict run
+
+Before strict execution, lock the runtime Python files in
+artifacts/strict_source_hashes.json and reject source drift at each strict launch.
+Every actual HTTP attempt, including transport exceptions, is counted and timed;
+Trace optimizer requests are labeled meta. Retain unknown usage as missing, never
+as known zero cost. Per-attempt curves include cumulative call/token/cost counts,
+valid/invalid counts, current fitness, population size and policy hashes. A retry
+curve point includes only HTTP calls through that solution attempt, not later
+retries already completed by stock generation. Snapshot structural checkpoints at
+10/30/60/100; persist the kernel result even when canonical Trace execution fails.
+
+Reject a mismatch between solution HTTP calls and consumed attempts before the
+next generation. Transport/identity failures, non-finite fitness, population loss
+and disconnected feedback set shutdown/failure flags; the inherited meta fallback
+cannot hide them. TRACE-RECURSIVE additionally stops after ten consecutive invalid
+solution attempts, or at checkpoint 30 if meta proposals have failed and none has
+been deployed. Flat valid scores alone do not stop execution. This checkpoint
+interpretation makes the existing all-rejected-policy condition concrete before
+full execution. The earlier pilot files remain immutable and may lack these added
+audit fields; they are not used as strict quality results.
+
+### Strict execution preregistration completion — before the first full run
+
+All eight five-generation pilots passed, with live Trace policies deployed on
+PRISM and populations preserved. The pilot data remain diagnostic; every strict
+arm starts fresh from stock source. The SD path now uses the same canonical
+Python/NumPy RNG scope (`_seed_scope(42)`) that Trace already uses. Database/pool
+RNGs remain seeded 42. No LLM request seed is added. This closes the global-RNG
+asymmetry before any confirmatory run; pilot scores are not treated as effects.
+
+Persist each meta proposal (including rejected source), its stock validation and
+every scored search window. Valid proposal count and validation-failure rate use
+these proposal records; parser/transport failures are labeled separately. Preserve
+the final stock-scored window too. Expose any missing billing metadata separately.
+
+Quality AUC is the discrete sum of the best score after attempts 1 through 100;
+normalized AUC is that sum divided by 100. First-improvement/best iteration uses
+1e-12 tolerance, with iteration 0 denoting the unchanged initial best. Absolute
+gain is final minus initial; relative gain divides by the nonzero initial score.
+Window gain is stock window end minus start; improving-window fraction uses the
+same tolerance. Never use execution time as a quality metric. Report PRISM
+success_rate beside inverse-pressure score: its native objective can reward a
+program that fails some cases, so combined score alone does not imply uniformly
+better valid placements. Signal native component metrics remain visible.
+
+Commands below assume the EXP22 credential is already loaded securely in the
+environment. Single strict arms use the same runner as the pilots. Full runs must
+pass all gate files and the exact runtime source lock before any paid call.
+
+```bash
+# PRISM only, in preregistered order; stop on a failed run.
+for arm in SD-EVOX TRACE-RECURSIVE TRACE-FIXED SD-FIXED; do
+  experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/run_stage.py --stage strict --task prism --arm "$arm" || break
+done
+# Signal only; execute after the PRISM suite succeeds.
+for arm in TRACE-RECURSIVE SD-EVOX SD-FIXED TRACE-FIXED; do
+  experiments/recursive_opt/EXP22/.venv/bin/python -I experiments/recursive_opt/EXP22/scripts/run_stage.py --stage strict --task signal_processing --arm "$arm" || break
+done
+# Analysis only (no network).
+python3 experiments/recursive_opt/EXP22/scripts/analyze.py
+```
+
+The all-strict execution is these two ordered task suites, aborting before Signal
+if any PRISM arm fails. Full artifacts/checkpoints provide the reviewable result;
+advanced eligibility is assessed only after both suites complete without an
+unresolved provider/evaluator/control-plane confound. No advanced phase is
+authorized by the pilots alone. Plotting uses the already-installed system
+Matplotlib interpreter, separate from the unchanged benchmark environment.

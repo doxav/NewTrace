@@ -1,0 +1,50 @@
+WARNING:skydiscover.optimize.evaluation.evaluator:cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+WARNING:skydiscover.optimize.search.default_discovery_controller:No valid diffs found in LLM response (iteration=4, attempt 1/2). Expected SEARCH/REPLACE blocks. Preview:
+Looking at the metrics, the 0.9 success rate suggests ~10% of test cases fail — likely because all greedy orderings fail to fit models, raising ValueError. A fallback that still returns a placement (even if imperfect) would recover those cases. I'll also add a "most free memory" tie-breaking fallback.
+
+```python
+GPU_MEM_SIZE = 80  # GB
+
+# EVOLVE-BLOCK-START
+
+
+def _greedy(order, gpu_num, models):
+    """Greedy pass: assign each model (in given order) to the GPU that
+    minimizes the resulting KVPR after placement, subject to memory fit."""
+    placement = {g: [] for g in range(gpu_num)}
+    mem = [GPU_MEM_SIZE] * gpu_num
+    load = [0.0] * gpu_num
+    for m in order:
+        best, best_kvpr = None, float("inf")
+        for g in range(gpu_num):
+            if m.model_size <= mem[g]:
+                kvpr = (load[g] + m.req_rate / m.slo) / (mem[g] - m.model_size)
+                if kvpr < best_kvpr:
+                    best_kvpr, best = kvpr, g
+        if best is None:
+            return None
+        placement[best].append(m)
+        load[best] += m.req_rate / m.slo
+        mem[best] -= m.model_size
+    max_kvpr = max(load[g] / (GPU_MEM_SIZE - sum(x.model_size for x in placement[g]))
+                   for g in range(gpu_num))
+    return max_kvpr, placement
+
+
+def _greedy_fallback(order, gpu_num, models):
+    """Greedy pass that never fails: place each model on the GPU with the
+    most free memory (best-fit by KVPR when it fits), ensuring a valid
+    placement even when memory is tight."""
+    placement = {g: [] for g in range(gpu_num)}
+    mem = [GPU_MEM_SIZE] * gpu_num
+    load = [0.0] * gpu_num
+    for m in order:
+        fit = [g for g in range(gpu_num) if m.model_size <= mem[g]]
+        if fit:
+            best = min(fit, key=lambda g: (load[g] + m.req_rate / m.slo) / (mem[g] - m.model_size))
+        else:
+            best = max(range(gpu_num), key=lambda g: mem[g])
+        placement[best].append(m)
+        load[best] += m.req_rate / m.slo
+        mem[best] -= m.m
+... (truncated) ...

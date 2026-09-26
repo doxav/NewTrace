@@ -1,9 +1,7 @@
 {
   "attempts": [
     {
-      "candidate_errors": [
-        "LLM returned None response"
-      ],
+      "candidate_errors": [],
       "config": {
         "arm": "SD-EVOX",
         "concurrency": 1,
@@ -12,90 +10,586 @@
         "stage": "one",
         "task": "prism"
       },
-      "directory": "one_prism_SD-EVOX_20260926T110457.652084Z",
+      "directory": "one_prism_SD-EVOX_20260926T120700.651214Z",
       "http_passed": true,
       "result": {
         "arm": "SD-EVOX",
-        "final_best_score": 21.891622105209393,
+        "final_best_score": 22.94035956034893,
         "final_metrics": {
-          "combined_score": 21.891622105209393,
-          "execution_time": 9.840011596679688e-05,
-          "max_kvpr": 20.891622105209393,
-          "success_rate": 1.0
+          "combined_score": 22.94035956034893,
+          "execution_time": 0.000168725848197937,
+          "max_kvpr": 21.98035956034893,
+          "success_rate": 0.96
         },
         "gate_failure": null,
         "horizon": 1,
         "initial_score": 21.891622105209393,
-        "invalid_attempts": 1,
+        "invalid_attempts": 0,
         "iterations_observed": 1,
-        "passed": false,
+        "passed": true,
         "policy_switches": 0,
         "task": "prism",
-        "valid_candidates": 0,
-        "wall_time": 337.9384556209843
+        "valid_candidates": 1,
+        "wall_time": 22.282193991995882
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "SD-EVOX",
+        "concurrency": 1,
+        "horizon": 1,
+        "seed": 42,
+        "stage": "one",
+        "task": "prism"
+      },
+      "directory": "one_prism_SD-EVOX_20260926T120725.007647Z",
+      "http_passed": true,
+      "result": {
+        "arm": "SD-EVOX",
+        "final_best_score": 23.40197669940928,
+        "final_metrics": {
+          "combined_score": 23.40197669940928,
+          "execution_time": 0.00018916959347932234,
+          "max_kvpr": 22.481976699409277,
+          "success_rate": 0.92
+        },
+        "gate_failure": null,
+        "horizon": 1,
+        "initial_score": 21.891622105209393,
+        "invalid_attempts": 0,
+        "iterations_observed": 1,
+        "passed": true,
+        "policy_switches": 0,
+        "task": "prism",
+        "valid_candidates": 1,
+        "wall_time": 20.028852144023404
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "TRACE-RECURSIVE",
+        "concurrency": 1,
+        "horizon": 1,
+        "seed": 42,
+        "stage": "one",
+        "task": "prism"
+      },
+      "directory": "one_prism_TRACE-RECURSIVE_20260926T120815.057620Z",
+      "http_passed": true,
+      "result": {
+        "arm": "TRACE-RECURSIVE",
+        "final_best_score": 22.74381561430314,
+        "final_metrics": {
+          "combined_score": 22.74381561430314,
+          "execution_time": 0.00019962372987166694,
+          "max_kvpr": 21.82381561430314,
+          "success_rate": 0.92
+        },
+        "gate_failure": null,
+        "horizon": 1,
+        "initial_score": 21.891622105209393,
+        "invalid_attempts": 0,
+        "iterations_observed": 1,
+        "passed": true,
+        "policy_switches": 0,
+        "task": "prism",
+        "valid_candidates": 1,
+        "wall_time": 18.594613305991516
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "SD-EVOX",
+        "concurrency": 1,
+        "horizon": 1,
+        "seed": 42,
+        "stage": "one",
+        "task": "signal_processing"
+      },
+      "directory": "one_signal_processing_SD-EVOX_20260926T120836.564868Z",
+      "http_passed": true,
+      "result": {
+        "arm": "SD-EVOX",
+        "final_best_score": 0.49904861783269006,
+        "final_metrics": {
+          "accuracy_score": 0.8420816095203836,
+          "avg_error": 0.4664988183834896,
+          "combined_score": 0.49904861783269006,
+          "composite_score": 0.4518100150842093,
+          "correlation": 0.8420816095203836,
+          "efficiency_score": 1.0,
+          "execution_time": 0.0030466556549072266,
+          "false_reversals": 175.4,
+          "lag_error": 0.3090769071827435,
+          "noise_reduction": 0.3347443615622788,
+          "output_length": 91.0,
+          "overall_score": 0.49904861783269006,
+          "responsiveness_score": 0.7638970594570291,
+          "runs_successfully": 1.0,
+          "slope_changes": 223.4,
+          "smoothness_score": 0.08216926869350863,
+          "success_rate": 1.0
+        },
+        "gate_failure": null,
+        "horizon": 1,
+        "initial_score": 0.49904861783269006,
+        "invalid_attempts": 0,
+        "iterations_observed": 1,
+        "passed": true,
+        "policy_switches": 0,
+        "task": "signal_processing",
+        "valid_candidates": 1,
+        "wall_time": 32.67596082901582
       }
     },
     {
       "candidate_errors": [
-        "LLM returned None response"
+        "Diff SEARCH blocks did not match parent solution - no changes applied (after 1 attempts)"
       ],
       "config": {
-        "arm": "SD-EVOX",
+        "arm": "TRACE-RECURSIVE",
         "concurrency": 1,
         "horizon": 1,
         "seed": 42,
         "stage": "one",
-        "task": "prism"
+        "task": "signal_processing"
       },
-      "directory": "one_prism_SD-EVOX_20260926T111148.483699Z",
+      "directory": "one_signal_processing_TRACE-RECURSIVE_20260926T120912.257823Z",
       "http_passed": true,
       "result": {
-        "arm": "SD-EVOX",
-        "final_best_score": 21.891622105209393,
+        "arm": "TRACE-RECURSIVE",
+        "final_best_score": 0.49904861783269006,
         "final_metrics": {
-          "combined_score": 21.891622105209393,
-          "execution_time": 9.475231170654297e-05,
-          "max_kvpr": 20.891622105209393,
+          "accuracy_score": 0.8420816095203836,
+          "avg_error": 0.4664988183834896,
+          "combined_score": 0.49904861783269006,
+          "composite_score": 0.4518100150842093,
+          "correlation": 0.8420816095203836,
+          "efficiency_score": 1.0,
+          "execution_time": 0.0029365062713623048,
+          "false_reversals": 175.4,
+          "lag_error": 0.3090769071827435,
+          "noise_reduction": 0.3347443615622788,
+          "output_length": 91.0,
+          "overall_score": 0.49904861783269006,
+          "responsiveness_score": 0.7638970594570291,
+          "runs_successfully": 1.0,
+          "slope_changes": 223.4,
+          "smoothness_score": 0.08216926869350863,
           "success_rate": 1.0
         },
         "gate_failure": null,
         "horizon": 1,
-        "initial_score": 21.891622105209393,
+        "initial_score": 0.49904861783269006,
         "invalid_attempts": 1,
         "iterations_observed": 1,
         "passed": false,
         "policy_switches": 0,
-        "task": "prism",
+        "task": "signal_processing",
         "valid_candidates": 0,
-        "wall_time": 343.16879276998225
+        "wall_time": 15.831301198981237
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "TRACE-RECURSIVE",
+        "concurrency": 1,
+        "horizon": 1,
+        "seed": 42,
+        "stage": "one",
+        "task": "signal_processing"
+      },
+      "directory": "one_signal_processing_TRACE-RECURSIVE_20260926T121010.705116Z",
+      "http_passed": true,
+      "result": {
+        "arm": "TRACE-RECURSIVE",
+        "final_best_score": 0.5111750983492337,
+        "final_metrics": {
+          "accuracy_score": 0.9158396228978605,
+          "avg_error": 0.30220095641384964,
+          "combined_score": 0.5111750983492337,
+          "composite_score": 0.4337102638909884,
+          "correlation": 0.9158396228978605,
+          "efficiency_score": 1.0,
+          "execution_time": 0.000446319580078125,
+          "false_reversals": 213.6,
+          "lag_error": 0.2340375270224102,
+          "noise_reduction": 0.4077736374591222,
+          "output_length": 91.0,
+          "overall_score": 0.5111750983492337,
+          "responsiveness_score": 0.8103481280775021,
+          "runs_successfully": 1.0,
+          "slope_changes": 271.0,
+          "smoothness_score": 0.06872852233676975,
+          "success_rate": 1.0
+        },
+        "gate_failure": null,
+        "horizon": 1,
+        "initial_score": 0.49904861783269006,
+        "invalid_attempts": 0,
+        "iterations_observed": 1,
+        "passed": true,
+        "policy_switches": 0,
+        "task": "signal_processing",
+        "valid_candidates": 1,
+        "wall_time": 21.958009541995125
+      }
+    },
+    {
+      "candidate_errors": [
+        "No valid diffs found in response (after 2 attempts)"
+      ],
+      "config": {
+        "arm": "SD-EVOX",
+        "concurrency": 1,
+        "horizon": 5,
+        "seed": 42,
+        "stage": "pilot",
+        "task": "prism"
+      },
+      "directory": "pilot_prism_SD-EVOX_20260926T121118.853733Z",
+      "http_passed": true,
+      "result": {
+        "arm": "SD-EVOX",
+        "final_best_score": 24.46738723935556,
+        "final_metrics": {
+          "combined_score": 24.46738723935556,
+          "execution_time": 0.0003013333608937818,
+          "max_kvpr": 23.60738723935556,
+          "success_rate": 0.86
+        },
+        "gate_failure": null,
+        "horizon": 5,
+        "initial_score": 21.891622105209393,
+        "invalid_attempts": 3,
+        "iterations_observed": 5,
+        "passed": true,
+        "policy_switches": 1,
+        "task": "prism",
+        "valid_candidates": 2,
+        "wall_time": 114.92558672299492
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "SD-FIXED",
+        "concurrency": 1,
+        "horizon": 5,
+        "seed": 42,
+        "stage": "pilot",
+        "task": "prism"
+      },
+      "directory": "pilot_prism_SD-FIXED_20260926T121811.631842Z",
+      "http_passed": true,
+      "result": {
+        "arm": "SD-FIXED",
+        "final_best_score": 25.80596345447857,
+        "final_metrics": {
+          "combined_score": 25.80596345447857,
+          "execution_time": 0.0003811168670654297,
+          "max_kvpr": 24.80596345447857,
+          "success_rate": 1.0
+        },
+        "gate_failure": null,
+        "horizon": 5,
+        "initial_score": 21.891622105209393,
+        "invalid_attempts": 2,
+        "iterations_observed": 5,
+        "passed": true,
+        "policy_switches": 0,
+        "task": "prism",
+        "valid_candidates": 3,
+        "wall_time": 140.48349276802037
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "TRACE-FIXED",
+        "concurrency": 1,
+        "horizon": 5,
+        "seed": 42,
+        "stage": "pilot",
+        "task": "prism"
+      },
+      "directory": "pilot_prism_TRACE-FIXED_20260926T121641.091744Z",
+      "http_passed": true,
+      "result": {
+        "arm": "TRACE-FIXED",
+        "final_best_score": 24.0422338723312,
+        "final_metrics": {
+          "combined_score": 24.0422338723312,
+          "execution_time": 0.0007207053048270089,
+          "max_kvpr": 23.4822338723312,
+          "success_rate": 0.56
+        },
+        "gate_failure": null,
+        "horizon": 5,
+        "initial_score": 21.891622105209393,
+        "invalid_attempts": 1,
+        "iterations_observed": 5,
+        "passed": true,
+        "policy_switches": 0,
+        "task": "prism",
+        "valid_candidates": 4,
+        "wall_time": 87.72851749800611
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "TRACE-RECURSIVE",
+        "concurrency": 1,
+        "horizon": 5,
+        "seed": 42,
+        "stage": "pilot",
+        "task": "prism"
+      },
+      "directory": "pilot_prism_TRACE-RECURSIVE_20260926T121349.098047Z",
+      "http_passed": true,
+      "result": {
+        "arm": "TRACE-RECURSIVE",
+        "final_best_score": 23.314669864476514,
+        "final_metrics": {
+          "combined_score": 23.314669864476514,
+          "execution_time": 0.000232579860281437,
+          "max_kvpr": 22.374669864476513,
+          "success_rate": 0.94
+        },
+        "gate_failure": null,
+        "horizon": 5,
+        "initial_score": 21.891622105209393,
+        "invalid_attempts": 0,
+        "iterations_observed": 5,
+        "passed": true,
+        "policy_switches": 2,
+        "task": "prism",
+        "valid_candidates": 5,
+        "wall_time": 114.89430031101801
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "SD-EVOX",
+        "concurrency": 1,
+        "horizon": 5,
+        "seed": 42,
+        "stage": "pilot",
+        "task": "signal_processing"
+      },
+      "directory": "pilot_signal_processing_SD-EVOX_20260926T122314.056218Z",
+      "http_passed": true,
+      "result": {
+        "arm": "SD-EVOX",
+        "final_best_score": 0.5001113682173032,
+        "final_metrics": {
+          "accuracy_score": 0.7877010175196794,
+          "avg_error": 0.5225525665109965,
+          "combined_score": 0.5001113682173032,
+          "composite_score": 0.4678675597845315,
+          "correlation": 0.7877010175196794,
+          "efficiency_score": 1.0,
+          "execution_time": 0.0005161285400390625,
+          "false_reversals": 124.2,
+          "lag_error": 0.3638550526654779,
+          "noise_reduction": 0.32645097519372496,
+          "output_length": 91.0,
+          "overall_score": 0.5001113682173032,
+          "responsiveness_score": 0.7332157460909279,
+          "runs_successfully": 1.0,
+          "slope_changes": 155.6,
+          "smoothness_score": 0.11389521640091117,
+          "success_rate": 1.0
+        },
+        "gate_failure": null,
+        "horizon": 5,
+        "initial_score": 0.49904861783269006,
+        "invalid_attempts": 0,
+        "iterations_observed": 5,
+        "passed": true,
+        "policy_switches": 3,
+        "task": "signal_processing",
+        "valid_candidates": 5,
+        "wall_time": 194.82919577899156
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "SD-FIXED",
+        "concurrency": 1,
+        "horizon": 5,
+        "seed": 42,
+        "stage": "pilot",
+        "task": "signal_processing"
+      },
+      "directory": "pilot_signal_processing_SD-FIXED_20260926T122631.726064Z",
+      "http_passed": true,
+      "result": {
+        "arm": "SD-FIXED",
+        "final_best_score": 0.5049337698278397,
+        "final_metrics": {
+          "accuracy_score": 0.8934131743946405,
+          "avg_error": 0.4025530213417011,
+          "combined_score": 0.5049337698278397,
+          "composite_score": 0.44219464463726676,
+          "correlation": 0.8934131743946405,
+          "efficiency_score": 1.0,
+          "execution_time": 0.00043730735778808595,
+          "false_reversals": 187.4,
+          "lag_error": 0.24984804754201476,
+          "noise_reduction": 0.3402408292669862,
+          "output_length": 91.0,
+          "overall_score": 0.5049337698278397,
+          "responsiveness_score": 0.8000972613963971,
+          "runs_successfully": 1.0,
+          "slope_changes": 240.6,
+          "smoothness_score": 0.07674597083653109,
+          "success_rate": 1.0
+        },
+        "gate_failure": null,
+        "horizon": 5,
+        "initial_score": 0.49904861783269006,
+        "invalid_attempts": 0,
+        "iterations_observed": 5,
+        "passed": true,
+        "policy_switches": 0,
+        "task": "signal_processing",
+        "valid_candidates": 5,
+        "wall_time": 119.17914356398978
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "TRACE-FIXED",
+        "concurrency": 1,
+        "horizon": 5,
+        "seed": 42,
+        "stage": "pilot",
+        "task": "signal_processing"
+      },
+      "directory": "pilot_signal_processing_TRACE-FIXED_20260926T122833.680195Z",
+      "http_passed": true,
+      "result": {
+        "arm": "TRACE-FIXED",
+        "final_best_score": 0.5032573617513533,
+        "final_metrics": {
+          "accuracy_score": 0.6348264449436112,
+          "avg_error": 0.6391394102694268,
+          "combined_score": 0.5032573617513533,
+          "composite_score": 0.5004525133450146,
+          "correlation": 0.6348264449436112,
+          "efficiency_score": 1.0,
+          "execution_time": 0.0008319854736328125,
+          "false_reversals": 54.2,
+          "lag_error": 0.4467701908032365,
+          "noise_reduction": 0.2894125610387041,
+          "output_length": 90.0,
+          "overall_score": 0.5032573617513533,
+          "responsiveness_score": 0.6911947774129955,
+          "runs_successfully": 1.0,
+          "slope_changes": 64.8,
+          "smoothness_score": 0.23584905660377356,
+          "success_rate": 1.0
+        },
+        "final_window_metrics": {
+          "combined_score": 0.0005883229491292392,
+          "search_horizon": 101,
+          "search_window_end_score": 0.5032573617513533,
+          "search_window_start_score": 0.49904861783269006,
+          "window_start_iteration": null
+        },
+        "gate_failure": null,
+        "horizon": 5,
+        "initial_score": 0.49904861783269006,
+        "invalid_attempts": 1,
+        "iterations_observed": 5,
+        "meta_proposal_failures": 0,
+        "passed": true,
+        "policy_switches": 0,
+        "task": "signal_processing",
+        "valid_candidates": 4,
+        "wall_time": 99.18143118498847
+      }
+    },
+    {
+      "candidate_errors": [],
+      "config": {
+        "arm": "TRACE-RECURSIVE",
+        "concurrency": 1,
+        "horizon": 5,
+        "seed": 42,
+        "stage": "pilot",
+        "task": "signal_processing"
+      },
+      "directory": "pilot_signal_processing_TRACE-RECURSIVE_20260926T122034.237022Z",
+      "http_passed": true,
+      "result": {
+        "arm": "TRACE-RECURSIVE",
+        "final_best_score": 0.5969675879295456,
+        "final_metrics": {
+          "accuracy_score": 0.9428175442361137,
+          "avg_error": 0.33641995894220605,
+          "combined_score": 0.5969675879295456,
+          "composite_score": 0.5236754686628997,
+          "correlation": 0.9428175442361137,
+          "efficiency_score": 1.0,
+          "execution_time": 0.0005007266998291015,
+          "false_reversals": 58.6,
+          "lag_error": 0.36938830925150157,
+          "noise_reduction": 0.5619884888212019,
+          "output_length": 91.0,
+          "overall_score": 0.5969675879295456,
+          "responsiveness_score": 0.7302530576930317,
+          "runs_successfully": 1.0,
+          "slope_changes": 73.6,
+          "smoothness_score": 0.2136752136752137,
+          "success_rate": 1.0
+        },
+        "gate_failure": null,
+        "horizon": 5,
+        "initial_score": 0.49904861783269006,
+        "invalid_attempts": 0,
+        "iterations_observed": 5,
+        "passed": true,
+        "policy_switches": 0,
+        "task": "signal_processing",
+        "valid_candidates": 5,
+        "wall_time": 156.55472923102207
       }
     }
   ],
   "calls_missing_cost": 0,
-  "completion_requests": 14,
+  "completion_requests": 105,
   "gates": {
     "S0": true,
     "S1": true,
     "S2": true,
     "S3": true,
-    "S4": false,
-    "S5": false
+    "S4": true,
+    "S5": true
   },
   "primary_control_plane": {
-    "cp_b_exclusion": "Live empty-response recovery escalated max_tokens 32 -> 64 -> 128; fixed-parameter equivalence fails.",
     "portable": false,
-    "primary_variant": "CP-A",
-    "promotable": false
+    "primary_variant": "CP-A"
   },
   "provider": {
     "only": [
       "novita"
     ]
   },
-  "reported_cost_usd": 0.028471665,
-  "reported_tokens": 86713,
-  "status": "STOPPED_PROVIDER",
+  "reasoning_effort": "low",
+  "reported_cost_usd": 0.0635394825,
+  "reported_tokens": 462716,
+  "status": "PARTIAL",
   "strict_runs_completed": [],
-  "successful_http_responses": 14,
-  "valid_generated_candidates": 0
+  "successful_http_responses": 105,
+  "valid_generated_candidates": 38
 }

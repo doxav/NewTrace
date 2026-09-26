@@ -1,0 +1,237 @@
+{
+  "artifact": {
+    "policy_source": "# EVOLVE-BLOCK-START\nimport logging\nimport math\nfrom dataclasses import dataclass\nfrom typing import Dict, List, Optional, Tuple\n\nfrom skydiscover.optimize.config import DatabaseConfig\nfrom skydiscover.optimize.search.base_database import Program, ProgramDatabase\n\nlogger = logging.getLogger(__name__)\n\n\n@dataclass\nclass EvolvedProgram(Program):\n    \"\"\"Program for the evolved database.\"\"\"\n\n\nclass EvolvedProgramDatabase(ProgramDatabase):\n    \"\"\"Score-biased search strategy database (v2, informed by window feedback).\n\n    Changes vs v1, based on measured window feedback (best child came from a\n    strong parent with mixed elite/diverse context; elite-heavy context with a\n    weaker parent regressed):\n    - Parents use rank-based softmax weighting over ``combined_score`` so the\n      bias is scale-invariant and reliably favors top-tier programs while\n      keeping a nonzero chance for weaker ones (exploration).\n    - Context balances elite members with random fill (at most half elites),\n      matching the pattern that produced the best observed child.\n    - A small epsilon of uniform parent sampling preserves diversity.\n    - Multiobjective mode still prefers the global Pareto front.\n    \"\"\"\n\n    def __init__(self, name: str, config: DatabaseConfig):\n        super().__init__(name, config)\n        self.initial_program = None\n\n    def add(\n        self, program: EvolvedProgram, iteration: Optional[int] = None, **kwargs\n    ) -> str:\n        \"\"\"Add a program to the database.\"\"\"\n        if iteration == 0 or program.iteration_found == 0:\n            self.initial_program = program\n\n        self.programs[program.id] = program\n\n        if iteration is not None:\n            self.last_iteration = max(self.last_iteration, iteration)\n\n        if self.config.db_path:\n            self._save_program(program)\n\n        self._update_best_program(program)\n\n        logger.debug(f\"Added program {program.id} to the evolve database\")\n        return program.id\n\n    def _score_of(self, program: EvolvedProgram) -> float:\n        \"\"\"Scalar score used for weighting; falls back to 0.0.\"\"\"\n        metrics = getattr(program, \"metrics\", None) or {}\n        score = metrics.get(\"combined_score\", 0.0)\n        try:\n            return float(score)\n        except (TypeError, ValueError):\n            return 0.0\n\n    def _weighted_choice(self, candidates: List[EvolvedProgram]) -> EvolvedProgram:\n        \"\"\"Rank-based softmax choice: scale-invariant bias toward top scores.\"\"\"\n        if len(candidates) == 1:\n            return candidates[0]\n\n        # Sort by score and weight by rank (exponential decay), which is\n        # robust to arbitrary score scales/spreads.\n        order = sorted(candidates, key=self._score_of, reverse=True)\n        n = len(order)\n        temperature = 0.5\n        weights = [math.exp(-i / temperature) for i in range(n)]\n        total = sum(weights)\n        r = self.rng.random() * total\n        acc = 0.0\n        for p, w in zip(order, weights):\n            acc += w\n            if r <= acc:\n                return p\n        return order[-1]\n\n    def sample(\n        self, num_context_programs: Optional[int] = 4, **kwargs\n    ) -> Tuple[Dict[str, EvolvedProgram], Dict[str, List[EvolvedProgram]]]:\n        \"\"\"\n        Picks a parent and set of context programs.\n\n        Parent: rank-weighted draw (Pareto-front-restricted in multiobjective\n        mode), with a small epsilon of uniform sampling for exploration.\n        Context: elites first (up to half the slots), then random fill.\n        \"\"\"\n        candidates = list(self.programs.values())\n\n        if len(candidates) == 0:\n            raise ValueError(\"No candidates available for sampling\")\n\n        pool = candidates\n        if self.is_multiobjective_enabled():\n            front = [p for p in self.get_pareto_front() if p.id in self.programs]\n            if front:\n                pool = front\n\n        # Parent: mostly score/rank-biased, occasionally uniform (epsilon=0.1).\n        if self.rng.random() < 0.1:\n            parent = self.rng.choice(pool)\n        else:\n            parent = self._weighted_choice(pool)\n\n        n_ctx = num_context_programs or 0\n        # Context: prefer other high scorers (elites), then random fill.\n        others = [p for p in candidates if p.id != parent.id]\n        others_sorted = sorted(others, key=self._score_of, reverse=True)\n\n        examples: List[EvolvedProgram] = []\n        seen = set()\n        # Take up to half the context slots from elites.\n        num_elites = (n_ctx + 1) // 2\n        for p in others_sorted[:num_elites]:\n            examples.append(p)\n            seen.add(p.id)\n        # Fill remaining slots randomly for diversity.\n        remaining = [p for p in others if p.id not in seen]\n        self.rng.shuffle(remaining)\n        for p in remaining:\n            if len(examples) >= n_ctx:\n                break\n            examples.append(p)\n            seen.add(p.id)\n\n        parent_dict = {\"\": parent}\n        context_programs_dict = {\"\": examples}\n\n        return parent_dict, context_programs_dict\n\n\n# EVOLVE-BLOCK-END\n"
+  },
+  "budget": {
+    "accounted": {
+      "candidates": 5,
+      "candidates_evaluated": 0,
+      "candidates_proposed": 0,
+      "candidates_reserved": 0,
+      "eval_llm_calls": 0,
+      "evaluator_runs": 0,
+      "optimizer_llm_calls": 2,
+      "total_tokens": 57038,
+      "wall_time_s": 114.93843
+    },
+    "candidates": 5,
+    "eval_llm_calls": null,
+    "evaluator_runs": null,
+    "exceeded": [],
+    "on_exceed": "fail",
+    "optimizer_llm_calls": null,
+    "total_tokens": null,
+    "wall_time_s": null
+  },
+  "engine": "exp22.engine.coevolution@1",
+  "error": null,
+  "evaluation": {
+    "artifacts": {},
+    "error": null,
+    "feedback": "",
+    "metrics": {
+      "combined_score": 23.314669864476514,
+      "execution_time": 0.000232579860281437,
+      "max_kvpr": 22.374669864476513,
+      "success_rate": 0.94
+    },
+    "status": "ok",
+    "trace": null,
+    "usage": {
+      "feedback": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "forward": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "judge": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      },
+      "optimizer": {
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+        "prompt_tokens": 0,
+        "total_tokens": 0
+      }
+    },
+    "valid": true
+  },
+  "level_results": [
+    {
+      "artifact": {
+        "policy_source": "# EVOLVE-BLOCK-START\nimport logging\nimport math\nfrom dataclasses import dataclass\nfrom typing import Dict, List, Optional, Tuple\n\nfrom skydiscover.optimize.config import DatabaseConfig\nfrom skydiscover.optimize.search.base_database import Program, ProgramDatabase\n\nlogger = logging.getLogger(__name__)\n\n\n@dataclass\nclass EvolvedProgram(Program):\n    \"\"\"Program for the evolved database.\"\"\"\n\n\nclass EvolvedProgramDatabase(ProgramDatabase):\n    \"\"\"Score-biased search strategy database (v2, informed by window feedback).\n\n    Changes vs v1, based on measured window feedback (best child came from a\n    strong parent with mixed elite/diverse context; elite-heavy context with a\n    weaker parent regressed):\n    - Parents use rank-based softmax weighting over ``combined_score`` so the\n      bias is scale-invariant and reliably favors top-tier programs while\n      keeping a nonzero chance for weaker ones (exploration).\n    - Context balances elite members with random fill (at most half elites),\n      matching the pattern that produced the best observed child.\n    - A small epsilon of uniform parent sampling preserves diversity.\n    - Multiobjective mode still prefers the global Pareto front.\n    \"\"\"\n\n    def __init__(self, name: str, config: DatabaseConfig):\n        super().__init__(name, config)\n        self.initial_program = None\n\n    def add(\n        self, program: EvolvedProgram, iteration: Optional[int] = None, **kwargs\n    ) -> str:\n        \"\"\"Add a program to the database.\"\"\"\n        if iteration == 0 or program.iteration_found == 0:\n            self.initial_program = program\n\n        self.programs[program.id] = program\n\n        if iteration is not None:\n            self.last_iteration = max(self.last_iteration, iteration)\n\n        if self.config.db_path:\n            self._save_program(program)\n\n        self._update_best_program(program)\n\n        logger.debug(f\"Added program {program.id} to the evolve database\")\n        return program.id\n\n    def _score_of(self, program: EvolvedProgram) -> float:\n        \"\"\"Scalar score used for weighting; falls back to 0.0.\"\"\"\n        metrics = getattr(program, \"metrics\", None) or {}\n        score = metrics.get(\"combined_score\", 0.0)\n        try:\n            return float(score)\n        except (TypeError, ValueError):\n            return 0.0\n\n    def _weighted_choice(self, candidates: List[EvolvedProgram]) -> EvolvedProgram:\n        \"\"\"Rank-based softmax choice: scale-invariant bias toward top scores.\"\"\"\n        if len(candidates) == 1:\n            return candidates[0]\n\n        # Sort by score and weight by rank (exponential decay), which is\n        # robust to arbitrary score scales/spreads.\n        order = sorted(candidates, key=self._score_of, reverse=True)\n        n = len(order)\n        temperature = 0.5\n        weights = [math.exp(-i / temperature) for i in range(n)]\n        total = sum(weights)\n        r = self.rng.random() * total\n        acc = 0.0\n        for p, w in zip(order, weights):\n            acc += w\n            if r <= acc:\n                return p\n        return order[-1]\n\n    def sample(\n        self, num_context_programs: Optional[int] = 4, **kwargs\n    ) -> Tuple[Dict[str, EvolvedProgram], Dict[str, List[EvolvedProgram]]]:\n        \"\"\"\n        Picks a parent and set of context programs.\n\n        Parent: rank-weighted draw (Pareto-front-restricted in multiobjective\n        mode), with a small epsilon of uniform sampling for exploration.\n        Context: elites first (up to half the slots), then random fill.\n        \"\"\"\n        candidates = list(self.programs.values())\n\n        if len(candidates) == 0:\n            raise ValueError(\"No candidates available for sampling\")\n\n        pool = candidates\n        if self.is_multiobjective_enabled():\n            front = [p for p in self.get_pareto_front() if p.id in self.programs]\n            if front:\n                pool = front\n\n        # Parent: mostly score/rank-biased, occasionally uniform (epsilon=0.1).\n        if self.rng.random() < 0.1:\n            parent = self.rng.choice(pool)\n        else:\n            parent = self._weighted_choice(pool)\n\n        n_ctx = num_context_programs or 0\n        # Context: prefer other high scorers (elites), then random fill.\n        others = [p for p in candidates if p.id != parent.id]\n        others_sorted = sorted(others, key=self._score_of, reverse=True)\n\n        examples: List[EvolvedProgram] = []\n        seen = set()\n        # Take up to half the context slots from elites.\n        num_elites = (n_ctx + 1) // 2\n        for p in others_sorted[:num_elites]:\n            examples.append(p)\n            seen.add(p.id)\n        # Fill remaining slots randomly for diversity.\n        remaining = [p for p in others if p.id not in seen]\n        self.rng.shuffle(remaining)\n        for p in remaining:\n            if len(examples) >= n_ctx:\n                break\n            examples.append(p)\n            seen.add(p.id)\n\n        parent_dict = {\"\": parent}\n        context_programs_dict = {\"\": examples}\n\n        return parent_dict, context_programs_dict\n\n\n# EVOLVE-BLOCK-END\n"
+      },
+      "budget": {
+        "accounted": {
+          "candidates": 5,
+          "candidates_evaluated": 0,
+          "candidates_proposed": 0,
+          "candidates_reserved": 0,
+          "eval_llm_calls": 0,
+          "evaluator_runs": 0,
+          "optimizer_llm_calls": 2,
+          "total_tokens": 57038,
+          "wall_time_s": 114.936981
+        },
+        "candidates": 5,
+        "eval_llm_calls": null,
+        "evaluator_runs": null,
+        "exceeded": [],
+        "on_exceed": "fail",
+        "optimizer_llm_calls": null,
+        "total_tokens": null,
+        "wall_time_s": null
+      },
+      "engine": "exp22.engine.coevolution@1",
+      "error": null,
+      "evaluation": {
+        "artifacts": {},
+        "error": null,
+        "feedback": "",
+        "metrics": {
+          "combined_score": 23.314669864476514,
+          "execution_time": 0.000232579860281437,
+          "max_kvpr": 22.374669864476513,
+          "success_rate": 0.94
+        },
+        "status": "ok",
+        "trace": null,
+        "usage": {
+          "feedback": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "forward": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "judge": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          },
+          "optimizer": {
+            "completion_tokens": 0,
+            "cost_usd": 0.0,
+            "prompt_tokens": 0,
+            "total_tokens": 0
+          }
+        },
+        "valid": true
+      },
+      "level_results": [],
+      "lineage": [],
+      "metadata": {
+        "kernel_result": {
+          "arm": "TRACE-RECURSIVE",
+          "final_best_score": 23.314669864476514,
+          "final_metrics": {
+            "combined_score": 23.314669864476514,
+            "execution_time": 0.000232579860281437,
+            "max_kvpr": 22.374669864476513,
+            "success_rate": 0.94
+          },
+          "gate_failure": null,
+          "horizon": 5,
+          "initial_score": 21.891622105209393,
+          "iterations_observed": 5,
+          "policy_switches": 2,
+          "task": "prism",
+          "wall_time": 114.89430031101801
+        },
+        "level_id": "coevolution"
+      },
+      "module_ref": "exp22.module.discovery_policy@1",
+      "plan_fingerprint": "388b5f822d32088b261a1c926781514917f1e3cf63e98a44995e9d71eebd7011",
+      "portable": false,
+      "promotable": false,
+      "spec_fingerprint": "388b5f822d32088b261a1c926781514917f1e3cf63e98a44995e9d71eebd7011",
+      "status": "success",
+      "unit_id": "default:seed-42:matrix-0",
+      "usage": {
+        "optimizer": {
+          "calls": 2,
+          "completion_tokens": 2902,
+          "empty_text_responses": 0,
+          "prompt_tokens": 54136,
+          "semantic_retries": 0,
+          "semantic_retry_completion_tokens": 0,
+          "semantic_retry_cost_usd": 0.0,
+          "semantic_retry_prompt_tokens": 0,
+          "semantic_retry_total_tokens": 0,
+          "total_tokens": 57038
+        }
+      },
+      "valid": true
+    }
+  ],
+  "lineage": [],
+  "metadata": {
+    "arm_id": "default",
+    "kernel_result": {
+      "arm": "TRACE-RECURSIVE",
+      "final_best_score": 23.314669864476514,
+      "final_metrics": {
+        "combined_score": 23.314669864476514,
+        "execution_time": 0.000232579860281437,
+        "max_kvpr": 22.374669864476513,
+        "success_rate": 0.94
+      },
+      "gate_failure": null,
+      "horizon": 5,
+      "initial_score": 21.891622105209393,
+      "iterations_observed": 5,
+      "policy_switches": 2,
+      "task": "prism",
+      "wall_time": 114.89430031101801
+    },
+    "level_id": "coevolution",
+    "level_ids": [
+      "coevolution"
+    ],
+    "matrix": {},
+    "resolved_models": {
+      "coevolution": {}
+    },
+    "seed": 42,
+    "test_overrides": {
+      "llm_factory": "src.transport.TraceOpenRouter"
+    }
+  },
+  "module_ref": "exp22.module.discovery_policy@1",
+  "plan_fingerprint": "388b5f822d32088b261a1c926781514917f1e3cf63e98a44995e9d71eebd7011",
+  "portable": false,
+  "promotable": false,
+  "spec_fingerprint": "388b5f822d32088b261a1c926781514917f1e3cf63e98a44995e9d71eebd7011",
+  "status": "success",
+  "unit_id": "default:seed-42:matrix-0",
+  "usage": {
+    "optimizer": {
+      "calls": 2,
+      "completion_tokens": 2902,
+      "empty_text_responses": 0,
+      "prompt_tokens": 54136,
+      "semantic_retries": 0,
+      "semantic_retry_completion_tokens": 0,
+      "semantic_retry_cost_usd": 0.0,
+      "semantic_retry_prompt_tokens": 0,
+      "semantic_retry_total_tokens": 0,
+      "total_tokens": 57038
+    }
+  },
+  "valid": true
+}

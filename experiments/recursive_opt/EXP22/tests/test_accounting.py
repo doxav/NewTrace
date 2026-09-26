@@ -25,6 +25,17 @@ class AccountingTests(unittest.TestCase):
         self.assertEqual(result['reported_cost'], 0.01)
         self.assertEqual(result['calls_missing_cost'], 1)
 
+    def test_usage_curve_does_not_include_future_retry(self) -> None:
+        """A failed attempt's cumulative cost stops before the later successful retry."""
+        rows = [{'role': 'guide', 'usage': {'cost': 0.01}}, {'role': 'solution', 'usage': {'cost': 0.02}}, {'role': 'solution', 'usage': {'cost': 0.03}}]
+        first = usage_summary(rows, solution_limit=1)
+        self.assertEqual(first['total_calls'], 2)
+        self.assertAlmostEqual(first['reported_cost'], 0.03)
+        self.assertAlmostEqual(usage_summary(rows, solution_limit=2)['reported_cost'], 0.06)
+        for limit in (0, True, 3):
+            with self.assertRaises(ValueError):
+                usage_summary(rows, solution_limit=limit)
+
     def test_analysis_separates_provider_series(self) -> None:
         """Historical runs must not affect current-route counts or outcomes."""
         with tempfile.TemporaryDirectory() as temporary:
@@ -32,7 +43,9 @@ class AccountingTests(unittest.TestCase):
             (root/'artifacts').mkdir()
             (root/'runs/old').mkdir(parents=True)
             (root/'runs/old/openrouter_config_sanitized.json').write_text(json.dumps({'provider': {'only': ['DeepInfra']}}))
-            row = {'outbound_body': {'provider': {'only': ['novita']}}, 'passed': True, 'http_status': 200, 'usage': {'total_tokens': 4, 'cost': 0.01}}
+            (root/'runs/old_default').mkdir()
+            (root/'runs/old_default/openrouter_config_sanitized.json').write_text(json.dumps({'provider': {'only': ['novita']}}))
+            row = {'outbound_body': {'provider': {'only': ['novita']}, 'reasoning_effort': 'low'}, 'passed': True, 'http_status': 200, 'usage': {'total_tokens': 4, 'cost': 0.01}}
             (root/'artifacts/openrouter_transport_validation.json').write_text(json.dumps({'direct': row, 'trace': {'primary_variant': 'CP-A'}}))
             (root/'artifacts/gates.json').write_text('{}')
             (root/'manifest.json').write_text('{}')
@@ -42,7 +55,7 @@ class AccountingTests(unittest.TestCase):
                 self.assertEqual(report['attempts'], [])
                 self.assertEqual(report['status'], 'PARTIAL')
                 (root/'runs/current').mkdir()
-                (root/'runs/current/openrouter_config_sanitized.json').write_text(json.dumps({'provider': {'only': ['novita']}}))
+                (root/'runs/current/openrouter_config_sanitized.json').write_text(json.dumps({'provider': {'only': ['novita']}, 'reasoning_effort': 'low'}))
                 with self.assertRaisesRegex(ValueError, 'unfinished'):
                     analyze.analyze()
                 current = root/'runs/current'
@@ -64,6 +77,15 @@ class AccountingTests(unittest.TestCase):
             (root/'artifacts/evaluator_parity.json').write_text('{"passed": true}')
             (root/'artifacts/openrouter_transport_validation.json').write_text(json.dumps({'passed': True, 'direct': {'outbound_body': {'provider': {'only': ['DeepInfra']}}}}))
             with patch.object(run_stage, 'ROOT', root), patch('sys.argv', ['run_stage', '--stage', 'one', '--task', 'prism', '--arm', 'SD-EVOX']), self.assertRaisesRegex(ValueError, 'different routing identity'):
+                run_stage.main()
+            self.assertFalse((root/'runs').exists())
+            (root/'artifacts/openrouter_transport_validation.json').write_text(json.dumps({'passed': True, 'direct': {'outbound_body': {'model': run_stage.MODEL, **run_stage.EXTRA_BODY}}}))
+            (root/'artifacts/gates.json').write_text(json.dumps({f'S{i}': True for i in range(6)}))
+            (root/'artifacts/strict_source_hashes.json').write_text('{}')
+            (root/'scripts').mkdir()
+            for name in ('run_stage.py', 'framework_smoke.py', 'preflight.py'):
+                (root/'scripts'/name).write_text('# Changed source\n')
+            with patch.object(run_stage, 'ROOT', root), patch('sys.argv', ['run_stage', '--stage', 'strict', '--task', 'prism', '--arm', 'SD-EVOX']), self.assertRaisesRegex(ValueError, 'source differs'):
                 run_stage.main()
             self.assertFalse((root/'runs').exists())
 

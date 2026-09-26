@@ -1,0 +1,68 @@
+iteration: 1
+diverge_label_length: 2960
+refine_label_length: 2061
+
+diverge_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.
+  This may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.
+  You can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.
+  Think through what is needed to achieve a BREAKTHROUGH SCORE.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  - **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Libraries / solvers**: only `numpy` is available — use `numpy.random` for stochastic search, vectorized KVPR evaluation across candidate placements; no external MILP/CP solver exists, so hand-rolled search is required.
+  - **Construction heuristics**: greedy insertion sorted by req_rate/slo descending ↔ best-fit (place model on GPU minimizing resulting max KVPR) ↔ worst-fit / load-spreading ↔ sort by model_size descending first (packing-aware ordering).
+  - **Local search / metaheuristics**: hill-climbing with single-model moves ↔ swap two models between GPUs ↔ simulated annealing with temperature schedule ↔ tabu search avoiding recently reversed moves ↔ iterated local search with random restarts / perturbation (ruin-and-recreate).
+  - **Multi-start / ensemble**: run greedy from many random permutations, keep best ↔ random initial placements refined by local search ↔ mix deterministic + randomized orderings, take minimum max-KVPR.
+  - **Multi-phase pipeline**: bin-packing feasibility first (ensure sizes fit, e.g. first-fit-decreasing), then load-balance phase on KVPR ↔ coarse placement then fine polish with targeted moves on the bottleneck GPU only.
+  - **Objective shaping**: focus moves on the argmax-KVPR GPU (move a model out or swap with a low-KVPR GPU) ↔ penalize near-full GPUs (small free memory) during construction to leave slack for high-pressure models.
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken "creative" solution is worthless.
+  
+  Format:
+  1. APPROACH: Describe your different approach.
+  2. CODE: Implementation.
+
+refine_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You should keep the same fundamental approach and algorithm structure.
+  DO NOT switch to a different problem formulation.
+  Focus on REFINING / EXPLOITING the current approach: better inputs, additional polish, etc.
+  Think through what is needed to SQUEEZE the last few percent of performance.
+  Use sufficient computational budget for refinement.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF REFINEMENT strategies (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Search budget**: increase local-search iterations / restarts within the 10s timeout; add a time-budget loop (search until ~8s, return best).
+  - **Neighborhood refinement**: prioritize moves touching the bottleneck (max-KVPR) GPU ↔ try both move and swap neighborhoods each iteration ↔ first-improvement vs best-improvement pivoting.
+  - **Acceptance / schedule tuning**: tune annealing temperature range and cooling rate ↔ tune tabu tenure ↔ adaptive perturbation size in iterated local search.
+  - **Initialization quality**: multiple sorted orderings (by req_rate/slo, by size, by req_rate/slo ÷ size) as seeds ↔ keep best-of-N greedy runs.
+  - **Post-processing / polish**: final pass repeatedly moving models off the argmax-KVPR GPU if it strictly lowers max-KVPR ↔ verify memory constraint and all models placed exactly once before returning.
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken solution is worthless.
+  
+  Format:
+  1. REFINEMENT: Describe what you are refining.
+  2. CODE: Implementation with refinement.

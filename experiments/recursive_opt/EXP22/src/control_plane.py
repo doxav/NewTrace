@@ -8,7 +8,7 @@ from typing import Any
 
 from src.evaluation import TASKS
 from src.kernel import POLICY, PolicyModule, run_kernel
-from src.transport import MODEL, PROVIDER, SESSION
+from src.transport import MODEL, PROVIDER, REASONING_EFFORT, SESSION
 
 from opto.features.recursive_opt import spec as S
 from opto.trainer.objectives import EvaluationResult
@@ -95,7 +95,7 @@ def specification(task: str, arm: str, horizon: int, directory: Path, variant: s
     """Declare one complete Trace run without embedding credentials."""
     if variant not in {'CP-A', 'CP-B'}:
         raise ValueError('Unknown EXP22 control-plane variant')
-    profile: dict[str, Any] = {'provider': 'openrouter', 'model': MODEL, 'api_key_ref': 'env:OPENROUTER_API_KEY', 'temperature': 0.7, 'max_tokens': 32000, 'request_timeout_s': 600, 'transport_max_attempts': 1, 'request_params': {'extra_body': {'session_id': SESSION}}}
+    profile: dict[str, Any] = {'provider': 'openrouter', 'model': MODEL, 'api_key_ref': 'env:OPENROUTER_API_KEY', 'temperature': 0.7, 'max_tokens': 32000, 'request_timeout_s': 600, 'transport_max_attempts': 1, 'request_params': {'extra_body': {'session_id': SESSION, 'reasoning_effort': REASONING_EFFORT}}}
     if variant == 'CP-B':
         profile['openrouter_routing'] = {'only': [PROVIDER]}
     return {

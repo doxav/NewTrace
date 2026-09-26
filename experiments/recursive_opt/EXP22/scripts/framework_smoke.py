@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import json
 import sys
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ from src.transport import (
     HTTP_ROLES,
     MODEL,
     PROVIDER,
+    REASONING_EFFORT,
     SERVING_PROVIDER,
     SESSION,
     SkyOpenRouter,
@@ -41,19 +43,33 @@ def observer(original: Callable[..., Any], records: list[dict[str, Any]]) -> Cal
         body = json.loads(request.content)
         if body.get('model') != MODEL or any(body.get(k) != v for k, v in EXTRA_BODY.items()):
             raise ValueError('Actual HTTP request violates EXP22 routing')
-        response = original(client, request, *args, **kwargs)
-        response.read()
-        value = response.json()
-        record = {
+        if any(row.get('http_status') == 200 and not row['passed'] for row in records):
+            raise ValueError('An earlier serving identity violation prevents further requests')
+        record: dict[str, Any] = {
             'role': HTTP_ROLES.get(id(client), 'trace_meta_or_preflight'),
-            'outbound_body': body, 'http_status': response.status_code,
-            'returned_model': value.get('model'), 'serving_provider': value.get('provider'),
-            'generation_id': value.get('id'), 'usage': value.get('usage'), 'error': value.get('error'),
-            'finish_reasons': [choice.get('finish_reason') for choice in value.get('choices', [])],
-            'content_lengths': [len((choice.get('message') or {}).get('content') or '') for choice in value.get('choices', [])],
+            'outbound_body': body, 'http_status': None, 'passed': False,
+            'usage': None, 'started_at_unix': time.time(),
         }
-        record['passed'] = response.status_code == 200 and value.get('provider') == SERVING_PROVIDER and (value.get('model') == MODEL or (value.get('model') or '').startswith(MODEL + '-'))
         records.append(record)
+        try:
+            response = original(client, request, *args, **kwargs)
+            record['http_status'] = response.status_code
+            response.read()
+            value = response.json()
+            if not isinstance(value, dict):
+                raise TypeError('OpenRouter returned a non-object response')
+            record.update({
+                'returned_model': value.get('model'), 'serving_provider': value.get('provider'),
+                'generation_id': value.get('id'), 'usage': value.get('usage'), 'error': value.get('error'),
+                'finish_reasons': [choice.get('finish_reason') for choice in value.get('choices', [])],
+                'content_lengths': [len((choice.get('message') or {}).get('content') or '') for choice in value.get('choices', [])],
+            })
+            record['passed'] = response.status_code == 200 and value.get('provider') == SERVING_PROVIDER and (value.get('model') == MODEL or (value.get('model') or '').startswith(MODEL + '-'))
+        except (httpx.HTTPError, httpx2.HTTPError, ValueError, TypeError, AttributeError) as error:
+            record['error'] = {'type': type(error).__name__}
+            raise
+        finally:
+            record['finished_at_unix'] = time.time()
         return response
     return send
 
@@ -63,9 +79,12 @@ def main() -> int:
     path = ROOT / 'artifacts/openrouter_transport_validation.json'
     evidence = json.loads(path.read_text())
     messages = [{'role': 'user', 'content': 'Reply with OK.'}]
-    profiles = {'llm_profiles': {'main': {'provider': 'openrouter', 'model': MODEL, 'max_tokens': 32, 'temperature': 0.7, 'request_timeout_s': 600, 'transport_max_attempts': 1, 'openrouter_routing': {'only': [PROVIDER]}, 'request_params': {'extra_body': {'session_id': SESSION}}}}}
+    profiles = {'llm_profiles': {'main': {'provider': 'openrouter', 'model': MODEL, 'max_tokens': 32, 'temperature': 0.7, 'request_timeout_s': 600, 'transport_max_attempts': 1, 'openrouter_routing': {'only': [PROVIDER]}, 'request_params': {'extra_body': {'session_id': SESSION, 'reasoning_effort': REASONING_EFFORT}}}}}
     S._normalize_llm_profiles(profiles)
     for name in ('skydiscover', 'trace_cp_a', 'trace_cp_b'):
+        if name == 'trace_cp_b' and PRIMARY_VARIANT != 'CP-B':
+            evidence[name] = {'status': 'EXCLUDED_TOKEN_ESCALATION', 'requests': []}
+            continue
         records: list[dict[str, Any]] = []
         try:
             with contextlib.ExitStack() as stack:
