@@ -1,59 +1,75 @@
 {
-  "url": "https://openrouter.ai/api/v1/models/z-ai/glm-5.3-flash/endpoints",
-  "model": "z-ai/glm-5.3-flash",
-  "deepinfra_endpoints": [
-    {
-      "name": "DeepInfra | z-ai/glm-5.3-flash-20260826",
-      "model_id": "z-ai/glm-5.3-flash",
-      "model_name": "Z.ai: GLM 5.3 Flash",
-      "context_length": 1048576,
-      "pricing": {
-        "prompt": "0.000000075",
-        "completion": "0.00000025",
-        "input_cache_read": "0.000000015",
-        "discount": 0.5
-      },
-      "provider_name": "DeepInfra",
-      "tag": "deepinfra/fp4",
-      "quantization": "fp4",
-      "max_completion_tokens": 131072,
-      "max_prompt_tokens": null,
-      "supported_parameters": [
-        "reasoning",
-        "include_reasoning",
-        "max_tokens",
-        "temperature",
-        "top_p",
-        "stop",
-        "frequency_penalty",
-        "presence_penalty",
-        "repetition_penalty",
-        "top_k",
-        "seed",
-        "min_p",
-        "logit_bias",
-        "structured_outputs",
-        "tools",
-        "tool_choice",
-        "response_format",
-        "reasoning_effort"
+  "data": {
+    "id": "z-ai/glm-5.3-flash",
+    "name": "Z.ai: GLM 5.3 Flash",
+    "created": 1787752741,
+    "description": "GLM-5.3-Flash is a native multimodal model from Z.ai. It is suited for efficient coding and long-horizon agent tasks. Its hybrid sparse and linear attention architecture maintains accurate long-context behavior while...",
+    "architecture": {
+      "tokenizer": "Other",
+      "instruct_type": null,
+      "modality": "text+image+video->text",
+      "input_modalities": [
+        "text",
+        "image",
+        "video"
       ],
-      "supports_tool_choice": {
-        "none": true,
-        "auto": true,
-        "required": true,
-        "function": true
-      },
-      "status": 0,
-      "uptime_last_30m": 99.8713550600343,
-      "uptime_last_5m": 100,
-      "uptime_last_1d": 99.81249257360464,
-      "supports_implicit_caching": false,
-      "supports_voice_cloning": false,
-      "supports_multiple_audio_references": false,
-      "supports_image_reference": false,
-      "latency_last_30m": null,
-      "throughput_last_30m": null
-    }
-  ]
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "Novita | z-ai/glm-5.3-flash-20260826",
+        "model_id": "z-ai/glm-5.3-flash",
+        "model_name": "Z.ai: GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000001125",
+          "completion": "0.000000375",
+          "input_cache_read": "0.0000000225",
+          "discount": 0.25
+        },
+        "provider_name": "Novita",
+        "tag": "novita/fp8",
+        "quantization": "fp8",
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "reasoning",
+          "include_reasoning",
+          "max_tokens",
+          "temperature",
+          "top_p",
+          "stop",
+          "frequency_penalty",
+          "presence_penalty",
+          "seed",
+          "top_k",
+          "repetition_penalty",
+          "response_format",
+          "tools",
+          "tool_choice",
+          "reasoning_effort"
+        ],
+        "supports_tool_choice": {
+          "none": false,
+          "auto": true,
+          "required": false,
+          "function": false
+        },
+        "status": 0,
+        "uptime_last_30m": 99.80405220049379,
+        "uptime_last_5m": 99.91345737775855,
+        "uptime_last_1d": 99.73150227961538,
+        "supports_implicit_caching": false,
+        "supports_voice_cloning": false,
+        "supports_multiple_audio_references": false,
+        "supports_image_reference": false,
+        "latency_last_30m": null,
+        "throughput_last_30m": null
+      }
+    ]
+  },
+  "filter": "Novita endpoints only",
+  "source": "https://openrouter.ai/api/v1/models/z-ai/glm-5.3-flash/endpoints"
 }

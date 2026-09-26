@@ -13,16 +13,13 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.preflight import write_json
-
-MODEL = "z-ai/glm-5.3-flash"
-BASE_URL = "https://openrouter.ai/api/v1"
-SESSION = "benchmark-PRIMS-SIGNAL-run-001"
+from src.transport import BASE_URL, MODEL, PROVIDER, SERVING_PROVIDER, SESSION
 
 
 def payload() -> dict[str, Any]:
     """Build the tiny smoke request without credentials or an LLM seed."""
     return {
-        "model": MODEL, "provider": {"only": ["DeepInfra"]}, "session_id": SESSION,
+        "model": MODEL, "provider": {"only": [PROVIDER]}, "session_id": SESSION,
         "messages": [{"role": "user", "content": "Reply with OK."}],
         "temperature": 0.7, "max_tokens": 32,
     }
@@ -61,7 +58,7 @@ def main() -> int:
         record["metadata_http_status"] = metadata_code
         record["serving_provider"] = data.get("provider_name")
     returned = record["returned_model"] or ""
-    record["passed"] = code == 200 and (returned == MODEL or returned.startswith(MODEL + "-")) and record["serving_provider"] == "DeepInfra"
+    record["passed"] = code == 200 and (returned == MODEL or returned.startswith(MODEL + "-")) and record["serving_provider"] == SERVING_PROVIDER
     evidence = {"direct": record, "skydiscover": {"status": "NOT_RUN"}, "trace": {"status": "NOT_RUN"}, "passed": False}
     write_json(ROOT / "artifacts/openrouter_transport_validation.json", evidence)
     if not record["passed"]:

@@ -1,0 +1,14 @@
+{
+  "evidence": [
+    "artifacts/diagnostic_summary.json",
+    "runs/one_prism_SD-EVOX_20260926T102637.995899Z/http_requests.json",
+    "runs/one_prism_SD-EVOX_20260926T102800.570327Z/http_requests.json"
+  ],
+  "iteration": 0,
+  "last_active_policy": "stock initial_search_strategy.py",
+  "last_valid_score": 21.891622105209393,
+  "last_valid_score_origin": "stock initial program; no generated candidate",
+  "reason": "DeepInfra shared pool rejected both S4 attempts with HTTP 429 engine_overloaded",
+  "recommended_fix": "Retry S4 only when the same GLM/DeepInfra route is available; no provider/model substitution. Complete S4/S5 before strict execution.",
+  "status": "STOPPED_PROVIDER"
+}

@@ -22,7 +22,7 @@ from scripts.preflight import write_json
 from src.control_plane import register, specification
 from src.evaluation import SKY, TASKS
 from src.kernel import run_kernel
-from src.transport import EXTRA_BODY, MODEL
+from src.transport import EXTRA_BODY, MODEL, TraceOpenRouter
 
 from opto.features.recursive_opt import spec as S
 
@@ -67,8 +67,11 @@ def main() -> int:
     parser.add_argument('--stage', choices=('one', 'pilot', 'strict'), required=True)
     args = parser.parse_args()
     horizon = {'one': 1, 'pilot': 5, 'strict': 100}[args.stage]
-    if not json.loads((ROOT/'artifacts/evaluator_parity.json').read_text())['passed'] or not json.loads((ROOT/'artifacts/openrouter_transport_validation.json').read_text())['passed']:
+    transport = json.loads((ROOT/'artifacts/openrouter_transport_validation.json').read_text())
+    if not json.loads((ROOT/'artifacts/evaluator_parity.json').read_text())['passed'] or not transport['passed']:
         raise ValueError('Evaluator and transport gates must pass first')
+    if any(transport['direct']['outbound_body'].get(key) != value for key, value in EXTRA_BODY.items()):
+        raise ValueError('Transport evidence belongs to a different routing identity')
     if args.stage == 'strict':
         gates = json.loads((ROOT/'artifacts/gates.json').read_text())
         if not all(gates.get(name) is True for name in ('S0', 'S1', 'S2', 'S3', 'S4', 'S5')):
@@ -97,7 +100,7 @@ def main() -> int:
                 for module in (httpx, httpx2):
                     stack.enter_context(patch.object(module.Client, 'send', observer(module.Client.send, records)))
                 if raw:
-                    canonical = S.run_spec(raw)
+                    canonical = S.run_spec(raw, resources={'llm_factory': TraceOpenRouter} if raw['runtime']['test_mode'] else None)
                     write_json(directory/'control_plane_result.json', canonical.to_dict())
                     if not canonical.valid:
                         raise ValueError('Canonical Trace execution returned an invalid result')

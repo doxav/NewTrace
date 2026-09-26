@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from black import FileMode, format_str
 
@@ -27,6 +27,7 @@ from src.kernel import (
     configuration,
     digest,
 )
+from src.transport import TraceOpenRouter
 
 from opto.features.recursive_opt import spec as S
 
@@ -44,6 +45,19 @@ class KernelTests(unittest.TestCase):
         module = S.build_module(plan.spec)
         self.assertEqual(module.policy_source.data, POLICY.read_text())
         self.assertEqual(len(module.parameters()), 1)
+
+    def test_selected_cp_a_canonical_execution(self) -> None:
+        """Execute the selected engine with explicit non-portable factory metadata."""
+        register()
+        result = {'horizon': 1, 'iterations_observed': 1, 'final_metrics': {'combined_score': 1.0}, 'gate_failure': None}
+        with tempfile.TemporaryDirectory(dir=ROOT/'artifacts') as temporary, patch.dict('os.environ', {'OPENROUTER_API_KEY': 'fixture'}), patch('src.control_plane.run_kernel', new=AsyncMock(return_value=result)) as kernel:
+            raw = specification('prism', 'TRACE-RECURSIVE', 1, Path(temporary))
+            actual = S.run_spec(raw, resources={'llm_factory': TraceOpenRouter})
+            self.assertTrue(actual.valid)
+            self.assertFalse(actual.portable)
+            self.assertFalse(actual.promotable)
+            self.assertEqual(actual.metadata['kernel_result']['iterations_observed'], 1)
+            self.assertEqual(kernel.await_count, 1)
 
     def test_trace_mock_policy_swap_and_feedback(self) -> None:
         """A real OptoPrimeV2 step consumes feedback and activates through stock migration."""

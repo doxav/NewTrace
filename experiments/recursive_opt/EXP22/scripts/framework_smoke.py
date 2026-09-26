@@ -16,10 +16,13 @@ import httpx
 import httpx2
 import openai
 from scripts.preflight import write_json
+from src.control_plane import PRIMARY_VARIANT
 from src.transport import (
     EXTRA_BODY,
     HTTP_ROLES,
     MODEL,
+    PROVIDER,
+    SERVING_PROVIDER,
     SESSION,
     SkyOpenRouter,
     TraceOpenRouter,
@@ -46,8 +49,10 @@ def observer(original: Callable[..., Any], records: list[dict[str, Any]]) -> Cal
             'outbound_body': body, 'http_status': response.status_code,
             'returned_model': value.get('model'), 'serving_provider': value.get('provider'),
             'generation_id': value.get('id'), 'usage': value.get('usage'), 'error': value.get('error'),
+            'finish_reasons': [choice.get('finish_reason') for choice in value.get('choices', [])],
+            'content_lengths': [len((choice.get('message') or {}).get('content') or '') for choice in value.get('choices', [])],
         }
-        record['passed'] = response.status_code == 200 and value.get('provider') == 'DeepInfra' and (value.get('model') == MODEL or (value.get('model') or '').startswith(MODEL + '-'))
+        record['passed'] = response.status_code == 200 and value.get('provider') == SERVING_PROVIDER and (value.get('model') == MODEL or (value.get('model') or '').startswith(MODEL + '-'))
         records.append(record)
         return response
     return send
@@ -58,7 +63,7 @@ def main() -> int:
     path = ROOT / 'artifacts/openrouter_transport_validation.json'
     evidence = json.loads(path.read_text())
     messages = [{'role': 'user', 'content': 'Reply with OK.'}]
-    profiles = {'llm_profiles': {'main': {'provider': 'openrouter', 'model': MODEL, 'max_tokens': 32, 'temperature': 0.7, 'request_timeout_s': 600, 'transport_max_attempts': 1, 'openrouter_routing': {'only': ['DeepInfra']}, 'request_params': {'extra_body': {'session_id': SESSION}}}}}
+    profiles = {'llm_profiles': {'main': {'provider': 'openrouter', 'model': MODEL, 'max_tokens': 32, 'temperature': 0.7, 'request_timeout_s': 600, 'transport_max_attempts': 1, 'openrouter_routing': {'only': [PROVIDER]}, 'request_params': {'extra_body': {'session_id': SESSION}}}}}
     S._normalize_llm_profiles(profiles)
     for name in ('skydiscover', 'trace_cp_a', 'trace_cp_b'):
         records: list[dict[str, Any]] = []
@@ -81,10 +86,11 @@ def main() -> int:
             evidence[name] = {'passed': False, 'requests': records, 'exception_type': type(error).__name__}
         write_json(path, evidence)
         print(json.dumps({'client': name, 'passed': evidence[name]['passed']}))
-        if not evidence[name]['passed']:
+        if not evidence[name]['passed'] and (name != 'trace_cp_b' or PRIMARY_VARIANT == 'CP-B'):
             return 2
-    evidence['trace'] = {'status': 'CP_A_AND_CP_B_TRANSPORT_PASSED_ONLY'}
-    evidence['passed'] = evidence['direct']['passed'] and all(evidence[name]['passed'] for name in ('skydiscover', 'trace_cp_a', 'trace_cp_b'))
+    evidence['trace'] = {'primary_variant': PRIMARY_VARIANT, 'portable': PRIMARY_VARIANT == 'CP-B'}
+    active_trace = 'trace_cp_a' if PRIMARY_VARIANT == 'CP-A' else 'trace_cp_b'
+    evidence['passed'] = evidence['direct']['passed'] and all(evidence[name]['passed'] for name in ('skydiscover', active_trace))
     write_json(path, evidence)
     return 0 if evidence['passed'] else 2
 

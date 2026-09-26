@@ -8,7 +8,7 @@ from typing import Any
 
 from src.evaluation import TASKS
 from src.kernel import POLICY, PolicyModule, run_kernel
-from src.transport import MODEL, SESSION
+from src.transport import MODEL, PROVIDER, SESSION
 
 from opto.features.recursive_opt import spec as S
 from opto.trainer.objectives import EvaluationResult
@@ -16,6 +16,7 @@ from opto.trainer.objectives import EvaluationResult
 MODULE = 'exp22.module.discovery_policy@1'
 ENGINE = 'exp22.engine.coevolution@1'
 EVALUATOR = 'exp22.evaluator.coevolution@1'
+PRIMARY_VARIANT = 'CP-A'
 
 
 def validate_config(config: Mapping[str, Any]) -> None:
@@ -90,13 +91,13 @@ def register() -> None:
         S.register_dataset(f'exp22.dataset.{task}@1', dataset)
 
 
-def specification(task: str, arm: str, horizon: int, directory: Path, variant: str = 'CP-B') -> dict[str, Any]:
+def specification(task: str, arm: str, horizon: int, directory: Path, variant: str = PRIMARY_VARIANT) -> dict[str, Any]:
     """Declare one complete Trace run without embedding credentials."""
     if variant not in {'CP-A', 'CP-B'}:
         raise ValueError('Unknown EXP22 control-plane variant')
     profile: dict[str, Any] = {'provider': 'openrouter', 'model': MODEL, 'api_key_ref': 'env:OPENROUTER_API_KEY', 'temperature': 0.7, 'max_tokens': 32000, 'request_timeout_s': 600, 'transport_max_attempts': 1, 'request_params': {'extra_body': {'session_id': SESSION}}}
     if variant == 'CP-B':
-        profile['openrouter_routing'] = {'only': ['DeepInfra']}
+        profile['openrouter_routing'] = {'only': [PROVIDER]}
     return {
         'schema_version': S.SCHEMA_VERSION, 'kind': S.SPEC_KIND,
         'runtime': {'offline': False, 'test_mode': variant == 'CP-A', 'seed': 42},

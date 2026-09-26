@@ -44,7 +44,7 @@
     }
   },
   "completed_runs": [],
-  "completion_requests": 10,
+  "completion_requests": 14,
   "evidence_directory": "artifacts/preflight/20260926T100458.395061Z",
   "execution_authorized_by_this_script": false,
   "experiment": "EXP22 SkyDiscover/Trace PRISM and Signal comparison",
@@ -62,8 +62,15 @@
     "strict runs",
     "advanced phase"
   ],
-  "paid_calls": 4,
-  "primary_control_plane": "CP-B (transport/runtime/mocked parity validated; full execution unvalidated)",
+  "historical_series": "artifacts/deepinfra_pre_novita/manifest.json",
+  "paid_calls": 14,
+  "primary_control_plane": "CP-A: exact transport, non-portable/non-promotable",
+  "protocol_amendment": "v5",
+  "provider": {
+    "only": [
+      "novita"
+    ]
+  },
   "repositories": {
     "skydiscover": {
       "branch": "",
@@ -79,7 +86,7 @@
     }
   },
   "status": "STOPPED_PROVIDER",
-  "successful_completions": 4,
+  "successful_completions": 14,
   "timestamp_utc": "20260926T100458.395061Z",
   "trace_branch_gate": {
     "actual_branch": "",

@@ -1,5 +1,9 @@
 test_account_identifier_redaction_preserves_failure (test_accounting.AccountingTests.test_account_identifier_redaction_preserves_failure)
 Redaction hides account IDs without changing error codes or candidate data. ... ok
+test_analysis_separates_provider_series (test_accounting.AccountingTests.test_analysis_separates_provider_series)
+Historical runs must not affect current-route counts or outcomes. ... ok
+test_old_transport_gate_cannot_authorize_new_provider (test_accounting.AccountingTests.test_old_transport_gate_cannot_authorize_new_provider)
+A previously passed DeepInfra gate cannot enable a Novita run. ... ok
 test_rejected_cost_is_unknown (test_accounting.AccountingTests.test_rejected_cost_is_unknown)
 Absent usage is not evidence that a rejected request was free. ... ok
 test_cascade_thresholds (test_evaluation_transport.EvaluationTests.test_cascade_thresholds)
@@ -14,14 +18,20 @@ test_outbound_request (test_evaluation_transport.TransportTests.test_outbound_re
 Exact required routing survives JSON serialization without a secret. ... ok
 test_cp_a_and_cp_b_final_payloads (test_framework_transport.FrameworkTransportTests.test_cp_a_and_cp_b_final_payloads)
 The behavioral factory and portable guarded client agree on routing. ... ok
+test_cp_a_preserves_token_limit_on_empty_response (test_framework_transport.FrameworkTransportTests.test_cp_a_preserves_token_limit_on_empty_response)
+The selected fallback must never retry with an increased token limit. ... ok
 test_identity_and_routing_validation (test_framework_transport.FrameworkTransportTests.test_identity_and_routing_validation)
 Dedicated routing never opens arbitrary provider/credential overrides. ... ok
+test_observer_retains_empty_generation_evidence (test_framework_transport.FrameworkTransportTests.test_observer_retains_empty_generation_evidence)
+Successful routing and empty length-limited content remain distinct facts. ... ok
 test_portable_preflight_routes_its_own_call (test_framework_transport.FrameworkTransportTests.test_portable_preflight_routes_its_own_call)
 The implicit control-plane probe must also carry provider/session. ... ok
 test_sky_sdk_body_and_identity (test_framework_transport.FrameworkTransportTests.test_sky_sdk_body_and_identity)
 Stock OpenAILLM's final SDK call carries mandatory extra fields. ... ok
 test_registration_compile_and_artifact (test_kernel.KernelTests.test_registration_compile_and_artifact)
 The intended versioned engine and complete code artifact resolve. ... ok
+test_selected_cp_a_canonical_execution (test_kernel.KernelTests.test_selected_cp_a_canonical_execution)
+Execute the selected engine with explicit non-portable factory metadata. ... ok
 test_trace_mock_policy_swap_and_feedback (test_kernel.KernelTests.test_trace_mock_policy_swap_and_feedback)
 A real OptoPrimeV2 step consumes feedback and activates through stock migration. ... cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
 ok
@@ -39,6 +49,6 @@ test_substitutions_and_missing_ref_fail (test_preflight.PreflightTests.test_subs
 Reject mismatched names, revisions, detached HEAD and absent refs. ... ok
 
 ----------------------------------------------------------------------
-Ran 18 tests in 2.023s
+Ran 23 tests in 2.011s
 
 OK

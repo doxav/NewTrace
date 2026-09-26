@@ -12,7 +12,9 @@ from skydiscover.optimize.llm.openai import OpenAILLM
 MODEL = "z-ai/glm-5.3-flash"
 SESSION = "benchmark-PRIMS-SIGNAL-run-001"
 BASE_URL = "https://openrouter.ai/api/v1"
-EXTRA_BODY = {"provider": {"only": ["DeepInfra"]}, "session_id": SESSION}
+PROVIDER = "novita"
+SERVING_PROVIDER = "Novita"
+EXTRA_BODY = {"provider": {"only": [PROVIDER]}, "session_id": SESSION}
 HTTP_ROLES: dict[int, str] = {}
 
 

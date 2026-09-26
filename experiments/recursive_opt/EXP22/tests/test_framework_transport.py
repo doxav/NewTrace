@@ -11,6 +11,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'worktrees/trace_cp_b'))
+from scripts.framework_smoke import observer
 from src.transport import (
     BASE_URL,
     EXTRA_BODY,
@@ -26,7 +27,7 @@ from opto.features.recursive_opt import spec as S
 
 def normalized_profile() -> dict:
     """Build a routing profile through canonical normalization defaults."""
-    value = {'llm_profiles': {'main': {'provider': 'openrouter', 'model': MODEL, 'openrouter_routing': {'only': ['DeepInfra']}, 'request_params': {'extra_body': {'session_id': SESSION}}, 'max_tokens': 32, 'temperature': 0.7, 'request_timeout_s': 600}}}
+    value = {'llm_profiles': {'main': {'provider': 'openrouter', 'model': MODEL, 'openrouter_routing': {'only': ['novita']}, 'request_params': {'extra_body': {'session_id': SESSION}}, 'max_tokens': 32, 'temperature': 0.7, 'request_timeout_s': 600}}}
     S._normalize_llm_profiles(value)
     return value['llm_profiles']['main']
 
@@ -75,10 +76,10 @@ class FrameworkTransportTests(unittest.TestCase):
 
     def test_identity_and_routing_validation(self) -> None:
         """Dedicated routing never opens arbitrary provider/credential overrides."""
-        for params in ({'provider': {'only': ['DeepInfra']}}, {'extra_body': {'provider': {}}}, {'model': 'other'}, {'api_key': 'fixture'}):
+        for params in ({'provider': {'only': ['novita']}}, {'extra_body': {'provider': {}}}, {'model': 'other'}, {'api_key': 'fixture'}):
             with self.assertRaises(ValueError):
                 S._validate_request_params(params, 'request_params')
-        for routing in ({'only': []}, {'only': ['DeepInfra', 'DeepInfra']}, {'only': 'DeepInfra'}, {'sort': 'price'}):
+        for routing in ({'only': []}, {'only': ['novita', 'novita']}, {'only': 'novita'}, {'sort': 'price'}):
             profile = normalized_profile()
             profile['openrouter_routing'] = routing
             with self.assertRaises(ValueError):
@@ -90,3 +91,31 @@ class FrameworkTransportTests(unittest.TestCase):
         with patch.object(S, 'normalize_spec', return_value=normalized), patch('opto.features.recursive_opt.runmode.make_live_llm') as factory:
             S.preflight_llm_profiles({})
             self.assertEqual(factory.return_value.call_args.kwargs['extra_body'], EXTRA_BODY)
+
+    def test_cp_a_preserves_token_limit_on_empty_response(self) -> None:
+        """The selected fallback must never retry with an increased token limit."""
+        profile = normalized_profile()
+        profile['max_tokens'] = 32000
+        response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=None), finish_reason='length')])
+        with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'fixture'}), patch('openai.OpenAI') as constructor:
+            create = constructor.return_value.chat.completions.create
+            create.return_value = response
+            client = S._make_guarded_role_client(profile, 'optimizer', TraceOpenRouter, {}, S._BudgetGuard({}))
+            client(messages=[{'role': 'user', 'content': 'ping'}])
+            self.assertEqual(create.call_count, 1)
+            self.assertEqual(create.call_args.kwargs['max_tokens'], 32000)
+            self.assertEqual(create.call_args.kwargs['extra_body']['provider'], {'only': ['novita']})
+
+    def test_observer_retains_empty_generation_evidence(self) -> None:
+        """Successful routing and empty length-limited content remain distinct facts."""
+        import httpx
+
+        body = {'model': MODEL, **EXTRA_BODY}
+        request = httpx.Request('POST', BASE_URL + '/chat/completions', json=body)
+        response = httpx.Response(200, request=request, json={'model': MODEL, 'provider': 'Novita', 'choices': [{'finish_reason': 'length', 'message': {'content': None}}]})
+        records = []
+        with patch.object(httpx.Client, 'send', return_value=response) as send:
+            observer(send, records)(SimpleNamespace(), request)
+        self.assertTrue(records[0]['passed'])
+        self.assertEqual(records[0]['finish_reasons'], ['length'])
+        self.assertEqual(records[0]['content_lengths'], [0])

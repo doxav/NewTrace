@@ -57,7 +57,7 @@ class TransportTests(unittest.TestCase):
             request = mocked.call_args.args[0]
             body = json.loads(request.data)
             self.assertEqual(body["model"], MODEL)
-            self.assertEqual(body["provider"], {"only": ["DeepInfra"]})
+            self.assertEqual(body["provider"], {"only": ["novita"]})
             self.assertEqual(body["session_id"], SESSION)
             self.assertNotIn("seed", body)
             self.assertNotIn("fixture-credential", request.data.decode())

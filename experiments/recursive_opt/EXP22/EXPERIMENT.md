@@ -1,6 +1,6 @@
 # EXP22 protocol v1 — 2026-09-26
 
-Current status: STOPPED_PROVIDER at S4 after the continuation amendments below.
+Current status: Novita continuation under amendment v5; see RESULTS.md for observed gates.
 The initial S0 source stop is historical; no full benchmark has begun. This document does not certify an implemented benchmark.
 All experiment files belong under this directory. Source repositories remain unchanged.
 
@@ -274,3 +274,54 @@ This diagnostic analyzer refuses evidence that no longer matches the two recorde
 failed attempts. Extend it explicitly if resumed execution produces new evidence.
 The remaining full-run metering/checkpoint/analysis requirements still need
 validation before any strict gate can be marked passed.
+
+## Provider amendment v5 — 2026-09-26, before Novita paid execution
+
+The user explicitly requested replacing the upstream provider with `novita` and
+continuing. This supersedes the previous DeepInfra-only routing requirement and
+stop. Every new request uses `provider.only=["novita"]`; actual serving metadata
+must identify `Novita`. Model, session ID (including PRIMS), temperature, token
+limit, timeout, sources, evaluator and arm budgets are unchanged. No fallback
+provider is authorized. The public OpenRouter endpoint catalog confirms this route.
+
+DeepInfra transport/diagnostic/config evidence is archived under
+`artifacts/deepinfra_pre_novita/`; its immutable run directories remain intact.
+No DeepInfra result is pooled with the Novita series. Repeat S2, compile all S3
+specs, and repeat CP-A/CP-B mocked equivalence for Novita before S4. S0/S1 source
+and evaluator evidence remain applicable because neither changed. S4 and S5
+remain mandatory before strict execution; the bounded transient-retry rule still
+applies. Existing analysis commands must be updated to select provider evidence
+explicitly before they may write the current report.
+
+### CP-A fallback selected after Novita S2, before S4
+
+Direct, SkyDiscover and CP-A each completed one correctly routed live request.
+CP-B made three successful HTTP requests: its stock empty-response recovery
+changed max_tokens from 32 to 64 to 128, violating single-call smoke semantics.
+Source inspection shows the same recovery can escalate a 32000-token generation
+to 32768. Therefore CP-B is excluded from live benchmark execution. Use the
+pre-authorized CP-A fallback (`test_mode=true`, explicit llm_factory), labeled
+non-portable/non-promotable. Successful-response mocked equivalence still passes,
+but does not establish empty-response equivalence. All six Novita HTTP requests
+remain in transport evidence and cost accounting. S2 passes for the active
+direct/Sky/CP-A paths only; CP-B's failed diagnostic remains visible.
+
+### Bounded empty-generation diagnosis — v5.1, before second Novita S4
+
+The first Novita PRISM S4 returned HTTP 200 with 32000 completion tokens
+(31997 reasoning tokens), but stock SkyDiscover reported None content and no
+candidate. Preserve this failure. Repeat the same one-generation smoke once,
+without changing max_tokens, timeout, prompts, temperature, provider or model.
+If empty generation recurs, stop as STOPPED_PROVIDER: the required generation
+gate cannot be established at the fixed request settings. A diagnostic success
+would still require every remaining S4/S5 gate; no failed attempt is discarded
+or treated as a quality observation. The HTTP observer now also persists finish
+reasons and content lengths, without altering requests or returned responses.
+
+### Novita diagnostic disposition — 2026-09-26
+
+Both unchanged S4 attempts ended with empty solution content at 32000 completion
+tokens. Stop as STOPPED_PROVIDER (generation failure; all HTTP routes passed),
+with S4/S5 false. No further paid optimizer run is enabled. RESULTS.md and the
+current provider-filtered analyzer retain every attempt and all returned costs.
+The strict and advanced phases remain unrun; no quality conclusion is supported.

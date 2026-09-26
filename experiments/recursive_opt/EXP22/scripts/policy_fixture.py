@@ -32,7 +32,7 @@ from src.kernel import (
     configuration,
     digest,
 )
-from src.transport import MODEL, TraceOpenRouter
+from src.transport import MODEL, SERVING_PROVIDER, TraceOpenRouter
 
 from opto.features.recursive_opt import spec as S
 
@@ -56,7 +56,7 @@ def run() -> dict[str, Any]:
             requests.append(body)
             content = f'<reasoning>Fixture</reasoning><variable><name>{module.policy_source.name}</name><value>{response_source}</value></variable>'
             library = httpx2 if isinstance(request, httpx2.Request) else httpx
-            return library.Response(200, request=request, json={'id': 'fixture', 'object': 'chat.completion', 'created': 0, 'model': MODEL, 'provider': 'DeepInfra', 'choices': [{'index': 0, 'message': {'role': 'assistant', 'content': content}, 'finish_reason': 'stop'}], 'usage': {'prompt_tokens': 1, 'completion_tokens': 1, 'total_tokens': 2}})
+            return library.Response(200, request=request, json={'id': 'fixture', 'object': 'chat.completion', 'created': 0, 'model': MODEL, 'provider': SERVING_PROVIDER, 'choices': [{'index': 0, 'message': {'role': 'assistant', 'content': content}, 'finish_reason': 'stop'}], 'usage': {'prompt_tokens': 1, 'completion_tokens': 1, 'total_tokens': 2}})
 
         with contextlib.ExitStack() as stack:
             for library in (httpx, httpx2):

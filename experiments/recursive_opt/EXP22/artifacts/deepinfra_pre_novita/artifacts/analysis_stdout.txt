@@ -1,0 +1,86 @@
+{
+  "status": "STOPPED_PROVIDER",
+  "successful_transport_calls": 4,
+  "transport_tokens": 125,
+  "reported_transport_cost_usd": 1.9875000000000002e-05,
+  "rejected_requests": 6,
+  "rejected_request_cost": null,
+  "valid_generated_candidates": 0,
+  "strict_runs_completed": [],
+  "attempts": [
+    {
+      "directory": "one_prism_SD-EVOX_20260926T102637.995899Z",
+      "result": {
+        "arm": "SD-EVOX",
+        "final_best_score": 21.891622105209393,
+        "final_metrics": {
+          "combined_score": 21.891622105209393,
+          "execution_time": 9.250640869140625e-05,
+          "max_kvpr": 20.891622105209393,
+          "success_rate": 1.0
+        },
+        "gate_failure": null,
+        "horizon": 1,
+        "initial_score": 21.891622105209393,
+        "invalid_attempts": 1,
+        "iterations_observed": 1,
+        "passed": false,
+        "policy_switches": 0,
+        "task": "prism",
+        "valid_candidates": 0,
+        "wall_time": 0.8932153180066962
+      },
+      "http_statuses": [
+        429,
+        429,
+        429
+      ],
+      "provider_error_codes": [
+        "engine_overloaded",
+        "engine_overloaded",
+        "engine_overloaded"
+      ]
+    },
+    {
+      "directory": "one_prism_SD-EVOX_20260926T102800.570327Z",
+      "result": {
+        "arm": "SD-EVOX",
+        "final_best_score": 21.891622105209393,
+        "final_metrics": {
+          "combined_score": 21.891622105209393,
+          "execution_time": 0.00011944770812988281,
+          "max_kvpr": 20.891622105209393,
+          "success_rate": 1.0
+        },
+        "gate_failure": null,
+        "horizon": 1,
+        "initial_score": 21.891622105209393,
+        "invalid_attempts": 1,
+        "iterations_observed": 1,
+        "passed": false,
+        "policy_switches": 0,
+        "task": "prism",
+        "valid_candidates": 0,
+        "wall_time": 1.0494542920205276
+      },
+      "http_statuses": [
+        429,
+        429,
+        429
+      ],
+      "provider_error_codes": [
+        "engine_overloaded",
+        "engine_overloaded",
+        "engine_overloaded"
+      ]
+    }
+  ],
+  "gates": {
+    "S0": true,
+    "S1": true,
+    "S2": true,
+    "S3": true,
+    "S4": false,
+    "S5": false
+  }
+}

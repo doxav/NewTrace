@@ -1,0 +1,44 @@
+test_account_identifier_redaction_preserves_failure (test_accounting.AccountingTests.test_account_identifier_redaction_preserves_failure)
+Redaction hides account IDs without changing error codes or candidate data. ... ok
+test_rejected_cost_is_unknown (test_accounting.AccountingTests.test_rejected_cost_is_unknown)
+Absent usage is not evidence that a rejected request was free. ... ok
+test_cascade_thresholds (test_evaluation_transport.EvaluationTests.test_cascade_thresholds)
+Stock threshold includes equality and treats absent metrics as failure. ... ok
+test_comparison_rejects_changed_or_missing_quality (test_evaluation_transport.EvaluationTests.test_comparison_rejects_changed_or_missing_quality)
+Timing exclusion must not hide a quality drift or missing field. ... ok
+test_missing_entry_point_parity (test_evaluation_transport.EvaluationTests.test_missing_entry_point_parity)
+Invalid source has the same metrics on both evaluation boundaries. ... cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+ok
+test_outbound_request (test_evaluation_transport.TransportTests.test_outbound_request)
+Exact required routing survives JSON serialization without a secret. ... ok
+test_cp_a_and_cp_b_final_payloads (test_framework_transport.FrameworkTransportTests.test_cp_a_and_cp_b_final_payloads)
+The behavioral factory and portable guarded client agree on routing. ... ok
+test_identity_and_routing_validation (test_framework_transport.FrameworkTransportTests.test_identity_and_routing_validation)
+Dedicated routing never opens arbitrary provider/credential overrides. ... ok
+test_portable_preflight_routes_its_own_call (test_framework_transport.FrameworkTransportTests.test_portable_preflight_routes_its_own_call)
+The implicit control-plane probe must also carry provider/session. ... ok
+test_sky_sdk_body_and_identity (test_framework_transport.FrameworkTransportTests.test_sky_sdk_body_and_identity)
+Stock OpenAILLM's final SDK call carries mandatory extra fields. ... ok
+test_registration_compile_and_artifact (test_kernel.KernelTests.test_registration_compile_and_artifact)
+The intended versioned engine and complete code artifact resolve. ... ok
+test_trace_mock_policy_swap_and_feedback (test_kernel.KernelTests.test_trace_mock_policy_swap_and_feedback)
+A real OptoPrimeV2 step consumes feedback and activates through stock migration. ... cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+ok
+test_exact_required_branch_passes (test_preflight.PreflightTests.test_exact_required_branch_passes)
+An exact checked-out required branch passes the identity gate. ... ok
+test_explicit_isolation_requires_exact_reference (test_preflight.PreflightTests.test_explicit_isolation_requires_exact_reference)
+Continuation accepts isolation without accepting an unrelated commit. ... ok
+test_git_failure_is_descriptive (test_preflight.PreflightTests.test_git_failure_is_descriptive)
+Invalid repositories fail without leaking raw subprocess output. ... ok
+test_recursive_scan_and_safe_json (test_preflight.PreflightTests.test_recursive_scan_and_safe_json)
+Scan nested files and report paths without disclosing matches. ... ok
+test_secret_rejected_before_write (test_preflight.PreflightTests.test_secret_rejected_before_write)
+Evidence must not persist API credentials, even accidentally. ... ok
+test_substitutions_and_missing_ref_fail (test_preflight.PreflightTests.test_substitutions_and_missing_ref_fail)
+Reject mismatched names, revisions, detached HEAD and absent refs. ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 2.023s
+
+OK
