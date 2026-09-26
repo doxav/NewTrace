@@ -56,7 +56,10 @@ def main() -> None:
         axes[0, 0].legend(fontsize=8, loc='best')
         fig.suptitle(f"EXP22 · {task.replace('_', ' ').title()} · Novita / low\nSingle stochastic run per arm · {report['status']}", fontsize=13)
         for extension in ('png', 'svg'):
-            fig.savefig(ROOT/f'artifacts/{task}_strict_curves.{extension}', dpi=160)
+            path = ROOT/f'artifacts/{task}_strict_curves.{extension}'
+            fig.savefig(path, dpi=160)
+            if extension == 'svg':
+                path.write_text('\n'.join(line.rstrip() for line in path.read_text().splitlines()) + '\n')
         plt.close(fig)
     (ROOT/'artifacts/plot_environment.json').write_text(json.dumps({'matplotlib': matplotlib.__version__, 'backend': matplotlib.get_backend()}, indent=2)+'\n')
 
