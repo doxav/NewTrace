@@ -362,6 +362,7 @@ class PrioritySearch(SearchTemplate):
               score_function: str = 'mean',  # function to compute the score for the candidates; 'mean' or 'ucb'
               ucb_exploration_constant: float = 1.0,  # exploration constant for UCB score function
               decouple_optimizers: bool = True,  # whether to decouple the optimizers for each candidate; if True, each candidate will have its own optimizer instance; if False, all candidates share the same optimizer instance.
+              selection_score_window: str = 'history',
               # Additional keyword arguments
               **kwargs
               ):
@@ -393,8 +394,21 @@ class PrioritySearch(SearchTemplate):
             memory_update_frequency (int, optional): The number of iterations to keep the candidates in the short-term memory before merging them into the long-term memory. Defaults to 0, which means only long-term memory is used. None means only short-term memory is used.
             score_function (str, optional): The function to compute the score for the candidates; 'mean' or 'ucb'. Defaults to 'mean'.
             ucb_exploration_constant (float, optional): The exploration constant for UCB score function. Defaults to 1.0.
+            selection_score_window (str): 'history' keeps legacy scoring; 'latest_train_batch'
+                compares one parent/proposal on their current common TRAIN batch only.
             **kwargs: Additional keyword arguments that may be used by the implementation.
         """
+
+        if selection_score_window not in {'history', 'latest_train_batch'}:
+            raise ValueError("selection_score_window must be history or latest_train_batch")
+        if selection_score_window == 'latest_train_batch' and (
+            validate_dataset is not None or num_candidates != 1 or num_batches != 1
+            or num_proposals != 1 or objective_config is not None
+            or score_function != 'mean' or memory_update_frequency != 0
+            or len(self._optimizers) != 1
+        ):
+            raise ValueError("latest_train_batch requires one parent/proposal/batch, scalar mean, no validation dataset and long-term memory only")
+        self.selection_score_window = selection_score_window
 
         # Initialize search parameters and memory
         self._initialize_search_parameters(
@@ -823,8 +837,14 @@ class PrioritySearch(SearchTemplate):
             **kwargs: Additional keyword arguments that may be used by the implementation.
         """
         print("--- Updating memory with validation results...") if verbose else None
+        if getattr(self, 'selection_score_window', 'history') == 'latest_train_batch':
+            # Retire stale comparison scores, keeping history on the current parent.
+            # New proposals use the same TRAIN batch (use_prev_batch=True).
+            self.memory.reset()
         for candidate, rollouts in validate_results.items():
             candidate.add_rollouts(rollouts)  # add the rollouts to the candidate
+            if getattr(self, 'selection_score_window', 'history') == 'latest_train_batch' and rollouts:
+                candidate.selection_rollouts = list(rollouts)
             priority = self.compute_exploration_priority(candidate)  # compute the priority for the candidate
             self.memory.push(priority, candidate)
 
@@ -893,6 +913,8 @@ class PrioritySearch(SearchTemplate):
         """
         if not isinstance(candidate, ModuleCandidate):
             raise TypeError("candidate must be an instance of ModuleCandidate.")
+        if getattr(self, 'selection_score_window', 'history') == 'latest_train_batch':
+            return self._latest_train_score(candidate)
         # By default, we compute the mean score of the rollouts
         return candidate.mean_score()
 
@@ -908,6 +930,8 @@ class PrioritySearch(SearchTemplate):
         """
         if not isinstance(candidate, ModuleCandidate):
             raise TypeError("candidate must be an instance of ModuleCandidate.")
+        if getattr(self, 'selection_score_window', 'history') == 'latest_train_batch':
+            return self._latest_train_score(candidate)
 
         # Multi-objective priority: use weighted scalarization of score_dict when available
         if getattr(self, 'objective_config', None) is not None:
@@ -963,10 +987,18 @@ class PrioritySearch(SearchTemplate):
         """
         return candidates
 
+    def _latest_train_score(self, candidate: ModuleCandidate) -> float:
+        """Rank only the current common TRAIN batch; raw historical rollouts remain intact."""
+        rollouts = getattr(candidate, 'selection_rollouts', [])
+        return safe_mean([r['score'] for r in rollouts]) if rollouts else 0.0
+
     # For the further usage, we decide to add the exploration rollouts to the exploration candidates, before proposing.
     def add_exploration_rollouts_to_candidates(self, exploration_candidates: List[ModuleCandidate], samples: Samples):
         """ Add the exploration rollouts to the exploration candidates.
         """
         matched_exploration_candidates_and_samples = self.match_candidates_and_samples(exploration_candidates, samples.samples)
         for c, rollouts in matched_exploration_candidates_and_samples.items():
-            c.add_rollouts([r for rr in rollouts for r in rr.to_list()])
+            current = [r for rr in rollouts for r in rr.to_list()]
+            c.add_rollouts(current)
+            if getattr(self, 'selection_score_window', 'history') == 'latest_train_batch':
+                c.selection_rollouts = current

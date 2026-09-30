@@ -1,0 +1,19 @@
+test_complete_pairs_have_exact_metrics_and_isolated_reports (test_parallel_analysis.ParallelAnalysisTests.test_complete_pairs_have_exact_metrics_and_isolated_reports)
+Compute known gains and AUC while preserving the preexisting global report. ... ok
+test_default_plot_input_preserves_historical_paths (test_parallel_analysis.ParallelAnalysisTests.test_default_plot_input_preserves_historical_paths)
+Omitting the new option retains the existing report and artifact directory. ... ok
+test_failed_or_unexited_worker_cannot_complete_pair (test_parallel_analysis.ParallelAnalysisTests.test_failed_or_unexited_worker_cannot_complete_pair)
+Final files do not establish success before the worker exits successfully. ... ok
+test_invalid_manifest_and_mismatched_run_fail (test_parallel_analysis.ParallelAnalysisTests.test_invalid_manifest_and_mismatched_run_fail)
+Reject duplicate arms and directories belonging to another experiment. ... ok
+test_live_snapshot_preserves_unknown_metrics_and_usage_boundary (test_parallel_analysis.ParallelAnalysisTests.test_live_snapshot_preserves_unknown_metrics_and_usage_boundary)
+Live scores are measured but missing initial/native metrics are never invented. ... ok
+test_partial_sealed_result_has_no_full_auc (test_parallel_analysis.ParallelAnalysisTests.test_partial_sealed_result_has_no_full_auc)
+An interrupted worker retains observed evidence but cannot enter contrasts. ... ok
+test_plot_adapter_scopes_outputs_and_preserves_partial_results (test_parallel_analysis.ParallelAnalysisTests.test_plot_adapter_scopes_outputs_and_preserves_partial_results)
+Parallel plotting uses only its own batch and rejects unsealed snapshots. ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.040s
+
+OK

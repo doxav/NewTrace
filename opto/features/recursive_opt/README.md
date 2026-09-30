@@ -185,3 +185,39 @@ train_dataset=, algorithm=, optimizer=, guide=)` · `opto.trainer.algorithms`:
 
 **Trainer class names are case-sensitive** in the `train()` facade — use
 `"BeamsearchAlgorithm"` (not `"BeamSearchAlgorithm"`).
+
+## 6. Online co-evolution (`coevolution/`)
+
+The levels above are episodic: an O1 candidate is scored by rerunning O0. `coevolution/` adds the
+online alternative, where O1 acts *during* one O0 run. Two internal levels share one declared state:
+
+| Component | Module | Role |
+|---|---|---|
+| Shared state | `state.Population` | Insertion-ordered candidates, snapshot/restore, per-decision execution trace (`statistics`) |
+| O1 surface | `policy` | Code policies (`class Policy` with `observe`/`sample`), contract validator, `PolicySlot` hot swap with migration and rollback, paired challenger |
+| Trigger | `scheduling` | `stagnation` (patience, threshold), `periodic`, `never`; `resolve_patience('auto', horizon)` |
+| Deferred evaluation | `scheduling.DeferredEvaluation` | A deployed policy stays *pending* until its window closes; `log_window`, `gain` or `paired` scores |
+| Archive | `scheduling.StrategyArchive` | Parent `best` or `current`, random context policies |
+| Feedback | `feedback.FeedbackComposer` | Window context, population state, execution trace, context policies; optional LLM summaries (`feedback` role) |
+| Proposers | `proposers` | `LLMRewriteProposer` (full rewrite, validated retries) or `TraceProposer` (persistent OptoPrimeV2) |
+| O0 operator | `operator.PopulationOperator` | Parent + contexts + variation label + previous attempts; SEARCH/REPLACE diffs or rewrite; retries with errors |
+| Engine | `engine.CoevolutionEngine` | Runs everything; `evox_preset()` reproduces SkyDiscover EvoX |
+| Control plane | `control_plane` | Engine `coevolution`, module `recursive_opt.module.program_source@1`, `program_evaluator`, `coevolution_spec` |
+
+```python
+from opto.features.recursive_opt import spec as S
+from opto.features.recursive_opt.coevolution import control_plane as CP, evox_preset
+
+CP.register()
+S.register_evaluator('my.evaluator@1', CP.program_evaluator(lambda source: ({'combined_score': ...}, {})))
+raw = CP.coevolution_spec(level_id='evox', program=initial_source, evaluator_ref='my.evaluator@1',
+                          system_message=task_text, engine_config={**evox_preset(horizon=100), 'proposer': 'trace'})
+(result,) = S.execute_plan(S.compile_plan(raw), resources)   # roles: forward (O0), optimizer (O1), feedback
+```
+
+Equivalence with SkyDiscover EvoX is checked differentially (same scripted LLMs, same toy task):
+identical decisions (parents, contexts, labels, retries), triggers, window scores, proposals, deployments,
+rollbacks, LLM calls per role and best-score curve, over five scenarios (horizons 60–200). The harness lives in
+`experiments/recursive_opt/EXP23/equivalence/`. Prompt wording is adapted, not byte-identical.
+One deliberate deviation: an LLM transport error is not treated as a policy failure (EvoX restores the previous policy).
+Tests: `tests/unit_tests/test_recursive_coevolution.py`.

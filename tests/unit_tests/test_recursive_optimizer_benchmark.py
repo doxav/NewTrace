@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from artifacts.optimizer_discovery import benchmark as B
+from experiments.recursive_opt._shared.optimizer_discovery import benchmark as B
 
 
 def test_tasks_are_deterministic_disjoint_and_optima_feasible() -> None:

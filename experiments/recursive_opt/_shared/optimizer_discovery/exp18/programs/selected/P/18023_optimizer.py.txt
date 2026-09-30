@@ -1,0 +1,138 @@
+import math
+import random
+
+def propose(history, bounds, seed):
+    d = len(bounds)
+    rng = random.Random(seed + len(history))
+    n = len(history)
+
+    # Initial exploration: Latin hypercube design
+    N = 2 * d + 1
+    if n < N:
+        design_rng = random.Random(seed)
+        perms = []
+        for _ in range(d):
+            perm = list(range(N))
+            design_rng.shuffle(perm)
+            perms.append(perm)
+        k = n
+        point = []
+        for j in range(d):
+            cell = perms[j][k]
+            offset_rng = random.Random(seed + 1000 + k * d + j)
+            offset = offset_rng.random()
+            low, high = bounds[j]
+            point.append(low + (cell + offset) / N * (high - low))
+        return point
+
+    # GP-EI phase
+    X = [row['x'] for row in history]
+    y = [row['value'] for row in history]
+
+    # Estimate length scale as median pairwise distance
+    dists = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            dist = math.sqrt(sum((X[i][k] - X[j][k]) ** 2 for k in range(d)))
+            dists.append(dist)
+    if dists:
+        dists.sort()
+        if len(dists) % 2 == 1:
+            l = dists[len(dists) // 2]
+        else:
+            l = (dists[len(dists) // 2 - 1] + dists[len(dists) // 2]) / 2
+    else:
+        l = 0.1
+    if l == 0:
+        l = 0.1
+
+    def kernel(x, y):
+        diff = sum((x[k] - y[k]) ** 2 for k in range(d))
+        return math.exp(-0.5 * diff / (l * l))
+
+    # Build kernel matrix
+    K = [[kernel(X[i], X[j]) for j in range(n)] for i in range(n)]
+    sigma_n = 1e-6
+    for i in range(n):
+        K[i][i] += sigma_n
+
+    # LU solve with partial pivoting
+    def lu_solve(A, b):
+        n = len(A)
+        M = [row[:] + [b[i]] for i, row in enumerate(A)]
+        for i in range(n):
+            max_row = i
+            max_val = abs(M[i][i])
+            for r in range(i + 1, n):
+                if abs(M[r][i]) > max_val:
+                    max_val = abs(M[r][i])
+                    max_row = r
+            if max_val == 0:
+                M[i][i] += 1e-12
+                max_val = abs(M[i][i])
+            if max_row != i:
+                M[i], M[max_row] = M[max_row], M[i]
+            for r in range(i + 1, n):
+                factor = M[r][i] / M[i][i]
+                for c in range(i, n + 1):
+                    M[r][c] -= factor * M[i][c]
+        x = [0.0] * n
+        for i in range(n - 1, -1, -1):
+            s = sum(M[i][j] * x[j] for j in range(i + 1, n))
+            x[i] = (M[i][n] - s) / M[i][i]
+        return x
+
+    # Precompute alpha = K^{-1} y
+    alpha = lu_solve(K, y)
+    f_best = min(y)
+    best_x = X[y.index(f_best)]
+
+    # Generate candidate points
+    num_candidates = 1000
+    candidates = []
+    for i in range(num_candidates):
+        if i % 2 == 0:
+            cand = [rng.uniform(low, high) for low, high in bounds]
+        else:
+            sigma_cand = 0.1 * (max(high - low for low, high in bounds) / math.sqrt(d))
+            cand = [
+                max(low, min(high, best_x[k] + rng.gauss(0, sigma_cand)))
+                for k, (low, high) in enumerate(bounds)
+            ]
+        candidates.append(cand)
+
+    best_ei = -float('inf')
+    best_cand = None
+    for cand in candidates:
+        k_vec = [kernel(cand, X[i]) for i in range(n)]
+        beta = lu_solve(K, k_vec)
+        mean = sum(k_vec[i] * alpha[i] for i in range(n))
+        var = kernel(cand, cand) - sum(k_vec[i] * beta[i] for i in range(n))
+        if var < 0:
+            var = 0.0
+        sigma = math.sqrt(var)
+        if sigma < 1e-12:
+            ei = max(0.0, f_best - mean)
+        else:
+            z = (f_best - mean) / sigma
+            phi = (1.0 / math.sqrt(2 * math.pi)) * math.exp(-0.5 * z * z)
+            Phi = 0.5 * (1.0 + math.erf(z / math.sqrt(2)))
+            ei = (f_best - mean) * Phi + sigma * phi
+        if ei > best_ei:
+            best_ei = ei
+            best_cand = cand
+
+    if best_cand is None:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    # Avoid proposing a point too close to an existing one
+    for x in X:
+        dist = math.sqrt(sum((best_cand[k] - x[k]) ** 2 for k in range(d)))
+        if dist < 1e-12:
+            best_cand = [
+                max(low, min(high, best_cand[k] + rng.gauss(0, 1e-6)))
+                for k, (low, high) in enumerate(bounds)
+            ]
+            break
+
+    return best_cand

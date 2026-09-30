@@ -1,0 +1,174 @@
+import random
+import math
+
+def propose(history, bounds, seed):
+    dim = len(bounds)
+    # Generate Halton points for initial exploration
+    def halton(n, base):
+        result = 0.0
+        f = 1.0 / base
+        i = n
+        while i > 0:
+            result += f * (i % base)
+            i //= base
+            f /= base
+        return result
+
+    primes = [2, 3, 5, 7, 11, 13, 17, 19]
+    bases = primes[:dim]
+
+    halton_points = []
+    for i in range(32):
+        point = []
+        for b, (low, high) in zip(bases, bounds):
+            h = halton(i, b)
+            point.append(low + h * (high - low))
+        halton_points.append(point)
+
+    rng = random.Random(seed)
+    perm = list(range(32))
+    rng.shuffle(perm)
+
+    k = len(history)
+    N_explore = 2 * dim
+
+    # Exploration phase
+    if k < N_explore:
+        return halton_points[perm[k]]
+
+    best = min(history, key=lambda row: row["value"])["x"]
+
+    # Attempt quadratic model if enough points
+    if k >= 2 * dim + 1:
+        # Build design matrix: 1, x_i, x_i^2
+        n = k
+        p = 2 * dim + 1
+        X = [[0.0] * p for _ in range(n)]
+        y = [0.0] * n
+        for row_idx, row in enumerate(history):
+            x = row["x"]
+            y[row_idx] = row["value"]
+            X[row_idx][0] = 1.0
+            for i in range(dim):
+                X[row_idx][1 + i] = x[i]
+                X[row_idx][1 + dim + i] = x[i] * x[i]
+
+        # Normal equations: A = X^T X, b = X^T y
+        A = [[0.0] * p for _ in range(p)]
+        bvec = [0.0] * p
+        for i in range(p):
+            for j in range(p):
+                s = 0.0
+                for r in range(n):
+                    s += X[r][i] * X[r][j]
+                A[i][j] = s
+            s = 0.0
+            for r in range(n):
+                s += X[r][i] * y[r]
+            bvec[i] = s
+
+        # Add small ridge for stability
+        for i in range(p):
+            A[i][i] += 1e-8
+
+        # Solve A * beta = bvec via Gaussian elimination with partial pivoting
+        beta = None
+        try:
+            # Copy A and bvec
+            M = [row[:] for row in A]
+            rhs = bvec[:]
+            for col in range(p):
+                # Find pivot
+                pivot = col
+                max_abs = abs(M[col][col])
+                for r in range(col + 1, p):
+                    if abs(M[r][col]) > max_abs:
+                        max_abs = abs(M[r][col])
+                        pivot = r
+                if max_abs < 1e-12:
+                    raise ValueError("Singular matrix")
+                if pivot != col:
+                    M[col], M[pivot] = M[pivot], M[col]
+                    rhs[col], rhs[pivot] = rhs[pivot], rhs[col]
+                # Eliminate
+                for r in range(col + 1, p):
+                    factor = M[r][col] / M[col][col]
+                    for c in range(col, p):
+                        M[r][c] -= factor * M[col][c]
+                    rhs[r] -= factor * rhs[col]
+            # Back substitution
+            beta = [0.0] * p
+            for i in range(p - 1, -1, -1):
+                s = rhs[i]
+                for j in range(i + 1, p):
+                    s -= M[i][j] * beta[j]
+                beta[i] = s / M[i][i]
+        except Exception:
+            beta = None
+
+        if beta is not None:
+            # Compute unconstrained minimum
+            candidate = [0.0] * dim
+            valid = True
+            for i in range(dim):
+                a = beta[1 + i]
+                b = beta[1 + dim + i]
+                if b > 1e-12:
+                    x_i = -a / (2.0 * b)
+                else:
+                    # concave, choose bound that gives lower predicted value
+                    low, high = bounds[i]
+                    val_low = beta[0] + a * low + b * low * low
+                    val_high = beta[0] + a * high + b * high * high
+                    x_i = low if val_low < val_high else high
+                candidate[i] = x_i
+
+            # Clip to bounds
+            for i, (low, high) in enumerate(bounds):
+                candidate[i] = max(low, min(high, candidate[i]))
+
+            # Trust region: limit distance from best
+            max_radius = 0.2 * (high - low) * (0.95 ** ((k - N_explore) // (2 * dim)))
+            dist = math.sqrt(sum((candidate[i] - best[i]) ** 2 for i in range(dim)))
+            if dist > max_radius:
+                # Move towards best
+                for i in range(dim):
+                    candidate[i] = best[i] + (candidate[i] - best[i]) * (max_radius / dist)
+
+            # Ensure not already evaluated
+            if any(candidate == row["x"] for row in history):
+                # Perturb deterministically
+                rng2 = random.Random(seed + k)
+                step = 0.01 * (high - low)
+                for i in range(dim):
+                    candidate[i] += rng2.uniform(-step, step)
+                    candidate[i] = max(bounds[i][0], min(bounds[i][1], candidate[i]))
+            return candidate
+
+    # Fallback: coordinate descent with adaptive step
+    cycle = (k - N_explore) // (2 * dim)
+    step_factor = 0.2 * (0.95 ** cycle)
+    idx = (k - N_explore) % (2 * dim)
+    sign = 1 if idx < dim else -1
+    dim_idx = idx % dim
+
+    low, high = bounds[dim_idx]
+    step = step_factor * (high - low)
+
+    candidate = best.copy()
+    candidate[dim_idx] += sign * step
+    candidate[dim_idx] = max(low, min(high, candidate[dim_idx]))
+
+    # Avoid duplicates
+    if any(candidate == row["x"] for row in history):
+        # Try opposite direction
+        candidate2 = best.copy()
+        candidate2[dim_idx] -= sign * step
+        candidate2[dim_idx] = max(low, min(high, candidate2[dim_idx]))
+        if not any(candidate2 == row["x"] for row in history):
+            return candidate2
+        else:
+            rng2 = random.Random(seed + k)
+            return [rng2.uniform(low, high) for low, high in bounds]
+    else:
+        return candidate

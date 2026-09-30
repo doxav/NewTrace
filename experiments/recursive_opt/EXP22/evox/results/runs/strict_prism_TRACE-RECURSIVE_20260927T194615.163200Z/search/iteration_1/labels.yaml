@@ -1,0 +1,70 @@
+iteration: 1
+diverge_label_length: 2711
+refine_label_length: 2131
+
+diverge_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.
+  This may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.
+  You can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.
+  Think through what is needed to achieve a BREAKTHROUGH SCORE.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  - **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Libraries / solvers**: numpy only — use numpy for vectorized scoring, sorting, and random restarts; no external solvers available, so hand-rolled heuristics are the way.
+  - **Greedy construction**: sort models by req_rate/slo or model_size descending ↔ place each model on GPU with lowest resulting KVPR (best-fit on pressure) ↔ first-fit-decreasing on size ↔ worst-fit to spread load.
+  - **Local search / improvement**: after greedy placement, repeatedly move a model from max-KVPR GPU to another if KVPR decreases ↔ swap pairs of models between GPUs ↔ relocate-and-swap alternated until no improvement.
+  - **Metaheuristics**: simulated annealing over move/swap moves ↔ multi-start randomized greedy keeping best ↔ small perturbation + re-run (iterated local search).
+  - **Objective-aware scoring**: target minimax directly — score moves by change in the MAX KVPR only, not total KVPR; tie-break by second-highest GPU pressure.
+  - **Feasibility handling**: check memory capacity before each placement; prefer packing large models together to leave free space on low-pressure GPUs ↔ reserve headroom by penalizing near-full GPUs.
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken "creative" solution is worthless.
+  
+  Format:
+  1. APPROACH: Describe your different approach.
+  2. CODE: Implementation.
+
+refine_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You should keep the same fundamental approach and algorithm structure.
+  DO NOT switch to a different problem formulation.
+  Focus on REFINING / EXPLOITING the current approach: better inputs, additional polish, etc.
+  Think through what is needed to SQUEEZE the last few percent of performance.
+  Use sufficient computational budget for refinement.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF REFINEMENT strategies (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Local search intensity**: increase move/swap passes until no improving move exists; use first-improvement then best-improvement sweeps.
+  - **Multi-start**: run greedy from many randomized orderings/seeds, keep placement with lowest max KVPR.
+  - **Neighborhood refinement**: target only the max-KVPR GPU's models for moves; try 2-swaps and 3-cycles when single moves stall.
+  - **Feasibility polish**: repair any near-capacity GPU by shifting small models to GPUs with more free memory and lower pressure.
+  - **Correctness robustness**: ensure all model objects placed exactly once, dict keyed by gpu_id 0..gpu_num-1, and keep runtime well under the 10s timeout (vectorize scoring with numpy).
+  
+  Key evaluator facts driving both blocks: score = 1/avg(max_kvpr) + success_rate, so correctness (all models placed once, memory fit, dict format) is mandatory and minimizing the worst GPU's KVPR is the only quality lever.
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken solution is worthless.
+  
+  Format:
+  1. REFINEMENT: Describe what you are refining.
+  2. CODE: Implementation with refinement.

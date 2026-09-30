@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from artifacts.optimizer_discovery import benchmark as B
-from artifacts.optimizer_discovery import exp15 as E
+from experiments.recursive_opt._shared.optimizer_discovery import benchmark as B
+from experiments.recursive_opt._shared.optimizer_discovery import exp15 as E
 
 
 def response(source: str | None) -> Any:
@@ -131,7 +131,7 @@ def test_production_trace_budgets_isolation_and_selection(
     before = len(calls)
     exp.generate(701, "A2")
     assert len(calls) == before
-    from artifacts.optimizer_discovery import evidence
+    from experiments.recursive_opt._shared.optimizer_discovery import evidence
 
     assert evidence.verify(exp)["completed_responses"] == 4
     result = exp.analyze()
@@ -177,7 +177,7 @@ def test_environment_freeze_checks_versions(tmp_path: Path, monkeypatch: Any) ->
 
 def test_descriptive_audit_preserves_invalidity_and_missing_usage() -> None:
     """Missing usage stays missing; source failure is distinct from trajectory quality."""
-    from artifacts.optimizer_discovery import evidence
+    from experiments.recursive_opt._shared.optimizer_discovery import evidence
 
     proposals = [
         {
@@ -212,7 +212,7 @@ def test_descriptive_audit_preserves_invalidity_and_missing_usage() -> None:
 
 def test_provider_metadata_filter_does_not_persist_unknown_fields() -> None:
     """Only declared safe provider metadata may enter scientific artifacts."""
-    from artifacts.optimizer_discovery import evidence
+    from experiments.recursive_opt._shared.optimizer_discovery import evidence
 
     assert evidence.safe_metadata(
         {"id": "x", "provider_name": "p", "secret": "private"}
@@ -286,7 +286,7 @@ def test_preflight_rejects_modified_frozen_source(
 
 def test_reported_latency_matches_the_completed_attempt(tmp_path: Path) -> None:
     """A resumed slot's total wall duration must not be attributed to its final attempt."""
-    from artifacts.optimizer_discovery.reporting import attempt_timing
+    from experiments.recursive_opt._shared.optimizer_discovery.reporting import attempt_timing
 
     E.persist(tmp_path / "started_1.json", {"time_ns": 100_000_000_000})
     E.persist(
@@ -312,7 +312,7 @@ def test_selected_source_export_preserves_bytes_and_frozen_hash(
     """Portable export preserves even raw formatting and refuses altered selections."""
     import gzip
 
-    from artifacts.optimizer_discovery.reporting import export_programs
+    from experiments.recursive_opt._shared.optimizer_discovery.reporting import export_programs
 
     root = tmp_path / "raw"
     source = B.SEED_SOURCE + "\n  \n"
@@ -384,7 +384,7 @@ def test_trace_archive_is_lossless_and_requires_completed_generation(
     import hashlib
     import lzma
 
-    from artifacts.optimizer_discovery.reporting import archive_trace, read_trace
+    from experiments.recursive_opt._shared.optimizer_discovery.reporting import archive_trace, read_trace
 
     original = b'{"source": "raw  \\n", "all_data": [1, 2, 3]}\n'
     compressed = gzip.compress(original, mtime=0)
@@ -407,7 +407,7 @@ def test_completed_event_archive_replays_exact_log_and_cleans_up(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
     """Oversized event evidence stays lossless and reconstructs for unchanged analysis."""
-    from artifacts.optimizer_discovery.reporting import analyze_archived, archive_events
+    from experiments.recursive_opt._shared.optimizer_discovery.reporting import analyze_archived, archive_events
 
     payload = b'{"event":"evaluation","value":-1}\n' * 20000
     path = tmp_path / "events.jsonl"

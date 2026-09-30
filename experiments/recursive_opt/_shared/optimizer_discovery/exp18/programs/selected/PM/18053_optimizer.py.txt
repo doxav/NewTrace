@@ -1,0 +1,219 @@
+def propose(history, bounds, seed):
+    import random
+    rng = random.Random(seed + len(history))
+    d = len(bounds)
+    lows = [lo for lo, hi in bounds]
+    highs = [hi for lo, hi in bounds]
+    ranges = [hi - lo for lo, hi in bounds]
+    n = len(history)
+
+    def inside(p):
+        return [max(lows[i], min(highs[i], p[i])) for i in range(d)]
+
+    if n == 0:
+        return [0.5 * (lows[i] + highs[i]) for i in range(d)]
+
+    # Initial symmetric coordinate probing, then a separable quadratic estimate.
+    if n <= 2 * d + 1:
+        base = history[0]["x"]
+        if n <= 2 * d:
+            idx = (n - 1) // 2
+            sign = 1.0 if (n % 2 == 1) else -1.0
+            h = 0.25 * ranges[idx]
+            p = base[:]
+            p[idx] = max(lows[idx], min(highs[idx], p[idx] + sign * h))
+            return p
+
+        # n == 2*d + 1
+        f0 = history[0]["value"]
+        p = base[:]
+        for i in range(d):
+            plus = history[2 * i + 1]["value"]
+            minus = history[2 * i + 2]["value"]
+            denom = plus + minus - 2.0 * f0
+            if abs(denom) < 1e-12:
+                continue
+            h = 0.25 * ranges[i]
+            delta = h * (minus - plus) / (2.0 * denom)
+            p[i] += delta
+        p = inside(p)
+        for row in history:
+            if sum((p[k] - row["x"][k]) ** 2 for k in range(d)) < 1e-12:
+                scale = max(0.005, 0.02 * (1.0 - n / 32.0))
+                p = [base[i] + rng.gauss(0.0, scale * ranges[i]) for i in range(d)]
+                p = inside(p)
+                break
+        return p
+
+    sorted_hist = sorted(history, key=lambda row: row["value"])
+    best = sorted_hist[0]["x"]
+
+    # Stagnation detection.
+    min_so_far = float('inf')
+    last_improve = 0
+    for i, row in enumerate(history):
+        val = row["value"]
+        if val < min_so_far - 1e-12:
+            min_so_far = val
+            last_improve = i
+    steps = n - 1 - last_improve
+    stagnant = steps > max(2, d)
+
+    if stagnant:
+        p_uniform = 0.10
+        p_gauss = 0.20
+    else:
+        p_uniform = 0.05
+        p_gauss = 0.10
+
+    r = rng.random()
+    if r < p_uniform:
+        return [rng.uniform(lo, hi) for lo, hi in zip(lows, highs)]
+    if r < p_uniform + p_gauss:
+        base_scale = max(0.01, 0.15 * (1.0 - n / 32.0))
+        if stagnant:
+            base_scale *= 2.0
+        p = [best[i] + rng.gauss(0.0, base_scale * ranges[i]) for i in range(d)]
+        return inside(p)
+
+    # Try a small ridge quadratic trust-region model once enough data exists.
+    def solve_linear(A, bvec):
+        mdim = len(A)
+        M = [A[i][:] + [bvec[i]] for i in range(mdim)]
+        for col in range(mdim):
+            pivot = max(range(col, mdim), key=lambda rr: abs(M[rr][col]))
+            if abs(M[pivot][col]) < 1e-12:
+                return None
+            if pivot != col:
+                M[col], M[pivot] = M[pivot], M[col]
+            inv = 1.0 / M[col][col]
+            for j in range(col, mdim + 1):
+                M[col][j] *= inv
+            for rr in range(mdim):
+                if rr != col:
+                    fac = M[rr][col]
+                    if abs(fac) > 0.0:
+                        for j in range(col, mdim + 1):
+                            M[rr][j] -= fac * M[col][j]
+        return [M[i][mdim] for i in range(mdim)]
+
+    def try_quadratic():
+        mfeat = 1 + d + d * (d + 1) // 2
+        if n < mfeat + 2:
+            return None
+
+        best_x = best[:]
+        by_dist = sorted(
+            history,
+            key=lambda row: sum((row["x"][k] - best_x[k]) ** 2 for k in range(d))
+        )
+        npts = min(len(by_dist), 2 * mfeat + 3)
+        pts = by_dist[:npts]
+
+        A = [[0.0] * mfeat for _ in range(mfeat)]
+        bvec = [0.0] * mfeat
+
+        for row in pts:
+            x = row["x"]
+            feat = [1.0] + x[:]
+            for i in range(d):
+                for j in range(i, d):
+                    feat.append(x[i] * x[j])
+            y = row["value"]
+            for i in range(mfeat):
+                bvec[i] += feat[i] * y
+                for j in range(mfeat):
+                    A[i][j] += feat[i] * feat[j]
+
+        lam = 1e-7 * max(1.0, len(pts))
+        for i in range(1, mfeat):
+            A[i][i] += lam
+
+        theta = solve_linear(A, bvec)
+        if theta is None:
+            return None
+
+        # Build the quadratic-gradient matrix.
+        G = [[0.0] * d for _ in range(d)]
+        cur = 1 + d
+        for i in range(d):
+            for j in range(i, d):
+                val = theta[cur]
+                cur += 1
+                if i == j:
+                    G[i][i] = 2.0 * val
+                else:
+                    G[i][j] = val
+                    G[j][i] = val
+
+        rhs = [-theta[1 + i] for i in range(d)]
+        for i in range(d):
+            G[i][i] += 1e-8 * max(1.0, len(pts))
+
+        model_min = solve_linear(G, rhs)
+        if model_min is None:
+            return None
+
+        def model_value(x):
+            val = theta[0]
+            for k in range(d):
+                val += theta[1 + k] * x[k]
+            cur2 = 1 + d
+            for i in range(d):
+                for j in range(i, d):
+                    val += theta[cur2] * x[i] * x[j]
+                    cur2 += 1
+            return val
+
+        best_pred = model_value(best_x)
+        step = [model_min[i] - best_x[i] for i in range(d)]
+        max_ratio = 0.0
+        for i in range(d):
+            rn = max(ranges[i], 1e-12)
+            max_ratio = max(max_ratio, abs(step[i]) / rn)
+
+        trust = 0.20 + 0.20 * max(0.0, 1.0 - n / 28.0)
+        if stagnant:
+            trust *= 1.4
+
+        if max_ratio > trust:
+            scale = trust / max_ratio
+            step = [step[i] * scale for i in range(d)]
+
+        p = [best_x[i] + step[i] for i in range(d)]
+        p = inside(p)
+
+        if model_value(p) > best_pred - 1e-8:
+            return None
+
+        for row in history:
+            if sum((p[k] - row["x"][k]) ** 2 for k in range(d)) < 1e-12:
+                return None
+        return p
+
+    qp = try_quadratic()
+    if qp is not None:
+        return qp
+
+    # Nelder-Mead style reflection over the best d+1 points.
+    simplex = sorted_hist[:d + 1]
+    worst = simplex[-1]
+    centroid = [sum(simplex[i]["x"][j] for i in range(d)) / d for j in range(d)]
+    if stagnant:
+        alpha = 1.0 + 0.8 * (1.0 - n / 32.0)
+    else:
+        alpha = 1.0 + 0.5 * max(0.0, 1.0 - n / 20.0)
+    refl = [centroid[j] + alpha * (centroid[j] - worst["x"][j]) for j in range(d)]
+    p = inside(refl)
+
+    # Avoid exact duplicates with a small Gaussian perturbation.
+    for row in history:
+        if sum((p[k] - row["x"][k]) ** 2 for k in range(d)) < 1e-12:
+            scale = max(0.01, 0.05 * (1.0 - n / 32.0))
+            if stagnant:
+                scale *= 5.0
+            p = [best[i] + rng.gauss(0.0, scale * ranges[i]) for i in range(d)]
+            p = inside(p)
+            break
+
+    return p

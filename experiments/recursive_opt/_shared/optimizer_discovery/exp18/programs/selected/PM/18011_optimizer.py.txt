@@ -1,0 +1,187 @@
+def propose(history, bounds, seed):
+    import random, math
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    t = len(history)
+
+    # Initial low-discrepancy coverage using van der Corput sequence
+    if t < 2 * dim:
+        bases = [2, 3, 5, 7, 11, 13, 17, 19]
+        idx = seed + t + 1
+        if idx <= 0:
+            idx = 1
+        point = []
+        for j, (low, high) in enumerate(bounds):
+            base = bases[j % len(bases)]
+            f = 1.0
+            r = 0.0
+            n = idx
+            while n > 0:
+                f = f / base
+                r = r + f * (n % base)
+                n = n // base
+            point.append(low + r * (high - low))
+        return point
+
+    # Best point and value
+    best_row = min(history, key=lambda row: row["value"])
+    best_x = best_row["x"]
+    best_val = best_row["value"]
+
+    # Compute per-coordinate step sizes from top 25% points
+    sorted_hist = sorted(history, key=lambda row: row["value"])
+    k = max(2, int(0.25 * t))
+    top = sorted_hist[:k]
+    step = []
+    for i in range(dim):
+        vals = [row["x"][i] for row in top]
+        mean = sum(vals) / len(vals)
+        var = sum((v - mean) ** 2 for v in vals) / len(vals)
+        std = math.sqrt(var) if var > 0 else 0.0
+        range_i = bounds[i][1] - bounds[i][0]
+        if std < 1e-12:
+            std = 0.05 * range_i
+        s = max(0.01 * range_i, min(0.2 * range_i, std))
+        step.append(s)
+
+    # Exploration probability: decays with time, boosted on stagnation
+    p_explore = max(0.05, 0.25 * (1 - t / 32))
+    if t > 5:
+        prev_best = min(row["value"] for row in history[:-5])
+        if best_val >= prev_best:
+            p_explore = max(p_explore, 0.4)
+
+    if rng.random() < p_explore:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    # If the last evaluation improved the best, continue in that direction
+    if t >= 2 and history[-1]["value"] < min(row["value"] for row in history[:-1]):
+        prev_best = min(history[:-1], key=lambda row: row["value"])["x"]
+        dir_vec = [best_x[i] - prev_best[i] for i in range(dim)]
+        norm = sum(v * v for v in dir_vec) ** 0.5
+        if norm > 1e-12:
+            step_size = 0.5 * (1 - t / 32) + 0.1
+            new_x = [best_x[i] + step_size * dir_vec[i] for i in range(dim)]
+            new_x = [max(low, min(high, new_x[i] + rng.gauss(0, 0.01 * (high - low))))
+                     for i, (low, high) in enumerate(bounds)]
+            return new_x
+
+    # Quadratic surrogate proposal (safe with try/except)
+    if t >= 3 * dim and rng.random() < 0.3:
+        try:
+            pairs = [(i, j) for i in range(dim) for j in range(i, dim)]
+            m = 1 + dim + len(pairs)
+            X = []
+            y = []
+            for row in history:
+                x = row["x"]
+                feat = [1.0] + x
+                for i, j in pairs:
+                    feat.append(x[i] * x[j])
+                X.append(feat)
+                y.append(row["value"])
+            n = len(X)
+            lam = 1e-6
+            XtX = [[0.0] * m for _ in range(m)]
+            XtY = [0.0] * m
+            for k in range(n):
+                for i in range(m):
+                    XtY[i] += X[k][i] * y[k]
+                    for j in range(m):
+                        XtX[i][j] += X[k][i] * X[k][j]
+            for i in range(m):
+                XtX[i][i] += lam
+            A = [row[:] for row in XtX]
+            b = XtY[:]
+            for col in range(m):
+                pivot = col
+                for r in range(col + 1, m):
+                    if abs(A[r][col]) > abs(A[pivot][col]):
+                        pivot = r
+                if abs(A[pivot][col]) < 1e-12:
+                    raise ValueError
+                if pivot != col:
+                    A[col], A[pivot] = A[pivot], A[col]
+                    b[col], b[pivot] = b[pivot], b[col]
+                for r in range(col + 1, m):
+                    factor = A[r][col] / A[col][col]
+                    for c in range(col, m):
+                        A[r][c] -= factor * A[col][c]
+                    b[r] -= factor * b[col]
+            theta = [0.0] * m
+            for i in range(m - 1, -1, -1):
+                if abs(A[i][i]) < 1e-12:
+                    raise ValueError
+                s = b[i]
+                for j in range(i + 1, m):
+                    s -= A[i][j] * theta[j]
+                theta[i] = s / A[i][i]
+            H = [[0.0] * dim for _ in range(dim)]
+            grad = [theta[1 + i] for i in range(dim)]
+            for idx, (i, j) in enumerate(pairs):
+                coeff = theta[1 + dim + idx]
+                if i == j:
+                    H[i][i] = 2 * coeff
+                else:
+                    H[i][j] = coeff
+                    H[j][i] = coeff
+            A2 = [row[:] for row in H]
+            b2 = [-g for g in grad]
+            for i in range(dim):
+                A2[i][i] += 1e-6
+            for col in range(dim):
+                pivot = col
+                for r in range(col + 1, dim):
+                    if abs(A2[r][col]) > abs(A2[pivot][col]):
+                        pivot = r
+                if abs(A2[pivot][col]) < 1e-12:
+                    raise ValueError
+                if pivot != col:
+                    A2[col], A2[pivot] = A2[pivot], A2[col]
+                    b2[col], b2[pivot] = b2[pivot], b2[col]
+                for r in range(col + 1, dim):
+                    factor = A2[r][col] / A2[col][col]
+                    for c in range(col, dim):
+                        A2[r][c] -= factor * A2[col][c]
+                    b2[r] -= factor * b2[col]
+            x_star = [0.0] * dim
+            for i in range(dim - 1, -1, -1):
+                if abs(A2[i][i]) < 1e-12:
+                    raise ValueError
+                s = b2[i]
+                for j in range(i + 1, dim):
+                    s -= A2[i][j] * x_star[j]
+                x_star[i] = s / A2[i][i]
+            clipped = [max(low, min(high, x_star[i])) for i, (low, high) in enumerate(bounds)]
+            max_rel_dist = max(abs(clipped[i] - best_x[i]) / (bounds[i][1] - bounds[i][0]) for i in range(dim))
+            if max_rel_dist < 0.5:
+                return [max(low, min(high, clipped[i] + rng.gauss(0, 0.005 * (high - low))))
+                        for i, (low, high) in enumerate(bounds)]
+        except Exception:
+            pass
+
+    # Move from centroid of top points toward the best
+    if t >= 4 and rng.random() < 0.3:
+        centroid = [sum(row["x"][i] for row in top) / len(top) for i in range(dim)]
+        vec = [best_x[i] - centroid[i] for i in range(dim)]
+        norm = sum(v * v for v in vec) ** 0.5
+        if norm > 1e-12:
+            alpha = 0.5 * (1 - t / 32) + 0.1
+            ranges = [b[1] - b[0] for b in bounds]
+            new_x = [best_x[i] + alpha * (vec[i] / norm) * ranges[i] * (0.5 + 0.5 * rng.random())
+                     for i in range(dim)]
+            new_x = [max(low, min(high, x + rng.gauss(0, 0.01 * (high - low))))
+                     for x, (low, high) in zip(new_x, bounds)]
+            return new_x
+
+    # Perturb a single coordinate occasionally
+    if dim > 1 and rng.random() < 0.3:
+        coord = rng.randrange(dim)
+        new_x = best_x[:]
+        low, high = bounds[coord]
+        new_x[coord] = max(low, min(high, best_x[coord] + rng.gauss(0, step[coord])))
+        return new_x
+
+    # Full Gaussian perturbation around the best with adaptive step sizes
+    return [max(low, min(high, best_x[i] + rng.gauss(0, step[i])))
+            for i, (low, high) in enumerate(bounds)]

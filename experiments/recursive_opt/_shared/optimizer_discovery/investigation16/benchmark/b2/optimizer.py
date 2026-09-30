@@ -1,0 +1,12 @@
+def propose(history, bounds, seed):
+    """Mix uniform exploration with decreasing incumbent-centered Gaussian steps."""
+    import random
+    rng = random.Random(seed + len(history))
+    if not history:
+        return [(low + high) / 2 for low, high in bounds]
+    if rng.random() < 0.25:
+        return [rng.uniform(low, high) for low, high in bounds]
+    best = min(history, key=lambda row: row["value"])["x"]
+    scale = 0.2 / (1.0 + len(history) / (4.0 * len(bounds))) ** 0.5
+    return [max(low, min(high, x + rng.gauss(0.0, scale * (high - low))))
+            for x, (low, high) in zip(best, bounds)]

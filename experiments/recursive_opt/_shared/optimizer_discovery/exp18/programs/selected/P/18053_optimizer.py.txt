@@ -1,0 +1,86 @@
+import random
+import math
+
+def propose(history, bounds, seed):
+    rng = random.Random(seed + len(history))
+    d = len(bounds)
+    lows = [b[0] for b in bounds]
+    highs = [b[1] for b in bounds]
+    ranges = [h - l for l, h in bounds]
+    n = len(history)
+
+    if n == 0:
+        return [(l + h) / 2.0 for l, h in bounds]
+
+    best = min(history, key=lambda row: row["value"])
+    best_x = best["x"]
+    best_val = best["value"]
+
+    # Count consecutive evaluations without improving the best-so-far.
+    no_improve = 0
+    current_best = float("inf")
+    for row in history:
+        if row["value"] < current_best:
+            current_best = row["value"]
+            no_improve = 0
+        else:
+            no_improve += 1
+
+    # Success rate of proposals (excluding the first point).
+    if n > 1:
+        successes = 0
+        prev_best = float("inf")
+        for row in history:
+            if row["value"] < prev_best:
+                successes += 1
+                prev_best = row["value"]
+        success_rate = (successes - 1) / (n - 1)
+    else:
+        success_rate = 0.5
+
+    # Exploration probability.
+    if n <= 2 * d:
+        p_explore = 0.4
+    else:
+        p_explore = 0.15
+    if no_improve > 5:
+        p_explore = 0.5
+
+    if rng.random() < p_explore:
+        return [rng.uniform(l, h) for l, h in bounds]
+
+    # Adaptive step size.
+    scale = 0.2 / math.sqrt(1.0 + n / (4.0 * d))
+    if success_rate > 0.2:
+        scale *= 1.5
+    else:
+        scale *= 0.7
+    if no_improve > 5:
+        scale *= 2.0
+
+    # Half the time try a coordinate step, otherwise use a Gaussian perturbation.
+    if rng.random() < 0.5:
+        dim = rng.randrange(d)
+        # Pick a direction that stays inside the bounds.
+        if best_x[dim] <= lows[dim]:
+            direction = 1.0
+        elif best_x[dim] >= highs[dim]:
+            direction = -1.0
+        else:
+            direction = rng.choice([-1.0, 1.0])
+
+        step = direction * scale * ranges[dim]
+        x = best_x[:]
+        x[dim] += step
+        x[dim] = min(max(x[dim], lows[dim]), highs[dim])
+
+        # If clipping made it identical to the best, try the opposite direction.
+        if x[dim] == best_x[dim]:
+            step = -step
+            x[dim] = best_x[dim] + step
+            x[dim] = min(max(x[dim], lows[dim]), highs[dim])
+    else:
+        x = [best_x[i] + rng.gauss(0.0, scale * ranges[i]) for i in range(d)]
+        x = [min(max(x[i], lows[i]), highs[i]) for i in range(d)]
+
+    return x

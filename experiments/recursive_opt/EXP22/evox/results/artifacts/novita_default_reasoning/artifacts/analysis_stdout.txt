@@ -1,0 +1,101 @@
+{
+  "status": "STOPPED_PROVIDER",
+  "provider": {
+    "only": [
+      "novita"
+    ]
+  },
+  "primary_control_plane": {
+    "primary_variant": "CP-A",
+    "portable": false,
+    "promotable": false,
+    "cp_b_exclusion": "Live empty-response recovery escalated max_tokens 32 -> 64 -> 128; fixed-parameter equivalence fails."
+  },
+  "completion_requests": 14,
+  "successful_http_responses": 14,
+  "reported_tokens": 86713,
+  "reported_cost_usd": 0.028471665,
+  "calls_missing_cost": 0,
+  "valid_generated_candidates": 0,
+  "strict_runs_completed": [],
+  "attempts": [
+    {
+      "directory": "one_prism_SD-EVOX_20260926T110457.652084Z",
+      "config": {
+        "arm": "SD-EVOX",
+        "concurrency": 1,
+        "horizon": 1,
+        "seed": 42,
+        "stage": "one",
+        "task": "prism"
+      },
+      "result": {
+        "arm": "SD-EVOX",
+        "final_best_score": 21.891622105209393,
+        "final_metrics": {
+          "combined_score": 21.891622105209393,
+          "execution_time": 9.840011596679688e-05,
+          "max_kvpr": 20.891622105209393,
+          "success_rate": 1.0
+        },
+        "gate_failure": null,
+        "horizon": 1,
+        "initial_score": 21.891622105209393,
+        "invalid_attempts": 1,
+        "iterations_observed": 1,
+        "passed": false,
+        "policy_switches": 0,
+        "task": "prism",
+        "valid_candidates": 0,
+        "wall_time": 337.9384556209843
+      },
+      "http_passed": true,
+      "candidate_errors": [
+        "LLM returned None response"
+      ]
+    },
+    {
+      "directory": "one_prism_SD-EVOX_20260926T111148.483699Z",
+      "config": {
+        "arm": "SD-EVOX",
+        "concurrency": 1,
+        "horizon": 1,
+        "seed": 42,
+        "stage": "one",
+        "task": "prism"
+      },
+      "result": {
+        "arm": "SD-EVOX",
+        "final_best_score": 21.891622105209393,
+        "final_metrics": {
+          "combined_score": 21.891622105209393,
+          "execution_time": 9.475231170654297e-05,
+          "max_kvpr": 20.891622105209393,
+          "success_rate": 1.0
+        },
+        "gate_failure": null,
+        "horizon": 1,
+        "initial_score": 21.891622105209393,
+        "invalid_attempts": 1,
+        "iterations_observed": 1,
+        "passed": false,
+        "policy_switches": 0,
+        "task": "prism",
+        "valid_candidates": 0,
+        "wall_time": 343.16879276998225
+      },
+      "http_passed": true,
+      "candidate_errors": [
+        "LLM returned None response"
+      ]
+    }
+  ],
+  "gates": {
+    "S0": true,
+    "S1": true,
+    "S2": true,
+    "S3": true,
+    "S4": false,
+    "S5": false
+  }
+}

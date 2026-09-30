@@ -1,9 +1,11 @@
 import numpy as np
 import pickle
+import math
+from typing import Any, Mapping, Sequence
 
 class DataLoader:
 
-    def __init__(self, dataset, batch_size=1, randomize=True, replacement=False, shuffle=True):
+    def __init__(self, dataset, batch_size=1, randomize=True, replacement=False, shuffle=True, curriculum=None):
         """ Initialize the data loader
 
         Args:
@@ -19,6 +21,10 @@ class DataLoader:
         assert 'inputs' in dataset and 'infos' in dataset, "Dataset must have 'inputs' and 'infos' key"
         assert len(dataset['inputs']) == len(dataset['infos']), "Inputs and infos must have the same length"
 
+        if not dataset["inputs"] or type(batch_size) is not int or batch_size < 1:
+            raise ValueError("DataLoader requires nonempty data and a positive integer batch_size")
+        self.curriculum = CurriculumBuffer(**curriculum) if curriculum is not None else None
+        self._last_indices = []
         self.dataset = dataset
         self.batch_size = batch_size
         self.randomize = randomize
@@ -48,6 +54,7 @@ class DataLoader:
             raise StopIteration
         xs = []
         infos = []
+        self._last_indices = []
         while len(xs) < self.batch_size:
             if self._i >= len(self._indices):
                 self._start_new_epoch()
@@ -55,6 +62,7 @@ class DataLoader:
             remaining = self.batch_size - len(xs)
             end = min(self._i + remaining, len(self._indices))
             indices = self._indices[self._i:end]
+            self._last_indices.extend(int(index) for index in indices)
             xs.extend([self.dataset['inputs'][ind] for ind in indices])
             infos.extend([self.dataset['infos'][ind] for ind in indices])
             self._i += len(indices)
@@ -74,7 +82,22 @@ class DataLoader:
         except StopIteration:
             xs, infos = self.sample()  # make sure to get a batch after resetting
         self._exhausted = False  # calling next() again should not raise StopIteration immediately
+        if self.curriculum is not None:
+            recent = list(reversed(self.curriculum.history))[:max(0, self.batch_size - 1)]
+            fresh = [index for index in self._last_indices if index not in recent]
+            fresh += self._last_indices
+            self._last_indices = fresh[:self.batch_size - len(recent)] + recent
+            xs = [self.dataset["inputs"][index] for index in self._last_indices]
+            infos = [self.dataset["infos"][index] for index in self._last_indices]
         return xs, infos
+
+    def observe_scores(self, scores: Sequence[float]) -> None:
+        """Record training-only observations for the most recently drawn batch."""
+        if self.curriculum is None:
+            return
+        if len(scores) != len(self._last_indices):
+            raise ValueError("curriculum scores must match the last sampled batch")
+        self.curriculum.observe(dict(zip(self._last_indices, scores)))
 
     def __getstate__(self):
         """Get the state of the dataset for pickling."""
@@ -87,3 +110,45 @@ class DataLoader:
         self.__dict__.update(state)
         # Note: dataset needs to be set manually after unpickling
         print("Warning: dataset needs to be set manually after unpickling.")
+
+
+class CurriculumBuffer:
+    """Bounded recent failed-then-solved example indices, independent of any Guide.
+
+    Success means a finite guide score at least success_threshold. A failure must
+    come from an earlier observation batch. Positive observations alone do not add
+    examples. Initial data remain available for exploration, avoiding lock-in.
+    """
+
+    def __init__(self, *, history_size: int = 2, success_threshold: float = 1.0) -> None:
+        """Initialize explicit score semantics and bounded replay memory."""
+        if type(history_size) is not int or history_size < 1:
+            raise ValueError("curriculum history_size must be a positive integer")
+        if not isinstance(success_threshold, (float, int)) or not math.isfinite(success_threshold):
+            raise ValueError("curriculum success_threshold must be finite")
+        self.history_size = history_size
+        self.success_threshold = float(success_threshold)
+        self.history: list[int] = []
+        self.failed: set[int] = set()
+        self.events: list[dict[str, Any]] = []
+
+    def add_success_after_fail(self, index: int) -> None:
+        """Remember an observed transition, keeping the newest unique examples."""
+        if index not in self.failed:
+            return
+        self.failed.remove(index)
+        if index in self.history:
+            self.history.remove(index)
+        self.history.append(index)
+        self.history = self.history[-self.history_size:]
+        self.events.append({"method": "add_success_after_fail", "index": index, "history": list(self.history)})
+
+    def observe(self, scores: Mapping[int, float]) -> None:
+        """Register one deterministic observation batch; skip nonfinite failures."""
+        for index, score in scores.items():
+            if not math.isfinite(score):
+                continue
+            if score >= self.success_threshold:
+                self.add_success_after_fail(index)
+            else:
+                self.failed.add(index)

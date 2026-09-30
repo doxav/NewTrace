@@ -1,0 +1,204 @@
+def propose(history, bounds, seed):
+    """Optimizer using Halton exploration, diagonal quadratic surrogate, and adaptive local search."""
+    import random, math
+
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    n = len(history)
+
+    # Halton sequence for initial exploration
+    if n < 2 * dim:
+        bases = [2, 3, 5, 7, 11, 13][:dim]
+
+        def halton(index, base):
+            result = 0.0
+            f = 1.0 / base
+            i = index
+            while i > 0:
+                result += f * (i % base)
+                i //= base
+                f /= base
+            return result
+
+        idx = n + 1
+        point = []
+        for (low, high), base in zip(bounds, bases):
+            h = halton(idx, base)
+            point.append(low + h * (high - low))
+        return point
+
+    # Sort history by value
+    sorted_history = sorted(history, key=lambda row: row["value"])
+    best = sorted_history[0]["x"]
+    best_val = sorted_history[0]["value"]
+    second_best = sorted_history[1]["x"] if len(sorted_history) >= 2 else best
+
+    progress = n / 32.0
+
+    # Random restart probability (decreasing)
+    p_restart = 0.03 * (1 - progress)
+    if rng.random() < p_restart:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    # Build diagonal quadratic model: 1 + 2*dim parameters (no cross terms)
+    m = 1 + 2 * dim
+
+    def features(x):
+        feat = [1.0]
+        feat.extend(x)
+        feat.extend([xi * xi for xi in x])
+        return feat
+
+    xs = [row["x"] for row in history]
+    ys = [row["value"] for row in history]
+    A = [features(x) for x in xs]
+    y = ys
+
+    # Solve normal equations with ridge
+    ridge = 1e-4
+    AtA = [[0.0] * m for _ in range(m)]
+    Aty = [0.0] * m
+    for i in range(m):
+        for k in range(m):
+            s = 0.0
+            for j in range(n):
+                s += A[j][i] * A[j][k]
+            AtA[i][k] = s + (ridge if i == k else 0.0)
+        s = 0.0
+        for j in range(n):
+            s += A[j][i] * y[j]
+        Aty[i] = s
+
+    # Gaussian elimination with partial pivoting
+    n_eq = m
+    for col in range(n_eq):
+        max_row = col
+        max_val = abs(AtA[col][col])
+        for r in range(col + 1, n_eq):
+            if abs(AtA[r][col]) > max_val:
+                max_val = abs(AtA[r][col])
+                max_row = r
+        if max_val < 1e-12:
+            continue
+        if max_row != col:
+            AtA[col], AtA[max_row] = AtA[max_row], AtA[col]
+            Aty[col], Aty[max_row] = Aty[max_row], Aty[col]
+        for r in range(col + 1, n_eq):
+            factor = AtA[r][col] / AtA[col][col]
+            if factor == 0.0:
+                continue
+            for c in range(col, n_eq):
+                AtA[r][c] -= factor * AtA[col][c]
+            Aty[r] -= factor * Aty[col]
+
+    theta = [0.0] * n_eq
+    for r in range(n_eq - 1, -1, -1):
+        if abs(AtA[r][r]) < 1e-12:
+            theta[r] = 0.0
+            continue
+        s = Aty[r]
+        for c in range(r + 1, n_eq):
+            s -= AtA[r][c] * theta[c]
+        theta[r] = s / AtA[r][r]
+
+    def model_value(point):
+        val = theta[0]
+        for i in range(dim):
+            val += theta[1 + i] * point[i]
+            val += theta[1 + dim + i] * point[i] * point[i]
+        return val
+
+    # Compute stationary point of the quadratic (solve H x = -g)
+    H = [[0.0] * dim for _ in range(dim)]
+    g = [0.0] * dim
+    for k in range(dim):
+        H[k][k] = 2.0 * theta[1 + dim + k]
+        g[k] = theta[1 + k]
+
+    def solve_linear(A, b):
+        n = len(A)
+        M = [row[:] + [b[i]] for i, row in enumerate(A)]
+        for col in range(n):
+            max_row = col
+            max_val = abs(M[col][col])
+            for r in range(col + 1, n):
+                if abs(M[r][col]) > max_val:
+                    max_val = abs(M[r][col])
+                    max_row = r
+            if max_val < 1e-12:
+                return None
+            if max_row != col:
+                M[col], M[max_row] = M[max_row], M[col]
+            pivot = M[col][col]
+            for c in range(col, n + 1):
+                M[col][c] /= pivot
+            for r in range(n):
+                if r != col:
+                    factor = M[r][col]
+                    if factor == 0.0:
+                        continue
+                    for c in range(col, n + 1):
+                        M[r][c] -= factor * M[col][c]
+        return [M[i][n] for i in range(n)]
+
+    x_star = None
+    if dim > 0:
+        neg_g = [-gi for gi in g]
+        sol = solve_linear(H, neg_g)
+        if sol is not None:
+            x_star = [max(low, min(high, s)) for s, (low, high) in zip(sol, bounds)]
+
+    # Generate candidate points
+    candidates = []
+
+    # 1. Best point + Gaussian noise (adaptive scale)
+    scale = 0.15 * (1 - progress) ** 0.5
+    scale = max(scale, 0.005)
+    cand = [x + rng.gauss(0.0, scale * (high - low)) for x, (low, high) in zip(best, bounds)]
+    candidates.append([max(low, min(high, c)) for c, (low, high) in zip(cand, bounds)])
+
+    # 2. Best point + coordinate move
+    i = rng.randrange(dim)
+    sign = 1 if rng.random() < 0.5 else -1
+    step = scale * (bounds[i][1] - bounds[i][0]) * 1.5
+    cand = best[:]
+    cand[i] += sign * step
+    candidates.append([max(low, min(high, c)) for c, (low, high) in zip(cand, bounds)])
+
+    # 3. Stationary point of the quadratic (if available)
+    if x_star is not None:
+        candidates.append(x_star)
+
+    # 4. Line search between best and second best
+    if len(sorted_history) >= 2:
+        alpha = rng.uniform(-0.2, 1.2)
+        cand = [b + alpha * (s - b) for b, s in zip(best, second_best)]
+        candidates.append([max(low, min(high, c)) for c, (low, high) in zip(cand, bounds)])
+
+    # 5. A few random points (exploration)
+    for _ in range(2):
+        cand = [rng.uniform(low, high) for low, high in bounds]
+        candidates.append(cand)
+
+    # Remove duplicates (approximate)
+    unique_candidates = []
+    seen = set()
+    for cand in candidates:
+        key = tuple(round(c, 10) for c in cand)
+        if key not in seen:
+            seen.add(key)
+            unique_candidates.append(cand)
+
+    if not unique_candidates:
+        cand = [x + rng.gauss(0.0, 0.01 * (high - low)) for x, (low, high) in zip(best, bounds)]
+        return [max(low, min(high, c)) for c, (low, high) in zip(cand, bounds)]
+
+    # Evaluate surrogate on candidates and pick the best
+    best_cand = min(unique_candidates, key=model_value)
+
+    # With small probability, return a pure random point (exploration)
+    p_random = 0.02 * (1 - progress)
+    if rng.random() < p_random:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    return best_cand

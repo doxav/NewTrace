@@ -1,0 +1,12 @@
+--- S3_frozen/analysis.py
++++ analysis.py
+@@ -69,6 +69,9 @@
+         json.loads(path.read_text())
+         for path in sorted((study.ROOT / "raw").glob("*/*/result.json"))
+     ]
++    # Nested optimizer summaries use a different schema, retained separately in
++    # recursion_result.json. This table covers every task-learning run, invalid too.
++    rows = [row for row in rows if "phase" in row]
+     table = [
+         "<!-- LIVE_RESULTS -->",
+         "## Résultats disponibles — développement, pas test final",

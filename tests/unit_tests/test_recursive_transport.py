@@ -20,7 +20,7 @@ from opto.utils.auto_retry import TransportRetryError, retry_with_exponential_ba
 def _canonical_profile_spec() -> dict[str, Any]:
     """Build a valid canonical spec with one explicit transport profile."""
     raw = json.loads(
-        Path("artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json")
+        Path("experiments/recursive_opt/_shared/control_plane_v2/golden_specs/uc4_positive.normalized.json")
         .read_text(encoding="utf-8")
     )
     raw.pop("fingerprint", None)

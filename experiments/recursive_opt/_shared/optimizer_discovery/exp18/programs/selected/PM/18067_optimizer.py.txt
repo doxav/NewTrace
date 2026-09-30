@@ -1,0 +1,97 @@
+import random
+import math
+
+def propose(history, bounds, seed):
+    n = len(history)
+    d = len(bounds)
+    lows = [lo for lo, hi in bounds]
+    highs = [hi for lo, hi in bounds]
+
+    if n == 0:
+        return [(lo + hi) * 0.5 for lo, hi in bounds]
+
+    rng = random.Random(seed + n)
+
+    if n < d + 1:
+        return [rng.uniform(lows[i], highs[i]) for i in range(d)]
+
+    sorted_idx = sorted(range(n), key=lambda i: history[i]["value"])
+    best_idx = sorted_idx[0]
+    best_x = history[best_idx]["x"]
+
+    min_so_far = history[0]["value"]
+    last_improved = 0
+    for i in range(n):
+        v = history[i]["value"]
+        if v < min_so_far:
+            min_so_far = v
+            last_improved = i
+    stuck = n - 1 - last_improved
+
+    p_explore = (0.35 if stuck > 4 else 0.2) / (1.0 + n / (10.0 * d))
+    if rng.random() < p_explore:
+        best_candidate = None
+        best_dist = -1.0
+        for _ in range(30):
+            cand = [rng.uniform(lows[i], highs[i]) for i in range(d)]
+            min_dist = 1e9
+            for row in history:
+                sq = 0.0
+                for i in range(d):
+                    diff = (cand[i] - row["x"][i]) / (highs[i] - lows[i])
+                    sq += diff * diff
+                dist = math.sqrt(sq)
+                if dist < min_dist:
+                    min_dist = dist
+            if min_dist > best_dist:
+                best_dist = min_dist
+                best_candidate = cand
+        return best_candidate
+
+    if n >= d + 2 and rng.random() < 0.2:
+        worst_idx = sorted_idx[-1]
+        worst_x = history[worst_idx]["x"]
+        centroid = []
+        for i in range(d):
+            total = 0.0
+            cnt = 0
+            for idx in sorted_idx[:-1]:
+                total += history[idx]["x"][i]
+                cnt += 1
+            centroid.append(total / cnt)
+        new_x = []
+        for i in range(d):
+            val = 2.0 * centroid[i] - worst_x[i]
+            new_x.append(max(lows[i], min(highs[i], val)))
+        return new_x
+
+    if n >= max(d + 2, 6) and rng.random() < 0.45:
+        top_count = max(2, int(n * 0.3))
+        other_idx = rng.choice(sorted_idx[1:min(top_count + 1, n)])
+        other_x = history[other_idx]["x"]
+        if rng.random() < 0.2:
+            alpha = rng.uniform(1.0, 1.5)
+        else:
+            alpha = rng.uniform(0.3, 0.9)
+        new_x = []
+        for i in range(d):
+            val = alpha * best_x[i] + (1.0 - alpha) * other_x[i]
+            new_x.append(max(lows[i], min(highs[i], val)))
+        return new_x
+
+    if rng.random() < 0.85:
+        inc = best_x
+    else:
+        top_n = max(2, int(n * 0.3))
+        inc = history[rng.choice(sorted_idx[:top_n])]["x"]
+
+    base_scale = 0.2
+    scale = base_scale / (1.0 + n / (3.0 * d)) ** 0.5
+    if stuck > 5:
+        scale *= 1.6
+
+    new_x = []
+    for i in range(d):
+        val = inc[i] + rng.gauss(0.0, scale * (highs[i] - lows[i]))
+        new_x.append(max(lows[i], min(highs[i], val)))
+    return new_x

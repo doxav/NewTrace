@@ -1,0 +1,97 @@
+import math
+import random
+
+def propose(history, bounds, seed):
+    """Optimize black-box function with adaptive exploration and local search."""
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    n = len(history)
+
+    # Deterministic low-discrepancy sequence for initial exploration
+    def halton(index, base):
+        result = 0.0
+        f = 1.0 / base
+        i = index
+        while i > 0:
+            result += f * (i % base)
+            i //= base
+            f /= base
+        return result
+
+    def halton_point(idx):
+        primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+        point = []
+        for d in range(dim):
+            base = primes[d]
+            offset = (seed % 1000) + 1
+            val = halton(idx + offset, base)
+            lo, hi = bounds[d]
+            point.append(lo + (hi - lo) * val)
+        return point
+
+    # Early exploration: first max(2*dim, 4) points via Halton
+    init_points = max(2 * dim, 4)
+    if n < init_points:
+        return halton_point(n)
+
+    # Sort history by value
+    sorted_history = sorted(history, key=lambda row: row["value"])
+    best = sorted_history[0]
+    best_x = best["x"]
+    best_val = best["value"]
+    second = sorted_history[1] if len(sorted_history) >= 2 else None
+
+    # Index of best point in original history
+    best_idx = min(range(n), key=lambda i: history[i]["value"])
+    last_improve = n - best_idx - 1
+
+    # If no improvement for a while, force global restart (random uniform)
+    if last_improve >= 6:
+        if rng.random() < 0.8:
+            return [rng.uniform(low, high) for low, high in bounds]
+        # else continue local search
+
+    # Exploration probability: decreases with n but stays non-trivial
+    p_explore = max(0.1, 0.3 - 0.005 * n)
+    if rng.random() < p_explore:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    # Compute progress and base scale
+    progress = n / 32.0
+    scale = 0.2 * (1.0 - progress) ** 0.5 + 0.01
+
+    # Adapt scale based on recent improvement activity
+    if last_improve < 2:
+        scale *= 1.2
+    elif last_improve >= 3:
+        scale *= 0.8
+
+    # Choose a local search strategy
+    r = rng.random()
+    if second is not None and r < 0.3:
+        # Move along direction from second best to best
+        direction = [best_x[i] - second["x"][i] for i in range(dim)]
+        factor = rng.uniform(0.5, 1.5)
+        candidate = [best_x[i] + direction[i] * factor for i in range(dim)]
+    elif r < 0.6:
+        # Full Gaussian perturbation
+        step = [rng.gauss(0.0, scale * (bounds[i][1] - bounds[i][0])) for i in range(dim)]
+        candidate = [best_x[i] + step[i] for i in range(dim)]
+    else:
+        # Single-coordinate perturbation
+        i = rng.randrange(dim)
+        step = [0.0] * dim
+        step[i] = rng.gauss(0.0, scale * (bounds[i][1] - bounds[i][0]))
+        candidate = [best_x[i] + step[i] for i in range(dim)]
+
+    # Clip to bounds
+    candidate = [max(low, min(high, c)) for c, (low, high) in zip(candidate, bounds)]
+
+    # Avoid exact duplicates: if this point already exists, add a small jitter
+    for row in history:
+        if all(abs(candidate[i] - row["x"][i]) < 1e-12 for i in range(dim)):
+            jitter = [rng.uniform(-0.01, 0.01) * (bounds[i][1] - bounds[i][0]) for i in range(dim)]
+            candidate = [max(low, min(high, candidate[i] + jitter[i])) for i, (low, high) in enumerate(bounds)]
+            break
+
+    return candidate

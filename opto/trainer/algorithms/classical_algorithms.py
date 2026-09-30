@@ -63,7 +63,7 @@ class SequentialUpdate(PrioritySearch):
         memory_size = 1  # SequentialSearch only stores one candidate at a time in the heap memory
         # validate_proposals is the same as `ensure_improvement` flag in MinibatchAlgorithm
 
-        return super().train(guide, train_dataset,
+        return super().train(guide=guide, train_dataset=train_dataset,
                       validate_dataset=validate_dataset,
                       validate_guide=validate_guide,
                       batch_size=batch_size,
@@ -134,7 +134,7 @@ class SequentialSearch(PrioritySearch):
         memory_size = 1  # MultiSequentialUpdate only stores one candidate at a time in the heap memory
         # validate_proposals is the same as `ensure_improvement` flag in MinibatchAlgorithm
 
-        return super().train(guide, train_dataset,
+        return super().train(guide=guide, train_dataset=train_dataset,
                       validate_dataset=validate_dataset,
                       validate_guide=validate_guide,
                       batch_size=batch_size,
@@ -197,7 +197,7 @@ class BeamSearch(PrioritySearch):
         # num_candidates acts as the beam size in beam search.
         memory_size = num_candidates
 
-        return super().train(guide, train_dataset,
+        return super().train(guide=guide, train_dataset=train_dataset,
                        validate_dataset=validate_dataset,
                        validate_guide=validate_guide,
                        batch_size=batch_size,

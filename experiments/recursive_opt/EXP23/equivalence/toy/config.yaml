@@ -1,0 +1,8 @@
+language: python
+diff_based_generation: true
+max_iterations: 60
+max_solution_length: 60000
+prompt:
+  system_message: "Toy task: maximize SCORE by editing the program."
+evaluator:
+  timeout: 30

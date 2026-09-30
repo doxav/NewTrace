@@ -7,7 +7,8 @@ import sys
 import traceback
 import asyncio
 
-from typing import List, Dict, Callable, Union, Any
+from contextlib import contextmanager
+from typing import List, Dict, Callable, Union, Any, Iterator
 from collections.abc import Mapping
 
 from opto.trace.broadcast import recursive_conversion
@@ -24,6 +25,18 @@ from opto.trace.nodes import (
     get_op_name,
 )
 from opto.trace.utils import contain
+
+@contextmanager
+def _bundle_telemetry(fun: Callable[..., Any], inputs: Dict[str, Any]) -> Iterator[tuple[Any, Any]]:
+    """Use an already-active optional telemetry session without importing its SDK."""
+    backend = sys.modules.get("opto.trace.io.telemetry_session")
+    session = backend.TelemetrySession.current() if backend is not None else None
+    if session is None:
+        yield None, None
+        return
+    with session.bundle_span(fun_name=getattr(fun, "__name__", type(fun).__name__), file_path=getattr(getattr(fun, "__code__", None), "co_filename", "unknown"), inputs=inputs) as span:
+        yield session, span
+
 
 # This is a global flag to allow external dependencies to be used in the operator.
 ALLOW_EXTERNAL_DEPENDENCIES = None
@@ -568,10 +581,12 @@ class FunModule(Module):
         # Wrap the inputs as nodes
         inputs, args, kwargs, _args, _kwargs = self._wrap_inputs(fun, args, kwargs)
         # Execute fun
-        with trace_nodes() as used_nodes:
+        with _bundle_telemetry(fun, inputs) as (session, span), trace_nodes() as used_nodes:
             # After exit, used_nodes contains the nodes whose data attribute is read in the operator fun.
             _args, _kwargs = self.preprocess_inputs(args, kwargs, _args, _kwargs)
             output = self.sync_call_fun(fun, *_args, **_kwargs)
+            if span is not None:
+                span.set_attribute("output.value", session._truncate(output))
         # Wrap the output as a MessageNode or an ExceptionNode
         nodes = self.postprocess_output(output, fun, _args, _kwargs, used_nodes, inputs)
         return nodes
@@ -586,12 +601,14 @@ class FunModule(Module):
         # Wrap the inputs as nodes
         inputs, args, kwargs, _args, _kwargs = self._wrap_inputs(fun, args, kwargs)
         # Execute fun
-        with trace_nodes() as used_nodes:
+        with _bundle_telemetry(fun, inputs) as (session, span), trace_nodes() as used_nodes:
             # After exit, used_nodes contains the nodes whose data attribute is read in the operator fun.
             _args, _kwargs = self.preprocess_inputs(args, kwargs, _args, _kwargs)
             output = await self.async_call_fun(
                 fun, *_args, **_kwargs
             )  # use await to call the async function
+            if span is not None:
+                span.set_attribute("output.value", session._truncate(output))
         # Wrap the output as a MessageNode or an ExceptionNode
         nodes = self.postprocess_output(output, fun, _args, _kwargs, used_nodes, inputs)
         return nodes

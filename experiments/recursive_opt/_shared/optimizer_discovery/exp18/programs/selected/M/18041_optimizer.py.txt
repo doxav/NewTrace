@@ -1,0 +1,98 @@
+import math
+import random
+
+def propose(history, bounds, seed):
+    rng = random.Random(seed + len(history))
+    n = len(history)
+    dim = len(bounds)
+    widths = [high - low for low, high in bounds]
+
+    # Initialization: first point at center, then Latin hypercube for next 2*dim-1 points
+    m = 2 * dim
+    if n == 0:
+        return [(low + high) / 2.0 for low, high in bounds]
+    if n < m:
+        perms = []
+        for d in range(dim):
+            perm = list(range(m))
+            rng_perm = random.Random(seed + d * 1000)
+            rng_perm.shuffle(perm)
+            perms.append(perm)
+        point = []
+        for d in range(dim):
+            low, high = bounds[d]
+            idx = n  # because n runs 1..m-1, we use LHS cells 1..m-1
+            val = (perms[d][idx] + 0.5) / m
+            point.append(low + val * (high - low))
+        return point
+
+    # Best and second-best distinct points
+    sorted_hist = sorted(history, key=lambda row: row["value"])
+    best = sorted_hist[0]
+    best_x = best["x"]
+    best_val = best["value"]
+
+    second = None
+    for row in sorted_hist[1:]:
+        if any(abs(row["x"][i] - best_x[i]) > 1e-12 for i in range(dim)):
+            second = row
+            break
+    if second is None:
+        second = sorted_hist[1] if len(sorted_hist) > 1 else best
+
+    # Did the last point improve the best?
+    improved = False
+    if n >= 2:
+        prev_best = min(history[:-1], key=lambda row: row["value"])
+        if best_val < prev_best["value"] - 1e-12:
+            improved = True
+
+    # Random exploration probability
+    p_random = 0.15 if n < 20 else 0.05
+    if rng.random() < p_random:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    # Base step size, decaying with history
+    base_scale = 0.2 / (1.0 + n / (4.0 * dim)) ** 0.5
+    scale_factor = 1.3 if improved else 0.8
+    scale = base_scale * scale_factor
+
+    # Direction: blend improvement direction and best-to-second-best
+    direction = None
+    if improved and n >= 2:
+        diff = [best_x[i] - prev_best["x"][i] for i in range(dim)]
+        norm = math.sqrt(sum(d * d for d in diff))
+        if norm > 1e-12:
+            direction = [d / norm for d in diff]
+
+    diff2 = [best_x[i] - second["x"][i] for i in range(dim)]
+    norm2 = math.sqrt(sum(d * d for d in diff2))
+    if norm2 > 1e-12:
+        dir2 = [d / norm2 for d in diff2]
+        if direction is None:
+            direction = dir2
+        else:
+            avg = [(direction[i] + dir2[i]) / 2 for i in range(dim)]
+            norm_avg = math.sqrt(sum(d * d for d in avg))
+            if norm_avg > 1e-12:
+                direction = [d / norm_avg for d in avg]
+
+    # Choose step type
+    if direction is not None and rng.random() < 0.6:
+        step = [direction[i] * rng.gauss(0, scale * widths[i]) for i in range(dim)]
+    else:
+        step = [rng.gauss(0, scale * widths[i]) for i in range(dim)]
+
+    # Coordinate-wise step with probability 0.2
+    if rng.random() < 0.2:
+        idx = rng.randrange(dim)
+        if direction is not None and abs(direction[idx]) > 1e-12:
+            sign = 1 if direction[idx] > 0 else -1
+        else:
+            sign = 1 if rng.random() < 0.5 else -1
+        step = [0.0] * dim
+        step[idx] = sign * rng.gauss(0, scale * widths[idx])
+
+    new_x = [max(low, min(high, best_x[i] + step[i]))
+             for i, (low, high) in enumerate(bounds)]
+    return new_x

@@ -1,0 +1,258 @@
+--- a/src/transport.py
++++ b/src/transport.py
+@@ -18,6 +18,34 @@
+ EXTRA_BODY = {"provider": {"only": [PROVIDER]}, "session_id": SESSION, "reasoning_effort": REASONING_EFFORT}
+ HTTP_ROLES: dict[int, str] = {}
+ HTTP_RECORDS: list[dict[str, Any]] = []
++MAX_RECOVERABLE_RATE_LIMITS = 2
++RATE_LIMIT_BACKOFF_SECONDS = 30
++
++
++def is_recoverable_rate_limit(record: dict[str, Any]) -> bool:
++    """Recognize only an empty Novita shared-pool refusal of the frozen solution request."""
++    body = record.get('outbound_body')
++    error = record.get('error')
++    metadata = error.get('metadata') if isinstance(error, dict) else None
++    return (
++        record.get('passed') is False and record.get('role') == 'solution'
++        and record.get('http_status') == 429
++        and isinstance(metadata, dict) and error.get('code') == 429
++        and metadata.get('provider_name') == SERVING_PROVIDER
++        and metadata.get('limit_source') == 'upstream_provider_shared_pool'
++        and isinstance(body, dict) and body.get('model') == MODEL
++        and all(body.get(key) == value for key, value in EXTRA_BODY.items())
++        and body.get('temperature') == 0.7 and body.get('max_tokens') == 32000
++        and record.get('content_lengths') == [] and record.get('finish_reasons') == []
++        and record.get('returned_model') is None and record.get('serving_provider') is None
++        and record.get('generation_id') is None
++    )
++
++
++def transport_records_acceptable(records: list[dict[str, Any]]) -> bool:
++    """Keep all identity guards, permitting at most two precisely identified refusals."""
++    refused = [record for record in records if record.get('passed') is not True]
++    return len(refused) <= MAX_RECOVERABLE_RATE_LIMITS and all(is_recoverable_rate_limit(record) for record in refused)
+ 
+ 
+ class SkyOpenRouter(OpenAILLM):
+--- a/src/kernel.py
++++ b/src/kernel.py
+@@ -1,5 +1,6 @@
+ """Stock EvoX execution with measured Trace proposals at the meta boundary."""
+ 
++import asyncio
+ import copy
+ import hashlib
+ import json
+@@ -21,7 +22,14 @@
+ from src.accounting import usage_summary
+ from src.evaluation import SKY, TASKS, ProcessEvaluator
+ from src.observations import encode_observation, make_json_serializable
+-from src.transport import HTTP_RECORDS, HTTP_ROLES, model_config
++from src.transport import (
++    HTTP_RECORDS,
++    HTTP_ROLES,
++    RATE_LIMIT_BACKOFF_SECONDS,
++    is_recoverable_rate_limit,
++    model_config,
++    transport_records_acceptable,
++)
+ 
+ from opto import trace
+ from opto.optimizers.optoprime_v2 import OptoPrimeV2
+@@ -123,7 +131,7 @@
+         }
+         append_json(self.directory / 'window_history.jsonl', {'iteration': len(self.curve), 'active_policy_hash': self.window_observation['active_policy_hash'], 'phase': 'before_meta', **self.window_observation['window_metrics']})
+         await super()._evolve_search(solution_iter)
+-        if any(not row['passed'] for row in HTTP_RECORDS):
++        if not transport_records_acceptable(HTTP_RECORDS):
+             self.gate_failure = 'Meta HTTP transport or serving-identity validation failed'
+             self.shutdown_event.set()
+ 
+@@ -154,7 +162,7 @@
+         self.curve.append(record)
+         record.update({'current_score': self.current_candidate_score if valid else None, 'valid_candidates': sum(self.attempt_validity), 'invalid_candidates': len(self.attempt_validity) - sum(self.attempt_validity), 'policy_validation_failures': self._meta_evolution_failures, 'llm_usage': usage_summary(HTTP_RECORDS, solution_limit=len(self.curve))})
+         append_json(self.directory / 'solution_curve.jsonl', record)
+-        if any(not row['passed'] for row in HTTP_RECORDS):
++        if not transport_records_acceptable(HTTP_RECORDS):
+             self.gate_failure = 'HTTP transport or serving-identity validation failed'
+         elif self.stop_on_trace_failure and len(self.attempt_validity) >= 10 and not any(self.attempt_validity[-10:]):
+             self.gate_failure = 'No valid solution over ten consecutive generation attempts'
+@@ -174,6 +182,7 @@
+             self.shutdown_event.set()
+             raise ValueError(self.gate_failure)
+         remaining = self.total_solution_iterations - iteration
++        record_start = len(HTTP_RECORDS)
+         result = await super()._run_iteration(iteration, retry_times=min(retry_times, remaining))
+         if result.error and result.prompt is None and sum(row['role'] == 'solution' for row in HTTP_RECORDS) > used:
+             # Stock uses a missing prompt to infer a pre-generation database failure.
+@@ -188,6 +197,8 @@
+         self.pending_attempt_scores = [before] * (getattr(result, 'attempts_used', 1) - 1) + [None]
+         self.pending_attempt_validity = [False] * (getattr(result, 'attempts_used', 1) - 1) + [not result.error and bool(result.child_program_dict)]
+         append_json(self.directory / 'candidate_history.jsonl', {'iteration': iteration, 'error': result.error, 'attempts_used': getattr(result, 'attempts_used', 1), 'candidate': result.child_program_dict, 'parent_id': result.parent_id, 'context_ids': result.other_context_ids})
++        if result.error and transport_records_acceptable(HTTP_RECORDS) and any(is_recoverable_rate_limit(row) for row in HTTP_RECORDS[record_start:]):
++            await asyncio.sleep(RATE_LIMIT_BACKOFF_SECONDS)
+         return result
+ 
+     def _switch_to_new_search_algorithm(self, result: SerializableResult) -> bool:
+--- a/scripts/run_stage.py
++++ b/scripts/run_stage.py
+@@ -29,6 +29,7 @@
+     HTTP_RECORDS,
+     MODEL,
+     TraceOpenRouter,
++    transport_records_acceptable,
+ )
+ 
+ from opto.features.recursive_opt import spec as S
+@@ -106,7 +107,7 @@
+                 else:
+                     with S._seed_scope(42):
+                         result = asyncio.run(run_kernel(args.task, args.arm, horizon, directory))
+-                result['passed'] = result['iterations_observed'] == horizon and not result.get('gate_failure') and bool(records) and all(record['passed'] for record in records)
++                result['passed'] = result['iterations_observed'] == horizon and not result.get('gate_failure') and bool(records) and transport_records_acceptable(records)
+         except (ValueError, TypeError, RuntimeError, KeyError, AttributeError) as error:
+             kernel_path = directory/'kernel_result.json'
+             diagnostic = json.loads(kernel_path.read_text()) if kernel_path.exists() else {}
+--- /dev/null
++++ b/tests/test_rate_limits.py
+@@ -0,0 +1,139 @@
++"""Offline review of the unactivated, narrowly bounded solution-429 proposal."""
++
++import asyncio
++import copy
++import sys
++import tempfile
++import unittest
++from pathlib import Path
++from typing import Any
++from unittest.mock import AsyncMock, call, patch
++
++ROOT = Path(__file__).resolve().parents[1]
++sys.path[:0] = [str(ROOT / 'worktrees/trace_cp_b'), str(ROOT)]
++from scripts import run_stage
++from skydiscover.optimize.search.default_discovery_controller import (
++    DiscoveryControllerInput,
++)
++from skydiscover.optimize.search.registry import create_database, get_program
++from skydiscover.optimize.search.utils.discovery_utils import SerializableResult
++from src import kernel
++from src.evaluation import SKY, TASKS
++from src.kernel import AuditController, configuration
++from src.transport import (
++    EXTRA_BODY,
++    MODEL,
++    is_recoverable_rate_limit,
++    transport_records_acceptable,
++)
++
++
++def refused_request() -> dict[str, Any]:
++    """Represent the exact empty Novita shared-pool refusal captured in the live run."""
++    return {
++        'role': 'solution', 'http_status': 429, 'passed': False,
++        'outbound_body': {'model': MODEL, **copy.deepcopy(EXTRA_BODY), 'temperature': 0.7, 'max_tokens': 32000},
++        'error': {'code': 429, 'metadata': {'provider_name': 'Novita', 'limit_source': 'upstream_provider_shared_pool'}},
++        'content_lengths': [], 'finish_reasons': [], 'returned_model': None,
++        'serving_provider': None, 'generation_id': None,
++    }
++
++
++class RateLimitTests(unittest.TestCase):
++    """Keep refused calls budgeted, bounded, auditable, and distinct from valid replies."""
++
++    def test_exact_refusal_and_shared_decision(self) -> None:
++        """Only the identified refusal qualifies; final and controller guards agree."""
++        record = refused_request()
++        original = copy.deepcopy(record)
++        self.assertTrue(is_recoverable_rate_limit(record))
++        self.assertTrue(transport_records_acceptable([record, copy.deepcopy(record)]))
++        self.assertFalse(transport_records_acceptable([record] * 3))
++        self.assertEqual(record, original)
++        self.assertIs(kernel.transport_records_acceptable, run_stage.transport_records_acceptable)
++
++    def test_reject_other_failures_content_or_changed_request(self) -> None:
++        """Do not waive unknown transport, serving, routing, or model discrepancies."""
++        changes = [
++            ('role', 'meta'), ('http_status', 400), ('http_status', 200), ('http_status', None),
++            ('error.metadata.provider_name', 'Other'), ('error.metadata.limit_source', 'account_limit'),
++            ('error', None), ('error.metadata', None), ('error.code', 400),
++            ('outbound_body.model', 'other-model'), ('outbound_body.provider', {'only': ['other']}),
++            ('outbound_body.reasoning_effort', 'high'), ('outbound_body.session_id', 'other'),
++            ('outbound_body.max_tokens', 16000), ('outbound_body.temperature', 1.0),
++            ('outbound_body', None), ('content_lengths', [1]), ('content_lengths', None),
++            ('finish_reasons', ['stop']), ('returned_model', MODEL), ('serving_provider', 'Novita'),
++            ('generation_id', 'unexpected-generation'),
++        ]
++        for path, value in changes:
++            with self.subTest(path=path, value=value):
++                record = refused_request()
++                target = record
++                names = path.split('.')
++                for name in names[:-1]:
++                    target = target[name]
++                target[names[-1]] = value
++                self.assertFalse(is_recoverable_rate_limit(record))
++                self.assertFalse(transport_records_acceptable([record]))
++
++    def run_sequence(self, responses: list[dict[str, Any]], horizon: int) -> dict[str, Any]:
++        """Exercise the unchanged stock outer loop with mocked generation and sleep."""
++        with tempfile.TemporaryDirectory(dir=ROOT/'artifacts') as temporary, patch.dict('os.environ', {'OPENROUTER_API_KEY': 'fixture'}), patch('src.kernel.HTTP_RECORDS', []) as records:
++            config = configuration('prism', Path(temporary), fixed=True)
++            database = create_database('evox', config.search.database)
++            controller = AuditController(DiscoveryControllerInput(config, str(SKY/TASKS['prism']/'evaluator/evaluator.py'), database, output_dir=temporary))
++            self.addCleanup(controller.close)
++            self.addCleanup(controller.search_controller.close)
++            database.add(get_program(config, 'pass\n', 'initial-fixture', {'combined_score': 21.0}, 0), iteration=0)
++            fallback = object()
++            controller._fallback_database = fallback
++            policy = controller._active_search_algorithm_code
++
++            async def generate(iteration: int, retry_times: int = 3) -> SerializableResult:
++                """Consume precisely one planned HTTP record for this solution attempt."""
++                row = copy.deepcopy(responses[len(records)])
++                records.append(row)
++                if not row['passed']:
++                    return SerializableResult(iteration=iteration, error='Recorded provider refusal')
++                child = get_program(config, 'pass\n# improved\n', f'child-{iteration}', {'combined_score': 22.0}, iteration)
++                return SerializableResult(iteration=iteration, child_program_dict=child.to_dict())
++
++            with patch('src.kernel.CoEvolutionController._run_iteration', new=AsyncMock(side_effect=generate)) as generation, patch.object(controller, '_check_meta_llm_availability', new=AsyncMock()), patch.object(controller, '_generate_variation_operators', new=AsyncMock()), patch.object(controller, '_restore_fallback_database') as restore, patch('src.kernel.asyncio.sleep', new=AsyncMock()) as sleep:
++                asyncio.run(controller.run_discovery(0, horizon))
++            restore.assert_not_called()
++            self.assertIs(controller._fallback_database, fallback)
++            self.assertEqual(controller._active_search_algorithm_code, policy)
++            self.assertEqual(generation.await_count, len(records))
++            self.assertEqual(len(controller.curve), len(records))
++            return {'records': records, 'curve': controller.curve, 'validity': controller.attempt_validity, 'stopped': controller.shutdown_event.is_set(), 'gate_failure': controller.gate_failure, 'sleeps': sleep.await_args_list}
++
++    def test_refusal_then_valid_solution_consumes_two_attempts(self) -> None:
++        """The first refusal waits once, preserves fallback, then permits one valid call."""
++        result = self.run_sequence([refused_request(), {'role': 'solution', 'passed': True, 'http_status': 200}], 2)
++        self.assertEqual(result['validity'], [False, True])
++        self.assertEqual([row['best_score'] for row in result['curve']], [21.0, 22.0])
++        self.assertEqual(result['sleeps'], [call(30)])
++        self.assertFalse(result['stopped'])
++        self.assertIsNone(result['gate_failure'])
++        self.assertFalse(result['records'][0]['passed'])
++        self.assertTrue(run_stage.transport_records_acceptable(result['records']))
++
++    def test_third_refusal_stops_after_all_three_are_accounted(self) -> None:
++        """Two pauses are allowed; a third refusal stops before any fourth request."""
++        result = self.run_sequence([refused_request() for _ in range(3)], 100)
++        self.assertEqual(len(result['records']), 3)
++        self.assertEqual(result['validity'], [False, False, False])
++        self.assertEqual(result['sleeps'], [call(30), call(30)])
++        self.assertTrue(result['stopped'])
++        self.assertEqual(result['gate_failure'], 'HTTP transport or serving-identity validation failed')
++        self.assertTrue(all(not row['passed'] for row in result['records']))
++        self.assertFalse(run_stage.transport_records_acceptable(result['records']))
++
++    def test_nonrecoverable_http_error_stops_without_backoff(self) -> None:
++        """An ordinary provider error keeps the existing immediate-stop behavior."""
++        record = refused_request()
++        record['http_status'] = 400
++        result = self.run_sequence([record], 100)
++        self.assertEqual(len(result['curve']), 1)
++        self.assertEqual(result['sleeps'], [])
++        self.assertTrue(result['stopped'])

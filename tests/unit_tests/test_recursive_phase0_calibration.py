@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from artifacts.optimizer_discovery.phase0 import run_request
+from experiments.recursive_opt._shared.optimizer_discovery.phase0 import run_request
 
 
 def test_generation_records_invalid_without_retry(tmp_path: Path) -> None:
@@ -59,7 +59,7 @@ def test_transient_failures_keep_all_four_attempts(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
     """Three bounded engineering retries do not erase failed attempts."""
-    from artifacts.optimizer_discovery import phase0
+    from experiments.recursive_opt._shared.optimizer_discovery import phase0
 
     delays: list[float] = []
     monkeypatch.setattr(phase0.time, "sleep", delays.append)
@@ -76,7 +76,7 @@ def test_transient_failures_keep_all_four_attempts(
 
 def test_separate_interface_smoke_uses_its_registered_prompt(tmp_path: Path) -> None:
     """The engineering task has separate identity without rewriting original requests."""
-    from artifacts.optimizer_discovery import phase0
+    from experiments.recursive_opt._shared.optimizer_discovery import phase0
 
     calls: list[Any] = []
 
@@ -106,7 +106,7 @@ def test_separate_interface_smoke_uses_its_registered_prompt(tmp_path: Path) -> 
 
 def test_readiness_settings_and_numeric_reasoning_usage(tmp_path: Path) -> None:
     """New registered settings retain reasoning counters without persisting reasoning text."""
-    from artifacts.optimizer_discovery import phase0
+    from experiments.recursive_opt._shared.optimizer_discovery import phase0
 
     calls: list[Any] = []
 
@@ -156,7 +156,7 @@ def test_history_probe_measures_values_not_length(
     body: str, responsive: bool, valid: bool
 ) -> None:
     """History sensitivity requires observed legal differences at fixed history length."""
-    from artifacts.optimizer_discovery.phase0 import history_probe
+    from experiments.recursive_opt._shared.optimizer_discovery.phase0 import history_probe
 
     result = history_probe("def propose(history, bounds, seed):\n    " + body)
     assert result["valid"] is valid
@@ -166,7 +166,7 @@ def test_history_probe_measures_values_not_length(
 
 def test_readiness_gate_boundaries_and_complete_batch() -> None:
     """Missing, duplicated, collapsed or insufficiently valid batches cannot turn green."""
-    from artifacts.optimizer_discovery.phase0 import readiness_gate
+    from experiments.recursive_opt._shared.optimizer_discovery.phase0 import readiness_gate
 
     rows = [
         {"label": str(i), "generation_valid": i < 9, "history_responsive": i < 8}
@@ -204,7 +204,7 @@ def test_readiness_request_rejects_fixture_changes(tmp_path: Path) -> None:
 
 def test_summary_uses_executed_behavior_and_requires_telemetry(tmp_path: Path) -> None:
     """Complete valid executions can still fail for collapse or absent token evidence."""
-    from artifacts.optimizer_discovery import phase0
+    from experiments.recursive_opt._shared.optimizer_discovery import phase0
 
     def client(**kwargs: Any) -> Any:
         """Generate a legal best-so-far proposer through the real canonical evaluator."""

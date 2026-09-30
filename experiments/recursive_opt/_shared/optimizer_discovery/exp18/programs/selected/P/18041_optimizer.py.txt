@@ -1,0 +1,108 @@
+import random
+import math
+
+def propose(history, bounds, seed):
+    d = len(bounds)
+    n = len(history)
+    rng = random.Random(seed + n)
+
+    ranges = [hi - lo for lo, hi in bounds]
+    max_range = max(ranges) if ranges else 1.0
+
+    if n == 0:
+        return [(lo + hi) * 0.5 for lo, hi in bounds]
+
+    initial_count = 2 * d
+    if n < initial_count:
+        bases = [2, 3, 5, 7, 11, 13][:d]
+        point = []
+        for i in range(d):
+            base = bases[i]
+            idx = n
+            f = 1.0 / base
+            val = 0.0
+            while idx > 0:
+                val += f * (idx % base)
+                idx //= base
+                f /= base
+            low, high = bounds[i]
+            point.append(low + val * (high - low))
+        return point
+
+    best_idx = min(range(n), key=lambda i: history[i]["value"])
+    best = history[best_idx]["x"]
+    best_val = history[best_idx]["value"]
+
+    second_idx = min(
+        (i for i in range(n) if i != best_idx),
+        key=lambda i: history[i]["value"]
+    )
+    second = history[second_idx]["x"]
+
+    remaining = max(1, 32 - initial_count)
+    progress = (n - initial_count) / remaining
+    progress = max(0.0, min(1.0, progress))
+
+    step_size = 0.2 * max_range * (1.0 - progress) ** 0.8
+    if step_size < 1e-8 * max_range:
+        step_size = 1e-8 * max_range
+
+    if n > initial_count + 1:
+        prev_best_val = min(history[:-1], key=lambda r: r["value"])["value"]
+        if history[-1]["value"] < prev_best_val:
+            step_size *= 1.15
+        else:
+            step_size *= 0.85
+
+    p_explore = 0.05 + 0.15 * (1.0 - progress)
+    if n - best_idx > 8:
+        p_explore = max(p_explore, 0.30)
+
+    if rng.random() < p_explore:
+        if rng.random() < 0.5:
+            return [rng.uniform(lo, hi) for lo, hi in bounds]
+        scale = step_size * 1.5
+        return [
+            max(lo, min(hi, best[i] + rng.gauss(0.0, scale * (hi - lo) / max_range)))
+            for i, (lo, hi) in enumerate(bounds)
+        ]
+
+    direction = [best[i] - second[i] for i in range(d)]
+    dir_norm = math.sqrt(sum(x * x for x in direction))
+    if dir_norm > 1e-12:
+        dir_unit = [direction[i] / dir_norm for i in range(d)]
+    else:
+        dir_unit = [0.0] * d
+
+    r = rng.random()
+    if r < 0.40:
+        # coordinate-wise perturbation
+        new_point = best[:]
+        n_coords = rng.randint(1, min(2, d))
+        coords = rng.sample(range(d), n_coords)
+        for i in coords:
+            std = step_size * (ranges[i] / max_range) * 0.8
+            new_point[i] = best[i] + rng.gauss(0.0, std)
+    elif r < 0.70:
+        # differential evolution
+        idx1, idx2 = rng.sample(range(n), 2)
+        a = history[idx1]["x"]
+        b = history[idx2]["x"]
+        F = 0.8
+        new_point = [best[i] + F * (a[i] - b[i]) for i in range(d)]
+        noise_scale = 0.01 * max_range
+        new_point = [new_point[i] + rng.gauss(0.0, noise_scale) for i in range(d)]
+    elif r < 0.90:
+        # line search along best-second direction
+        alpha = step_size * rng.uniform(0.5, 1.5)
+        noise_scale = 0.02 * max_range
+        new_point = [
+            best[i] + alpha * dir_unit[i] + rng.gauss(0.0, noise_scale)
+            for i in range(d)
+        ]
+    else:
+        # full Gaussian
+        stds = [step_size * (ranges[i] / max_range) * 0.6 for i in range(d)]
+        new_point = [best[i] + rng.gauss(0.0, stds[i]) for i in range(d)]
+
+    return [max(lo, min(hi, x)) for x, (lo, hi) in zip(new_point, bounds)]

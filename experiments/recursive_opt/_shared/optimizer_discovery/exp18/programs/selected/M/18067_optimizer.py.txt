@@ -1,0 +1,397 @@
+def propose(history, bounds, seed):
+    import random, math
+    rng = random.Random(seed + len(history))
+    d = len(bounds)
+    lows = [b[0] for b in bounds]
+    highs = [b[1] for b in bounds]
+    widths = [highs[i] - lows[i] for i in range(d)]
+
+    if not history:
+        return [0.5 * (lows[i] + highs[i]) for i in range(d)]
+
+    n = len(history)
+    primes = [2, 3, 5, 7, 11, 13]
+
+    def halton(k, base):
+        f = 1.0
+        r = 0.0
+        while k > 0:
+            f = f / base
+            r += f * (k % base)
+            k //= base
+        return r
+
+    def halton_point(idx):
+        off = seed % 997
+        return [lows[i] + halton(idx + off, primes[i]) * widths[i] for i in range(d)]
+
+    if n <= 2 * d:
+        return halton_point(n)
+
+    p_explore = 0.10 if n < 12 else 0.05 if n < 20 else 0.02
+    if rng.random() < p_explore:
+        return halton_point(n + 37)
+
+    best_row = min(history, key=lambda row: row["value"])
+    best_x = best_row["x"]
+
+    top_count = max(2, min(4, n))
+    top_rows = sorted(history, key=lambda row: row["value"])[:top_count]
+
+    if rng.random() < 0.20:
+        ref = rng.choice(top_rows)["x"]
+        scale = 0.05 + 0.15 * rng.random()
+        return [
+            max(lows[i], min(highs[i], ref[i] + rng.gauss(0.0, scale * widths[i])))
+            for i in range(d)
+        ]
+
+    candidates = []
+
+    def add(x):
+        x = [max(lows[i], min(highs[i], x[i])) for i in range(d)]
+        candidates.append(x)
+
+    for _ in range(8):
+        add([rng.uniform(lows[i], highs[i]) for i in range(d)])
+
+    scales = [0.005, 0.02, 0.06, 0.15, 0.35]
+    for s in scales:
+        reps = 3 if s < 0.15 else 2
+        for _ in range(reps):
+            add([best_x[i] + rng.gauss(0.0, s * widths[i]) for i in range(d)])
+
+    for row in top_rows:
+        for s in [0.02, 0.1, 0.25]:
+            add([row["x"][i] + rng.gauss(0.0, s * widths[i]) for i in range(d)])
+
+    for i in range(d):
+        for sign in (-1.0, 1.0):
+            for s in [0.02, 0.08, 0.2]:
+                x = best_x[:]
+                x[i] += sign * s * widths[i]
+                add(x)
+
+    if n >= d + 2:
+        m = d + 1
+        at_a = [[0.0] * m for _ in range(m)]
+        at_y = [0.0] * m
+
+        for row in history:
+            xn = [(row["x"][i] - lows[i]) / widths[i] for i in range(d)]
+            yv = row["value"]
+            cols = [1.0] + xn
+            for ii in range(m):
+                at_y[ii] += cols[ii] * yv
+                for jj in range(m):
+                    at_a[ii][jj] += cols[ii] * cols[jj]
+
+        aug = [at_a[ii] + [at_y[ii]] for ii in range(m)]
+        ok = True
+
+        for col in range(m):
+            pivot = col
+            if abs(aug[pivot][pivot]) < 1e-14:
+                pivot = None
+                for ri in range(col + 1, m):
+                    if abs(aug[ri][col]) > 1e-14:
+                        pivot = ri
+                        break
+                if pivot is None:
+                    ok = False
+                    break
+                aug[col], aug[pivot] = aug[pivot], aug[col]
+
+            pv = aug[col][col]
+            if abs(pv) < 1e-14:
+                ok = False
+                break
+
+            for jj in range(col, m + 1):
+                aug[col][jj] /= pv
+
+            for ri in range(m):
+                if ri == col:
+                    continue
+                factor = aug[ri][col]
+                if abs(factor) > 1e-14:
+                    for jj in range(col, m + 1):
+                        aug[ri][jj] -= factor * aug[col][jj]
+
+        if ok:
+            beta = [aug[i][m] for i in range(m)]
+            g = beta[1:]
+            norm = math.sqrt(sum(v * v for v in g))
+            if norm > 1e-10:
+                dirs = [-v / norm for v in g]
+                eta = 0.2 + 0.3 * (1.0 - n / 32.0)
+                x_norm = [(best_x[i] - lows[i]) / widths[i] for i in range(d)]
+                cand_norm = [x_norm[i] + eta * dirs[i] for i in range(d)]
+                add([lows[i] + cand_norm[i] * widths[i] for i in range(d)])
+
+    if n >= 2 * d + 1:
+        m = 2 * d + 1
+        qa = [[0.0] * m for _ in range(m)]
+        qb = [0.0] * m
+
+        for row in history:
+            xn = [(row["x"][i] - lows[i]) / widths[i] for i in range(d)]
+            yv = row["value"]
+            cols = [1.0] + xn + [v * v for v in xn]
+
+            for ii in range(m):
+                qb[ii] += cols[ii] * yv
+                for jj in range(m):
+                    qa[ii][jj] += cols[ii] * cols[jj]
+
+        for ii in range(m):
+            qa[ii][ii] += 1e-6
+
+        qaug = [qa[ii] + [qb[ii]] for ii in range(m)]
+        qok = True
+
+        for col in range(m):
+            pivot = col
+            if abs(qaug[pivot][pivot]) < 1e-12:
+                pivot = None
+                for ri in range(col + 1, m):
+                    if abs(qaug[ri][col]) > 1e-12:
+                        pivot = ri
+                        break
+                if pivot is None:
+                    qok = False
+                    break
+                qaug[col], qaug[pivot] = qaug[pivot], qaug[col]
+
+            pv = qaug[col][col]
+            if abs(pv) < 1e-12:
+                qok = False
+                break
+
+            for jj in range(col, m + 1):
+                qaug[col][jj] /= pv
+
+            for ri in range(m):
+                if ri == col:
+                    continue
+                factor = qaug[ri][col]
+                if abs(factor) > 1e-12:
+                    for jj in range(col, m + 1):
+                        qaug[ri][jj] -= factor * qaug[col][jj]
+
+        if qok:
+            qbeta = [qaug[i][m] for i in range(m)]
+            qgrad = [0.0] * d
+            for i in range(d):
+                zbest = (best_x[i] - lows[i]) / widths[i]
+                qgrad[i] = qbeta[1 + i] + 2.0 * qbeta[1 + d + i] * zbest
+
+            qnorm = math.sqrt(sum(v * v for v in qgrad))
+            if qnorm > 1e-10:
+                qstep = 0.05 + 0.15 * (1.0 - n / 32.0)
+                qdirs = [-v / qnorm for v in qgrad]
+                x_norm = [(best_x[i] - lows[i]) / widths[i] for i in range(d)]
+                cand_norm = [x_norm[i] + qstep * qdirs[i] for i in range(d)]
+                add([lows[i] + cand_norm[i] * widths[i] for i in range(d)])
+
+    if n >= (d + 1) * (d + 2) // 2:
+        m = 1 + d + d * (d + 1) // 2
+        quad_idx = {}
+        qi = 1 + d
+        for i in range(d):
+            for j in range(i, d):
+                quad_idx[(i, j)] = qi
+                qi += 1
+
+        fa = [[0.0] * m for _ in range(m)]
+        fb = [0.0] * m
+
+        for row in history:
+            xn = [(row["x"][i] - lows[i]) / widths[i] for i in range(d)]
+            yv = row["value"]
+            cols = [1.0] + xn
+            for i in range(d):
+                for j in range(i, d):
+                    cols.append(xn[i] * xn[j])
+
+            for ii in range(m):
+                fb[ii] += cols[ii] * yv
+                for jj in range(m):
+                    fa[ii][jj] += cols[ii] * cols[jj]
+
+        for ii in range(m):
+            fa[ii][ii] += 1e-6
+
+        faug = [fa[ii] + [fb[ii]] for ii in range(m)]
+        fok = True
+
+        for col in range(m):
+            pivot = col
+            if abs(faug[pivot][pivot]) < 1e-12:
+                pivot = None
+                for ri in range(col + 1, m):
+                    if abs(faug[ri][col]) > 1e-12:
+                        pivot = ri
+                        break
+                if pivot is None:
+                    fok = False
+                    break
+                faug[col], faug[pivot] = faug[pivot], faug[col]
+
+            pv = faug[col][col]
+            if abs(pv) < 1e-12:
+                fok = False
+                break
+
+            for jj in range(col, m + 1):
+                faug[col][jj] /= pv
+
+            for ri in range(m):
+                if ri == col:
+                    continue
+                factor = faug[ri][col]
+                if abs(factor) > 1e-12:
+                    for jj in range(col, m + 1):
+                        faug[ri][jj] -= factor * faug[col][jj]
+
+        if fok:
+            beta = [faug[i][m] for i in range(m)]
+            zbest = [(best_x[i] - lows[i]) / widths[i] for i in range(d)]
+
+            fgrad = [0.0] * d
+            for a in range(d):
+                val = beta[1 + a]
+                for i in range(d):
+                    for j in range(i, d):
+                        if a == i and a == j:
+                            val += 2.0 * beta[quad_idx[(i, j)]] * zbest[a]
+                        elif a == i:
+                            val += beta[quad_idx[(i, j)]] * zbest[j]
+                        elif a == j:
+                            val += beta[quad_idx[(i, j)]] * zbest[i]
+                fgrad[a] = val
+
+            H = [[0.0] * d for _ in range(d)]
+            for i in range(d):
+                for j in range(i, d):
+                    if i == j:
+                        H[i][i] += 2.0 * beta[quad_idx[(i, j)]]
+                    else:
+                        H[i][j] += beta[quad_idx[(i, j)]]
+                        H[j][i] += beta[quad_idx[(i, j)]]
+
+            for ii in range(d):
+                H[ii][ii] += 1e-7
+
+            Haug = [H[ii] + [-fgrad[ii]] for ii in range(d)]
+            hok = True
+
+            for col in range(d):
+                pivot = col
+                if abs(Haug[pivot][pivot]) < 1e-12:
+                    pivot = None
+                    for ri in range(col + 1, d):
+                        if abs(Haug[ri][col]) > 1e-12:
+                            pivot = ri
+                            break
+                    if pivot is None:
+                        hok = False
+                        break
+                    Haug[col], Haug[pivot] = Haug[pivot], Haug[col]
+
+                pv = Haug[col][col]
+                if abs(pv) < 1e-12:
+                    hok = False
+                    break
+
+                for jj in range(col, d + 1):
+                    Haug[col][jj] /= pv
+
+                for ri in range(d):
+                    if ri == col:
+                        continue
+                    factor = Haug[ri][col]
+                    if abs(factor) > 1e-12:
+                        for jj in range(col, d + 1):
+                            Haug[ri][jj] -= factor * Haug[col][jj]
+
+            if hok:
+                delta = [Haug[i][d] for i in range(d)]
+                dnorm = math.sqrt(sum(v * v for v in delta))
+                if dnorm > 1e-10:
+                    max_step = 0.1 + 0.2 * (1.0 - n / 32.0)
+                    if dnorm > max_step:
+                        factor = max_step / dnorm
+                        delta = [v * factor for v in delta]
+                    for mult in (0.5, 1.0):
+                        cand_norm = [zbest[i] + mult * delta[i] for i in range(d)]
+                        add([lows[i] + cand_norm[i] * widths[i] for i in range(d)])
+
+    sorted_hist = sorted(history, key=lambda row: row["value"])
+    cnt = min(4, n)
+    centroid = [0.0] * d
+    total_w = 0.0
+    for idx in range(cnt):
+        w = 1.0 / (idx + 1)
+        total_w += w
+        row = sorted_hist[idx]
+        for i in range(d):
+            centroid[i] += row["x"][i] * w
+    for i in range(d):
+        centroid[i] /= total_w
+
+    for s in (0.02, 0.08):
+        add([centroid[i] + rng.gauss(0.0, s * widths[i]) for i in range(d)])
+
+    vals = [row["value"] for row in history]
+    val_min = min(vals)
+    val_max = max(vals)
+    val_range = val_max - val_min
+    if val_range <= 0:
+        val_range = 1.0
+
+    alpha = 0.15 + 0.35 * (1.0 - n / 32.0)
+
+    def score(x):
+        dists = []
+        for row in history:
+            nd2 = 0.0
+            for i in range(d):
+                z = (x[i] - row["x"][i]) / widths[i]
+                nd2 += z * z
+            dists.append((nd2, row["value"]))
+        dists.sort(key=lambda t: t[0])
+
+        nearest2 = dists[0][0]
+        if nearest2 < 1e-14:
+            return float("inf")
+
+        k = min(5, n)
+        total = 0.0
+        pred = 0.0
+        for j in range(k):
+            dist2, v = dists[j]
+            w = 1.0 / (math.sqrt(dist2) + 1e-12)
+            pred += w * v
+            total += w
+        pred /= total
+
+        return pred + alpha * math.sqrt(nearest2) * val_range
+
+    best_candidate = None
+    best_score = float("inf")
+
+    for x in candidates:
+        sc = score(x)
+        if sc < best_score:
+            best_score = sc
+            best_candidate = x
+
+    if best_candidate is not None:
+        return best_candidate
+
+    scale = 0.01 + 0.05 * (1.0 - n / 32.0)
+    return [
+        max(lows[i], min(highs[i], best_x[i] + rng.gauss(0.0, scale * widths[i])))
+        for i in range(d)
+    ]

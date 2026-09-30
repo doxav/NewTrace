@@ -8,7 +8,9 @@ examples/notebook_outputs/recursive_opt_use_cases/
 
 # Log files
 *.log
-
+*.gz
+*.zip
+ 
 # Python virtualenv
 .venv*
 
@@ -187,3 +189,5 @@ examples/XP_recurse_2/
 examples/XP_1stattempt/
 examples/examples/
 memOLD/
+experiments/**/*.json
+experiments/**/*.jsonl

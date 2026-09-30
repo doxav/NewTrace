@@ -1,0 +1,284 @@
+def propose(history, bounds, seed):
+    import random
+    import math
+
+    rng = random.Random(seed + len(history))
+    d = len(bounds)
+    n = len(history)
+
+    n_init = min(2 * d + 2, 8)
+    if n < n_init:
+        if n == 0:
+            return [(low + high) / 2.0 for low, high in bounds]
+        m = n_init - 1
+        point = []
+        for i, (low, high) in enumerate(bounds):
+            rng_dim = random.Random(seed + i * 100000 + 12345)
+            slots = [(j + 0.5) / m for j in range(m)]
+            rng_dim.shuffle(slots)
+            point.append(low + (high - low) * slots[n - 1])
+        return point
+
+    if rng.random() < 0.05:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    best_idx = min(range(n), key=lambda i: history[i]["value"])
+    best_x = history[best_idx]["x"]
+    best_y = history[best_idx]["value"]
+
+    p = (d + 1) * (d + 2) // 2
+
+    if n >= max(d + 1, (p + 1) // 2):
+        pts = []
+        for row in history:
+            dist = 0.0
+            for i in range(d):
+                diff = (row["x"][i] - best_x[i]) / (bounds[i][1] - bounds[i][0])
+                dist += diff * diff
+            pts.append((dist, row))
+        pts.sort(key=lambda t: t[0])
+        m = min(n, 2 * p)
+        X = []
+        y = []
+        weights = []
+        for idx, (dist, row) in enumerate(pts[:m]):
+            x_norm = [(row["x"][i] - bounds[i][0]) / (bounds[i][1] - bounds[i][0]) for i in range(d)]
+            X.append(x_norm)
+            y.append(row["value"])
+            weights.append(1.0 / (dist + 0.05))
+
+        A = []
+        for x in X:
+            row = [1.0]
+            for i in range(d):
+                row.append(x[i])
+            for i in range(d):
+                row.append(x[i] * x[i])
+            for i in range(d):
+                for j in range(i + 1, d):
+                    row.append(x[i] * x[j])
+            A.append(row)
+
+        AtA = [[0.0] * p for _ in range(p)]
+        AtY = [0.0] * p
+        for r in range(m):
+            w = weights[r]
+            for c1 in range(p):
+                AtY[c1] += w * A[r][c1] * y[r]
+                for c2 in range(p):
+                    AtA[c1][c2] += w * A[r][c1] * A[r][c2]
+        lam = 1e-6
+        for i in range(p):
+            AtA[i][i] += lam
+
+        aug = [AtA[i][:] + [AtY[i]] for i in range(p)]
+        ok = True
+        for col in range(p):
+            pivot = col
+            max_val = abs(aug[col][col])
+            for r in range(col + 1, p):
+                if abs(aug[r][col]) > max_val:
+                    max_val = abs(aug[r][col])
+                    pivot = r
+            if max_val < 1e-12:
+                ok = False
+                break
+            if pivot != col:
+                aug[col], aug[pivot] = aug[pivot], aug[col]
+            div = aug[col][col]
+            for j in range(p + 1):
+                aug[col][j] /= div
+            for r in range(p):
+                if r != col:
+                    factor = aug[r][col]
+                    if factor != 0.0:
+                        for j in range(p + 1):
+                            aug[r][j] -= factor * aug[col][j]
+        if ok:
+            beta = [aug[i][p] for i in range(p)]
+
+            station = None
+            if d > 0:
+                G = [[0.0] * d for _ in range(d)]
+                h = [0.0] * d
+                for i in range(d):
+                    h[i] = -beta[1 + i]
+                    G[i][i] = 2.0 * beta[1 + d + i]
+                    for j in range(i + 1, d):
+                        cross_idx = 1 + d + d + (i * (2 * d - i - 1) // 2 + (j - i - 1))
+                        G[i][j] = beta[cross_idx]
+                        G[j][i] = beta[cross_idx]
+                aug2 = [G[i][:] + [h[i]] for i in range(d)]
+                ok2 = True
+                for col in range(d):
+                    pivot = col
+                    max_val = abs(aug2[col][col])
+                    for r in range(col + 1, d):
+                        if abs(aug2[r][col]) > max_val:
+                            max_val = abs(aug2[r][col])
+                            pivot = r
+                    if max_val < 1e-12:
+                        ok2 = False
+                        break
+                    if pivot != col:
+                        aug2[col], aug2[pivot] = aug2[pivot], aug2[col]
+                    div = aug2[col][col]
+                    for j in range(d + 1):
+                        aug2[col][j] /= div
+                    for r in range(d):
+                        if r != col:
+                            factor = aug2[r][col]
+                            if factor != 0.0:
+                                for j in range(d + 1):
+                                    aug2[r][j] -= factor * aug2[col][j]
+                if ok2:
+                    station = [max(bounds[i][0], min(bounds[i][1], aug2[i][d])) for i in range(d)]
+
+            nearest = 1e9
+            for i, row in enumerate(history):
+                if i == best_idx:
+                    continue
+                dist = 0.0
+                for k in range(d):
+                    diff = (row["x"][k] - best_x[k]) / (bounds[k][1] - bounds[k][0])
+                    dist += diff * diff
+                dist = math.sqrt(dist)
+                if dist < nearest:
+                    nearest = dist
+            scale = min(0.2 * (1.0 - n / 40.0), 0.5 * nearest)
+            if scale < 0.01:
+                scale = 0.01
+
+            candidates = []
+            if station is not None:
+                candidates.append(station)
+            for _ in range(60):
+                candidates.append([rng.uniform(low, high) for low, high in bounds])
+
+            for _ in range(100):
+                cand = []
+                for i, (low, high) in enumerate(bounds):
+                    s = scale * (high - low)
+                    cand.append(max(low, min(high, best_x[i] + rng.gauss(0.0, s))))
+                candidates.append(cand)
+
+            if station is not None:
+                for _ in range(15):
+                    cand = []
+                    for i, (low, high) in enumerate(bounds):
+                        s = scale * (high - low)
+                        cand.append(max(low, min(high, station[i] + rng.gauss(0.0, s))))
+                    candidates.append(cand)
+                for _ in range(15):
+                    t = rng.uniform(0.0, 2.0)
+                    cand = []
+                    for i in range(d):
+                        v = best_x[i] + t * (station[i] - best_x[i])
+                        cand.append(max(bounds[i][0], min(bounds[i][1], v)))
+                    candidates.append(cand)
+
+            sorted_hist = sorted(history, key=lambda row: row["value"])
+            if n >= 2:
+                second_x = sorted_hist[1]["x"]
+                for _ in range(30):
+                    cand = []
+                    for i, (low, high) in enumerate(bounds):
+                        s = scale * (high - low)
+                        cand.append(max(low, min(high, second_x[i] + rng.gauss(0.0, s))))
+                    candidates.append(cand)
+                for t in [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]:
+                    cand = []
+                    for i in range(d):
+                        v = best_x[i] + t * (second_x[i] - best_x[i])
+                        cand.append(max(bounds[i][0], min(bounds[i][1], v)))
+                    candidates.append(cand)
+
+            # Pair-difference directions from top points, helps curved valleys
+            top_pts = [row["x"] for row in sorted_hist[:min(n, 8)]]
+            for _ in range(25):
+                i1 = rng.randrange(len(top_pts))
+                i2 = rng.randrange(len(top_pts))
+                if i1 == i2:
+                    continue
+                t = rng.uniform(-1.0, 1.0)
+                cand = []
+                for k in range(d):
+                    v = best_x[k] + t * (top_pts[i1][k] - top_pts[i2][k])
+                    cand.append(max(bounds[k][0], min(bounds[k][1], v)))
+                candidates.append(cand)
+
+            for _ in range(30):
+                rnd = [rng.uniform(low, high) for low, high in bounds]
+                t = rng.random()
+                cand = []
+                for i in range(d):
+                    v = best_x[i] + t * (rnd[i] - best_x[i])
+                    cand.append(max(bounds[i][0], min(bounds[i][1], v)))
+                candidates.append(cand)
+
+            for step in [0.001, 0.01, 0.05, 0.1, 0.2]:
+                for i in range(d):
+                    for sign in [-1.0, 1.0]:
+                        cand = best_x[:]
+                        cand[i] = max(bounds[i][0], min(bounds[i][1],
+                                    cand[i] + sign * step * (bounds[i][1] - bounds[i][0])))
+                        candidates.append(cand)
+
+            std = [0.0] * d
+            if m > 1:
+                for i in range(d):
+                    mean = sum(x[i] for x in X) / m
+                    var = sum((x[i] - mean) ** 2 for x in X) / (m - 1)
+                    std[i] = math.sqrt(var + 1e-12)
+            scale_aniso = 0.3 * (1.0 - n / 40.0)
+            if scale_aniso < 0.03:
+                scale_aniso = 0.03
+            for _ in range(30):
+                cand = []
+                for i, (low, high) in enumerate(bounds):
+                    s = scale_aniso * std[i] * (high - low)
+                    cand.append(max(low, min(high, best_x[i] + rng.gauss(0.0, s))))
+                candidates.append(cand)
+
+            y_range = max(y) - min(y)
+            if y_range < 1e-12:
+                y_range = 1.0
+
+            best_score = float("inf")
+            best_cand = None
+            for cand in candidates:
+                cand_norm = [(cand[i] - bounds[i][0]) / (bounds[i][1] - bounds[i][0]) for i in range(d)]
+                pred = beta[0]
+                idx = 1
+                for i in range(d):
+                    pred += beta[idx] * cand_norm[i]
+                    idx += 1
+                for i in range(d):
+                    pred += beta[idx] * cand_norm[i] * cand_norm[i]
+                    idx += 1
+                for i in range(d):
+                    for j in range(i + 1, d):
+                        pred += beta[idx] * cand_norm[i] * cand_norm[j]
+                        idx += 1
+
+                min_dist = float("inf")
+                for row in history:
+                    dist = 0.0
+                    for i in range(d):
+                        diff = (cand[i] - row["x"][i]) / (bounds[i][1] - bounds[i][0])
+                        dist += diff * diff
+                    dist = math.sqrt(dist)
+                    if dist < min_dist:
+                        min_dist = dist
+
+                score = pred - 0.02 * y_range * min_dist
+                if score < best_score:
+                    best_score = score
+                    best_cand = cand
+
+            if best_cand is not None:
+                return best_cand
+
+    scale = 0.2 / (1.0 + n / (4.0 * d)) ** 0.5
+    return [max(low, min(high, x + rng.gauss(0.0, scale * (high - low))))
+            for x, (low, high) in zip(best_x, bounds)]

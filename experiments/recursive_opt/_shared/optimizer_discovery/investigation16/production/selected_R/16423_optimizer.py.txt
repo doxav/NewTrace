@@ -1,0 +1,86 @@
+import random
+import math
+
+def propose(history, bounds, seed):
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    lo = [b[0] for b in bounds]
+    hi = [b[1] for b in bounds]
+    ranges = [h - l for l, h in zip(lo, hi)]
+
+    # Halton sequence for initial exploration
+    n_init = 2 * dim
+    if len(history) < n_init:
+        # generate Halton point for index len(history)+1
+        idx = len(history) + 1
+        # primes for each dimension
+        primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+        point = []
+        for i in range(dim):
+            base = primes[i]
+            f = 1.0 / base
+            value = 0.0
+            n = idx
+            while n > 0:
+                value += f * (n % base)
+                n //= base
+                f /= base
+            point.append(lo[i] + value * ranges[i])
+        return point
+
+    # Find best point so far
+    best_idx = min(range(len(history)), key=lambda i: history[i]['value'])
+    best = history[best_idx]['x']
+    best_val = history[best_idx]['value']
+
+    # Number of evaluations since last improvement
+    no_improve = len(history) - 1 - best_idx
+
+    # Exploration probability
+    p_explore = 0.15
+    if no_improve > 8:
+        p_explore = 0.5
+    elif no_improve > 4:
+        p_explore = 0.3
+
+    # Generate candidate
+    for _ in range(10):
+        if rng.random() < p_explore:
+            # Uniform random exploration
+            cand = [lo[i] + rng.random() * ranges[i] for i in range(dim)]
+        else:
+            # Local search around best
+            # Adaptive step size: decreases slowly with evaluations
+            sigma_factor = 0.15 * (0.95 ** (len(history) // dim))
+            # Occasionally use a larger step
+            if rng.random() < 0.3:
+                sigma_factor *= 2.0
+            cand = []
+            for i in range(dim):
+                sigma = sigma_factor * ranges[i]
+                cand.append(best[i] + rng.gauss(0, sigma))
+            # Clip to bounds
+            cand = [max(lo[i], min(hi[i], cand[i])) for i in range(dim)]
+
+        # Check if duplicate (within tolerance)
+        duplicate = False
+        for h in history:
+            if all(abs(cand[i] - h['x'][i]) < 1e-12 for i in range(dim)):
+                duplicate = True
+                break
+        if not duplicate:
+            return cand
+
+        # If duplicate, add small random perturbation
+        cand = [max(lo[i], min(hi[i], cand[i] + rng.uniform(-0.01, 0.01) * ranges[i])) for i in range(dim)]
+        # Check again
+        duplicate = False
+        for h in history:
+            if all(abs(cand[i] - h['x'][i]) < 1e-12 for i in range(dim)):
+                duplicate = True
+                break
+        if not duplicate:
+            return cand
+
+    # Fallback: random point
+    return [lo[i] + rng.random() * ranges[i] for i in range(dim)]

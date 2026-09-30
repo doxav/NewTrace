@@ -1,0 +1,173 @@
+import math
+import random
+import itertools
+
+def _norm_cdf(x):
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+def _norm_pdf(x):
+    return math.exp(-x * x / 2.0) / math.sqrt(2.0 * math.pi)
+
+def _cholesky(A):
+    n = len(A)
+    L = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1):
+            s = A[i][j] - sum(L[i][k] * L[j][k] for k in range(j))
+            if i == j:
+                if s <= 0.0:
+                    s = 1e-10
+                L[i][i] = math.sqrt(s)
+            else:
+                L[i][j] = s / L[j][j]
+    return L
+
+def _solve_triangular(L, b, lower=True):
+    n = len(b)
+    x = [0.0] * n
+    if lower:
+        for i in range(n):
+            s = b[i] - sum(L[i][j] * x[j] for j in range(i))
+            x[i] = s / L[i][i]
+    else:
+        for i in range(n - 1, -1, -1):
+            s = b[i] - sum(L[i][j] * x[j] for j in range(i + 1, n))
+            x[i] = s / L[i][i]
+    return x
+
+def _kernel(x, y, length_scales):
+    s = 0.0
+    for i in range(len(x)):
+        d = (x[i] - y[i]) / length_scales[i]
+        s += d * d
+    return math.exp(-0.5 * s)
+
+def _fit_hyper(X, y, length_scales, jitter=1e-6):
+    n = len(y)
+    mean_y = sum(y) / n
+    yc = [yi - mean_y for yi in y]
+    K = [[_kernel(X[i], X[j], length_scales) for j in range(n)] for i in range(n)]
+    for i in range(n):
+        K[i][i] += jitter
+    L = _cholesky(K)
+    z = _solve_triangular(L, yc, True)
+    Lt = [[L[j][i] for j in range(n)] for i in range(n)]
+    alpha = _solve_triangular(Lt, z, False)
+    logdet = sum(2.0 * math.log(L[i][i]) for i in range(n))
+    quad = sum(yc[i] * alpha[i] for i in range(n))
+    nll = 0.5 * (quad + logdet + n * math.log(2.0 * math.pi))
+    return L, alpha, mean_y, nll
+
+def propose(history, bounds, seed):
+    d = len(bounds)
+    lows = [lo for lo, hi in bounds]
+    highs = [hi for lo, hi in bounds]
+    widths = [hi - lo for lo, hi in bounds]
+
+    if not history:
+        return [(lo + hi) * 0.5 for lo, hi in bounds]
+
+    n = len(history)
+    rng = random.Random(seed + n)
+
+    if n < 3:
+        return [rng.uniform(lo, hi) for lo, hi in bounds]
+
+    X = []
+    y = []
+    for row in history:
+        x = row["x"]
+        X.append([(x[i] - lows[i]) / widths[i] for i in range(d)])
+        y.append(row["value"])
+
+    # Hyperparameter candidates: base scales, random scales, and jitter values
+    base_scales = [0.1, 0.2, 0.4, 0.7, 1.0]
+    options = []
+    for s in base_scales:
+        options.append(([s] * d, 1e-6))
+    # Add random length scales (more samples)
+    for _ in range(10):
+        scales = [math.exp(rng.uniform(math.log(0.05), math.log(1.2))) for _ in range(d)]
+        jitter = rng.choice([1e-6, 1e-5, 1e-4, 1e-3])
+        options.append((scales, jitter))
+
+    best_nll = None
+    best_scales = [0.2] * d
+    best_jitter = 1e-6
+    for scales, jitter in options:
+        try:
+            L, alpha, mean_y, nll = _fit_hyper(X, y, scales, jitter)
+        except Exception:
+            continue
+        if best_nll is None or nll < best_nll:
+            best_nll = nll
+            best_scales = scales
+            best_jitter = jitter
+
+    L, alpha, mean_y, _ = _fit_hyper(X, y, best_scales, best_jitter)
+
+    f_best = min(y)
+    best_idx = y.index(f_best)
+    best_norm = X[best_idx]
+
+    candidates = []
+
+    # Corners
+    for corner in itertools.product([0.0, 1.0], repeat=d):
+        candidates.append(list(corner))
+
+    # Random points
+    for _ in range(50):
+        candidates.append([rng.random() for _ in range(d)])
+
+    # Local perturbations around best
+    for scale in [0.01, 0.03, 0.07, 0.15, 0.3]:
+        for _ in range(10):
+            cand = [best_norm[i] + rng.gauss(0.0, scale) for i in range(d)]
+            cand = [min(1.0, max(0.0, c)) for c in cand]
+            candidates.append(cand)
+
+    # Local perturbations around other top points
+    top = sorted(range(n), key=lambda i: y[i])[:min(3, n)]
+    for idx in top[1:]:
+        for scale in [0.05, 0.15]:
+            for _ in range(6):
+                cand = [X[idx][i] + rng.gauss(0.0, scale) for i in range(d)]
+                cand = [min(1.0, max(0.0, c)) for c in cand]
+                candidates.append(cand)
+
+    def too_close(pt):
+        for hx in X:
+            if sum((pt[i] - hx[i]) ** 2 for i in range(d)) < 1e-12:
+                return True
+        return False
+
+    # Use LCB acquisition with decreasing kappa
+    kappa = 2.0 * (1.0 - n / 32.0)  # exploration decreases with n
+    best_score = None
+    best_cand = None
+
+    for cand in candidates:
+        if too_close(cand):
+            continue
+        k_vec = [_kernel(cand, X[i], best_scales) for i in range(n)]
+        mu = mean_y + sum(k_vec[i] * alpha[i] for i in range(n))
+        v = _solve_triangular(L, k_vec, True)
+        sigma2 = 1.0 - sum(v[i] * v[i] for i in range(n))
+        if sigma2 < 1e-12:
+            sigma2 = 1e-12
+        sigma = math.sqrt(sigma2)
+        if sigma <= 0.0:
+            continue
+        # Lower confidence bound (minimize)
+        score = mu - kappa * sigma
+        if best_score is None or score < best_score:
+            best_score = score
+            best_cand = cand
+
+    if best_cand is None:
+        return [rng.uniform(lo, hi) for lo, hi in bounds]
+
+    result = [best_cand[i] * widths[i] + lows[i] for i in range(d)]
+    result = [max(low, min(high, result[i])) for i, (low, high) in enumerate(bounds)]
+    return result

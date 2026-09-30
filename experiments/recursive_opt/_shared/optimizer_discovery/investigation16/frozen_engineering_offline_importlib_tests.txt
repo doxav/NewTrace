@@ -1,0 +1,20 @@
+
+==================================== ERRORS ====================================
+_ ERROR collecting artifacts/optimizer_discovery/investigation16/feedback_experiment/test_analysis.py _
+artifacts/optimizer_discovery/investigation16/feedback_experiment/test_analysis.py:30: in <module>
+    A = load_analysis()
+        ^^^^^^^^^^^^^^^
+artifacts/optimizer_discovery/investigation16/feedback_experiment/test_analysis.py:22: in load_analysis
+    "f1_final_analysis", F.ROOT / "analysis.py"
+                         ^^^^^^
+E   AttributeError: module 'artifacts.optimizer_discovery.investigation16.feedback_experiment' has no attribute 'ROOT'
+_ ERROR collecting artifacts/optimizer_discovery/investigation16/generation/test_analysis.py _
+artifacts/optimizer_discovery/investigation16/generation/test_analysis.py:25: in <module>
+    A = load_analysis()
+        ^^^^^^^^^^^^^^^
+artifacts/optimizer_discovery/investigation16/generation/test_analysis.py:17: in load_analysis
+    path = G.ROOT / "generation/analysis.py"
+           ^^^^^^
+E   AttributeError: module 'artifacts.optimizer_discovery.investigation16.generation' has no attribute 'ROOT'
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+2 errors in 2.58s

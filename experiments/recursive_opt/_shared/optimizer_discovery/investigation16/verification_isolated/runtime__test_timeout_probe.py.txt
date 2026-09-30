@@ -1,0 +1,17 @@
+...                                                                      [100%]
+=============================== warnings summary ===============================
+artifacts/optimizer_discovery/investigation16/runtime/test_timeout_probe.py::test_wrapper_default_reaches_http_transport
+artifacts/optimizer_discovery/investigation16/runtime/test_timeout_probe.py::test_arriving_bytes_can_exceed_total_timeout
+artifacts/optimizer_discovery/investigation16/runtime/test_timeout_probe.py::test_stalled_read_times_out_without_hidden_retry
+  /home/xav/miniconda3/lib/python3.13/site-packages/httpx/_models.py:408: DeprecationWarning: Use 'content=<...>' to upload raw bytes/text content.
+    headers, stream = encode_request(
+
+artifacts/optimizer_discovery/investigation16/runtime/test_timeout_probe.py::test_wrapper_default_reaches_http_transport
+artifacts/optimizer_discovery/investigation16/runtime/test_timeout_probe.py::test_arriving_bytes_can_exceed_total_timeout
+  /home/xav/miniconda3/lib/python3.13/site-packages/pydantic/main.py:464: UserWarning: Pydantic serializer warnings:
+    PydanticSerializationUnexpectedValue(Expected 9 fields but got 5: Expected `Message` - serialized value may not be as expected [field_name='message', input_value=Message(content='LOCAL SY...er_specific_fields=None), input_type=Message])
+    PydanticSerializationUnexpectedValue(Expected `StreamingChoices` - serialized value may not be as expected [field_name='choices', input_value=Choices(finish_reason='st...ider_specific_fields={}), input_type=Choices])
+    return self.__pydantic_serializer__.to_python(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+3 passed, 5 warnings in 12.21s

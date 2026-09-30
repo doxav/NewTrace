@@ -1,0 +1,32 @@
+def propose(history, bounds, seed):
+    """Optimize anytime best-so-far with adaptive exploration and local search."""
+    import random
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    n = len(history)
+    if n == 0:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    best = min(history, key=lambda row: row["value"])["x"]
+
+    # Exploration probability decays from ~0.53 to ~0.07 over 32 evaluations
+    p_explore = 0.5 * (1.0 - n / 32.0) + 0.05
+    if rng.random() < p_explore:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    # Base point: mostly best, sometimes a random historical point
+    if n > 1 and rng.random() < 0.2:
+        base = history[rng.randrange(n)]["x"]
+    else:
+        base = best
+
+    # Step size decays from ~0.34 to ~0.05
+    scale = 0.3 * (1.0 - n / 32.0) + 0.05
+    # Occasionally take a larger jump to escape local minima
+    if rng.random() < 0.15:
+        scale *= 2.0
+
+    return [
+        max(low, min(high, x + rng.gauss(0.0, scale * (high - low))))
+        for x, (low, high) in zip(base, bounds)
+    ]

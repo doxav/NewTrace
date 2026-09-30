@@ -1,0 +1,174 @@
+def propose(history, bounds, seed):
+    import random, math
+
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    n = len(history)
+    budget = 32
+
+    lows = [b[0] for b in bounds]
+    spans = [b[1] - b[0] for b in bounds]
+
+    def to_norm(x):
+        return [(x[i] - lows[i]) / spans[i] for i in range(dim)]
+
+    def from_norm(x):
+        return [lows[i] + x[i] * spans[i] for i in range(dim)]
+
+    primes = [2, 3, 5, 7, 11, 13][:dim]
+
+    def radical_inverse(idx, base):
+        res = 0.0
+        f = 1.0 / base
+        i = idx
+        while i > 0:
+            res += f * (i % base)
+            i //= base
+            f /= base
+        return res
+
+    if n == 0:
+        return from_norm([0.5] * dim)
+
+    if n < 5:
+        halton_idx = n
+        point_norm = [radical_inverse(halton_idx, primes[i]) for i in range(dim)]
+        return from_norm(point_norm)
+
+    hist_norm = [to_norm(row["x"]) for row in history]
+    hist_vals = [row["value"] for row in history]
+
+    # lengthscale from pairwise distances
+    dists = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = math.sqrt(sum((hist_norm[i][k] - hist_norm[j][k]) ** 2 for k in range(dim)))
+            dists.append(d)
+    if dists:
+        dists.sort()
+        length = dists[len(dists) // 2] / math.sqrt(dim)
+        if length < 1e-3:
+            length = 1e-3
+        if length > 2.0:
+            length = 2.0
+    else:
+        length = 0.5
+
+    def kern(x1, x2):
+        d2 = sum((x1[i] - x2[i]) ** 2 for i in range(dim))
+        return math.exp(-d2 / (2.0 * length * length))
+
+    sigma_n = 1e-6
+
+    K = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i, n):
+            v = kern(hist_norm[i], hist_norm[j])
+            if i == j:
+                v += sigma_n
+            K[i][j] = v
+            K[j][i] = v
+
+    def solve(A, b):
+        m = len(A)
+        aug = [A[i][:] + [b[i]] for i in range(m)]
+        for col in range(m):
+            piv = max(range(col, m), key=lambda r: abs(aug[r][col]))
+            if abs(aug[piv][col]) < 1e-12:
+                continue
+            if piv != col:
+                aug[col], aug[piv] = aug[piv], aug[col]
+            pv = aug[col][col]
+            for r in range(col + 1, m):
+                factor = aug[r][col] / pv
+                for c in range(col, m + 1):
+                    aug[r][c] -= factor * aug[col][c]
+        x = [0.0] * m
+        for i in range(m - 1, -1, -1):
+            s = aug[i][-1] - sum(aug[i][j] * x[j] for j in range(i + 1, m))
+            if abs(aug[i][i]) < 1e-12:
+                x[i] = 0.0
+            else:
+                x[i] = s / aug[i][i]
+        return x
+
+    y_mean = sum(hist_vals) / n
+    y_centered = [v - y_mean for v in hist_vals]
+    alpha = solve([K[i][:] for i in range(n)], y_centered)
+
+    K_inv = [[0.0] * n for _ in range(n)]
+    for col in range(n):
+        e = [1.0 if i == col else 0.0 for i in range(n)]
+        sol = solve([K[i][:] for i in range(n)], e)
+        for row in range(n):
+            K_inv[row][col] = sol[row]
+
+    best_val = min(hist_vals)
+    best_idx = hist_vals.index(best_val)
+    best_norm = hist_norm[best_idx]
+
+    progress = n / float(budget)
+    scale = 0.2 * (1.0 - progress) + 0.02
+
+    candidates = []
+
+    for _ in range(200):
+        candidates.append([rng.random() for _ in range(dim)])
+
+    for _ in range(200):
+        cand = [max(0.0, min(1.0, best_norm[i] + rng.gauss(0.0, scale))) for i in range(dim)]
+        candidates.append(cand)
+
+    sorted_idx = sorted(range(n), key=lambda i: hist_vals[i])
+    top_k = sorted_idx[:min(3, n)]
+    for idx in top_k:
+        base = hist_norm[idx]
+        for _ in range(100):
+            cand = [max(0.0, min(1.0, base[i] + rng.gauss(0.0, scale))) for i in range(dim)]
+            candidates.append(cand)
+
+    for _ in range(50):
+        dir_vec = [rng.gauss(0.0, 1.0) for _ in range(dim)]
+        norm_len = math.sqrt(sum(d * d for d in dir_vec))
+        if norm_len > 1e-12:
+            step_len = rng.uniform(-scale, scale)
+            cand = [max(0.0, min(1.0, best_norm[i] + step_len * dir_vec[i] / norm_len)) for i in range(dim)]
+            candidates.append(cand)
+
+    for _ in range(50):
+        idx = rng.randrange(n)
+        base = hist_norm[idx]
+        cand = [max(0.0, min(1.0, base[i] + rng.gauss(0.0, scale))) for i in range(dim)]
+        candidates.append(cand)
+
+    def norm_pdf(x):
+        return math.exp(-0.5 * x * x) / math.sqrt(2.0 * math.pi)
+
+    def norm_cdf(x):
+        return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+    xi = 0.01
+    best_ei = -float("inf")
+    best_cand = None
+
+    for cand in candidates:
+        k_star = [kern(cand, hist_norm[i]) for i in range(n)]
+        mu = y_mean + sum(k_star[i] * alpha[i] for i in range(n))
+        kK = [sum(K_inv[i][j] * k_star[j] for j in range(n)) for i in range(n)]
+        var = 1.0 + sigma_n - sum(k_star[i] * kK[i] for i in range(n))
+        if var < 0:
+            var = 0.0
+        sigma = math.sqrt(var)
+        if sigma < 1e-10:
+            improve = best_val - mu - xi
+            ei = improve if improve > 0 else 0.0
+        else:
+            z = (best_val - mu - xi) / sigma
+            ei = (best_val - mu - xi) * norm_cdf(z) + sigma * norm_pdf(z)
+        if ei > best_ei:
+            best_ei = ei
+            best_cand = cand
+
+    if best_cand is None:
+        best_cand = best_norm
+    return from_norm(best_cand)

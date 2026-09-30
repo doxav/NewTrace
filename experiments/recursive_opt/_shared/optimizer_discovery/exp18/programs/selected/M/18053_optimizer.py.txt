@@ -1,0 +1,110 @@
+def propose(history, bounds, seed):
+    import random, math
+    rng = random.Random(seed + len(history))
+    n = len(history)
+    dim = len(bounds)
+    lows = [low for low, high in bounds]
+    highs = [high for low, high in bounds]
+    ranges = [high - low for low, high in bounds]
+
+    if n == 0:
+        return [(low + high) / 2.0 for low, high in bounds]
+
+    bases = [2, 3, 5, 7, 11, 13]
+
+    def halton(index, base):
+        result = 0.0
+        f = 1.0 / base
+        i = index
+        while i > 0:
+            result += f * (i % base)
+            i //= base
+            f /= base
+        return result
+
+    def halton_point(idx):
+        return [lows[d] + halton(idx, bases[d % len(bases)]) * ranges[d] for d in range(dim)]
+
+    initial_points = 2 * dim + 2
+    if n < initial_points:
+        return halton_point(n + 1 + (seed % 1000))
+
+    best_idx = min(range(n), key=lambda i: history[i]["value"])
+    best = history[best_idx]["x"]
+    best_val = history[best_idx]["value"]
+
+    # Track last improvement
+    last_imp = 0
+    current_best = float('inf')
+    for i, row in enumerate(history):
+        if row["value"] < current_best:
+            current_best = row["value"]
+            last_imp = i
+
+    # Restart if stuck for too long
+    if n - last_imp > 6 and rng.random() < 0.3:
+        return halton_point(n + 1 + (seed % 1000))
+
+    # Success rate
+    improvements = 0
+    for i in range(1, n):
+        if history[i]["value"] < min(row["value"] for row in history[:i]):
+            improvements += 1
+    success_rate = improvements / n
+
+    # Adaptive step size
+    progress = n / 32.0
+    base_scale = 0.2 * (1.0 - progress) + 0.02
+    if success_rate > 0.3:
+        base_scale *= 1.2
+    elif success_rate < 0.15:
+        base_scale *= 0.8
+
+    if n > 1:
+        prev_best = min(row["value"] for row in history[:-1])
+        if history[-1]["value"] < prev_best:
+            base_scale *= 1.3
+        else:
+            base_scale *= 0.9
+
+    base_scale = max(0.01, min(0.5, base_scale))
+    scale = base_scale / math.sqrt(dim)
+
+    # Exploration probability
+    p_explore = 0.2 * (1.0 - progress) + 0.05
+    if success_rate < 0.15:
+        p_explore += 0.05
+    p_explore = min(0.4, p_explore)
+
+    if rng.random() < p_explore:
+        if rng.random() < 0.5:
+            return halton_point(n + 1 + (seed % 1000))
+        else:
+            return [rng.uniform(low, high) for low, high in bounds]
+
+    # Direction from second best to best
+    second_idx = None
+    second_val = float('inf')
+    for i in range(n):
+        if i != best_idx and history[i]["value"] < second_val:
+            second_val = history[i]["value"]
+            second_idx = i
+    if second_idx is not None:
+        direction = [best[i] - history[second_idx]["x"][i] for i in range(dim)]
+        norm = math.sqrt(sum(d * d for d in direction))
+        if norm > 1e-12:
+            if rng.random() < 0.4:
+                step_factor = rng.uniform(0.5, 1.5)
+                new_point = [best[i] + direction[i] * step_factor for i in range(dim)]
+                return [max(low, min(high, new_point[i])) for i, (low, high) in enumerate(bounds)]
+
+    # Local random step: mix of coordinate and Gaussian
+    if rng.random() < 0.5:
+        d = rng.randrange(dim)
+        step = rng.uniform(-scale * 2.0, scale * 2.0) * ranges[d]
+        new_point = best[:]
+        new_point[d] = max(lows[d], min(highs[d], new_point[d] + step))
+        return new_point
+    else:
+        return [max(low, min(high, x + rng.gauss(0.0, scale * (high - low))))
+                for x, (low, high) in zip(best, bounds)]

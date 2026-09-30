@@ -1,0 +1,69 @@
+iteration: 1
+diverge_label_length: 2360
+refine_label_length: 1996
+
+diverge_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.
+  This may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.
+  You can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.
+  Think through what is needed to achieve a BREAKTHROUGH SCORE.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  - **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Libraries / solvers**: numpy for vectorized KVPR evaluation; no MILP solver installed, so hand-rolled search is primary
+  - **Greedy construction**: sort by req_rate/slo or size desc ↔ least-loaded-GPU (min max-KVPR increment) insertion ↔ best-fit-decreasing on memory
+  - **Local search / metaheuristics**: hill climbing with swap/move moves ↔ simulated annealing ↔ tabu search on placement vector
+  - **Multi-start random search**: random feasible assignments + local polish, keep best across restarts ↔ randomized greedy with noise
+  - **Binary-search threshold feasibility**: guess max-KVPR bound, check feasibility via greedy packing ↔ tighten bound iteratively
+  - **Exact / exhaustive**: branch-and-bound over assignments (small n) ↔ DP over GPU subsets if model count permits
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken "creative" solution is worthless.
+  
+  Format:
+  1. APPROACH: Describe your different approach.
+  2. CODE: Implementation.
+
+refine_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You should keep the same fundamental approach and algorithm structure.
+  DO NOT switch to a different problem formulation.
+  Focus on REFINING / EXPLOITING the current approach: better inputs, additional polish, etc.
+  Think through what is needed to SQUEEZE the last few percent of performance.
+  Use sufficient computational budget for refinement.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF REFINEMENT strategies (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Computational budget**: more local-search iterations ↔ more multi-start restarts within 10s timeout
+  - **Move set enrichment**: add pairwise swaps, 3-way rotations, GPU-pair rebalancing moves ↔ alternate move types when stuck
+  - **Initialization quality**: multiple greedy orderings (by load, by size, by load/size ratio) as seeds ↔ seed annealing/greedy with best prior result
+  - **Objective shaping**: use softened objective (e.g., top-2 or weighted-sum of GPU KVPRs) during search, true max-KVPR for final selection
+  - **Post-processing / polish**: targeted moves only from the max-KVPR GPU ↔ exhaustive single-model relocation & swap pass until no improvement
+  - **Acceptance tuning**: annealing temperature schedule ↔ stricter/looser hill-climbing acceptance near convergence
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken solution is worthless.
+  
+  Format:
+  1. REFINEMENT: Describe what you are refining.
+  2. CODE: Implementation with refinement.

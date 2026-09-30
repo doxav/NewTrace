@@ -1,0 +1,116 @@
+{"type": "iteration", "iteration": 1, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 0, "label": "", "context_iterations": [], "child_score": 23.86785829566567}
+{"type": "iteration", "iteration": 2, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 1, "label": "", "context_iterations": [0], "child_score": 24.429186431253314}
+{"type": "iteration", "iteration": 3, "attempts": 3, "error": null, "role": "active", "policy": "initial", "parent_iteration": 0, "label": "", "context_iterations": [2, 1], "child_score": 26.11233034036918}
+{"type": "iteration", "iteration": 6, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 3, "label": "", "context_iterations": [0, 2, 1], "child_score": 23.012452651972993}
+{"type": "iteration", "iteration": 7, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 1, "label": "", "context_iterations": [6, 0, 2, 3], "child_score": 26.11233034036918}
+{"type": "iteration", "iteration": 8, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 1, "label": "", "context_iterations": [3, 6, 2, 0], "child_score": 26.036475217949533}
+{"type": "iteration", "iteration": 9, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 7, "label": "", "context_iterations": [3, 2, 1, 0], "child_score": 26.10420721525768}
+{"type": "iteration", "iteration": 10, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 7, "label": "", "context_iterations": [1, 0, 3, 8], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 11, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 7, "label": "", "context_iterations": [6, 0, 3, 10], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 12, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 1, "label": "", "context_iterations": [8, 6, 11, 7], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 13, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 11, "label": "", "context_iterations": [7, 3, 1, 0], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 14, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 12, "label": "", "context_iterations": [3, 6, 1, 13], "child_score": 26.064645893562638}
+{"type": "iteration", "iteration": 15, "attempts": 1, "error": null, "role": "active", "policy": "initial", "parent_iteration": 8, "label": "", "context_iterations": [6, 9, 12, 7], "child_score": 26.036475217949533}
+{"type": "trigger", "iteration": 15, "best": 26.11233034036918}
+{"type": "scored", "iteration": 15, "entry": "policy_0", "metrics": {"combined_score": 5.51336126580074, "window_start_iteration": 0, "search_window_start_score": 21.891622105209397, "search_window_end_score": 26.11233034036918, "search_horizon": 10}}
+{"type": "proposal", "iteration": 15, "parent": "policy_0", "context": [], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 15, "entry": "policy_1", "ok": true}
+{"type": "iteration", "iteration": 16, "attempts": 1, "error": null, "role": "active", "policy": "policy_1", "parent_iteration": 3, "label": "refine", "context_iterations": [12, 10, 11, 0], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 17, "attempts": 1, "error": null, "role": "active", "policy": "policy_1", "parent_iteration": 3, "label": "refine", "context_iterations": [10, 8, 14, 2], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 18, "attempts": 1, "error": null, "role": "active", "policy": "policy_1", "parent_iteration": 9, "label": "refine", "context_iterations": [3, 17, 11, 0], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 19, "attempts": 2, "error": null, "role": "active", "policy": "policy_1", "parent_iteration": 2, "label": "diverge", "context_iterations": [3, 16, 17, 10], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 21, "attempts": 1, "error": null, "role": "active", "policy": "policy_1", "parent_iteration": 1, "label": "refine", "context_iterations": [3, 0, 11, 19], "child_score": 24.01372780182138}
+{"type": "iteration", "iteration": 22, "attempts": 1, "error": null, "role": "active", "policy": "policy_1", "parent_iteration": 1, "label": "refine", "context_iterations": [3, 19, 8, 12], "child_score": 26.11233034036918}
+{"type": "iteration", "iteration": 23, "attempts": 1, "error": null, "role": "active", "policy": "policy_1", "parent_iteration": 2, "label": "diverge", "context_iterations": [3, 14, 11, 0], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 24, "attempts": 1, "error": null, "role": "active", "policy": "policy_1", "parent_iteration": 7, "label": "refine", "context_iterations": [3, 6, 23, 14], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 25, "attempts": 1, "error": null, "role": "active", "policy": "policy_1", "parent_iteration": 10, "label": "refine", "context_iterations": [3, 18, 16, 1], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 26, "attempts": 1, "error": null, "role": "active", "policy": "policy_1", "parent_iteration": 14, "label": "refine", "context_iterations": [3, 18, 9, 0], "child_score": 26.10420721525768}
+{"type": "trigger", "iteration": 26, "best": 26.11233034036918}
+{"type": "scored", "iteration": 26, "entry": "policy_1", "metrics": {"combined_score": 0.0, "window_start_iteration": 15, "search_window_start_score": 26.11233034036918, "search_window_end_score": 26.11233034036918, "search_horizon": 10}}
+{"type": "proposal", "iteration": 26, "parent": "policy_0", "context": ["policy_1"], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 26, "entry": "policy_2", "ok": true}
+{"type": "iteration", "iteration": 27, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 2, "label": "refine", "context_iterations": [3, 7, 22, 9], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 28, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 22, "label": "refine", "context_iterations": [3, 7, 9, 26], "child_score": 26.11233034036918}
+{"type": "iteration", "iteration": 29, "attempts": 2, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 27, "label": "refine", "context_iterations": [3, 7, 22, 28], "child_score": 26.064645893562638}
+{"type": "iteration", "iteration": 31, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 15, "label": "refine", "context_iterations": [3, 7, 22, 28], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 32, "attempts": 2, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 3, "label": "refine", "context_iterations": [7, 22, 28, 9], "child_score": 26.11233034036918}
+{"type": "iteration", "iteration": 34, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 25, "label": "refine", "context_iterations": [3, 7, 22, 28], "child_score": 26.04522625326631}
+{"type": "iteration", "iteration": 35, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 11, "label": "diverge", "context_iterations": [3, 7, 22, 28], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 36, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 22, "label": "refine", "context_iterations": [3, 7, 28, 32], "child_score": 26.11233034036918}
+{"type": "iteration", "iteration": 37, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 21, "label": "refine", "context_iterations": [3, 7, 22, 28], "child_score": 26.036475217949533}
+{"type": "iteration", "iteration": 38, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 2, "label": "refine", "context_iterations": [3, 7, 22, 28], "child_score": 26.11233034036918}
+{"type": "trigger", "iteration": 38, "best": 26.11233034036918}
+{"type": "scored", "iteration": 38, "entry": "policy_2", "metrics": {"combined_score": 0.0, "window_start_iteration": 26, "search_window_start_score": 26.11233034036918, "search_window_end_score": 26.11233034036918, "search_horizon": 10}}
+{"type": "proposal", "iteration": 38, "parent": "policy_0", "context": ["policy_2"], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 38, "entry": "policy_3", "ok": true}
+{"type": "iteration", "iteration": 39, "attempts": 2, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 34, "label": "refine", "context_iterations": [3, 7, 22, 28], "child_score": 26.11233034036918}
+{"type": "iteration", "iteration": 41, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 37, "label": "refine", "context_iterations": [3, 7, 22, 28], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 42, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 23, "label": "refine", "context_iterations": [3, 7, 22, 28], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 43, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 34, "label": "refine", "context_iterations": [3, 7, 22, 28], "child_score": 26.136320719809902}
+{"type": "iteration", "iteration": 44, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 24, "label": "refine", "context_iterations": [43, 3, 7, 22], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 45, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 26, "label": "refine", "context_iterations": [43, 3, 7, 22], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 46, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 16, "label": "refine", "context_iterations": [45, 43, 3, 7], "child_score": 21.851622105209398}
+{"type": "iteration", "iteration": 47, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 29, "label": "refine", "context_iterations": [45, 43, 3, 7], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 48, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 28, "label": "refine", "context_iterations": [45, 47, 43, 3], "child_score": 26.11233034036918}
+{"type": "iteration", "iteration": 49, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 9, "label": "refine", "context_iterations": [45, 47, 43, 3], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 50, "attempts": 2, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 47, "label": "refine", "context_iterations": [45, 43, 3, 7], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 52, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 1, "label": "refine", "context_iterations": [45, 47, 50, 43], "child_score": 25.7212292589407}
+{"type": "iteration", "iteration": 53, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 17, "label": "refine", "context_iterations": [45, 47, 50, 43], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 54, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 37, "label": "refine", "context_iterations": [45, 47, 50, 43], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 55, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 27, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 56, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 29, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "trigger", "iteration": 56, "best": 26.255971749535238}
+{"type": "scored", "iteration": 56, "entry": "policy_3", "metrics": {"combined_score": 0.1953201113051137, "window_start_iteration": 38, "search_window_start_score": 26.11233034036918, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}
+{"type": "proposal", "iteration": 56, "parent": "policy_0", "context": ["policy_1", "policy_2"], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 56, "entry": "policy_4", "ok": true}
+{"type": "iteration", "iteration": 57, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 26, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.097657605228285}
+{"type": "iteration", "iteration": 58, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 11, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 59, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 54, "label": "refine", "context_iterations": [45, 47, 50, 55], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 60, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 53, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 61, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 28, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 62, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 50, "label": "refine", "context_iterations": [45, 47, 54, 55], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 63, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 32, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 64, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 49, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 65, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 28, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 66, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 23, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 21.891622105209397}
+{"type": "trigger", "iteration": 66, "best": 26.255971749535238}
+{"type": "scored", "iteration": 66, "entry": "policy_4", "metrics": {"combined_score": 0.0, "window_start_iteration": 56, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}
+{"type": "proposal", "iteration": 66, "parent": "policy_0", "context": ["policy_4"], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 66, "entry": "policy_5", "ok": true}
+{"type": "iteration", "iteration": 67, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 38, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.097657605228285}
+{"type": "iteration", "iteration": 68, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 2, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 69, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 54, "label": "refine", "context_iterations": [45, 47, 50, 55], "child_score": 8.979913660034061}
+{"type": "iteration", "iteration": 70, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 41, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 71, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 65, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 72, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 50, "label": "refine", "context_iterations": [45, 47, 54, 55], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 73, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 71, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 74, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 31, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 75, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 43, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 76, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 13, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "trigger", "iteration": 76, "best": 26.255971749535238}
+{"type": "scored", "iteration": 76, "entry": "policy_5", "metrics": {"combined_score": 0.0, "window_start_iteration": 66, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}
+{"type": "proposal", "iteration": 76, "parent": "policy_0", "context": ["policy_4", "policy_3"], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 76, "entry": "policy_6", "ok": true}
+{"type": "iteration", "iteration": 77, "attempts": 1, "error": null, "role": "active", "policy": "policy_6", "parent_iteration": 45, "label": "refine", "context_iterations": [47, 50, 54, 55], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 78, "attempts": 1, "error": null, "role": "active", "policy": "policy_6", "parent_iteration": 59, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 79, "attempts": 1, "error": null, "role": "active", "policy": "policy_6", "parent_iteration": 43, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 80, "attempts": 1, "error": null, "role": "active", "policy": "policy_6", "parent_iteration": 79, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 81, "attempts": 1, "error": null, "role": "active", "policy": "policy_6", "parent_iteration": 28, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 82, "attempts": 2, "error": null, "role": "active", "policy": "policy_6", "parent_iteration": 47, "label": "refine", "context_iterations": [45, 50, 54, 55], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 84, "attempts": 1, "error": null, "role": "active", "policy": "policy_6", "parent_iteration": 58, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 85, "attempts": 1, "error": null, "role": "active", "policy": "policy_6", "parent_iteration": 74, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 7.808480491708357}
+{"type": "iteration", "iteration": 86, "attempts": 1, "error": null, "role": "active", "policy": "policy_6", "parent_iteration": 58, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 87, "attempts": 2, "error": null, "role": "active", "policy": "policy_6", "parent_iteration": 78, "label": "refine", "context_iterations": [45, 47, 50, 54], "child_score": 5.347672996602716}
+{"type": "trigger", "iteration": 87, "best": 26.255971749535238}
+{"type": "scored", "iteration": 87, "entry": "policy_6", "metrics": {"combined_score": 0.0, "window_start_iteration": 76, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}
+{"type": "proposal", "iteration": 87, "parent": "policy_0", "context": ["policy_6"], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 87, "entry": "policy_7", "ok": true}
+{"type": "iteration", "iteration": 89, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 45, "label": "refine", "context_iterations": [47, 50, 1, 27], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 90, "attempts": 2, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 68, "label": "refine", "context_iterations": [45, 47, 77, 79], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 92, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 80, "label": "refine", "context_iterations": [45, 47, 37, 63], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 93, "attempts": 2, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 65, "label": "refine", "context_iterations": [45, 47, 22, 38], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 95, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 73, "label": "refine", "context_iterations": [45, 47, 14, 56], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 96, "attempts": 2, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 17, "label": "refine", "context_iterations": [45, 47, 87, 81], "child_score": 21.891622105209397}
+{"type": "iteration", "iteration": 98, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 12, "label": "refine", "context_iterations": [45, 47, 46, 44], "child_score": 26.142466038897922}
+{"type": "iteration", "iteration": 99, "attempts": 2, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 72, "label": "refine", "context_iterations": [45, 47, 43, 85], "child_score": 26.255971749535238}
+{"type": "scored", "iteration": 100, "entry": "policy_7", "metrics": {"combined_score": 0.0, "window_start_iteration": 87, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}

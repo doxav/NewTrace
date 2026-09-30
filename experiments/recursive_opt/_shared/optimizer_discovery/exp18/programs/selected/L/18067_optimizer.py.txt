@@ -1,0 +1,165 @@
+import math
+import random
+
+def propose(history, bounds, seed):
+    rng = random.Random(seed + len(history))
+    n = len(bounds)
+    t = len(history)
+
+    lo = [b[0] for b in bounds]
+    hi = [b[1] for b in bounds]
+    span = [hi[i] - lo[i] if hi[i] > lo[i] else 1.0 for i in range(n)]
+
+    if t == 0:
+        return [lo[i] + 0.5 * span[i] for i in range(n)]
+
+    # Early low-discrepancy coverage: center + roughly n additional points.
+    if t < n + 1:
+        primes = [2, 3, 5, 7, 11, 13, 17, 19]
+
+        def vdc(k, base):
+            s = 0.0
+            f = 1.0
+            while k > 0:
+                f /= base
+                s += f * (k % base)
+                k //= base
+            return s
+
+        idx = t + 1
+        return [lo[i] + vdc(idx, primes[i]) * span[i] for i in range(n)]
+
+    # Normalize history to [0, 1]^n.
+    X = [[(row["x"][d] - lo[d]) / span[d] for d in range(n)] for row in history]
+    y = [row["value"] for row in history]
+
+    mean_y = sum(y) / t
+    dev_y = [v - mean_y for v in y]
+    sigma_amp = max(1e-9, math.sqrt(sum(v * v for v in dev_y) / t))
+    noise = 1e-5 * sigma_amp
+
+    # Adaptive, slightly smooth anisotropic length scales.
+    lengths = []
+    for d in range(n):
+        vals = [p[d] for p in X]
+        spread = max(vals) - min(vals) if t >= 2 else 1.0
+        length = 0.3 + 0.4 * max(0.0, min(1.0, spread))
+        lengths.append(min(0.9, max(0.1, length)))
+
+    def kernel(a, b):
+        s = 0.0
+        for d in range(n):
+            diff = (a[d] - b[d]) / lengths[d]
+            s += diff * diff
+        return sigma_amp * math.exp(-0.5 * s)
+
+    # Build covariance matrix.
+    K = [[0.0] * t for _ in range(t)]
+    for i in range(t):
+        for j in range(i, t):
+            val = kernel(X[i], X[j])
+            if i == j:
+                val += noise
+            K[i][j] = val
+            K[j][i] = val
+
+    def invert_matrix(A):
+        size = len(A)
+        aug = [A[i][:] + [1.0 if i == j else 0.0 for j in range(size)]
+               for i in range(size)]
+        for col in range(size):
+            pivot = col
+            pivot_abs = abs(aug[col][col])
+            for r in range(col + 1, size):
+                if abs(aug[r][col]) > pivot_abs:
+                    pivot = r
+                    pivot_abs = abs(aug[r][col])
+            if pivot_abs < 1e-12:
+                raise ArithmeticError
+            if pivot != col:
+                aug[col], aug[pivot] = aug[pivot], aug[col]
+            pv = aug[col][col]
+            for c in range(2 * size):
+                aug[col][c] /= pv
+            for r in range(size):
+                if r != col:
+                    factor = aug[r][col]
+                    if factor != 0.0:
+                        for c in range(col, 2 * size):
+                            aug[r][c] -= factor * aug[col][c]
+        return [row[size:] for row in aug]
+
+    try:
+        invK = invert_matrix(K)
+    except ArithmeticError:
+        best_x = min(history, key=lambda row: row["value"])["x"]
+        scale = 0.1
+        return [max(lo[d], min(hi[d], best_x[d] + rng.gauss(0, scale * span[d])))
+                for d in range(n)]
+
+    alpha = [sum(invK[i][j] * dev_y[j] for j in range(t)) for i in range(t)]
+
+    best_idx = min(range(t), key=lambda i: y[i])
+    best_x = X[best_idx]
+    best_val = y[best_idx]
+
+    # Generate a diverse set of candidate points.
+    candidates = []
+    num_candidates = 300
+
+    for _ in range(num_candidates):
+        r = rng.random()
+        if r < 0.35:
+            # Local move around best, all dimensions.
+            scale = 10.0 ** rng.uniform(-2.2, -0.5)
+            cand = [best_x[d] + rng.gauss(0, scale) for d in range(n)]
+        elif r < 0.55:
+            # One-coordinate perturbation.
+            cand = list(best_x)
+            d = rng.randrange(n)
+            scale = 10.0 ** rng.uniform(-2.0, -0.3)
+            cand[d] += rng.gauss(0, scale)
+        elif r < 0.75:
+            # Perturb around an existing point.
+            base = X[rng.randrange(t)]
+            scale = 10.0 ** rng.uniform(-1.5, -0.2)
+            cand = [base[d] + rng.gauss(0, scale) for d in range(n)]
+        elif r < 0.95:
+            # Global random.
+            cand = [rng.random() for _ in range(n)]
+        else:
+            # Very fine local move.
+            scale = 10.0 ** rng.uniform(-3.0, -1.5)
+            cand = [best_x[d] + rng.gauss(0, scale) for d in range(n)]
+
+        cand = [max(0.0, min(1.0, c)) for c in cand]
+        candidates.append(cand)
+
+    best_ei = -1e300
+    best_candidate = None
+
+    for cand in candidates:
+        kstar = [kernel(cand, X[i]) for i in range(t)]
+        mu = mean_y + sum(kstar[i] * alpha[i] for i in range(t))
+        var = kernel(cand, cand) - sum(
+            kstar[i] * sum(invK[i][j] * kstar[j] for j in range(t))
+            for i in range(t)
+        )
+        var = max(0.0, var)
+        sigma_p = math.sqrt(var)
+        if sigma_p < 1e-12:
+            ei = 0.0
+        else:
+            z = (best_val - mu) / sigma_p
+            phi = math.exp(-0.5 * z * z) / math.sqrt(2.0 * math.pi)
+            Phi = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+            ei = (best_val - mu) * Phi + sigma_p * phi
+        ei += 1e-15 * rng.random()
+        if ei > best_ei:
+            best_ei = ei
+            best_candidate = cand
+
+    if best_candidate is None:
+        best_candidate = best_x
+
+    return [lo[d] + best_candidate[d] * span[d] for d in range(n)]

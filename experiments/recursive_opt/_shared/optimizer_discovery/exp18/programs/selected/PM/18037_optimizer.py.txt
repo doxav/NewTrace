@@ -1,0 +1,185 @@
+import random
+import math
+import statistics
+
+def propose(history, bounds, seed):
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    lows = [b[0] for b in bounds]
+    highs = [b[1] for b in bounds]
+    widths = [h - l for l, h in bounds]
+
+    def norm(x):
+        return [(x[i] - lows[i]) / widths[i] for i in range(dim)]
+
+    def denorm(z):
+        return [lows[i] + z[i] * widths[i] for i in range(dim)]
+
+    if not history:
+        return [(lows[i] + highs[i]) / 2.0 for i in range(dim)]
+
+    n = len(history)
+    X = [norm(row["x"]) for row in history]
+    y = [row["value"] for row in history]
+
+    if n < 3:
+        best_idx = min(range(n), key=lambda i: y[i])
+        best_x = X[best_idx]
+        if rng.random() < 0.5:
+            return denorm([rng.random() for _ in range(dim)])
+        scale = 0.2
+        cand = [best_x[i] + rng.gauss(0.0, scale) for i in range(dim)]
+        cand = [min(1.0, max(0.0, c)) for c in cand]
+        return denorm(cand)
+
+    y_mean = sum(y) / n
+    y_std = statistics.stdev(y) if n > 1 else 1.0
+    if y_std == 0:
+        y_std = 1.0
+    y_scaled = [(v - y_mean) / y_std for v in y]
+
+    def cholesky(A):
+        L = [[0.0] * n for _ in range(n)]
+        for i in range(n):
+            for j in range(i + 1):
+                s = A[i][j] - sum(L[i][k] * L[j][k] for k in range(j))
+                if i == j:
+                    L[i][j] = math.sqrt(max(s, 1e-12))
+                else:
+                    L[i][j] = s / L[j][j] if L[j][j] > 1e-12 else 0.0
+        return L
+
+    def solve_cholesky(L, b):
+        z = [0.0] * n
+        for i in range(n):
+            s = b[i] - sum(L[i][k] * z[k] for k in range(i))
+            z[i] = s / L[i][i]
+        a = [0.0] * n
+        for i in range(n - 1, -1, -1):
+            s = z[i] - sum(L[k][i] * a[k] for k in range(i + 1, n))
+            a[i] = s / L[i][i]
+        return a
+
+    def log_marginal(log_l, log_sf, log_sn):
+        l = math.exp(log_l)
+        sf = math.exp(log_sf)
+        sn = math.exp(log_sn)
+        sf2 = sf * sf
+        sn2 = sn * sn
+        K = [[0.0] * n for _ in range(n)]
+        for i in range(n):
+            for j in range(i + 1):
+                d2 = sum(((X[i][k] - X[j][k]) / l) ** 2 for k in range(dim))
+                val = sf2 * math.exp(-0.5 * d2)
+                K[i][j] = val
+                K[j][i] = val
+            K[i][i] += sn2
+        try:
+            L = cholesky(K)
+        except Exception:
+            return -1e100
+        alpha = solve_cholesky(L, y_scaled)
+        log_det = sum(math.log(L[i][i]) for i in range(n))
+        return -0.5 * sum(alpha[i] * y_scaled[i] for i in range(n)) - log_det - 0.5 * n * math.log(2.0 * math.pi)
+
+    best_lik = -1e100
+    best_hp = (0.5, 1.0, 1e-4)
+    for _ in range(35):
+        log_l = rng.uniform(-2.4, 0.8)
+        log_sf = rng.uniform(-1.2, 1.4)
+        log_sn = rng.uniform(-6.0, -2.0)
+        lik = log_marginal(log_l, log_sf, log_sn)
+        if lik > best_lik:
+            best_lik = lik
+            best_hp = (math.exp(log_l), math.exp(log_sf), math.exp(log_sn))
+
+    length, sf, sn = best_hp
+    sf2 = sf * sf
+    sn2 = sn * sn
+
+    K = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1):
+            d2 = sum(((X[i][k] - X[j][k]) / length) ** 2 for k in range(dim))
+            val = sf2 * math.exp(-0.5 * d2)
+            K[i][j] = val
+            K[j][i] = val
+        K[i][i] += sn2
+    L = cholesky(K)
+    alpha = solve_cholesky(L, y_scaled)
+
+    best_idx = min(range(n), key=lambda i: y[i])
+    best_x = X[best_idx]
+    best_y = y[best_idx]
+
+    def predict(z):
+        kvec = [sf2 * math.exp(-0.5 * sum(((z[k] - X[i][k]) / length) ** 2 for k in range(dim))) for i in range(n)]
+        mu = y_mean + y_std * sum(kvec[i] * alpha[i] for i in range(n))
+        v = [0.0] * n
+        for i in range(n):
+            s = kvec[i] - sum(L[i][k] * v[k] for k in range(i))
+            v[i] = s / L[i][i]
+        var_scaled = sf2 - sum(v[i] * v[i] for i in range(n))
+        var_scaled = max(var_scaled, 1e-12)
+        sigma = math.sqrt(y_std * y_std * var_scaled)
+        return mu, sigma
+
+    candidates = []
+
+    for _ in range(40):
+        candidates.append([rng.random() for _ in range(dim)])
+
+    scale_main = 0.08 / math.sqrt(1.0 + n / (4.0 * dim))
+    for _ in range(50):
+        c = [best_x[i] + rng.gauss(0.0, scale_main) for i in range(dim)]
+        candidates.append([min(1.0, max(0.0, cc)) for cc in c])
+
+    scale_small = scale_main * 0.25
+    for _ in range(30):
+        c = [best_x[i] + rng.gauss(0.0, scale_small) for i in range(dim)]
+        candidates.append([min(1.0, max(0.0, cc)) for cc in c])
+
+    sorted_idx = sorted(range(n), key=lambda i: y[i])
+    for _ in range(30):
+        idx = sorted_idx[rng.randrange(min(5, n))]
+        sc = rng.uniform(0.02, 0.2)
+        c = [X[idx][i] + rng.gauss(0.0, sc) for i in range(dim)]
+        candidates.append([min(1.0, max(0.0, cc)) for cc in c])
+
+    for _ in range(20):
+        idx = rng.randrange(n)
+        sc = rng.uniform(0.05, 0.2)
+        c = [X[idx][i] + rng.gauss(0.0, sc) for i in range(dim)]
+        candidates.append([min(1.0, max(0.0, cc)) for cc in c])
+
+    if n > 1:
+        second_x = X[sorted_idx[1]]
+        for _ in range(20):
+            t = rng.random() * 0.5
+            c = [best_x[i] + t * (second_x[i] - best_x[i]) for i in range(dim)]
+            candidates.append([min(1.0, max(0.0, cc)) for cc in c])
+
+    candidates.append(best_x[:])
+
+    def phi(x):
+        return math.exp(-0.5 * x * x) / math.sqrt(2.0 * math.pi)
+
+    def Phi(x):
+        return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+    best_ei = -1.0
+    best_cand = None
+    for cand in candidates:
+        mu, sigma = predict(cand)
+        if sigma <= 1e-12:
+            ei = max(0.0, best_y - mu)
+        else:
+            z = (best_y - mu) / sigma
+            ei = (best_y - mu) * Phi(z) + sigma * phi(z)
+        if ei > best_ei:
+            best_ei = ei
+            best_cand = cand
+
+    if best_cand is None:
+        return denorm([rng.random() for _ in range(dim)])
+    return denorm(best_cand)

@@ -1,0 +1,47 @@
+diff --git a/opto/features/recursive_opt/spec.py b/opto/features/recursive_opt/spec.py
+index a7423cfcf3..5f9765f293 100644
+--- a/opto/features/recursive_opt/spec.py
++++ b/opto/features/recursive_opt/spec.py
+@@ -45 +45 @@ _METRIC_KEYS = {'direction', 'source', 'aggregate_examples'}
+-_PROFILE_KEYS = {'provider', 'model', 'resolved_model', 'api_key_ref', 'fallbacks', 'temperature', 'max_tokens', 'base_url', 'request_params', 'request_timeout_s', 'transport_max_attempts', 'transport_base_delay_s'}
++_PROFILE_KEYS = {'openrouter_routing', 'provider', 'model', 'resolved_model', 'api_key_ref', 'fallbacks', 'temperature', 'max_tokens', 'base_url', 'request_params', 'request_timeout_s', 'transport_max_attempts', 'transport_base_delay_s'}
+@@ -446,0 +447 @@ def preflight_llm_profiles(spec: Mapping[str, Any], *, checker: Optional[Callabl
++    from .runmode import preflight_model
+@@ -448 +448,0 @@ def preflight_llm_profiles(spec: Mapping[str, Any], *, checker: Optional[Callabl
+-        from .runmode import preflight_model
+@@ -459,3 +459,11 @@ def preflight_llm_profiles(spec: Mapping[str, Any], *, checker: Optional[Callabl
+-                if model not in checked:
+-                    checker(model)
+-                    checked.add(model)
++                identity = json.dumps([model, _thaw(candidate.get('openrouter_routing')), _thaw(candidate['request_params'])], sort_keys=True)
++                if identity not in checked:
++                    if candidate.get('openrouter_routing') is not None and checker is preflight_model:
++                        from .runmode import make_live_llm
++                        client = make_live_llm(model, max_retries=1, request_timeout_s=candidate['request_timeout_s'], allow_env_overrides=False, budget_resource=None)
++                        params = _thaw(candidate['request_params'])
++                        params['extra_body'] = {**params.get('extra_body', {}), 'provider': _thaw(candidate['openrouter_routing'])}
++                        client(messages=[{'role': 'user', 'content': 'Return exactly: ok'}], max_tokens=8, temperature=candidate.get('temperature'), **params)
++                    else:
++                        checker(model)
++                    checked.add(identity)
+@@ -1417 +1425,4 @@ def _make_guarded_role_client(profile: Mapping[str, Any], role: str, factory: Op
+-    return _GuardedRoleClient(client, role, usage, guard, profile.get('max_tokens'), profile.get('temperature'), profile['request_params'], profile['resolved_model'])
++    request_params = _thaw(profile['request_params'])
++    if profile.get('openrouter_routing') is not None:
++        request_params['extra_body'] = {**request_params.get('extra_body', {}), 'provider': _thaw(profile['openrouter_routing'])}
++    return _GuardedRoleClient(client, role, usage, guard, profile.get('max_tokens'), profile.get('temperature'), request_params, profile['resolved_model'])
+@@ -2040 +2051 @@ def _normalize_llm_profiles(spec: Dict[str, Any]) -> None:
+-        profile = {'provider': None, 'model': None, 'resolved_model': None, 'api_key_ref': None, 'fallbacks': [], 'temperature': None, 'max_tokens': None, 'base_url': None, 'request_params': {}, 'request_timeout_s': None, 'transport_max_attempts': 10, 'transport_base_delay_s': 1.0, **_thaw(raw_profile)}
++        profile = {'openrouter_routing': None, 'provider': None, 'model': None, 'resolved_model': None, 'api_key_ref': None, 'fallbacks': [], 'temperature': None, 'max_tokens': None, 'base_url': None, 'request_params': {}, 'request_timeout_s': None, 'transport_max_attempts': 10, 'transport_base_delay_s': 1.0, **_thaw(raw_profile)}
+@@ -2235,0 +2247,11 @@ def _validate_profile(profile: Mapping[str, Any], path: str, profiles: Mapping[s
++    routing = profile.get('openrouter_routing')
++    if routing is not None:
++        if profile['provider'] != 'openrouter' or not isinstance(routing, Mapping) or set(routing) != {'only'}:
++            raise ValueError(f'{path}.openrouter_routing requires openrouter and exactly an only list')
++        only = routing['only']
++        if not isinstance(only, (list, tuple)) or not only or any(not isinstance(name, str) or not name.strip() or name != name.strip() for name in only):
++            raise ValueError(f'{path}.openrouter_routing.only requires non-empty provider names')
++        if len(set(only)) != len(only):
++            raise ValueError(f'{path}.openrouter_routing.only must not contain duplicates')
++        if not isinstance(profile['request_params'].get('extra_body', {}), Mapping):
++            raise ValueError(f'{path}.request_params.extra_body must be a mapping')

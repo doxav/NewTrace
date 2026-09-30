@@ -1,0 +1,177 @@
+def propose(history, bounds, seed):
+    import random, math
+
+    rng = random.Random(seed + len(history))
+    ndim = len(bounds)
+
+    def vdc(index, base):
+        result = 0.0
+        f = 1.0
+        while index > 0:
+            index, remainder = divmod(index, base)
+            f /= base
+            result += remainder * f
+        return result
+
+    def halton(index, dim):
+        bases = [2, 3, 5, 7, 11, 13]
+        return [vdc(index, bases[d]) for d in range(dim)]
+
+    # Low-discrepancy exploration for the first several evaluations
+    if len(history) < 2 * ndim + 2:
+        idx = len(history) + 1
+        u = halton(idx, ndim)
+        return [low + (high - low) * u[d] for d, (low, high) in enumerate(bounds)]
+
+    # Increased chance of pure random exploration
+    if rng.random() < 0.10:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    n = len(history)
+    X = [row["x"] for row in history]
+    y = [row["value"] for row in history]
+
+    best_row = min(history, key=lambda row: row["value"])
+    best_val = best_row["value"]
+    best_x = best_row["x"]
+
+    # Per-dimension length scales (slightly larger to encourage exploration)
+    length = []
+    for d in range(ndim):
+        diffs = []
+        for i in range(n):
+            for j in range(i + 1, n):
+                diffs.append(abs(X[i][d] - X[j][d]))
+        if diffs:
+            diffs.sort()
+            med = diffs[len(diffs) // 2]
+        else:
+            med = 0.0
+        rng_d = bounds[d][1] - bounds[d][0]
+        l_d = max(0.1 * rng_d, min(0.6 * rng_d, med * 0.7))
+        length.append(l_d)
+
+    mean_y = sum(y) / n
+    std_y = math.sqrt(sum((v - mean_y) ** 2 for v in y) / n)
+    if std_y < 1e-12:
+        std_y = 1.0
+    y_norm = [(v - mean_y) / std_y for v in y]
+
+    def kernel(a, b):
+        s = 0.0
+        for d in range(ndim):
+            diff = a[d] - b[d]
+            s += (diff / length[d]) ** 2
+        return math.exp(-0.5 * s)
+
+    K = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            K[i][j] = kernel(X[i], X[j])
+            if i == j:
+                K[i][j] += 1e-6
+
+    def invert_matrix(mat):
+        m = len(mat)
+        aug = [row[:] + [1.0 if i == j else 0.0 for j in range(m)] for i, row in enumerate(mat)]
+        for i in range(m):
+            pivot_row = i
+            for k in range(i + 1, m):
+                if abs(aug[k][i]) > abs(aug[pivot_row][i]):
+                    pivot_row = k
+            aug[i], aug[pivot_row] = aug[pivot_row], aug[i]
+            pivot = aug[i][i]
+            if abs(pivot) < 1e-12:
+                raise ValueError("Singular")
+            for j in range(2 * m):
+                aug[i][j] /= pivot
+            for k in range(m):
+                if k != i:
+                    factor = aug[k][i]
+                    for j in range(2 * m):
+                        aug[k][j] -= factor * aug[i][j]
+        return [row[m:] for row in aug]
+
+    try:
+        K_inv = invert_matrix(K)
+    except Exception:
+        scale = 0.15 * (1.0 - n / 32.0) + 0.02
+        return [max(low, min(high, best_x[d] + rng.gauss(0.0, scale * (high - low))))
+                for d, (low, high) in enumerate(bounds)]
+
+    alpha = [sum(K_inv[i][j] * y_norm[j] for j in range(n)) for i in range(n)]
+
+    def phi(x):
+        return math.exp(-0.5 * x * x) / math.sqrt(2.0 * math.pi)
+
+    def Phi(x):
+        return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+    candidates = []
+
+    # Uniform random candidates (more)
+    for _ in range(200):
+        candidates.append([rng.uniform(low, high) for low, high in bounds])
+
+    # Local candidates around the best point (larger initial scale)
+    scale = 0.2 * (1.0 - n / 32.0) + 0.02
+    for _ in range(150):
+        x = []
+        for d, (low, high) in enumerate(bounds):
+            val = best_x[d] + rng.gauss(0.0, scale * (high - low))
+            x.append(max(low, min(high, val)))
+        candidates.append(x)
+
+    # Local candidates around other good points (slightly larger)
+    sorted_hist = sorted(history, key=lambda row: row["value"])
+    for row in sorted_hist[1:min(4, n)]:
+        base = row["x"]
+        for _ in range(40):
+            x = []
+            for d, (low, high) in enumerate(bounds):
+                val = base[d] + rng.gauss(0.0, 0.6 * scale * (high - low))
+                x.append(max(low, min(high, val)))
+            candidates.append(x)
+
+    candidates.append(best_x)
+
+    best_ei = -1e9
+    best_candidate = None
+
+    for x_cand in candidates:
+        k_star = [kernel(X[i], x_cand) for i in range(n)]
+        mean_norm = sum(k_star[i] * alpha[i] for i in range(n))
+        mean = mean_norm * std_y + mean_y
+
+        var_norm = 1.0 - sum(
+            k_star[i] * sum(K_inv[i][j] * k_star[j] for j in range(n))
+            for i in range(n)
+        )
+        if var_norm < 0.0:
+            var_norm = 0.0
+        std = math.sqrt(var_norm) * std_y
+
+        improvement = best_val - mean
+        if std > 1e-12:
+            z = improvement / std
+            ei = improvement * Phi(z) + std * phi(z)
+        else:
+            ei = improvement if improvement > 0.0 else 0.0
+
+        if ei > best_ei:
+            best_ei = ei
+            best_candidate = x_cand
+
+    if best_candidate is None:
+        best_candidate = [rng.uniform(low, high) for low, high in bounds]
+
+    # Avoid exact duplicates by adding a tiny perturbation if necessary
+    for existing in history:
+        if all(abs(best_candidate[d] - existing["x"][d]) < 1e-12 for d in range(ndim)):
+            best_candidate = [
+                max(low, min(high, best_candidate[d] + rng.gauss(0.0, 1e-6 * (high - low))))
+                for d, (low, high) in enumerate(bounds)
+            ]
+            break
+
+    return best_candidate

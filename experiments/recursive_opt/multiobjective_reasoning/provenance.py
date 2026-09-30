@@ -91,11 +91,11 @@ def build_control_plane_lock_after_gepa_reflection_fix() -> dict[str, Any]:
     old_lock_path = PACKAGE_ROOT / "control_plane_lock_v2.json"
     old_lock = _load_json(old_lock_path)
     readiness = _load_json(
-        REPOSITORY_ROOT / "artifacts/control_plane_v2/prompt18_readiness.json"
+        REPOSITORY_ROOT / "experiments/recursive_opt/_shared/control_plane_v2/prompt18_readiness.json"
     )
     golden = _load_json(
         REPOSITORY_ROOT
-        / "artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json"
+        / "experiments/recursive_opt/_shared/control_plane_v2/golden_specs/uc4_positive.normalized.json"
     )
     control_provenance = control_plane.compile_plan(golden).code_provenance
     expected_runtime = readiness["verified_runtime_tree_sha256"]
@@ -217,7 +217,7 @@ def build_experiment_protocol_lock_after_proposal_gate_fix() -> dict[str, Any]:
     previous = _load_json(previous_path)
     golden = _load_json(
         REPOSITORY_ROOT
-        / "artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json"
+        / "experiments/recursive_opt/_shared/control_plane_v2/golden_specs/uc4_positive.normalized.json"
     )
     control_provenance = control_plane.compile_plan(golden).code_provenance
     expected_control = previous["control_plane"]
@@ -290,11 +290,11 @@ def build_control_plane_lock_after_empty_text_retry() -> dict[str, Any]:
     previous_path = PACKAGE_ROOT / "experiment_protocol_lock_after_proposal_gate_fix.json"
     previous = _load_json(previous_path)
     readiness = _load_json(
-        REPOSITORY_ROOT / "artifacts/control_plane_v2/prompt18_readiness.json"
+        REPOSITORY_ROOT / "experiments/recursive_opt/_shared/control_plane_v2/prompt18_readiness.json"
     )
     golden = _load_json(
         REPOSITORY_ROOT
-        / "artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json"
+        / "experiments/recursive_opt/_shared/control_plane_v2/golden_specs/uc4_positive.normalized.json"
     )
     control_provenance = control_plane.compile_plan(golden).code_provenance
     if (
@@ -469,11 +469,11 @@ def build_main_experiment_lock(
         raise RuntimeError("frozen control-plane files have local modifications")
     golden = _load_json(
         REPOSITORY_ROOT
-        / "artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json"
+        / "experiments/recursive_opt/_shared/control_plane_v2/golden_specs/uc4_positive.normalized.json"
     )
     control_provenance = control_plane.compile_plan(golden).code_provenance
     readiness = _load_json(
-        REPOSITORY_ROOT / "artifacts/control_plane_v2/prompt18_readiness.json"
+        REPOSITORY_ROOT / "experiments/recursive_opt/_shared/control_plane_v2/prompt18_readiness.json"
     )
     required_ci = readiness.get("required_ci_run")
     if not readiness.get("ready_for_prompt_18") or not isinstance(required_ci, dict):

@@ -1,0 +1,279 @@
+import random, math
+
+def propose(history, bounds, seed):
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    lows = [low for low, high in bounds]
+    highs = [high for low, high in bounds]
+    spans = [high - low for low, high in bounds]
+    max_span = max(spans)
+
+    # Initial exploration: center first, then Halton with random shift
+    initial_points = max(2, 2 * dim)
+    if len(history) == 0:
+        return [(low + high) * 0.5 for low, high in bounds]
+    if len(history) < initial_points:
+        shift_rng = random.Random(seed)
+        shift = [shift_rng.random() for _ in range(dim)]
+        primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29][:dim]
+        n = len(history)
+        point = []
+        for i, (low, high) in enumerate(bounds):
+            base = primes[i]
+            f = 1.0 / base
+            x = 0.0
+            idx = n
+            while idx > 0:
+                x += f * (idx % base)
+                idx //= base
+                f /= base
+            x = (x + shift[i]) % 1.0
+            point.append(low + x * (high - low))
+        return point
+
+    # Normalize coordinates to [0,1]
+    hist = []
+    for h in history:
+        xn = [(h['x'][i] - lows[i]) / spans[i] for i in range(dim)]
+        hist.append({'x': xn, 'value': h['value']})
+    sorted_hist = sorted(hist, key=lambda h: h['value'])
+    best = sorted_hist[0]
+    x_best = best['x']
+    best_val = best['value']
+
+    # Steps since last improvement
+    last_imp = 0
+    cur_best = float('inf')
+    for i, h in enumerate(hist):
+        if h['value'] < cur_best:
+            cur_best = h['value']
+            last_imp = i
+    steps_since = len(hist) - last_imp
+
+    # Global exploration probability increases when stuck
+    global_prob = 0.05 + 0.15 * min(1.0, steps_since / 8.0)
+    if rng.random() < global_prob:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    direction = None
+    sigma = 0.0
+
+    # Momentum if last point improved
+    if len(hist) >= 2:
+        prev_best_val = min(h['value'] for h in hist[:-1])
+        if hist[-1]['value'] < prev_best_val:
+            prev_best = min(hist[:-1], key=lambda h: h['value'])
+            delta = [hist[-1]['x'][i] - prev_best['x'][i] for i in range(dim)]
+            norm = math.sqrt(sum(d * d for d in delta))
+            if norm > 1e-12:
+                direction = [d / norm for d in delta]
+                sigma = min(0.5, norm * 1.5)
+
+    # Quadratic model when enough points are available
+    need = (dim + 1) * (dim + 2) // 2
+    if direction is None and len(hist) >= need:
+        n_fit = min(len(hist), 2 * need)
+        local = sorted_hist[:n_fit]
+        p = 1 + dim + dim * (dim + 1) // 2
+        A = [[0.0] * p for _ in range(n_fit)]
+        for r, h in enumerate(local):
+            x = h['x']
+            A[r][0] = 1.0
+            for i in range(dim):
+                A[r][1 + i] = x[i]
+            idx = 1 + dim
+            for i in range(dim):
+                for j in range(i, dim):
+                    A[r][idx] = x[i] * x[j]
+                    idx += 1
+
+        AtA = [[0.0] * p for _ in range(p)]
+        Atb = [0.0] * p
+        for r in range(n_fit):
+            y = local[r]['value']
+            for i in range(p):
+                Atb[i] += A[r][i] * y
+                for j in range(p):
+                    AtA[i][j] += A[r][i] * A[r][j]
+
+        lam = 1e-8 * n_fit
+        for i in range(p):
+            AtA[i][i] += lam
+
+        M = [AtA[i] + [Atb[i]] for i in range(p)]
+        for col in range(p):
+            pivot = max(range(col, p), key=lambda r: abs(M[r][col]))
+            if abs(M[pivot][col]) < 1e-12:
+                continue
+            M[col], M[pivot] = M[pivot], M[col]
+            div = M[col][col]
+            for j in range(col, p + 1):
+                M[col][j] /= div
+            for r in range(p):
+                if r != col and abs(M[r][col]) > 1e-12:
+                    factor = M[r][col]
+                    for j in range(col, p + 1):
+                        M[r][j] -= factor * M[col][j]
+        theta = [M[i][p] for i in range(p)]
+
+        # Gradient at best point
+        g = [0.0] * dim
+        for i in range(dim):
+            g[i] = theta[1 + i]
+            idx = 1 + dim
+            for a in range(dim):
+                for b in range(a, dim):
+                    if a == i and b == i:
+                        g[i] += 2 * theta[idx] * x_best[i]
+                    elif a == i or b == i:
+                        g[i] += theta[idx] * (x_best[b] if a == i else x_best[a])
+                    idx += 1
+
+        # Hessian at best point
+        H = [[0.0] * dim for _ in range(dim)]
+        idx = 1 + dim
+        for a in range(dim):
+            for b in range(a, dim):
+                c = theta[idx]
+                if a == b:
+                    H[a][a] += 2 * c
+                else:
+                    H[a][b] += c
+                    H[b][a] += c
+                idx += 1
+
+        trace = sum(H[i][i] for i in range(dim))
+        reg = 1e-6 * (1.0 + abs(trace))
+        for i in range(dim):
+            H[i][i] += reg
+
+        # Solve H * delta = -g
+        M = [H[i] + [-g[i]] for i in range(dim)]
+        for col in range(dim):
+            pivot = max(range(col, dim), key=lambda r: abs(M[r][col]))
+            if abs(M[pivot][col]) < 1e-12:
+                continue
+            M[col], M[pivot] = M[pivot], M[col]
+            div = M[col][col]
+            for j in range(col, dim + 1):
+                M[col][j] /= div
+            for r in range(dim):
+                if r != col and abs(M[r][col]) > 1e-12:
+                    factor = M[r][col]
+                    for j in range(col, dim + 1):
+                        M[r][j] -= factor * M[col][j]
+        delta = [M[i][dim] for i in range(dim)]
+        norm_d = math.sqrt(sum(d * d for d in delta))
+        if norm_d > 1e-12:
+            direction = [d / norm_d for d in delta]
+            min_dist = 1.0
+            for h in hist:
+                if h['x'] == x_best:
+                    continue
+                d = math.sqrt(sum((x_best[i] - h['x'][i]) ** 2 for i in range(dim)))
+                if d > 0 and d < min_dist:
+                    min_dist = d
+            trust = min(0.3, 0.5 * min_dist) * (0.9 ** steps_since)
+            sigma = min(trust, norm_d)
+
+    # Linear gradient direction (fallback before quadratic is ready)
+    if direction is None and len(hist) >= dim + 1:
+        K = min(len(hist), 2 * dim + 2)
+        local = sorted_hist[:K]
+        A = [[0.0] * dim for _ in range(dim)]
+        b = [0.0] * dim
+        for h in local:
+            dx = [h['x'][i] - x_best[i] for i in range(dim)]
+            dy = h['value'] - best_val
+            for i in range(dim):
+                b[i] += dy * dx[i]
+                for j in range(dim):
+                    A[i][j] += dx[i] * dx[j]
+        ridge = 1e-8
+        for i in range(dim):
+            A[i][i] += ridge
+        M = [A[i] + [b[i]] for i in range(dim)]
+        for col in range(dim):
+            pivot = max(range(col, dim), key=lambda r: abs(M[r][col]))
+            if abs(M[pivot][col]) < 1e-12:
+                continue
+            M[col], M[pivot] = M[pivot], M[col]
+            div = M[col][col]
+            for j in range(col, dim + 1):
+                M[col][j] /= div
+            for r in range(dim):
+                if r != col and abs(M[r][col]) > 1e-12:
+                    factor = M[r][col]
+                    for j in range(col, dim + 1):
+                        M[r][j] -= factor * M[col][j]
+        g = [M[i][dim] for i in range(dim)]
+        norm_g = math.sqrt(sum(gi * gi for gi in g))
+        if norm_g > 1e-12:
+            direction = [-gi / norm_g for gi in g]
+            min_dist = 1.0
+            for h in hist:
+                if h['x'] == x_best:
+                    continue
+                d = math.sqrt(sum((x_best[i] - h['x'][i]) ** 2 for i in range(dim)))
+                if d > 0 and d < min_dist:
+                    min_dist = d
+            sigma = min(0.2, 0.5 * min_dist)
+
+    # Simplex reflection
+    if direction is None and len(hist) >= dim + 1 and rng.random() < 0.3:
+        simplex = sorted_hist[:dim + 1]
+        worst = simplex[-1]
+        others = simplex[:-1]
+        centroid = [sum(o['x'][i] for o in others) / len(others) for i in range(dim)]
+        delta = [centroid[i] - worst['x'][i] for i in range(dim)]
+        norm = math.sqrt(sum(d * d for d in delta))
+        if norm > 1e-12:
+            direction = [d / norm for d in delta]
+            sigma = norm
+
+    # Direction from second best to best
+    if direction is None and len(sorted_hist) >= 2 and rng.random() < 0.5:
+        second = sorted_hist[1]
+        delta = [x_best[i] - second['x'][i] for i in range(dim)]
+        norm = math.sqrt(sum(d * d for d in delta))
+        if norm > 1e-12:
+            direction = [d / norm for d in delta]
+            sigma = min(0.3, norm * 0.8)
+
+    # Random direction or coordinate axis
+    if direction is None:
+        if rng.random() < 0.5:
+            vec = [rng.gauss(0.0, 1.0) for _ in range(dim)]
+            norm = math.sqrt(sum(v * v for v in vec))
+            if norm == 0:
+                vec = [1.0] + [0.0] * (dim - 1)
+                norm = 1.0
+            direction = [v / norm for v in vec]
+        else:
+            axis = rng.randrange(dim)
+            direction = [0.0] * dim
+            direction[axis] = 1.0 if rng.random() < 0.5 else -1.0
+        sigma = 0.2 * (0.85 ** steps_since)
+
+    # Scale step size by remaining budget
+    remaining = 32 - len(hist)
+    sigma *= (0.5 + 0.5 * remaining / 32)
+    sigma = max(sigma, 0.01)
+
+    # Occasional very small refinement step
+    if rng.random() < 0.1:
+        sigma = 0.02
+
+    new_norm = [x_best[i] + sigma * direction[i] for i in range(dim)]
+    new_norm = [max(0.0, min(1.0, val)) for val in new_norm]
+    new_point = [lows[i] + new_norm[i] * spans[i] for i in range(dim)]
+
+    # Avoid duplicates
+    for h in history:
+        d = math.sqrt(sum((new_point[i] - h['x'][i]) ** 2 for i in range(dim)))
+        if d < 1e-10 * max_span:
+            perturb = [rng.uniform(-0.01, 0.01) * spans[i] for i in range(dim)]
+            new_point = [max(low, min(high, new_point[i] + perturb[i])) for i, (low, high) in enumerate(bounds)]
+            break
+
+    return new_point

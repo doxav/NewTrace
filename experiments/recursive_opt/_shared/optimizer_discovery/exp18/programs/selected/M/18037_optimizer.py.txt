@@ -1,0 +1,77 @@
+import math
+import random
+
+def propose(history, bounds, seed):
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    lows = [lo for lo, hi in bounds]
+    highs = [hi for lo, hi in bounds]
+    ranges = [hi - lo for lo, hi in bounds]
+    center = [(lo + hi) * 0.5 for lo, hi in bounds]
+    n = len(history)
+
+    if n == 0:
+        return center
+
+    # Phase 1: axis-aligned points around center
+    if n <= 2 * dim:
+        d = (n - 1) // 2
+        sign = 1.0 if (n - 1) % 2 == 0 else -1.0
+        delta = 0.15 * ranges[d]
+        x = center[:]
+        x[d] = center[d] + sign * delta
+        x[d] = max(lows[d], min(highs[d], x[d]))
+        return x
+
+    # Phase 2: coordinate-wise quadratic minimum from center and axis samples
+    if n == 2 * dim + 1:
+        x = center[:]
+        for d in range(dim):
+            y0 = history[0]["value"]
+            yp = history[1 + 2 * d]["value"]
+            ym = history[2 + 2 * d]["value"]
+            delta = 0.15 * ranges[d]
+            denom = yp + ym - 2.0 * y0
+            if abs(denom) < 1e-12:
+                continue
+            offset = -(yp - ym) / (2.0 * denom)
+            x[d] = center[d] + offset * delta
+            x[d] = max(lows[d], min(highs[d], x[d]))
+        return x
+
+    # Phase 3: local search around best with occasional exploration
+    best = min(history, key=lambda row: row["value"])
+    best_x = best["x"]
+
+    # Stagnation detection
+    last_improve = 0
+    current_best = history[0]["value"]
+    for i, row in enumerate(history):
+        if row["value"] < current_best:
+            current_best = row["value"]
+            last_improve = i
+    stagnation = n - 1 - last_improve
+
+    p_explore = 0.15 * (1.0 - n / 32.0) + 0.05
+    if stagnation > 5:
+        p_explore = max(p_explore, 0.3)
+
+    if rng.random() < p_explore:
+        return [rng.uniform(lo, hi) for lo, hi in bounds]
+
+    scale = 0.15 * (1.0 - n / 32.0) + 0.02
+    if stagnation > 5:
+        scale = min(0.3, scale * 1.5)
+
+    direction = [rng.gauss(0.0, 1.0) for _ in range(dim)]
+    norm_dir = math.sqrt(sum(v * v for v in direction))
+    if norm_dir < 1e-12:
+        direction = [1.0] + [0.0] * (dim - 1)
+        norm_dir = 1.0
+
+    x = [
+        best_x[i] + scale * ranges[i] * direction[i] / norm_dir
+        for i in range(dim)
+    ]
+    x = [max(lows[i], min(highs[i], x[i])) for i in range(dim)]
+    return x

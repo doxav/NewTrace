@@ -773,7 +773,7 @@ def _comparability(rows: Sequence[ArmResult]) -> Dict[str, Any]:
         if r.arm in ("standard", "recursive") and r.scored_tasks:
             sets.setdefault(r.arm, sorted(set(r.scored_tasks)))
     std, rec = sets.get("standard"), sets.get("recursive")
-    if std is None or rec is None:
+    if std is None or rec is None or any(not row.ok() for row in rows):
         return {"known": False, "comparable": None,
                 "reason": "scored task ids unavailable for at least one arm",
                 "standard_tasks": std, "recursive_tasks": rec}
@@ -796,14 +796,25 @@ def _summarize(rows: Sequence[ArmResult]) -> Dict[str, Any]:
     init = arms.get("initial", {}).get("mean_final")
     std, rec = arms.get("standard", {}).get("mean_final"), arms.get("recursive", {}).get("mean_final")
     std_b, rec_b = arms.get("standard", {}).get("mean_best"), arms.get("recursive", {}).get("mean_best")
-    std_row = next((r for r in by.get("standard", []) if r.ok()), None)
-    rec_row = next((r for r in by.get("recursive", []) if r.ok()), None)
-    speed = {}
-    if std_row and rec_row:
-        std_best = float(std_row.best_score if std_row.best_score is not None else std_row.score)
-        speed = {"standard_best_unit": std_row.best_unit, "recursive_best_unit": rec_row.best_unit,
-                 "recursive_unit_to_standard_best": first_unit_reaching(rec_row.curve, std_best),
-                 "recursive_unit_to_standard_final": first_unit_reaching(rec_row.curve, float(std_row.score))}
+    std_rows = {row.seed: row for row in by.get("standard", [])}
+    rec_rows = {row.seed: row for row in by.get("recursive", [])}
+    paired_speed = []
+    for seed in sorted(set(std_rows) | set(rec_rows)):
+        standard, recursive = std_rows.get(seed), rec_rows.get(seed)
+        valid = standard is not None and recursive is not None and standard.ok() and recursive.ok()
+        target = float(standard.best_score if standard.best_score is not None else standard.score) if valid else None
+        paired_speed.append({
+            "seed": seed, "valid": valid,
+            "standard_best_unit": first_unit_reaching(standard.curve, target) if valid else None,
+            "recursive_best_unit": recursive.best_unit if valid else None,
+            "recursive_unit_to_standard_best": first_unit_reaching(recursive.curve, target) if valid else None,
+            "recursive_unit_to_standard_final": first_unit_reaching(recursive.curve, float(standard.score)) if valid else None,
+        })
+    speed = {"per_seed": paired_speed, "unit": "candidate index; not necessarily LLM calls"}
+    # A mean hitting time exists only when every registered pair attained it.
+    for key in ("standard_best_unit", "recursive_best_unit", "recursive_unit_to_standard_best", "recursive_unit_to_standard_final"):
+        values = [row[key] for row in paired_speed]
+        speed[key] = statistics.mean(values) if values and all(value is not None for value in values) else None
     verdict, why = _verdict(init, std, rec, std_b, rec_b, speed, rows)
     paired = _paired_delta(by)
     return {"arms": arms,

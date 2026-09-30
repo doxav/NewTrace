@@ -1,0 +1,141 @@
+import math, random, statistics
+
+def propose(history, bounds, seed):
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    n = len(history)
+    widths = [hi - lo for lo, hi in bounds]
+    max_width = max(widths) if widths else 1.0
+
+    if n == 0:
+        return [(lo + hi) * 0.5 for lo, hi in bounds]
+
+    # Deterministic Halton exploration for first 2*dim+1 points
+    if n < 2 * dim + 1:
+        primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29][:dim]
+        idx = n
+        point = []
+        for base in primes:
+            val = 0.0
+            f = 1.0 / base
+            i = idx
+            while i > 0:
+                val += f * (i % base)
+                i //= base
+                f /= base
+            point.append(val)
+        return [lo + (hi - lo) * p for p, (lo, hi) in zip(point, bounds)]
+
+    # Best point so far
+    best = min(history, key=lambda row: row["value"])
+    best_x = best["x"]
+    best_val = best["value"]
+
+    # Adaptive step size: median distance to best, decayed over time
+    distances = []
+    for row in history:
+        if row["x"] != best_x:
+            dist = math.sqrt(sum((row["x"][i] - best_x[i]) ** 2 for i in range(dim)))
+            distances.append(dist)
+    if distances:
+        scale = statistics.median(distances) / max_width
+        scale = max(0.01, min(0.3, scale))
+    else:
+        scale = 0.1
+    scale *= (1.0 - n / 32.0) ** 0.5
+    scale = max(0.001, min(0.5, scale))
+
+    # Stagnation detection
+    last_best_idx = max(i for i, row in enumerate(history) if row["value"] == best_val)
+    stagnation = n - 1 - last_best_idx
+    if stagnation > 5:
+        scale *= 1.5
+
+    # Uniform exploration probability
+    p_uniform = 0.05 + 0.1 * (1.0 - n / 32.0)
+    if stagnation > 10:
+        p_uniform = 0.2
+    if rng.random() < p_uniform:
+        return [rng.uniform(lo, hi) for lo, hi in bounds]
+
+    # Diagonal quadratic model (weighted least squares)
+    if n >= 2 * dim + 1:
+        m = 1 + 2 * dim
+        sigma = max(scale * max_width, 0.05 * max_width)
+        sigma2 = sigma * sigma
+        XtX = [[0.0] * m for _ in range(m)]
+        Xty = [0.0] * m
+        for row in history:
+            x = row["x"]
+            dist2 = sum((x[i] - best_x[i]) ** 2 for i in range(dim))
+            w = math.exp(-dist2 / (2.0 * sigma2))
+            feats = [1.0] + [x[i] for i in range(dim)] + [x[i] * x[i] for i in range(dim)]
+            for a in range(m):
+                Xty[a] += w * feats[a] * row["value"]
+                for b in range(m):
+                    XtX[a][b] += w * feats[a] * feats[b]
+        # Ridge regularization
+        for i in range(m):
+            XtX[i][i] += 1e-6
+
+        # Gaussian elimination with partial pivoting
+        A = [row[:] for row in XtX]
+        b = Xty[:]
+        for i in range(m):
+            pivot = i
+            max_abs = abs(A[i][i])
+            for k in range(i + 1, m):
+                if abs(A[k][i]) > max_abs:
+                    max_abs = abs(A[k][i])
+                    pivot = k
+            if max_abs < 1e-12:
+                break
+            if pivot != i:
+                A[i], A[pivot] = A[pivot], A[i]
+                b[i], b[pivot] = b[pivot], b[i]
+            pv = A[i][i]
+            for k in range(i + 1, m):
+                factor = A[k][i] / pv
+                A[k][i] = 0.0
+                for j in range(i + 1, m):
+                    A[k][j] -= factor * A[i][j]
+                b[k] -= factor * b[i]
+
+        beta = [0.0] * m
+        ok = True
+        for i in range(m - 1, -1, -1):
+            s = b[i]
+            for j in range(i + 1, m):
+                s -= A[i][j] * beta[j]
+            if abs(A[i][i]) < 1e-12:
+                ok = False
+                break
+            beta[i] = s / A[i][i]
+
+        if ok:
+            candidate = []
+            for i in range(dim):
+                a = beta[1 + dim + i]
+                b = beta[1 + i]
+                if a > 1e-8:
+                    x_star = -b / (2.0 * a)
+                elif abs(b) > 1e-12:
+                    step = math.copysign(scale * widths[i], -b)
+                    x_star = best_x[i] + step
+                else:
+                    x_star = best_x[i]
+                candidate.append(max(bounds[i][0], min(bounds[i][1], x_star)))
+            # Slight perturbation to avoid exact boundary
+            candidate = [c + rng.gauss(0.0, scale * max_width * 0.02) for c in candidate]
+            candidate = [max(bounds[i][0], min(bounds[i][1], candidate[i])) for i in range(dim)]
+            return candidate
+
+    # Fallback: random direction step around best
+    direction = [rng.gauss(0.0, 1.0) for _ in range(dim)]
+    norm = math.sqrt(sum(d * d for d in direction))
+    if norm < 1e-12:
+        direction = [1.0] + [0.0] * (dim - 1)
+        norm = 1.0
+    step_len = scale * max_width * rng.uniform(0.5, 1.5)
+    candidate = [best_x[i] + direction[i] / norm * step_len for i in range(dim)]
+    return [max(bounds[i][0], min(bounds[i][1], candidate[i])) for i in range(dim)]

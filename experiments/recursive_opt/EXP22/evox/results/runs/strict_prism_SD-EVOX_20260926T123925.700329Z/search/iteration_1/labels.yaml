@@ -1,0 +1,68 @@
+iteration: 1
+diverge_label_length: 2454
+refine_label_length: 1910
+
+diverge_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.
+  This may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.
+  You can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.
+  Think through what is needed to achieve a BREAKTHROUGH SCORE.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  - **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Libraries / solvers**: numpy only; use vectorized scoring, np.argsort for greedy orders, np.random for randomized restarts.
+  - **Greedy construction**: sort models by req_rate/slo ratio, size, or load density; place on least-pressured GPU ↔ fullest-fitting GPU ↔ best-fit by leftover memory.
+  - **Local search / improvement**: start greedy, then swap/move models between GPUs iteratively to reduce max KVPR ↔ targeted moves from the bottleneck GPU only.
+  - **Randomized multi-start**: random shuffles or perturbed greedy orders, keep best placement across many restarts within time budget.
+  - **Metaheuristics**: simulated annealing with move/swap neighborhoods ↔ simple genetic/evolutionary permutation search ↔ large-neighborhood reassignment of worst GPU.
+  - **Bin-packing hybrid**: first pack by size (feasibility), then rebalance load across GPUs minimizing max KVPR.
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken "creative" solution is worthless.
+  
+  Format:
+  1. APPROACH: Describe your different approach.
+  2. CODE: Implementation.
+
+refine_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You should keep the same fundamental approach and algorithm structure.
+  DO NOT switch to a different problem formulation.
+  Focus on REFINING / EXPLOITING the current approach: better inputs, additional polish, etc.
+  Think through what is needed to SQUEEZE the last few percent of performance.
+  Use sufficient computational budget for refinement.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF REFINEMENT strategies (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Computational budget**: more multi-start restarts / local-search iterations while staying under 10s timeout; early-exit when no improvement.
+  - **Neighborhood intensification**: deeper swap chains, 2-opt style exchanges, focus moves on the max-KVPR GPU ↔ its best swap partner.
+  - **Initialization quality**: try multiple greedy sort keys (ratio, size desc, load density) and keep the best seed for refinement.
+  - **Objective sharpening**: use tie-breaking on second-highest GPU pressure, not just max, to guide search out of plateaus.
+  - **Post-processing polish**: final pass reassigning single models from bottleneck GPU if it strictly lowers max KVPR; validate memory constraint each move.
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken solution is worthless.
+  
+  Format:
+  1. REFINEMENT: Describe what you are refining.
+  2. CODE: Implementation with refinement.

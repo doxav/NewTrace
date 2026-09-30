@@ -1,0 +1,508 @@
+diff -ruN a/opto/features/recursive_opt/coevolution/control_plane.py b/opto/features/recursive_opt/coevolution/control_plane.py
+--- a/opto/features/recursive_opt/coevolution/control_plane.py	2026-09-30 11:46:18.097891569 +0200
++++ b/opto/features/recursive_opt/coevolution/control_plane.py	2026-09-30 11:46:18.100997187 +0200
+@@ -19,6 +19,7 @@
+ 
+ from .. import spec as S
+ from .engine import CoevolutionConfig, CoevolutionEngine
++from .projections import make_projection
+ 
+ ENGINE = 'coevolution'
+ MODULE = 'recursive_opt.module.program_source@1'
+@@ -98,12 +99,13 @@
+ def _run_engine(unit: Any, level: Any, resources: Mapping[str, Any]) -> S.RunResult:
+     spec = level.spec
+     config = dict(spec['engine']['config'])
+-    unknown = set(config) - _FIELDS - {'system_message', 'problem_description', 'evaluator_context'}
++    unknown = set(config) - _FIELDS - {'system_message', 'problem_description', 'evaluator_context', 'projections'}
+     if unknown:
+         raise ValueError(f'unknown coevolution engine config keys: {sorted(unknown)}')
+     system_message = config.pop('system_message', '')
+     problem_description = config.pop('problem_description', None)
+     evaluator_context = config.pop('evaluator_context', '')
++    projections = [make_projection(item) for item in config.pop('projections', [])]
+     engine_config = CoevolutionConfig(**config)
+     module = S._build_level_module(spec, resources)
+     evaluator = S._evaluator_entry(spec['objective']['evaluator_ref'])
+@@ -135,7 +137,7 @@
+         return solution_llm(system, user)
+     engine = CoevolutionEngine(engine_config.__class__(**{**dataclasses.asdict(engine_config), 'score_key': score_key}), counted_solution, meta_llm, evaluate,
+                                str(module.program.data), system_message, feedback_llm, problem_description, evaluator_context,
+-                               on_event=_capture_hook(resources.get('capture')))
++                               on_event=_capture_hook(resources.get('capture')), projections=projections)
+     report = engine.run()
+     module.program._data = report['best_source']
+     metrics = {k: float(v) for k, v in report['best_metrics'].items() if isinstance(v, (int, float)) and not isinstance(v, bool)}
+@@ -159,7 +161,8 @@
+ 
+ def coevolution_spec(level_id: str, program: str, evaluator_ref: str, system_message: str, engine_config: Mapping[str, Any],
+                      llm_profile: Optional[Mapping[str, Any]] = None, offline: bool = True, seed: int = 42, budget: Optional[Mapping[str, Any]] = None,
+-                     output_directory: Optional[str] = None, problem_description: Optional[str] = None, evaluator_context: str = '') -> Dict[str, Any]:
++                     output_directory: Optional[str] = None, problem_description: Optional[str] = None, evaluator_context: str = '',
++                     score_key: str = 'combined_score') -> Dict[str, Any]:
+     """Raw v2 spec for one co-evolution level (one profile shared by the three roles unless overridden)."""
+     profile = dict(llm_profile or {'provider': 'openrouter', 'model': 'offline/mock', 'max_tokens': 32000})
+     config = {**dict(engine_config), 'system_message': system_message, 'evaluator_context': evaluator_context}
+@@ -177,8 +180,8 @@
+             'module': {'ref': MODULE, 'config': {'program': program}},
+             'engine': {'name': ENGINE, 'config': config},
+             'objective': {'evaluator_ref': evaluator_ref, 'intent': 'Maximize the evaluator combined_score through online co-evolution.',
+-                          'metrics': {'combined_score': {'direction': 'maximize', 'source': 'evaluation.metrics.combined_score', 'aggregate_examples': 'mean'}},
+-                          'selection': {'mode': 'scalar', 'score_key': 'combined_score'}},
++                          'metrics': {score_key: {'direction': 'maximize', 'source': f'evaluation.metrics.{score_key}', 'aggregate_examples': 'mean'}},
++                          'selection': {'mode': 'scalar', 'score_key': score_key}},
+             'llm_roles': {'forward': 'main', 'optimizer': 'main', 'feedback': 'main'},
+         }],
+     }
+diff -ruN a/opto/features/recursive_opt/coevolution/engine.py b/opto/features/recursive_opt/coevolution/engine.py
+--- a/opto/features/recursive_opt/coevolution/engine.py	2026-09-30 11:46:18.097857805 +0200
++++ b/opto/features/recursive_opt/coevolution/engine.py	2026-09-30 11:46:18.100963263 +0200
+@@ -106,7 +106,7 @@
+     def __init__(self, config: CoevolutionConfig, solution_llm: LLMText, meta_llm: LLMText, evaluate: Evaluate, initial_source: str,
+                  system_message: str, feedback_llm: Optional[LLMText] = None, problem_description: Optional[str] = None,
+                  evaluator_context: str = '', population: Optional[Population] = None, policy_namespace: Optional[Mapping[str, Any]] = None,
+-                 on_event: Optional[Callable[[Dict[str, Any]], None]] = None) -> None:
++                 on_event: Optional[Callable[[Dict[str, Any]], None]] = None, projections: Optional[List[Callable[[str], Tuple[str, str]]]] = None) -> None:
+         self.config = config
+         self.llm_calls = {'solution': 0, 'meta': 0, 'feedback': 0}
+         self.solution_llm = _Counted(solution_llm, self.llm_calls, 'solution')
+@@ -118,6 +118,7 @@
+         self.population = population if population is not None else Population(config.score_key)
+         self.events: List[Dict[str, Any]] = []
+         self.proposer = None
++        self.projections = list(projections or [])
+ 
+     # ---- helpers
+     def _event(self, **event: Any) -> None:
+@@ -136,9 +137,15 @@
+     def run(self) -> Dict[str, Any]:
+         cfg, population = self.config, self.population
+         patience = resolve_patience(cfg.patience, cfg.horizon, cfg.patience_ratio)
++        operator_projections = PopulationOperator(None, None, '', projections=self.projections)
+         if not len(population):
+-            metrics, artifacts = self.evaluate(self.initial_source)
+-            population.add(Candidate('initial', self.initial_source, dict(metrics), 0, artifacts=dict(artifacts or {})))
++            deployable, notes = operator_projections.project(self.initial_source)
++            metrics, artifacts = self.evaluate(deployable)
++            artifacts = dict(artifacts or {})
++            if notes:
++                artifacts['projection'] = '; '.join(notes)
++            population.add(Candidate('initial', self.initial_source, dict(metrics), 0, artifacts=artifacts,
++                                     metadata={'deployable': deployable} if deployable != self.initial_source else {}))
+         if cfg.labels is not None:
+             labels = dict(cfg.labels)
+         elif cfg.generate_labels and self.feedback_llm is not None:
+@@ -153,7 +160,8 @@
+         deferred = DeferredEvaluation(scorer)
+         trigger = make_trigger(cfg.trigger, patience, cfg.improvement_threshold)
+         operator = PopulationOperator(self.solution_llm, self.evaluate, self.system_message, cfg.operator_mode, cfg.retries, labels,
+-                                      cfg.num_previous_attempts, cfg.max_solution_chars, cfg.language, cfg.score_key, cfg.evaluator_timeout_s)
++                                      cfg.num_previous_attempts, cfg.max_solution_chars, cfg.language, cfg.score_key, cfg.evaluator_timeout_s,
++                                      self.projections)
+         composer = FeedbackComposer(self.feedback_llm if cfg.summaries else None, cfg.meta_system_prompt or META_SYSTEM, self.problem_description, self.evaluator_context)
+         self.composer = composer
+         if cfg.proposer == 'trace':
+@@ -316,7 +324,8 @@
+             self._event(type='scored', iteration=iteration - 1, entry=entry.id, metrics=dict(entry.metrics))
+         best = population.best()
+         self.archive, self.slot = archive, slot
+-        return {'best_score': self._best(), 'best_source': best.content if best else None, 'best_metrics': dict(best.metrics) if best else {},
++        return {'best_score': self._best(), 'best_source': best.metadata.get('deployable', best.content) if best else None,
++                'best_editable_source': best.content if best else None, 'best_metrics': dict(best.metrics) if best else {},
+                 'solution_attempts': attempts_total, 'curve': curve, 'events': self.events, 'archive': [e.to_dict() for e in archive.entries.values()],
+                 'active_policy': slot.active_source, 'meta_failures': state['meta_failures'], 'llm_calls': dict(self.llm_calls),
+                 'feedback_calls': dict(composer.calls), 'labels': labels, 'population_size': len(population)}
+diff -ruN a/opto/features/recursive_opt/coevolution/guides.py b/opto/features/recursive_opt/coevolution/guides.py
+--- a/opto/features/recursive_opt/coevolution/guides.py	1970-01-01 01:00:00.000000000 +0100
++++ b/opto/features/recursive_opt/coevolution/guides.py	2026-09-30 11:46:18.101478027 +0200
+@@ -0,0 +1,95 @@
++"""Guides for co-evolution: separate the guiding score from the raw benchmark metric.
++
++A benchmark metric can be exploitable (e.g. averaging only over solved cases rewards
++crashing on hard cases). ``GuidedEvaluator`` wraps an evaluator, computes the score the
++search should follow (``guided_score`` by default), enforces hard constraints, and keeps
++every raw metric for reporting. ``format_case_diagnostics`` turns per-case records from a
++white-box evaluator into targeted feedback (worst cases, failures by cause).
++"""
++
++from __future__ import annotations
++
++import operator as op
++from collections import Counter
++from typing import Any, Callable, Dict, Mapping, Optional, Sequence, Tuple
++
++Evaluate = Callable[[str], Tuple[Dict[str, Any], Dict[str, Any]]]
++_OPS = {'>=': op.ge, '>': op.gt, '<=': op.le, '<': op.lt, '==': op.eq}
++
++
++class GuidedEvaluator:
++    """``evaluate(source) -> (metrics, artifacts)`` with a guiding score and hard constraints.
++
++    violation='penalize' keeps the candidate with ``penalty_score``; 'reject' marks it invalid
++    (validity=0) so the operator retries. ``score_fn(metrics, artifacts)`` defines the guide score
++    (default: ``metrics[source_key]``).
++    """
++
++    def __init__(self, evaluate: Evaluate, score_key: str = 'guided_score', source_key: str = 'combined_score',
++                 score_fn: Optional[Callable[[Mapping[str, Any], Mapping[str, Any]], float]] = None,
++                 hard_constraints: Optional[Mapping[str, Tuple[str, float]]] = None, violation: str = 'penalize',
++                 penalty_score: float = 0.0, feedback_fn: Optional[Callable[[Mapping[str, Any], Mapping[str, Any]], str]] = None) -> None:
++        if violation not in {'penalize', 'reject'}:
++            raise ValueError("violation must be 'penalize' or 'reject'")
++        for name, (symbol, _) in (hard_constraints or {}).items():
++            if symbol not in _OPS:
++                raise ValueError(f'unknown comparison {symbol!r} for constraint {name!r}')
++        self.evaluate, self.score_key, self.source_key, self.score_fn = evaluate, score_key, source_key, score_fn
++        self.constraints, self.violation, self.penalty_score, self.feedback_fn = dict(hard_constraints or {}), violation, penalty_score, feedback_fn
++
++    def violations(self, metrics: Mapping[str, Any]) -> list:
++        failed = []
++        for name, (symbol, bound) in self.constraints.items():
++            value = metrics.get(name)
++            if not isinstance(value, (int, float)) or not _OPS[symbol](value, bound):
++                failed.append(f'{name}={value} (required {symbol} {bound})')
++        return failed
++
++    def __call__(self, source: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
++        metrics, artifacts = self.evaluate(source)
++        metrics, artifacts = dict(metrics), dict(artifacts or {})
++        if metrics.get('validity') in (0, -1):
++            return metrics, artifacts  # already a failed evaluation: leave it to the operator
++        failed = self.violations(metrics)
++        if failed and self.violation == 'reject':
++            metrics.update(validity=0, error='hard constraint violated: ' + '; '.join(failed))
++            return metrics, artifacts
++        score = self.score_fn(metrics, artifacts) if self.score_fn else metrics.get(self.source_key, 0.0)
++        metrics[self.score_key] = self.penalty_score if failed else float(score)
++        if failed:
++            artifacts['constraints'] = 'Hard constraints violated (guide score set to the penalty): ' + '; '.join(failed)
++        if self.feedback_fn:
++            artifacts['feedback'] = self.feedback_fn(metrics, artifacts)
++        return metrics, artifacts
++
++
++def _fmt(value: Any) -> str:
++    return f'{value:.4g}' if isinstance(value, (int, float)) and not isinstance(value, bool) else str(value)
++
++
++def format_case_diagnostics(cases: Sequence[Mapping[str, Any]], worst: int = 5, lower_is_better: bool = True, value_key: str = 'value',
++                            bound_key: str = 'bound', detail_keys: Sequence[str] = ()) -> str:
++    """Per-case feedback: failures grouped by cause, and the worst solved cases (relative gap to a bound when given)."""
++    solved = [c for c in cases if c.get('ok') and isinstance(c.get(value_key), (int, float))]
++    failed = [c for c in cases if not c.get('ok')]
++    lines = [f'{len(solved)}/{len(cases)} cases solved.']
++    if failed:
++        causes = Counter(str(c.get('error') or 'unknown').split(':')[0] for c in failed)
++        lines.append(f'{len(failed)} case(s) failed: ' + ', '.join(f'{cause} x{count}' for cause, count in causes.most_common())
++                     + '. Example: case ' + f"{failed[0].get('case')}: {str(failed[0].get('error'))[:200]}")
++    if solved:
++        def gap(c: Mapping[str, Any]) -> float:
++            bound = c.get(bound_key)
++            if isinstance(bound, (int, float)) and bound:
++                return c[value_key] / bound if lower_is_better else bound / c[value_key]
++            return c[value_key] if lower_is_better else -c[value_key]
++        ranked = sorted(solved, key=gap, reverse=True)[:worst]
++        if any(isinstance(c.get(bound_key), (int, float)) for c in solved):
++            mean_gap = sum(gap(c) for c in solved) / len(solved)
++            lines.append(f'Mean ratio to the per-case bound: {mean_gap:.3f} (1.0 = optimal bound reached).')
++        lines.append('Worst cases:')
++        for c in ranked:
++            details = ', '.join(f'{k}={_fmt(c.get(k))}' for k in detail_keys if k in c)
++            bound = f", bound={_fmt(c.get(bound_key))}, ratio={gap(c):.3f}" if isinstance(c.get(bound_key), (int, float)) else ''
++            lines.append(f"  case {c.get('case')}: {value_key}={_fmt(c[value_key])}{bound}{(' | ' + details) if details else ''}")
++    return '\n'.join(lines)
+diff -ruN a/opto/features/recursive_opt/coevolution/__init__.py b/opto/features/recursive_opt/coevolution/__init__.py
+--- a/opto/features/recursive_opt/coevolution/__init__.py	2026-09-30 11:46:18.097923447 +0200
++++ b/opto/features/recursive_opt/coevolution/__init__.py	2026-09-30 11:46:18.101026741 +0200
+@@ -5,6 +5,8 @@
+ """
+ 
+ from .engine import CoevolutionConfig, CoevolutionEngine, evox_preset
++from .guides import GuidedEvaluator, format_case_diagnostics
++from .projections import CompileCheck, FallbackWrapper, ProjectionError, make_projection, register_projection
+ from .feedback import META_SYSTEM, POLICY_CONTRACT, FeedbackComposer, population_state
+ from .operator import DEFAULT_LABELS, OperatorResult, PopulationOperator, apply_search_replace, evaluation_failed, extract_diffs, generate_labels, parse_full_rewrite
+ from .policy import UNIFORM_POLICY_SOURCE, PolicyContractError, PolicyRuntimeError, PolicySlot, Selection, check_selection, validate_policy_source
+@@ -14,6 +16,7 @@
+ from .state import Candidate, Population, filter_statistics
+ 
+ __all__ = [
++    'CompileCheck', 'FallbackWrapper', 'GuidedEvaluator', 'ProjectionError', 'format_case_diagnostics', 'make_projection', 'register_projection',
+     'ArchiveEntry', 'Candidate', 'CoevolutionConfig', 'CoevolutionEngine', 'DEFAULT_LABELS', 'DeferredEvaluation', 'FeedbackComposer', 'GainScorer',
+     'LLMRewriteProposer', 'LogWindowScorer', 'META_SYSTEM', 'NeverTrigger', 'OperatorResult', 'POLICY_CONTRACT', 'PairedScorer', 'PeriodicTrigger',
+     'PolicyContractError', 'PolicyRuntimeError', 'PolicySlot', 'Population', 'PopulationOperator', 'ProposalResult', 'Selection', 'StagnationTrigger',
+diff -ruN a/opto/features/recursive_opt/coevolution/operator.py b/opto/features/recursive_opt/coevolution/operator.py
+--- a/opto/features/recursive_opt/coevolution/operator.py	2026-09-30 11:46:18.097665798 +0200
++++ b/opto/features/recursive_opt/coevolution/operator.py	2026-09-30 11:46:18.100727104 +0200
+@@ -15,6 +15,7 @@
+ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
+ 
+ from .policy import Selection
++from .projections import ProjectionError
+ from .state import Candidate, Population
+ 
+ LLMText = Callable[[str, str], str]
+@@ -137,13 +138,24 @@
+ 
+     def __init__(self, llm: LLMText, evaluate: Evaluate, system_message: str, mode: str = 'diff', retries: int = 3,
+                  labels: Optional[Mapping[str, str]] = None, num_previous_attempts: int = 3, max_solution_chars: int = 60000,
+-                 language: str = 'python', score_key: str = 'combined_score', timeout_s: Optional[float] = None) -> None:
++                 language: str = 'python', score_key: str = 'combined_score', timeout_s: Optional[float] = None,
++                 projections: Optional[List[Callable[[str], Tuple[str, str]]]] = None) -> None:
+         if mode not in {'diff', 'rewrite'}:
+             raise ValueError("mode must be 'diff' or 'rewrite'")
+         self.llm, self.evaluate, self.system_message, self.mode, self.retries = llm, evaluate, system_message, mode, retries
+         self.labels = dict(labels or {})
+         self.num_previous_attempts, self.max_solution_chars, self.language = num_previous_attempts, max_solution_chars, language
+         self.score_key, self.timeout_s = score_key, timeout_s
++        self.projections = list(projections or [])
++
++    def project(self, source: str) -> Tuple[str, List[str]]:
++        """Apply every projection in order; raises ProjectionError to reject before evaluation."""
++        notes = []
++        for projection in self.projections:
++            source, note = projection(source)
++            if note:
++                notes.append(note)
++        return source, notes
+ 
+     # ---- prompt
+     def _score(self, metrics: Mapping[str, Any]) -> str:
+@@ -227,8 +239,18 @@
+                 if attempt < retries:
+                     continue
+                 return OperatorResult(None, retries, f'{error} (after {retries} attempts)', failed, prompts)
+-            metrics, artifacts = self.evaluate(solution)
+-            eval_error = evaluation_failed(metrics, artifacts or {})
++            try:
++                deployable, notes = self.project(solution)
++            except ProjectionError as projection_error:
++                failed.append({'attempt': attempt, 'error': f'Projection rejected the candidate: {projection_error}', 'solution': solution})
++                if attempt < retries:
++                    continue
++                return OperatorResult(None, retries, f'Projection rejected the candidate: {projection_error} (after {retries} attempts)', failed, prompts)
++            metrics, artifacts = self.evaluate(deployable)
++            artifacts = dict(artifacts or {})
++            if notes:
++                artifacts['projection'] = '; '.join(notes)
++            eval_error = evaluation_failed(metrics, artifacts)
+             if eval_error:
+                 failed.append({'attempt': attempt, 'error': eval_error, 'solution': solution})
+                 if attempt < retries:
+@@ -236,6 +258,7 @@
+                 return OperatorResult(None, retries, f'Evaluator failed after {retries} attempts: {eval_error}', failed, prompts)
+             child = Candidate(id=str(uuid.uuid4()), content=solution, metrics=dict(metrics), iteration=iteration, parent_id=selection.parent.id,
+                               context_ids=tuple(c.id for c in selection.contexts), label=selection.label,
+-                              context_labels=tuple('' for _ in selection.contexts), artifacts=dict(artifacts or {}), changes=changes)
++                              context_labels=tuple('' for _ in selection.contexts), artifacts=artifacts, changes=changes,
++                              metadata={'deployable': deployable} if deployable != solution else {})
+             return OperatorResult(child, attempt, None, failed, prompts)
+         raise AssertionError('unreachable')
+diff -ruN a/opto/features/recursive_opt/coevolution/projections.py b/opto/features/recursive_opt/coevolution/projections.py
+--- a/opto/features/recursive_opt/coevolution/projections.py	1970-01-01 01:00:00.000000000 +0100
++++ b/opto/features/recursive_opt/coevolution/projections.py	2026-09-30 11:46:18.101507499 +0200
+@@ -0,0 +1,102 @@
++"""Projections for co-evolution candidates (the Trace projection idea applied to program sources).
++
++A projection maps a generated source to the source that is evaluated and deployed:
++``projection(source) -> (projected_source, note)``, or raises ``ProjectionError`` to reject it
++before any evaluation. The candidate keeps its editable source; the deployable program is the
++projected one. Projections are registered by reference so control-plane specs can declare them.
++"""
++
++from __future__ import annotations
++
++import ast
++from typing import Any, Callable, Dict, Mapping, Sequence, Tuple
++
++Projection = Callable[[str], Tuple[str, str]]
++
++
++class ProjectionError(ValueError):
++    """The candidate cannot be projected onto the feasible set (rejected before evaluation)."""
++
++
++class CompileCheck:
++    """Reject sources that do not parse or do not define the required top-level names."""
++
++    def __init__(self, required: Sequence[str] = ()) -> None:
++        self.required = tuple(required)
++
++    def __call__(self, source: str) -> Tuple[str, str]:
++        try:
++            tree = ast.parse(source)
++        except SyntaxError as error:
++            raise ProjectionError(f'SyntaxError: {error.msg} (line {error.lineno})') from None
++        defined = {n.name for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
++        defined |= {t.id for n in tree.body if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)}
++        missing = [name for name in self.required if name not in defined]
++        if missing:
++            raise ProjectionError(f'missing required definition(s): {", ".join(missing)}')
++        return source, ''
++
++
++class FallbackWrapper:
++    """Per-call projection onto a feasible baseline.
++
++    The deployed ``entry`` calls the candidate; if it raises or ``check(result, *args, **kwargs)``
++    is false, it returns the baseline ``fallback(*args, **kwargs)`` instead and records the cause
++    in ``_PROJECTION_EVENTS``. ``fallback_source`` and ``check_source`` each define one function
++    (any names); they are renamed internally.
++    """
++
++    def __init__(self, entry: str, fallback_source: str, check_source: str) -> None:
++        self.entry = entry
++        self.fallback_source = self._rename(fallback_source, f'_fallback_{entry}')
++        self.check_source = self._rename(check_source, f'_check_{entry}')
++
++    @staticmethod
++    def _rename(source: str, name: str) -> str:
++        tree = ast.parse(source)
++        functions = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
++        if len(functions) != 1:
++            raise ValueError('fallback/check source must define exactly one top-level function')
++        functions[-1].name = name
++        return ast.unparse(tree)
++
++    def __call__(self, source: str) -> Tuple[str, str]:
++        entry = self.entry
++        wrapped = (f'{source.rstrip()}\n\n\n# --- projection: per-call fallback onto a feasible baseline ---\n'
++                   f'_PROJECTION_EVENTS = []\n_candidate_{entry} = {entry}\n\n\n{self.fallback_source}\n\n\n{self.check_source}\n\n\n'
++                   f'def {entry}(*args, **kwargs):\n'
++                   f'    try:\n'
++                   f'        result = _candidate_{entry}(*args, **kwargs)\n'
++                   f'    except Exception as error:\n'
++                   f'        _PROJECTION_EVENTS.append(type(error).__name__)\n'
++                   f'        return _fallback_{entry}(*args, **kwargs)\n'
++                   f'    try:\n'
++                   f'        valid = _check_{entry}(result, *args, **kwargs)\n'
++                   f'    except Exception:\n'
++                   f'        valid = False\n'
++                   f'    if valid:\n'
++                   f'        return result\n'
++                   f"    _PROJECTION_EVENTS.append('invalid')\n"
++                   f'    return _fallback_{entry}(*args, **kwargs)\n')
++        return wrapped, f'{entry} wrapped with a per-call fallback onto the baseline'
++
++
++_REGISTRY: Dict[str, Callable[[Mapping[str, Any]], Projection]] = {
++    'recursive_opt.projection.compile_check@1': lambda config: CompileCheck(config.get('required', ())),
++    'recursive_opt.projection.fallback_wrapper@1': lambda config: FallbackWrapper(config['entry'], config['fallback_source'], config['check_source']),
++}
++
++
++def register_projection(ref: str, factory: Callable[[Mapping[str, Any]], Projection]) -> None:
++    """Register a projection factory ``factory(config) -> projection`` under a versioned ref."""
++    if '@' not in ref:
++        raise ValueError('projection refs must be versioned, e.g. "my.projection@1"')
++    _REGISTRY[ref] = factory
++
++
++def make_projection(spec: Mapping[str, Any]) -> Projection:
++    """Build a projection from ``{'ref': ..., 'config': {...}}``."""
++    ref = spec.get('ref')
++    if ref not in _REGISTRY:
++        raise ValueError(f'unknown projection ref {ref!r}; register it with register_projection()')
++    return _REGISTRY[ref](dict(spec.get('config') or {}))
+diff -ruN a/tests/unit_tests/test_recursive_coevolution.py b/tests/unit_tests/test_recursive_coevolution.py
+--- a/tests/unit_tests/test_recursive_coevolution.py	2026-09-30 11:46:18.099357022 +0200
++++ b/tests/unit_tests/test_recursive_coevolution.py	2026-09-30 11:46:18.102955552 +0200
+@@ -377,3 +377,98 @@
+     assert result.metadata['report']['solution_attempts'] == 6
+     assert 'SCORE = SCORE + 0.5' in result.artifact['program']
+ 
++
++# ------------------------------------------------------------------ guides, diagnostics, projections
++
++from opto.features.recursive_opt.coevolution import (  # noqa: E402
++    CompileCheck,
++    FallbackWrapper,
++    GuidedEvaluator,
++    ProjectionError,
++    format_case_diagnostics,
++    make_projection,
++    register_projection,
++)
++
++
++def test_guided_evaluator_separates_guide_score_and_enforces_constraints():
++    def evaluate(source):
++        return {'combined_score': 30.0, 'success_rate': 0.06}, {}
++    penalize = GuidedEvaluator(evaluate, hard_constraints={'success_rate': ('>=', 1.0)}, violation='penalize', penalty_score=0.0)
++    metrics, artifacts = penalize('x')
++    assert metrics['guided_score'] == 0.0 and metrics['combined_score'] == 30.0
++    assert 'success_rate' in artifacts['constraints']
++    reject = GuidedEvaluator(evaluate, hard_constraints={'success_rate': ('>=', 1.0)}, violation='reject')
++    metrics, _ = reject('x')
++    assert metrics['validity'] == 0 and 'success_rate' in metrics['error']
++    custom = GuidedEvaluator(lambda s: ({'a': 2.0}, {'cases': [1]}), score_fn=lambda m, a: m['a'] * 10)
++    assert custom('x')[0]['guided_score'] == 20.0
++
++
++def test_case_diagnostics_highlights_worst_gaps_and_failures():
++    cases = [{'case': i, 'value': 1.0 + i / 10, 'bound': 1.0, 'ok': True} for i in range(10)]
++    cases.append({'case': 10, 'ok': False, 'error': 'ZeroDivisionError: float division by zero'})
++    cases.append({'case': 11, 'ok': False, 'error': 'ZeroDivisionError: float division by zero'})
++    text = format_case_diagnostics(cases, worst=3, lower_is_better=True)
++    assert 'case 9' in text and 'case 0' not in text.split('Worst')[1]
++    assert '2 case(s) failed' in text and 'ZeroDivisionError' in text
++
++
++def test_fallback_wrapper_projects_failures_onto_baseline():
++    source = 'def solve(x):\n    return 1 / x\n'
++    wrapper = FallbackWrapper(entry='solve', fallback_source='def solve(x):\n    return -1\n', check_source='def check(result, x):\n    return result < 100\n')
++    projected, notes = wrapper(source)
++    namespace = {}
++    exec(projected, namespace)
++    assert namespace['solve'](2) == 0.5          # candidate kept when valid
++    assert namespace['solve'](0) == -1           # exception -> fallback
++    assert namespace['solve'](0.001) == -1       # invalid result -> fallback
++    assert namespace['_PROJECTION_EVENTS'] == ['ZeroDivisionError', 'invalid']
++    assert 'fallback' in notes
++
++
++def test_compile_check_rejects_before_evaluation():
++    check = CompileCheck(required=('solve',))
++    assert check('def solve():\n    return 1\n')[0].startswith('def solve')
++    with pytest.raises(ProjectionError, match='SyntaxError'):
++        check('def solve(:\n')
++    with pytest.raises(ProjectionError, match='solve'):
++        check('def other():\n    return 1\n')
++
++
++def test_projection_registry_builds_from_config():
++    register_projection('test.double_newline@1', lambda config: (lambda source: (source + '\n' * config['n'], 'padded')))
++    projection = make_projection({'ref': 'test.double_newline@1', 'config': {'n': 2}})
++    assert projection('x')[0] == 'x\n\n'
++    assert make_projection({'ref': 'recursive_opt.projection.compile_check@1', 'config': {'required': ['f']}})('def f(): pass')[0]
++
++
++def test_operator_projects_before_evaluation_and_keeps_editable_content():
++    population = Population()
++    population.add(Candidate('p', 'SCORE = 1.0\n# end', {'combined_score': 1.0}, 0))
++    seen = []
++
++    def evaluate(source):
++        seen.append(source)
++        return toy_evaluate(source)
++    projection = lambda source: (source + '\nSCORE = SCORE + 10', 'bonus')  # noqa: E731
++    llm = ScriptedLLM(['<<<<<<< SEARCH\n# end\n=======\nSCORE = SCORE + 0.5\n# end\n>>>>>>> REPLACE'])
++    operator = PopulationOperator(llm, evaluate, system_message='T', mode='diff', retries=1, projections=[projection])
++    from opto.features.recursive_opt.coevolution import Selection
++    result = operator.run(Selection(population.get('p'), [], ''), population, iteration=1)
++    child = result.candidate
++    assert seen[0].endswith('SCORE = SCORE + 10')
++    assert 'SCORE = SCORE + 10' not in child.content and child.metadata['deployable'].endswith('SCORE = SCORE + 10')
++    assert child.metrics['combined_score'] == 11.5 and child.artifacts['projection'] == 'bonus'
++    rejecting = PopulationOperator(ScriptedLLM(['<<<<<<< SEARCH\n# end\n=======\nSCORE = (\n# end\n>>>>>>> REPLACE']), evaluate, system_message='T', retries=1, projections=[CompileCheck()])
++    failed = rejecting.run(Selection(population.get('p'), [], ''), population, iteration=2)
++    assert failed.candidate is None and 'SyntaxError' in failed.error and len(seen) == 1  # rejected before evaluation
++
++
++def test_engine_reports_deployable_best_program():
++    solution = CountingLLM(lambda n, s, u: diff_add(1.0))
++    config = CoevolutionConfig(**{**evox_preset(horizon=3, summaries=False, generate_labels=False, retries=1), 'trigger': 'never'})
++    engine = CoevolutionEngine(config, solution_llm=solution, meta_llm=lambda s, u: '', evaluate=toy_evaluate, initial_source='SCORE = 1.0\n# end',
++                               system_message='T', projections=[lambda source: (source + '\n# deployed', 'tag')])
++    report = engine.run()
++    assert report['best_source'].endswith('# deployed') and not report['best_editable_source'].endswith('# deployed')

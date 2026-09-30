@@ -1,5 +1,0 @@
-{
-  "components": {
-    "optimizer": "import random\n\ndef propose(history, bounds, seed):\n    rng = random.Random(seed + len(history))\n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n    \n    best = min(history, key=lambda h: h['value'])\n    best_x = best['x']\n    \n    # Exploit with probability 0.7, else explore\n    if rng.random() < 0.7:\n        point = []\n        for i, (low, high) in enumerate(bounds):\n            center = best_x[i]\n            std = (high - low) / 10.0\n            val = rng.gauss(center, std)\n            val = max(low, min(high, val))\n            point.append(val)\n        return point\n    else:\n        return [rng.uniform(low, high) for low, high in bounds]\n"
-  }
-}

@@ -122,6 +122,7 @@ class SearchTemplate(Trainer):
               *,
               guide, # guide to provide feedback
               train_dataset,  # dataset of (x, info) pairs to train the agent
+              curriculum = None, # optional failed-then-solved replay configuration
               # validation
               validate_dataset = None, # same format as train_dataset; if None use the current batch.
               validate_guide = None,  #  to provide scores for the validation set
@@ -162,7 +163,7 @@ class SearchTemplate(Trainer):
 
         if self.train_sampler is None:
             self.train_sampler = Sampler(
-                DataLoader(train_dataset, batch_size=batch_size),
+                DataLoader(train_dataset, batch_size=batch_size, curriculum=curriculum),
                 guide,
                 num_threads=self.num_threads,
                 subbatch_size=subbatch_size,
@@ -232,7 +233,7 @@ class SearchTemplate(Trainer):
             train_num_samples.append(info_sample['num_samples'])
             self.n_samples += len(samples)  # update the number of samples processed
 
-            if self.n_iters % log_frequency == 0:
+            if log_frequency is not None and self.n_iters % log_frequency == 0:
                 avg_train_score = np.sum(np.array(train_scores) * np.array(train_num_samples)) / np.sum(train_num_samples)
                 self.logger.log('Algo/Average train score', avg_train_score, self.n_iters, color='blue')
                 self.log(info_update, prefix="Update/")
@@ -265,7 +266,15 @@ class SearchTemplate(Trainer):
             agents (list): A list of trace.Modules (proposed parameters) to evaluate.
                 **kwargs: Additional keyword arguments that may be used by the implementation.
         """
-        samples = Samples(*self.train_sampler.sample(agents, description_prefix='Sampling training minibatch: '))  # create a Samples object to store the samples and the minibatch
+        # Only TRAIN is replayed here. Recheck after the update, before drawing
+        # the next batch, so large pools can learn fail-to-success transitions.
+        if (self.train_sampler.loader.curriculum is not None
+                and self.train_sampler._prev_batch is not None and agents):
+            self.train_sampler.sample(
+                agents, use_prev_batch=True, observe_curriculum=True,
+                description_prefix='Curriculum: rechecking previous training batch: ',
+            )
+        samples = Samples(*self.train_sampler.sample(agents, observe_curriculum=True, description_prefix='Sampling training minibatch: '))  # create a Samples object to store the samples and the minibatch
         # Log information about the sampling
         scores = [ g.get_scores() for g in samples.samples]  # list of list of scores for each BatchRollout
         scores = [item for sublist in scores for item in sublist if item is not None]  # flatten the list of scores

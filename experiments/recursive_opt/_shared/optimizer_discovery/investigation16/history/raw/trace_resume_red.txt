@@ -1,0 +1,80 @@
+...FF                                                                    [100%]
+=================================== FAILURES ===================================
+____ test_interrupted_production_trace_resumes_without_replacing_responses _____
+
+tmp_path = PosixPath('/tmp/pytest-of-xav/pytest-90/test_interrupted_production_tr0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f0a080ff240>
+
+    def test_interrupted_production_trace_resumes_without_replacing_responses(
+        tmp_path: Path, monkeypatch: Any
+    ) -> None:
+        """An interrupted engine trace must not prevent completion of its uncompleted slots."""
+        owner, state = _owner(tmp_path, monkeypatch)
+        state["fail_at"] = 2
+        with pytest.raises(RuntimeError):
+            T.generate_recursive(owner, 701, proposals_per_parent=2)
+        directory = tmp_path / "701/A2"
+>       assert not E.exists(directory / "trace.json")
+E       AssertionError: assert not True
+E        +  where True = <function exists at 0x7f0a0800c180>((PosixPath('/tmp/pytest-of-xav/pytest-90/test_interrupted_production_tr0/701/A2') / 'trace.json'))
+E        +    where <function exists at 0x7f0a0800c180> = E.exists
+
+tests/unit_tests/test_investigation16_history_trace_review.py:113: AssertionError
+___________ test_completed_trace_recovers_missing_completion_marker ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-xav/pytest-90/test_completed_trace_recovers_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f0a080ff130>
+
+    def test_completed_trace_recovers_missing_completion_marker(
+        tmp_path: Path, monkeypatch: Any
+    ) -> None:
+        """A crash between the two final artifact writes must not regenerate any response."""
+        owner, state = _owner(tmp_path, monkeypatch)
+        persist = E.persist
+        fail_marker = [True]
+    
+        def injected_persist(path: Path, value: Any) -> None:
+            """Interrupt only the first completion-marker write, after the trace is safe."""
+            if path.name == "generation_complete.json" and fail_marker[0]:
+                fail_marker[0] = False
+                raise RuntimeError("unit interruption before completion marker")
+            persist(path, value)
+    
+        monkeypatch.setattr(E, "persist", injected_persist)
+        with pytest.raises(RuntimeError, match="completion marker"):
+            T.generate_recursive(owner, 701)
+        directory = tmp_path / "701/A2"
+        saved = (directory / "trace.json").read_bytes()
+        assert state["success"] == 8
+>       T.generate_recursive(owner, 701)
+
+tests/unit_tests/test_investigation16_history_trace_review.py:156: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+artifacts/optimizer_discovery/investigation16/trace_schedule.py:145: in generate_recursive
+    E.persist(
+tests/unit_tests/test_investigation16_history_trace_review.py:148: in injected_persist
+    persist(path, value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-xav/pytest-90/test_completed_trace_recovers_0/701/A2/trace.json')
+value = {'plan': {'schema_version': 'recursive-opt/v2alpha', 'kind': 'recursive_optimization', 'runtime': {'offline': True, 's...Sampling training minibatch: Sampling 1 agents on 1 inputs (Running sequentially).\n', 'completed_update_callbacks': 8}
+
+    def persist(path: Path, value: Any) -> None:
+        """Atomically preserve immutable sanitized JSON; refuse conflicting replacement."""
+        text = _safe(json.dumps(value, indent=2, allow_nan=False)) + "\n"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if exists(path):
+            original = (
+                path.read_bytes()
+                if path.exists()
+                else gzip.decompress(path.with_suffix(path.suffix + ".gz").read_bytes())
+            )
+            if original.decode() != text:
+>               raise RuntimeError(f"refusing to overwrite completed evidence: {path.name}")
+E               RuntimeError: refusing to overwrite completed evidence: trace.json
+
+artifacts/optimizer_discovery/exp15.py:91: RuntimeError
+=========================== short test summary info ============================
+FAILED tests/unit_tests/test_investigation16_history_trace_review.py::test_interrupted_production_trace_resumes_without_replacing_responses
+FAILED tests/unit_tests/test_investigation16_history_trace_review.py::test_completed_trace_recovers_missing_completion_marker
+2 failed, 3 passed in 2.95s

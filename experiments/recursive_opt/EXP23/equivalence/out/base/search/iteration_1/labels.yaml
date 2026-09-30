@@ -1,0 +1,40 @@
+iteration: 1
+diverge_label_length: 825
+refine_label_length: 745
+
+diverge_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  Produce a **fundamentally different** solution than the current one.
+  This must be a real **strategy shift**, not minor edits or small tweaks.
+  
+  Allowed: new structure, new strategy, different generation plan, different style/format, new components.
+  DO NOT do: superficial rewrites, polishing, or the same idea with only small changes.
+  
+  ### Constraints
+  - Keep the output **valid** for the same task and constraints.
+  - Prefer changes that introduce something **not present** in the following current solution.
+  - If reliable tools or shortcuts exist, use them instead of manual re-creation.
+  
+  ### Output
+  1. APPROACH: One short paragraph describing what is different and why.
+  2. OUTPUT: The full generated solution.
+
+refine_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  Improve the current solution **within the same core structure**.
+  Do **not** change the fundamental structure of the following solution; instead make it stronger, cleaner, and more reliable.
+  
+  Allowed: rewriting for clarity, fixing weaknesses, improving completeness, better edge-case handling, and added polish.
+  DO NOT switch to a fundamentally different approach.
+  
+  ### Constraints
+  - Keep the output **valid** for the same task and constraints.
+  - Spend effort on higher-quality execution and fewer mistakes.
+  
+  ### Output
+  1. REFINEMENT: One short paragraph describing what you improved and how.
+  2. OUTPUT: The full refined solution.

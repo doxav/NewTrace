@@ -1,5 +1,0 @@
-{
-  "components": {
-    "optimizer": "def propose(history, bounds, seed):\n    import random\n    rng = random.Random(seed + len(history))\n    \n    def get_x_val(obs):\n        if isinstance(obs, dict):\n            return obs['x'], obs['value']\n        else:\n            return obs[0], obs[1]\n    \n    if not history:\n        return [rng.uniform(low, high) for low, high in bounds]\n    \n    best_x = None\n    best_val = float('inf')\n    for obs in history:\n        x, val = get_x_val(obs)\n        if val < best_val:\n            best_val = val\n            best_x = x\n    \n    if rng.random() < 0.2:\n        return [rng.uniform(low, high) for low, high in bounds]\n    else:\n        new_x = []\n        for i, (low, high) in enumerate(bounds):\n            step = (high - low) * 0.1\n            noise = rng.gauss(0, step)\n            val = best_x[i] + noise\n            val = max(low, min(high, val))\n            new_x.append(val)\n        return new_x\n"
-  }
-}

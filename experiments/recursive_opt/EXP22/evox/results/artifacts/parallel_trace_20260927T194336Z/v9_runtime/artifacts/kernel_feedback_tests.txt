@@ -1,0 +1,37 @@
+test_checkpoints_and_structural_stops (test_kernel.KernelTests.test_checkpoints_and_structural_stops)
+Flat valid search continues; sustained invalidity and budget drift stop. ... cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+ok
+test_failed_http_attempts_do_not_restore_policy_or_escape_budget (test_kernel.KernelTests.test_failed_http_attempts_do_not_restore_policy_or_escape_budget)
+Transport and ordinary generation failures retain every consumed attempt. ... cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+Iteration 0 failed (used 3 attempts): Fixture generation failure
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+Iteration 0 failed (used 3 attempts): Fixture generation failure
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+Iteration 0 failed (used 3 attempts): Fixture generation failure
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+Iteration 0 failed (used 3 attempts): Fixture generation failure
+ok
+test_pre_http_database_failure_still_restores_fallback (test_kernel.KernelTests.test_pre_http_database_failure_still_restores_fallback)
+A database error before HTTP retries the same iteration without consuming budget. ... cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+Iteration 0 failed (used 1 attempts): Fixture database failure
+Iteration 0 failed (used 1 attempts): Fixture parse failure
+ok
+test_registration_compile_and_artifact (test_kernel.KernelTests.test_registration_compile_and_artifact)
+The intended versioned engine and complete code artifact resolve. ... ok
+test_selected_cp_a_canonical_execution (test_kernel.KernelTests.test_selected_cp_a_canonical_execution)
+Execute the selected engine with explicit non-portable factory metadata. ... ok
+test_trace_mock_policy_swap_and_feedback (test_kernel.KernelTests.test_trace_mock_policy_swap_and_feedback)
+A real OptoPrimeV2 step consumes feedback and activates through stock migration. ... cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+cascade_evaluation is true but /home/xav/code/evo-compare/repos/skydiscover/benchmarks/ADRS/prism/evaluator/evaluator.py has no evaluate_stage1 — will fall back to direct evaluation
+ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 2.096s
+
+OK

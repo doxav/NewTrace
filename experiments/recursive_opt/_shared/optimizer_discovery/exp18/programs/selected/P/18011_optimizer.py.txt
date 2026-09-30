@@ -1,0 +1,194 @@
+def propose(history, bounds, seed):
+    import random, math
+
+    dim = len(bounds)
+    n_init = 10
+
+    # Halton sequence for initial exploration
+    if len(history) < n_init:
+        primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+        x = []
+        for i in range(dim):
+            base = primes[i]
+            index = len(history) + 1
+            f = 1.0
+            value = 0.0
+            n = index
+            while n > 0:
+                f = f / base
+                value += f * (n % base)
+                n //= base
+            low, high = bounds[i]
+            x.append(low + value * (high - low))
+        return x
+
+    # State stored in first history entry
+    if "state" not in history[0]:
+        best = min(history, key=lambda r: r["value"])
+        state = {
+            "best_x": list(best["x"]),
+            "best_value": best["value"],
+            "step_size": 0.2,
+            "no_improve": 0,
+        }
+        history[0]["state"] = state
+    else:
+        state = history[0]["state"]
+
+    # Update state with most recent point
+    last = history[-1]
+    if last["value"] < state["best_value"]:
+        state["best_x"] = list(last["x"])
+        state["best_value"] = last["value"]
+        state["no_improve"] = 0
+        state["step_size"] = min(0.5, state["step_size"] * 1.1)
+    else:
+        state["no_improve"] += 1
+        if state["no_improve"] % 3 == 0:
+            state["step_size"] = max(1e-4, state["step_size"] * 0.8)
+
+    rng = random.Random(seed + len(history))
+
+    # Restart if stuck
+    if state["no_improve"] >= 12:
+        state["no_improve"] = 0
+        state["step_size"] = 0.2
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    # Occasional global restart
+    if rng.random() < 0.03:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    # Build Gaussian process model
+    n = len(history)
+    X = [row["x"] for row in history]
+    y = [row["value"] for row in history]
+
+    # Estimate length scales from data
+    length_scales = []
+    for i in range(dim):
+        diffs = []
+        for j in range(n):
+            for k in range(j + 1, n):
+                diffs.append(abs(X[j][i] - X[k][i]))
+        if diffs:
+            med = sorted(diffs)[len(diffs) // 2]
+        else:
+            med = 0.1 * (bounds[i][1] - bounds[i][0])
+        if med < 1e-6:
+            med = 0.1 * (bounds[i][1] - bounds[i][0])
+        length_scales.append(max(med, 0.05 * (bounds[i][1] - bounds[i][0])))
+
+    sigma_f = 1.0
+    noise = 1e-6
+
+    def kernel(x1, x2):
+        s = 0.0
+        for i in range(dim):
+            d = (x1[i] - x2[i]) / length_scales[i]
+            s += d * d
+        return sigma_f * sigma_f * math.exp(-0.5 * s)
+
+    K = [[kernel(X[i], X[j]) for j in range(n)] for i in range(n)]
+    for i in range(n):
+        K[i][i] += noise * noise
+
+    def invert_matrix(mat):
+        m = len(mat)
+        aug = [row[:] + [1.0 if i == j else 0.0 for j in range(m)] for i, row in enumerate(mat)]
+        for col in range(m):
+            max_val = 0.0
+            pivot_row = col
+            for row in range(col, m):
+                if abs(aug[row][col]) > max_val:
+                    max_val = abs(aug[row][col])
+                    pivot_row = row
+            if max_val < 1e-12:
+                raise ValueError("Singular")
+            if pivot_row != col:
+                aug[col], aug[pivot_row] = aug[pivot_row], aug[col]
+            pivot = aug[col][col]
+            for j in range(2 * m):
+                aug[col][j] /= pivot
+            for row in range(m):
+                if row != col:
+                    factor = aug[row][col]
+                    if factor != 0.0:
+                        for j in range(2 * m):
+                            aug[row][j] -= factor * aug[col][j]
+        return [row[m:] for row in aug]
+
+    try:
+        K_inv = invert_matrix(K)
+    except Exception:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    K_inv_y = [sum(K_inv[i][j] * y[j] for j in range(n)) for i in range(n)]
+
+    def gp_predict(x):
+        k = [kernel(x, X[i]) for i in range(n)]
+        mu = sum(k[i] * K_inv_y[i] for i in range(n))
+        kK = [sum(k[j] * K_inv[j][i] for j in range(n)) for i in range(n)]
+        var = kernel(x, x) - sum(kK[i] * k[i] for i in range(n))
+        var = max(var, 1e-12)
+        return mu, var
+
+    # Generate candidate points
+    candidates = []
+    for _ in range(150):
+        candidates.append([rng.uniform(low, high) for low, high in bounds])
+
+    best_x = state["best_x"]
+    for _ in range(50):
+        cand = []
+        for i in range(dim):
+            sigma = state["step_size"] * (bounds[i][1] - bounds[i][0])
+            cand.append(max(bounds[i][0], min(bounds[i][1], best_x[i] + rng.gauss(0, sigma))))
+        candidates.append(cand)
+
+    if n >= 2:
+        sorted_hist = sorted(history, key=lambda r: r["value"])
+        second_best = sorted_hist[1]
+        for _ in range(20):
+            cand = []
+            for i in range(dim):
+                sigma = state["step_size"] * (bounds[i][1] - bounds[i][0])
+                cand.append(max(bounds[i][0], min(bounds[i][1], second_best["x"][i] + rng.gauss(0, sigma))))
+            candidates.append(cand)
+
+    best_value = state["best_value"]
+
+    def expected_improvement(mu, var):
+        std = math.sqrt(var)
+        if std < 1e-12:
+            return 0.0
+        z = (best_value - mu) / std
+        cdf = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+        pdf = math.exp(-0.5 * z * z) / math.sqrt(2.0 * math.pi)
+        return (best_value - mu) * cdf + std * pdf
+
+    best_candidate = None
+    best_ei = -1e9
+    for cand in candidates:
+        mu, var = gp_predict(cand)
+        ei = expected_improvement(mu, var)
+        if ei > best_ei:
+            best_ei = ei
+            best_candidate = cand
+
+    if best_candidate is not None:
+        return best_candidate
+
+    # Fallback local search
+    if rng.random() < 0.5:
+        i = rng.randrange(dim)
+        x = list(state["best_x"])
+        sigma = state["step_size"] * (bounds[i][1] - bounds[i][0])
+        x[i] = max(bounds[i][0], min(bounds[i][1], x[i] + rng.gauss(0, sigma)))
+        return x
+    else:
+        x = []
+        for i in range(dim):
+            sigma = state["step_size"] * (bounds[i][1] - bounds[i][0])
+            x.append(max(bounds[i][0], min(bounds[i][1], state["best_x"][i] + rng.gauss(0, sigma))))
+        return x

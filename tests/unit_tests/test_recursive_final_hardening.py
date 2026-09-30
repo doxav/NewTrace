@@ -547,10 +547,10 @@ def test_required_workflow_has_gepa_dependency_and_hardening_matrix() -> None:
 def test_readiness_uses_source_digests_without_sha_environment() -> None:
     """A checkout verifies digests and the explicit pre/post-CI readiness state."""
     readiness = json.loads(
-        Path("artifacts/control_plane_v2/prompt18_readiness.json").read_text()
+        Path("experiments/recursive_opt/_shared/control_plane_v2/prompt18_readiness.json").read_text()
     )
     smoke = json.loads(
-        Path("artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json").read_text()
+        Path("experiments/recursive_opt/_shared/control_plane_v2/golden_specs/uc4_positive.normalized.json").read_text()
     )
     provenance = S.compile_plan(smoke).code_provenance
 

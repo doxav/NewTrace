@@ -1,0 +1,81 @@
+def propose(history, bounds, seed):
+    import random, math
+
+    rng = random.Random(seed + len(history))
+    d = len(bounds)
+    n = len(history)
+
+    # Halton sequence helper
+    def halton(index, base):
+        result = 0.0
+        f = 1.0 / base
+        while index > 0:
+            result += f * (index % base)
+            index //= base
+            f /= base
+        return result
+
+    primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+
+    def halton_point(index):
+        point = []
+        for i in range(d):
+            b = primes[i]
+            u = halton(index, b)
+            point.append(bounds[i][0] + (bounds[i][1] - bounds[i][0]) * u)
+        return point
+
+    # First point: center
+    if n == 0:
+        return [(low + high) / 2.0 for low, high in bounds]
+
+    # Initial exploration: next 2*d-1 points use Halton
+    if n < 2 * d:
+        return halton_point(n)
+
+    # Global exploration probability (higher early, decays)
+    p_explore = max(0.05, 0.3 * (1 - n / 32))
+    if rng.random() < p_explore:
+        return halton_point(n + 1)
+
+    best = min(history, key=lambda row: row["value"])["x"]
+
+    # Check improvement
+    improved = False
+    if n >= 2:
+        last_val = history[-1]["value"]
+        best_before = min(history[:-1], key=lambda row: row["value"])["value"]
+        if last_val < best_before:
+            improved = True
+
+    # Compute per-dimension standard deviation of all points
+    stds = []
+    for i in range(d):
+        vals = [row["x"][i] for row in history]
+        mean = sum(vals) / len(vals)
+        var = sum((v - mean) ** 2 for v in vals) / len(vals)
+        stds.append(math.sqrt(var))
+
+    # Base scale from remaining budget
+    base_scale = 0.2 * (1 - n / 32) ** 0.5 + 0.01
+
+    point = []
+    for i, (low, high) in enumerate(bounds):
+        # Scale per dimension: use std as a fraction of range, but clamp
+        if stds[i] > 1e-12:
+            frac = stds[i] / (high - low)
+        else:
+            frac = 0.1
+        scale_i = base_scale * frac
+
+        if improved:
+            scale_i *= 1.5
+        else:
+            scale_i *= 0.7
+
+        # Perturb best
+        new_x = best[i] + rng.gauss(0, scale_i * (high - low))
+        new_x = max(low, min(high, new_x))
+        point.append(new_x)
+
+    return point

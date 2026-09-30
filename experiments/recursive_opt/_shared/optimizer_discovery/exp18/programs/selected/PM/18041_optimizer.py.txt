@@ -1,0 +1,261 @@
+def propose(history, bounds, seed):
+    import random, math
+    rng = random.Random(seed + len(history))
+    d = len(bounds)
+    low = [b[0] for b in bounds]
+    high = [b[1] for b in bounds]
+
+    def clip(pt):
+        return [max(low[i], min(high[i], pt[i])) for i in range(d)]
+
+    if not history:
+        return [(low[i] + high[i]) / 2.0 for i in range(d)]
+
+    n = len(history)
+    best = min(history, key=lambda r: r["value"])
+    bx = best["x"]
+    bv = best["value"]
+
+    best_sofar = []
+    cur = None
+    for r in history:
+        if cur is None or r["value"] < cur:
+            cur = r["value"]
+        best_sofar.append(cur)
+
+    last_imp = 0
+    for i in range(1, n):
+        if best_sofar[i] < best_sofar[i - 1]:
+            last_imp = i
+    age = n - last_imp
+
+    base_scale = 0.2 / math.sqrt(1.0 + n / (4.0 * d))
+    if age >= 5:
+        scale = base_scale * 1.5
+    elif age <= 1 and n > 1:
+        scale = base_scale * 0.8
+    else:
+        scale = base_scale
+    if scale < 0.02:
+        scale = 0.02
+
+    if n < 2 * d:
+        p_explore = 0.3
+    elif n < 4 * d:
+        p_explore = 0.15
+    else:
+        p_explore = 0.08
+    if age >= 5:
+        p_explore = max(p_explore, 0.35)
+
+    if rng.random() < p_explore:
+        diag = math.sqrt(sum((high[i] - low[i]) ** 2 for i in range(d)))
+        threshold = 0.06 * diag
+        for _ in range(10):
+            pt = [rng.uniform(low[i], high[i]) for i in range(d)]
+            min_dist = None
+            for r in history:
+                dist = math.sqrt(sum((pt[i] - r["x"][i]) ** 2 for i in range(d)))
+                if min_dist is None or dist < min_dist:
+                    min_dist = dist
+            if min_dist is None or min_dist > threshold:
+                return pt
+        return [rng.uniform(low[i], high[i]) for i in range(d)]
+
+    def solve_linear(mat, vec):
+        size = len(mat)
+        aug = [mat[i][:] + [vec[i]] for i in range(size)]
+        for col in range(size):
+            pivot = col
+            max_val = abs(aug[col][col])
+            for r in range(col + 1, size):
+                if abs(aug[r][col]) > max_val:
+                    max_val = abs(aug[r][col])
+                    pivot = r
+            if max_val < 1e-12:
+                return None
+            if pivot != col:
+                aug[col], aug[pivot] = aug[pivot], aug[col]
+            div = aug[col][col]
+            for j in range(col, size + 1):
+                aug[col][j] /= div
+            for r in range(size):
+                if r != col:
+                    factor = aug[r][col]
+                    for j in range(col, size + 1):
+                        aug[r][j] -= factor * aug[col][j]
+        return [aug[i][size] for i in range(size)]
+
+    def fit_model(use_cross):
+        if use_cross:
+            min_points = (d + 1) * (d + 2) // 2
+        else:
+            min_points = 2 * d + 1
+        if n < min_points:
+            return None
+        rows = history
+        limit = 2 * min_points
+        if n > limit:
+            rows = sorted(history, key=lambda r: sum((r["x"][i] - bx[i]) ** 2 for i in range(d)))[:limit]
+        m = 1 + 2 * d + (d * (d - 1) // 2 if use_cross else 0)
+        A = []
+        y = []
+        for r in rows:
+            x = r["x"]
+            y.append(r["value"])
+            feats = [1.0] + list(x) + [xi * xi for xi in x]
+            if use_cross:
+                for i in range(d):
+                    for j in range(i + 1, d):
+                        feats.append(x[i] * x[j])
+            A.append(feats)
+        AtA = [[0.0] * m for _ in range(m)]
+        Aty = [0.0] * m
+        for idx, row in enumerate(A):
+            yi = y[idx]
+            for i in range(m):
+                Aty[i] += row[i] * yi
+                for j in range(m):
+                    AtA[i][j] += row[i] * row[j]
+        trace = sum(AtA[i][i] for i in range(m)) / m if m > 0 else 0
+        lam = 1e-6 * trace if trace > 0 else 1e-6
+        for i in range(m):
+            AtA[i][i] += lam
+        w = solve_linear(AtA, Aty)
+        if w is None:
+            return None
+        grad = [0.0] * d
+        H = [[0.0] * d for _ in range(d)]
+        for i in range(d):
+            grad[i] = w[1 + i]
+            H[i][i] = 2.0 * w[1 + d + i]
+            grad[i] += 2.0 * w[1 + d + i] * bx[i]
+        if use_cross:
+            idx = 1 + 2 * d
+            for i in range(d):
+                for j in range(i + 1, d):
+                    H[i][j] = w[idx]
+                    H[j][i] = w[idx]
+                    grad[i] += w[idx] * bx[j]
+                    grad[j] += w[idx] * bx[i]
+                    idx += 1
+        return w, grad, H, use_cross
+
+    full_min = (d + 1) * (d + 2) // 2
+    diag_min = 2 * d + 1
+    model = None
+    if n >= full_min:
+        model = fit_model(True)
+    elif n >= diag_min:
+        model = fit_model(False)
+
+    if model is not None:
+        w, grad, H, use_cross = model
+        diag_len = math.sqrt(sum((high[i] - low[i]) ** 2 for i in range(d)))
+        max_step = scale * diag_len
+
+        def model_value(pt):
+            val = w[0]
+            for i in range(d):
+                val += w[1 + i] * pt[i] + w[1 + d + i] * pt[i] * pt[i]
+            if use_cross:
+                idx = 1 + 2 * d
+                for i in range(d):
+                    for j in range(i + 1, d):
+                        val += w[idx] * pt[i] * pt[j]
+                        idx += 1
+            return val
+
+        best_cand = None
+        best_mv = None
+
+        for lam in [0.0, 1e-8, 1e-6, 1e-4, 1e-2]:
+            Hreg = [row[:] for row in H]
+            for i in range(d):
+                Hreg[i][i] += lam
+            bvec = [-g for g in grad]
+            delta = solve_linear(Hreg, bvec)
+            if delta is None:
+                continue
+            norm = math.sqrt(sum(xi * xi for xi in delta))
+            if norm > max_step and norm > 1e-12:
+                factor = max_step / norm
+                delta = [xi * factor for xi in delta]
+            pt = clip([bx[i] + delta[i] for i in range(d)])
+            mv = model_value(pt)
+            if best_mv is None or mv < best_mv:
+                best_mv = mv
+                best_cand = pt
+
+        gnorm = math.sqrt(sum(g * g for g in grad))
+        if gnorm > 1e-12:
+            direction = [-g / gnorm for g in grad]
+            for frac in [0.3, 0.6, 1.0]:
+                step = max_step * frac
+                pt = clip([bx[i] + step * direction[i] for i in range(d)])
+                mv = model_value(pt)
+                if best_mv is None or mv < best_mv:
+                    best_mv = mv
+                    best_cand = pt
+
+        for _ in range(20):
+            direction = [rng.gauss(0, 1) for _ in range(d)]
+            norm = math.sqrt(sum(xi * xi for xi in direction))
+            if norm < 1e-12:
+                continue
+            direction = [xi / norm for xi in direction]
+            step = max_step * rng.uniform(0.2, 1.0)
+            pt = clip([bx[i] + step * direction[i] for i in range(d)])
+            mv = model_value(pt)
+            if best_mv is None or mv < best_mv:
+                best_mv = mv
+                best_cand = pt
+
+        if best_cand is not None:
+            pt = [best_cand[i] + rng.gauss(0, 0.002 * (high[i] - low[i])) for i in range(d)]
+            return clip(pt)
+
+    if n >= d + 1:
+        rows = history
+        limit = 2 * (d + 1)
+        if n > limit:
+            rows = sorted(history, key=lambda r: sum((r["x"][i] - bx[i]) ** 2 for i in range(d)))[:limit]
+        m = d + 1
+        A = []
+        y = []
+        for r in rows:
+            x = r["x"]
+            y.append(r["value"])
+            A.append([1.0] + list(x))
+        AtA = [[0.0] * m for _ in range(m)]
+        Aty = [0.0] * m
+        for idx, row in enumerate(A):
+            yi = y[idx]
+            for i in range(m):
+                Aty[i] += row[i] * yi
+                for j in range(m):
+                    AtA[i][j] += row[i] * row[j]
+        trace = sum(AtA[i][i] for i in range(m)) / m if m > 0 else 0
+        lam = 1e-8 * trace if trace > 0 else 1e-8
+        for i in range(m):
+            AtA[i][i] += lam
+        w = solve_linear(AtA, Aty)
+        if w is not None:
+            grad = w[1:]
+            norm = math.sqrt(sum(g * g for g in grad))
+            if norm > 1e-12:
+                direction = [-g / norm for g in grad]
+                step = scale * rng.uniform(0.6, 1.4)
+                pt = clip([bx[i] + step * direction[i] * (high[i] - low[i]) for i in range(d)])
+                return pt
+
+    if rng.random() < 0.5:
+        pt = [bx[i] + rng.gauss(0, scale * (high[i] - low[i])) for i in range(d)]
+    else:
+        direction = [rng.gauss(0, 1) for _ in range(d)]
+        norm = math.sqrt(sum(xi * xi for xi in direction))
+        if norm > 1e-12:
+            direction = [xi / norm for xi in direction]
+        step = scale * rng.uniform(0.5, 1.5)
+        pt = [bx[i] + step * direction[i] * (high[i] - low[i]) for i in range(d)]
+    return clip(pt)

@@ -1819,7 +1819,7 @@ def test_29_all_retrieved_cards_are_bound_with_lineage(tmp_path: Path) -> None:
 
 def test_30_semantic_migration_classifications() -> None:
     report = json.loads(
-        Path("artifacts/control_plane_v2/migration_report.json").read_text(encoding="utf-8")
+        Path("experiments/recursive_opt/_shared/control_plane_v2/migration_report.json").read_text(encoding="utf-8")
     )
     expected = {
         "execution_replayable",
@@ -1942,7 +1942,7 @@ def test_34_runtime_file_inventory_is_recorded() -> None:
     proxy for footprint; the inventory is kept as documentation only.
     """
     evidence = json.loads(
-        Path("artifacts/control_plane_v2/code_footprint_after.json").read_text(
+        Path("experiments/recursive_opt/_shared/control_plane_v2/code_footprint_after.json").read_text(
             encoding="utf-8"
         )
     )
@@ -1954,13 +1954,13 @@ def test_34_runtime_file_inventory_is_recorded() -> None:
 
 def test_35_source_provenance() -> None:
     smoke = json.loads(
-        Path("artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json").read_text(
+        Path("experiments/recursive_opt/_shared/control_plane_v2/golden_specs/uc4_positive.normalized.json").read_text(
             encoding="utf-8"
         )
     )
     provenance = S.compile_plan(smoke).code_provenance
     readiness = json.loads(
-        Path("artifacts/control_plane_v2/prompt18_readiness.json").read_text(
+        Path("experiments/recursive_opt/_shared/control_plane_v2/prompt18_readiness.json").read_text(
             encoding="utf-8"
         )
     )

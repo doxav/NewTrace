@@ -1,0 +1,108 @@
+def propose(history, bounds, seed):
+    import random, math
+    rng = random.Random(seed + len(history))
+    dim = len(bounds)
+    n = len(history)
+
+    # Early exploration: Halton sequence for deterministic coverage
+    if n < 8:
+        primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+        index = seed + n + 1
+        point = []
+        for d in range(dim):
+            base = primes[d]
+            result = 0.0
+            f = 1.0 / base
+            i = index
+            while i > 0:
+                result += f * (i % base)
+                i //= base
+                f /= base
+            low, high = bounds[d]
+            point.append(low + result * (high - low))
+        return point
+
+    # Find best point
+    best_idx = 0
+    best_val = history[0]["value"]
+    for i, h in enumerate(history):
+        if h["value"] < best_val:
+            best_val = h["value"]
+            best_idx = i
+    best_x = history[best_idx]["x"]
+
+    # Compute streak (evaluations since last improvement)
+    streak = n - best_idx - 1
+
+    # Compute average distance from best to all other points
+    dists = []
+    for h in history:
+        dist = math.sqrt(sum((best_x[d] - h["x"][d]) ** 2 for d in range(dim)))
+        dists.append(dist)
+    avg_dist = sum(dists) / n if n > 0 else 1.0
+    if avg_dist == 0.0:
+        avg_dist = 1.0
+
+    # Shrink step size over time
+    progress = n / 32.0
+    step_scale = avg_dist * (1.0 - 0.8 * progress)
+    if step_scale < 1e-6:
+        step_scale = 1e-6
+
+    # Adaptive probabilities based on stagnation
+    if streak > 5:
+        p_local, p_de, p_line, p_random = 0.25, 0.35, 0.2, 0.2
+    else:
+        p_local, p_de, p_line, p_random = 0.5, 0.3, 0.1, 0.1
+
+    r = rng.random()
+    if r < p_local:
+        # Local search: Gaussian perturbation around best
+        trial = []
+        for d, (low, high) in enumerate(bounds):
+            noise = rng.gauss(0.0, step_scale * 0.5)
+            trial.append(min(max(best_x[d] + noise, low), high))
+        return trial
+
+    elif r < p_local + p_de:
+        # Differential evolution (DE/rand/1/bin)
+        idx = rng.sample(range(n), 3)
+        x1 = history[idx[0]]["x"]
+        x2 = history[idx[1]]["x"]
+        x3 = history[idx[2]]["x"]
+        F = 0.8
+        CR = 0.9
+        mutant = [x1[d] + F * (x2[d] - x3[d]) for d in range(dim)]
+        trial = []
+        for d in range(dim):
+            if rng.random() < CR:
+                trial.append(mutant[d])
+            else:
+                trial.append(best_x[d])
+        trial = [min(max(trial[d], bounds[d][0]), bounds[d][1]) for d in range(dim)]
+        return trial
+
+    elif r < p_local + p_de + p_line:
+        # Line search between best and second best
+        # Find second best (different from best)
+        second_val = float('inf')
+        second_x = None
+        for h in history:
+            if h["value"] < second_val and h["value"] > best_val:
+                second_val = h["value"]
+                second_x = h["x"]
+        if second_x is None:
+            # fallback to random
+            return [rng.uniform(low, high) for low, high in bounds]
+        t = rng.uniform(0.0, 1.2)  # allow slight extrapolation
+        trial = []
+        for d in range(dim):
+            val = best_x[d] + t * (second_x[d] - best_x[d])
+            # add small noise to avoid exact duplicates
+            val += rng.gauss(0.0, step_scale * 0.1)
+            trial.append(min(max(val, bounds[d][0]), bounds[d][1]))
+        return trial
+
+    else:
+        # Pure random exploration
+        return [rng.uniform(low, high) for low, high in bounds]

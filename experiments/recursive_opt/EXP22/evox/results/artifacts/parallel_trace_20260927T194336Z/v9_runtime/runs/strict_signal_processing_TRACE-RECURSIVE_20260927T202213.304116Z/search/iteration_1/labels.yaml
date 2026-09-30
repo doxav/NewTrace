@@ -1,0 +1,68 @@
+iteration: 1
+diverge_label_length: 2808
+refine_label_length: 2060
+
+diverge_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.
+  This may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.
+  You can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.
+  Think through what is needed to achieve a BREAKTHROUGH SCORE.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  - **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Classical smoothing filters**: Savitzky-Golay (`scipy.signal: savgol_filter`) ↔ Butterworth zero-phase (`scipy.signal: filtfilt, butter`) ↔ Whittaker-Henderson penalized smoother ↔ exponential/Hodrick-Prescott trend extraction
+  - **State-space / Bayesian**: Kalman filter with tuned process/measurement noise (`scipy.signal` + hand-rolled KF) ↔ RTS smoother variant ↔ simple 1D particle filter ↔ adaptive KF with noise covariance estimation
+  - **Multi-scale decomposition**: wavelet denoising (`pywt: wavedec, thresholding via wthresh`) ↔ empirical mode decomposition (hand-rolled sifting) ↔ multi-resolution moving averages with cross-scale fusion
+  - **Robust / piecewise-linear**: total-variation denoising (L1 trend filtering, hand-rolled ADMM) ↔ RANSAC-style segment fitting ↔ hinge/kink detection with linear fits between change points
+  - **Reversal-aware design**: hysteresis on slope sign (deadband on diffs) ↔ monotonicity-constrained smoother ↔ two-pass: smooth first, then suppress sign flips not supported by local slope magnitude
+  - **Delay compensation**: predict one step ahead (local linear / quadratic extrapolation of the smoothed estimate) to offset window_size-1 lag; tune prediction horizon per test signal
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken "creative" solution is worthless.
+  
+  Format:
+  1. APPROACH: Describe your different approach.
+  2. CODE: Implementation.
+
+refine_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You should keep the same fundamental approach and algorithm structure.
+  DO NOT switch to a different problem formulation.
+  Focus on REFINING / EXPLOITING the current approach: better inputs, additional polish, etc.
+  Think through what is needed to SQUEEZE the last few percent of performance.
+  Use sufficient computational budget for refinement.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF REFINEMENT strategies (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Libraries / tools for refinement**: `scipy.signal: savgol_filter, filtfilt, medfilt` ↔ `pywt: wavedec, waverec, wthresh` for polish passes
+  - **Smoothing parameter tuning**: sweep Savitzky-Golay (window, polyorder) ↔ penalized smoother lambda ↔ wavelet threshold level; grid/random search against composite score
+  - **Lag/smoothness tradeoff**: tune process-vs-measurement noise ratio in KF; vary prediction horizon to reduce L_recent without spiking reversals
+  - **Post-processing polish**: apply second lighter smoothing pass ↔ hysteresis deadband on slope sign flips to cut false reversals ↔ clip outliers before filtering
+  - **Robustness across signals**: adaptive per-signal parameter selection (estimate noise level via MAD, set thresholds relative to it); validate on all 5 signal types (sinusoid, multi-freq, chirp, steps, random walk)
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken solution is worthless.
+  
+  Format:
+  1. REFINEMENT: Describe what you are refining.
+  2. CODE: Implementation with refinement.

@@ -1,0 +1,25 @@
+
+==================================== ERRORS ====================================
+_ ERROR collecting artifacts/optimizer_discovery/investigation16/generation/test_analysis.py _
+import file mismatch:
+imported module 'test_analysis' has this __file__ attribute:
+  /home/xav/code/Trace/artifacts/optimizer_discovery/investigation16/feedback_experiment/test_analysis.py
+which is not the same as the test file we want to collect:
+  /home/xav/code/Trace/artifacts/optimizer_discovery/investigation16/generation/test_analysis.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting artifacts/optimizer_discovery/investigation16/production/test_analysis.py _
+import file mismatch:
+imported module 'test_analysis' has this __file__ attribute:
+  /home/xav/code/Trace/artifacts/optimizer_discovery/investigation16/feedback_experiment/test_analysis.py
+which is not the same as the test file we want to collect:
+  /home/xav/code/Trace/artifacts/optimizer_discovery/investigation16/production/test_analysis.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_ ERROR collecting artifacts/optimizer_discovery/investigation16/statistics/test_audit.py _
+import file mismatch:
+imported module 'test_audit' has this __file__ attribute:
+  /home/xav/code/Trace/artifacts/optimizer_discovery/investigation16/feedback/test_audit.py
+which is not the same as the test file we want to collect:
+  /home/xav/code/Trace/artifacts/optimizer_discovery/investigation16/statistics/test_audit.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+3 errors in 2.83s

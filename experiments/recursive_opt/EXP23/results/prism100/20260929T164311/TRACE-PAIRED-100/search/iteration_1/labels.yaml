@@ -1,0 +1,70 @@
+iteration: 1
+diverge_label_length: 2821
+refine_label_length: 2178
+
+diverge_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.
+  This may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.
+  You can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.
+  Think through what is needed to achieve a BREAKTHROUGH SCORE.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  - **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Greedy construction heuristics**: sort models by req_rate/slo or size descending; place each on GPU minimizing resulting max KVPR ↔ first-fit-decreasing on size ↔ best-fit by residual memory ↔ least-loaded GPU by pressure.
+  - **Local search / metaheuristics**: start from greedy, swap/move pairs of models between GPUs to reduce bottleneck ↔ simulated annealing ↔ tabu search on move/swap neighborhoods.
+  - **Multi-start / randomized restarts**: run greedy with randomized tie-breaking or random orderings many times, keep lowest max KVPR ↔ random restarts with perturbation (iterated local search).
+  - **Min-max load balancing formulations**: binary search on KVPR threshold then check feasibility via bin packing ↔ treat as scheduling on unrelated machines, LPT rule ↔ largest-pressure-first rebalancing until balanced.
+  - **Exact / structured decomposition**: enumerate assignments for the few largest models, greedily place the rest ↔ branch-and-bound over GPU assignments for small instances (≤20 models).
+  - **Constraint handling via repair**: allow overflow during search then repair by evicting models to least-crowded GPUs ↔ penalty-augmented objective (large penalty when sum(model_size) > 80) driving search back to feasibility.
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken "creative" solution is worthless.
+  
+  Format:
+  1. APPROACH: Describe your different approach.
+  2. CODE: Implementation.
+
+refine_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You should keep the same fundamental approach and algorithm structure.
+  DO NOT switch to a different problem formulation.
+  Focus on REFINING / EXPLOITING the current approach: better inputs, additional polish, etc.
+  Think through what is needed to SQUEEZE the last few percent of performance.
+  Use sufficient computational budget for refinement.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF REFINEMENT strategies (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Neighborhood intensification**: after greedy, iterate move/swap until no improvement; prioritize moves touching the max-KVPR GPU ↔ try 2-swap and 3-cycle exchanges.
+  - **Multi-start budget**: increase restart count / randomized orderings within the 10s timeout, keep best placement across seeds.
+  - **Objective shaping**: score candidate placements by max KVPR plus secondary tiebreak (second-highest KVPR, variance) to escape plateaus ↔ tune penalty weight for memory overflow.
+  - **Sorting / ordering tuning**: vary sort keys (req_rate/slo, model_size, ratio of both) and descending vs. hybrid orders; keep the best-performing ordering.
+  - **Post-processing polish**: repeatedly move the model causing peak KVPR to the GPU with most free memory ↔ rebalance until max KVPR stops decreasing; verify all models placed exactly once and memory fits before returning.
+  
+  Both sections assume only `numpy` is available; all approaches are implementable in pure Python.
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken solution is worthless.
+  
+  Format:
+  1. REFINEMENT: Describe what you are refining.
+  2. CODE: Implementation with refinement.

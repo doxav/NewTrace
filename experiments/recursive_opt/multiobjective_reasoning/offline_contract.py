@@ -213,7 +213,7 @@ def run_offline_contract() -> dict[str, Any]:
     repository_root = package_root.parents[2]
     readiness = json.loads(
         (
-            repository_root / "artifacts/control_plane_v2/prompt18_readiness.json"
+            repository_root / "experiments/recursive_opt/_shared/control_plane_v2/prompt18_readiness.json"
         ).read_text(encoding="utf-8")
     )
     locked_control = {
@@ -223,7 +223,7 @@ def run_offline_contract() -> dict[str, Any]:
     readiness_spec = json.loads(
         (
             repository_root
-            / "artifacts/control_plane_v2/golden_specs/uc4_positive.normalized.json"
+            / "experiments/recursive_opt/_shared/control_plane_v2/golden_specs/uc4_positive.normalized.json"
         ).read_text(encoding="utf-8")
     )
     readiness_provenance = control_plane.compile_plan(readiness_spec).code_provenance

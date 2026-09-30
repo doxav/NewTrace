@@ -1,0 +1,202 @@
+import random, math
+
+def propose(history, bounds, seed):
+    rng = random.Random(seed + len(history))
+    d = len(bounds)
+    n = len(history)
+    ranges = [high - low for low, high in bounds]
+
+    if n == 0:
+        return [(low + high) / 2.0 for low, high in bounds]
+
+    initial_points = d + 2
+    if n < initial_points:
+        point = []
+        for j in range(d):
+            perm = list(range(initial_points))
+            perm_rng = random.Random(seed + 1000 + j)
+            perm_rng.shuffle(perm)
+            cell = perm[n]
+            low, high = bounds[j]
+            span = high - low
+            if span <= 0:
+                span = 1.0
+            coord = low + (cell + 0.5) / initial_points * span
+            coord = max(low, min(high, coord))
+            point.append(coord)
+        return point
+
+    x_data = [p["x"] for p in history]
+    y_data = [p["value"] for p in history]
+    y_min = min(y_data)
+    y_max = max(y_data)
+    y_mean = sum(y_data) / n
+    y_std = math.sqrt(sum((v - y_mean) ** 2 for v in y_data) / n) if n > 1 else 1.0
+    if y_std < 1e-12:
+        y_std = 1.0
+
+    x_norm = []
+    for x in x_data:
+        row = []
+        for i in range(d):
+            span = ranges[i] if ranges[i] > 0 else 1.0
+            row.append((x[i] - bounds[i][0]) / span)
+        x_norm.append(row)
+
+    length_scales = [0.7] * d
+
+    def kernel(x, y):
+        s = 0.0
+        for i in range(d):
+            diff = (x[i] - y[i]) / length_scales[i]
+            s += diff * diff
+        r = math.sqrt(s)
+        if r < 1e-12:
+            return 1.0
+        sqrt5 = math.sqrt(5.0)
+        return (1.0 + sqrt5 * r + (5.0 / 3.0) * r * r) * math.exp(-sqrt5 * r)
+
+    noise = 1e-6
+    K = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            K[i][j] = kernel(x_norm[i], x_norm[j])
+            if i == j:
+                K[i][j] += noise
+
+    def invert_matrix(mat):
+        size = len(mat)
+        aug = [row[:] + [1.0 if i == j else 0.0 for j in range(size)]
+               for i, row in enumerate(mat)]
+        for col in range(size):
+            pivot = col
+            max_val = abs(aug[col][col])
+            for row in range(col + 1, size):
+                if abs(aug[row][col]) > max_val:
+                    max_val = abs(aug[row][col])
+                    pivot = row
+            if max_val < 1e-12:
+                continue
+            if pivot != col:
+                aug[col], aug[pivot] = aug[pivot], aug[col]
+            pivot_val = aug[col][col]
+            for j in range(2 * size):
+                aug[col][j] /= pivot_val
+            for row in range(size):
+                if row != col:
+                    factor = aug[row][col]
+                    if factor != 0.0:
+                        for j in range(2 * size):
+                            aug[row][j] -= factor * aug[col][j]
+        return [row[size:] for row in aug]
+
+    try:
+        K_inv = invert_matrix(K)
+    except Exception:
+        return [rng.uniform(low, high) for low, high in bounds]
+
+    y_norm = [(v - y_mean) / y_std for v in y_data]
+    alpha = [0.0] * n
+    for i in range(n):
+        s = 0.0
+        for j in range(n):
+            s += K_inv[i][j] * y_norm[j]
+        alpha[i] = s
+
+    best_val = y_min
+    best_norm = (best_val - y_mean) / y_std
+
+    best_idx = min(range(n), key=lambda i: y_data[i])
+    best_x = x_data[best_idx]
+
+    candidates = []
+
+    for _ in range(150):
+        candidates.append([rng.uniform(low, high) for low, high in bounds])
+
+    progress = n / 32.0
+    scales = []
+    for i in range(d):
+        sc = 0.2 * (1.0 - progress) + 0.02
+        scales.append(sc * ranges[i])
+
+    for _ in range(100):
+        pt = []
+        for i in range(d):
+            val = best_x[i] + rng.gauss(0.0, scales[i])
+            val = max(bounds[i][0], min(bounds[i][1], val))
+            pt.append(val)
+        candidates.append(pt)
+
+    small_scales = [sc * 0.2 for sc in scales]
+    for _ in range(50):
+        pt = []
+        for i in range(d):
+            val = best_x[i] + rng.gauss(0.0, small_scales[i])
+            val = max(bounds[i][0], min(bounds[i][1], val))
+            pt.append(val)
+        candidates.append(pt)
+
+    if n >= 2:
+        sorted_idx = sorted(range(n), key=lambda i: y_data[i])
+        for idx in sorted_idx[1:min(3, n)]:
+            x0 = x_data[idx]
+            for _ in range(30):
+                pt = []
+                for i in range(d):
+                    val = x0[i] + rng.gauss(0.0, scales[i] * 0.5)
+                    val = max(bounds[i][0], min(bounds[i][1], val))
+                    pt.append(val)
+                candidates.append(pt)
+
+    for i in range(d):
+        for sign in [-1, 1]:
+            for factor in [0.5, 1.0, 2.0]:
+                pt = best_x[:]
+                delta = sign * factor * scales[i]
+                pt[i] = max(bounds[i][0], min(bounds[i][1], pt[i] + delta))
+                candidates.append(pt)
+
+    best_ei = -1.0
+    best_sigma = -1.0
+    best_candidate = None
+
+    for x in candidates:
+        x_n = []
+        for i in range(d):
+            span = ranges[i] if ranges[i] > 0 else 1.0
+            x_n.append((x[i] - bounds[i][0]) / span)
+
+        k_star = [kernel(x_n, x_norm[j]) for j in range(n)]
+        mu_norm = 0.0
+        for i in range(n):
+            mu_norm += k_star[i] * alpha[i]
+
+        kxx = kernel(x_n, x_n)
+        v = 0.0
+        for i in range(n):
+            s = 0.0
+            for j in range(n):
+                s += K_inv[i][j] * k_star[j]
+            v += k_star[i] * s
+
+        sigma2 = max(0.0, kxx - v)
+        sigma_norm = math.sqrt(sigma2)
+
+        if sigma_norm < 1e-12:
+            ei = 0.0
+        else:
+            z = (best_norm - mu_norm) / sigma_norm
+            cdf = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+            pdf = math.exp(-0.5 * z * z) / math.sqrt(2.0 * math.pi)
+            ei = (best_norm - mu_norm) * cdf + sigma_norm * pdf
+
+        if ei > best_ei or (abs(ei - best_ei) < 1e-12 and sigma_norm > best_sigma):
+            best_ei = ei
+            best_sigma = sigma_norm
+            best_candidate = x
+
+    if best_candidate is not None:
+        return best_candidate
+
+    return [rng.uniform(low, high) for low, high in bounds]

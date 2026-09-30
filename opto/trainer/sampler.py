@@ -3,6 +3,7 @@ import copy
 from dataclasses import dataclass
 from typing import Union, List, Tuple, Dict, Any, Optional
 from opto import trace
+from opto.trace.nodes import ExceptionNode
 from opto.trainer.utils import batch_run
 from opto.trainer.guide import Guide
 from opto.trainer.utils import deepcopy_module
@@ -246,7 +247,7 @@ class Sampler:
         """ Get the number of epochs of the loader. """
         return self.loader.n_epochs
 
-    def sample(self, agents, use_prev_batch=False, description_prefix=''):
+    def sample(self, agents, use_prev_batch=False, description_prefix='', observe_curriculum=False):
         """ Sample a batch of data from the loader and evaluate the agents.
 
         Args:
@@ -330,4 +331,12 @@ class Sampler:
 
         assert len(samples) == len(agents)*(batch_size // self.subbatch_size + (1 if batch_size % self.subbatch_size > 0 else 0)), f"Expected {len(agents)*(batch_size // self.subbatch_size + (1 if batch_size % self.subbatch_size > 0 else 0))} samples, got {len(samples)}"
 
+        if observe_curriculum and self.loader.curriculum is not None and samples:
+            # Max over candidates is order-independent. Only successive TRAIN
+            # batches create transitions; validation never enters this hook.
+            scores = [[] for _ in xs]
+            for index, rollout in enumerate(rollout for sample in samples for rollout in sample.rollouts):
+                if not isinstance(rollout.target, ExceptionNode):
+                    scores[index % len(xs)].append(float(rollout.score))
+            self.loader.observe_scores([max(values) if values else float("nan") for values in scores])
         return samples, batch

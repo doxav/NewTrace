@@ -38,7 +38,7 @@ _LEVEL_BLOCKS = ('surface', 'module', 'engine', 'objective', 'llm_roles', 'datas
 _FLAT_LEVEL_BLOCKS = tuple((block for block in _LEVEL_BLOCKS if block != 'outputs'))
 _TOP_LEVEL_KEYS = {'schema_version', 'kind', 'fingerprint', 'extensions', *CANONICAL_SPEC_BLOCKS, *_LEVEL_BLOCKS}
 _LEGACY_TOP_LEVEL_KEYS = {'families', 'budget', 'tracebench', 'scoring', 'prior_promotion', 'memory_root', 'reuse_priors', 'levels', 'trainer_kwargs', 'run_id', 'extensions'}
-_BLOCK_KEYS = {'surface': {'kind', 'targets'}, 'module': {'ref', 'config', 'artifact', 'inputs'}, 'engine': {'name', 'config'}, 'runtime': {'strict_refs', 'reproducible', 'offline', 'resume', 'memory_root', 'reuse_priors', 'tracebench', 'scoring', 'prior_promotion', 'trainer_kwargs', 'run_id', 'seed', 'test_mode'}, 'objective': {'evaluator_ref', 'intent', 'metrics', 'directions', 'selection', 'hard_constraints', 'aggregation', 'feedback_channels'}, 'datasets': {'train', 'validation', 'holdout'}, 'llm_roles': {'forward', 'optimizer', 'feedback', 'judge'}, 'knowledge': {'store', 'retrieval', 'statuses', 'scope_fields', 'top_k', 'injection_codec', 'promotion_rule', 'rollback_rule'}, 'outputs': {'directory', 'format', 'save_artifacts'}, 'budget': {'optimizer_llm_calls', 'eval_llm_calls', 'candidates', 'evaluator_runs', 'wall_time_s', 'total_tokens', 'on_exceed'}, 'experiment': {'seeds', 'arms', 'matrix'}}
+_BLOCK_KEYS = {'surface': {'kind', 'targets'}, 'module': {'ref', 'config', 'artifact', 'inputs'}, 'engine': {'name', 'config'}, 'runtime': {'strict_refs', 'reproducible', 'offline', 'resume', 'memory_root', 'reuse_priors', 'tracebench', 'scoring', 'prior_promotion', 'trainer_kwargs', 'run_id', 'seed', 'test_mode'}, 'objective': {'evaluator_ref', 'intent', 'metrics', 'directions', 'selection', 'hard_constraints', 'aggregation', 'feedback_channels', 'trace_config'}, 'datasets': {'train', 'validation', 'holdout'}, 'llm_roles': {'forward', 'optimizer', 'feedback', 'judge'}, 'knowledge': {'store', 'retrieval', 'statuses', 'scope_fields', 'top_k', 'injection_codec', 'promotion_rule', 'rollback_rule'}, 'outputs': {'directory', 'format', 'save_artifacts'}, 'budget': {'optimizer_llm_calls', 'eval_llm_calls', 'candidates', 'evaluator_runs', 'wall_time_s', 'total_tokens', 'on_exceed'}, 'experiment': {'seeds', 'arms', 'matrix'}}
 _LEVEL_KEYS = {'id', 'depends_on', 'ordering_only', *_LEVEL_BLOCKS}
 _DATASET_REF_KEYS = {'ref', 'split', 'config'}
 _METRIC_KEYS = {'direction', 'source', 'aggregate_examples'}
@@ -433,7 +433,7 @@ def compile_objective(objective: Mapping[str, Any], *, capabilities: Iterable[st
         raise ValueError(f'engine does not support objective mode {mode!r}')
     minimize = frozenset((metric for metric, descriptor in metrics.items() if descriptor['direction'] == 'minimize'))
     config = ObjectiveConfig(mode=mode, weights=dict(selection.get('weights') or {}), minimize=minimize, pareto_metrics=tuple(selection['pareto_metrics']) if selection.get('pareto_metrics') is not None else None, tie_break=str(selection.get('tie_break', 'weighted')), seed=int(selection.get('seed', 0)), scalarize_dict=str(selection.get('scalarize_dict', 'score')), score_key=str(selection.get('score_key', 'score')))
-    return {'config': config, 'intent': objective.get('intent', ''), 'metrics': _freeze(_thaw(metrics)), 'hard_constraints': tuple(_thaw(objective.get('hard_constraints', ()))), 'aggregation': _freeze(_thaw(objective.get('aggregation', {}))), 'feedback_channels': tuple(objective.get('feedback_channels', ()))}
+    return {'config': config, 'intent': objective.get('intent', ''), 'metrics': _freeze(_thaw(metrics)), 'hard_constraints': tuple(_thaw(objective.get('hard_constraints', ()))), 'aggregation': _freeze(_thaw(objective.get('aggregation', {}))), 'feedback_channels': tuple(objective.get('feedback_channels', ())), **({'trace_config': _freeze(_thaw(objective['trace_config']))} if 'trace_config' in objective else {})}
 
 def resolve_llm_roles(spec: Mapping[str, Any], overrides: Optional[Mapping[str, Any]]=None, *, level_id: Optional[str]=None) -> Mapping[str, Any]:
     """Resolve all global or level-local LLM role overrides to exact profiles."""
@@ -1271,7 +1271,13 @@ def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mappi
         budget_exhausted = _safe_error(error)
     artifact = _snapshot_level_module(spec, module)
     status = 'budget_exhausted' if budget_exhausted else 'success' if evaluation.valid else 'invalid'
-    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status=status, valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'module_capabilities': sorted(_module_entry(spec['module']['ref']).capabilities), 'objective_mode': objective['config'].mode, 'candidate_trajectory': [] if trainer_result is None else [{'candidate_id': index, 'artifact': _snapshot_level_module(spec, getattr(candidate_module, 'module', candidate_module)), 'seed_relation': 'trainer_base', 'evaluation': {'score': None if candidate.mean_score() is None else float(candidate.mean_score())}, 'status': 'selected' if _snapshot_level_module(spec, getattr(candidate_module, 'module', candidate_module)) == artifact else 'rejected'} for index, (_, candidate) in enumerate([item for item in getattr(getattr(trainer_result, 'memory', None), 'memory', []) or [] if isinstance(item, tuple) and len(item) == 2 and hasattr(item[1], 'get_module')]) for candidate_module in [candidate.get_module()]], 'evaluator_records': prepared['records'], 'trace_optimize_path': fit, 'selected_models': _selected_role_models(prepared['clients']), 'budget_exhausted': budget_exhausted, 'optimizer_response_diagnostics': guard.optimizer_response_diagnostics}), error=evaluation.error)
+    return RunResult(unit_id=f'{unit.unit_id}:{level.level_id}', plan_fingerprint='', spec_fingerprint=unit.spec['fingerprint'], engine=spec['engine']['name'], module_ref=spec['module']['ref'], status=status, valid=evaluation.valid, evaluation=evaluation, artifact=_freeze(artifact), lineage=prepared['lineage'], usage=_combined_runtime_usage(evaluation.usage, prepared['usage']), budget=guard.report(), metadata=_freeze({'level_id': level.level_id, 'engine_capabilities': sorted(engine.capabilities), 'module_capabilities': sorted(_module_entry(spec['module']['ref']).capabilities), 'objective_mode': objective['config'].mode, 'candidate_trajectory': [] if trainer_result is None else [{'candidate_id': index, 'artifact': _snapshot_level_module(spec, getattr(candidate_module, 'module', candidate_module)), 'seed_relation': 'trainer_base', 'evaluation': {'score': None if candidate.mean_score() is None else float(candidate.mean_score())}, 'status': 'selected' if _snapshot_level_module(spec, getattr(candidate_module, 'module', candidate_module)) == artifact else 'rejected'} for index, (_, candidate) in enumerate([item for item in getattr(getattr(trainer_result, 'memory', None), 'memory', []) or [] if isinstance(item, tuple) and len(item) == 2 and hasattr(item[1], 'get_module')]) for candidate_module in [candidate.get_module()]], 'evaluator_records': prepared['records'], 'curriculum_events': _curriculum_events(trainer_result), 'trace_optimize_path': fit, 'selected_models': _selected_role_models(prepared['clients']), 'budget_exhausted': budget_exhausted, 'optimizer_response_diagnostics': guard.optimizer_response_diagnostics}), error=evaluation.error)
+def _curriculum_events(trainer: Any) -> List[Dict[str, Any]]:
+    """Persist observed training transitions, without exposing validation to replay."""
+    loader = getattr(getattr(trainer, 'train_sampler', None), 'loader', None)
+    curriculum = getattr(loader, 'curriculum', None)
+    return copy.deepcopy(curriculum.events) if curriculum is not None else []
+
 class _EvaluatedModule(Module):
     """Attach registered evaluator results to real Trace parameter dependencies."""
 
@@ -1299,7 +1305,10 @@ class _EvaluatedModule(Module):
         info = _evaluation_info(evaluation)
         self.records.append(info)
         self.guard.record_candidate('evaluated')
-        return self._attach(output if output is not None else list(self.module.parameters()), {'score': _objective_score(evaluation, self.objective), 'objectives': _thaw(evaluation.metrics), 'feedback': evaluation.feedback, 'trace': evaluation.trace})
+        # Configured capture is already projected into feedback. Its complete
+        # evidence remains in records, outside the optimizer's traced payload.
+        optimizer_trace = None if self.objective.get('trace_config') is not None else evaluation.trace
+        return self._attach(output if output is not None else list(self.module.parameters()), {'score': _objective_score(evaluation, self.objective), 'objectives': _thaw(evaluation.metrics), 'feedback': evaluation.feedback, 'trace': optimizer_trace})
 
     def __deepcopy__(self, memo: Dict[int, Any]) -> '_EvaluatedModule':
         """Copy trainable state while sharing guards and immutable run context."""
@@ -1520,12 +1529,18 @@ def _evaluate_example(module: Module, example: Any, context: Mapping[str, Any], 
     observe = hasattr(guard, 'menu_observations') and context.get('phase') == 'fit'
     artifact = _snapshot_level_module(guard.menu_level_spec, module) if observe else None
     try:
-        if evaluator.mode == 'output':
-            output = module(example)
-            result = normalize_evaluation_result(evaluator.evaluate(output, example, context))
+        def execute() -> Tuple[EvaluationResult, Any]:
+            """Execute exactly once inside any requested telemetry boundary."""
+            if evaluator.mode == 'output':
+                value = module(example)
+                return normalize_evaluation_result(evaluator.evaluate(value, example, context)), value
+            return normalize_evaluation_result(evaluator.evaluate(module, [example], context)), None
+        trace_config = context.get('objective', {}).get('trace_config')
+        if trace_config is not None:
+            from .traces import capture_evaluation
+            result, output = capture_evaluation(execute, trace_config)
         else:
-            output = None
-            result = normalize_evaluation_result(evaluator.evaluate(module, [example], context))
+            result, output = execute()
     except Exception as error:
         if observe:
             guard.menu_observations.append({'candidate': artifact, 'example': _thaw(example), 'phase': context['phase'], 'valid': False, 'metrics': {}, 'error': type(error).__name__})
@@ -2326,20 +2341,24 @@ def _validate_profile(profile: Mapping[str, Any], path: str, profiles: Mapping[s
         raise TypeError(f'{path} request_params must be a mapping')
     if request_timeout_s is not None and any(key.lower().replace('-', '_').replace(' ', '_') in _REQUEST_TIMEOUT_KEYS for key in profile['request_params']):
         raise ValueError(f'{path}.request_params may not duplicate request_timeout_s')
-    _validate_request_params(profile['request_params'], f'{path}.request_params')
-def _validate_request_params(value: Any, path: str) -> None:
+    _validate_request_params(profile['request_params'], f'{path}.request_params', allow_openrouter_sort=profile['provider'] == 'openrouter')
+def _validate_request_params(value: Any, path: str, *, allow_openrouter_sort: bool = False) -> None:
     """Reject request controls that can replace normalized provider identity."""
     if isinstance(value, Mapping):
         for key, item in value.items():
             if not isinstance(key, str):
                 raise TypeError(f'{path} contains a non-string key')
             normalized = key.lower().replace('-', '_').replace(' ', '_')
+            if allow_openrouter_sort and key == 'provider' and path.endswith('.request_params.extra_body'):
+                if not isinstance(item, Mapping) or set(item) != {'sort'} or not isinstance(item['sort'], str) or item['sort'] not in {'price', 'latency', 'throughput'}:
+                    raise ValueError(f'{path}.provider supports only a validated OpenRouter sort preference')
+                continue
             if normalized in _REQUEST_IDENTITY_KEYS:
                 raise ValueError(f'{path}.{key} may not override model, provider, credentials, or base_url')
-            _validate_request_params(item, f'{path}.{key}')
+            _validate_request_params(item, f'{path}.{key}', allow_openrouter_sort=allow_openrouter_sort)
     elif isinstance(value, (list, tuple)):
         for index, item in enumerate(value):
-            _validate_request_params(item, f'{path}[{index}]')
+            _validate_request_params(item, f'{path}[{index}]', allow_openrouter_sort=allow_openrouter_sort)
     elif isinstance(value, float) and not math.isfinite(value):
         raise ValueError(f'{path} must contain finite JSON numbers')
 def _validate_gepa_engine_config(config: Mapping[str, Any], index: int) -> None:
@@ -2399,6 +2418,9 @@ def _validate_objective_semantics(objective: Mapping[str, Any], index: int) -> N
     if not isinstance(objective['aggregation'], Mapping):
         raise TypeError('objective.aggregation must be a mapping')
     _reject_unknown_keys(objective['aggregation'], {'mode', 'weights'}, 'objective.aggregation')
+    if 'trace_config' in objective:
+        from .traces import validate_trace_config
+        validate_trace_config(objective['trace_config'])
     channels = objective['feedback_channels']
     if any((channel not in {'natural_language', 'trace'} for channel in channels)):
         raise ValueError('objective.feedback_channels supports natural_language and trace')
