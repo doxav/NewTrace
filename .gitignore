@@ -8,8 +8,16 @@ examples/notebook_outputs/recursive_opt_use_cases/
 
 # Log files
 *.log
+
+# Archives
 *.gz
 *.zip
+
+
+# Lock and cache
+lock
+**/*_locks/
+**/reader_cache/
  
 # Python virtualenv
 .venv*

@@ -59,6 +59,51 @@ First-hit medians: **fixed 12, llm_rewrite 12, Trace 22** solution calls. These 
 
 Five existing offline tests passed during this review in 20.529 seconds: stock-metric reproduction, exploit/fallback behavior, invalid GPU IDs, optimum aggregation with three case spot checks, and mock execution of all three arms. They establish these engineering properties, not a recursive efficacy result.
 
+## Final clean-run results (all nine runs complete, 2026-09-30)
+
+Recomputed by [`scripts/analyze.py`](scripts/analyze.py) into [`analysis.json`](results/clean_20260930T115256/analysis.json). Every run used
+exactly 100 solution calls.
+
+| Arm | Seed | Calls to optimum | Wasted attempts | Children at optimum | Policies deployed | Transport retries | Cost (USD) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| fixed | 42 | 8 | 9 | 54 | 0 | 1 | 0.133 |
+| fixed | 43 | 12 | 11 | 63 | 0 | 1 | 0.185 |
+| fixed | 44 | 32 | 6 | 47 | 0 | 1 | 0.131 |
+| llm_rewrite | 42 | 12 | 11 | 51 | 8 | 1 | 0.186 |
+| llm_rewrite | 43 | 5 | 27 | 41 | 7 | 9 | 0.156 |
+| llm_rewrite | 44 | 33 | 32 | 35 | 5 | 4 | 0.181 |
+| trace | 42 | 45 | 13 | 35 | 7 | 3 | 0.189 |
+| trace | 43 | 22 | 13 | 43 | 7 | 2 | 0.182 |
+| trace | 44 | 8 | 19 | 45 | 7 | 0 | 0.141 |
+
+| Per arm | fixed | llm_rewrite | trace |
+|---|---|---|---|
+| Reached the optimum | 3/3 | 3/3 | 3/3 |
+| Median calls to optimum (range) | 12 (8–32) | 12 (5–33) | 22 (8–45) |
+| Mean wasted attempts | **8.7** | 23.3 | 15.0 |
+| Mean children at optimum | **54.7** | 42.3 | 41.0 |
+| Total cost | $0.45 | $0.52 | $0.51 |
+
+All nine runs reach the all-case optimum; before EXP24, one of seven EXP22/EXP23 runs did. The fixed-policy control is
+as fast as both meta arms and wastes the fewest attempts; policy changes add failed attempts without faster discovery.
+Trace and the EvoX-style proposer are not distinguishable with three runs each. The combined O0 intervention is
+confounded (guide, feedback and projection changed together), and PRISM offers no headroom to test meta-optimization.
+
+## Investigation: why stock scores of 30+ are not progress (2026-09-30)
+
+| Check | Evidence | Result |
+|---|---|---|
+| Every PRISM candidate scored in EXP22 and EXP23 | [`scripts/investigate_above_optimum.py`](scripts/investigate_above_optimum.py) | 538 candidates; 88 above 26.256; **none of the 88 solves all 50 cases** (best success rate 0.94). The best of the 142 fully-solved candidates is **26.2559717**. |
+| Independent check of the optimum | [`scripts/verify_optimum_bruteforce.py`](scripts/verify_optimum_bruteforce.py) | Exhaustive enumeration of every placement on the 11 five-GPU cases matches the bisection solver to 4e-14. |
+| Constructive proof | [`results/analysis/metric_exploit_demo.txt`](results/analysis/metric_exploit_demo.txt) | A program that places every solved case at its optimum scores 28.03 when refusing about 10 hard cases, 29.23 refusing 20, 33.54 refusing 40 and 42.90 keeping only the easiest case. Quality per solved case is identical; only refusals change. (The "none" row is a script bug; the all-case value is 26.256.) |
+| The 30.877 program | same file | It solves cases 22, 45 and 47 (difficulty ranks 0, 16 and 17), each at its optimum; the optimum on exactly those three cases scores 30.877. The score is case selection, not quality. |
+| Upstream history | SkyDiscover `git log` | Commit `be802e9` (2026-04-07, "Fix reward hacking in Prism and EPLB evaluators") closed format hacks but kept `continue` on exceptions and timeouts. The README table added 2026-04-08 reports EvoX 30.52, AdaEvolve 26.37 and EvoX-AdaEvolve 26.27, all above the computed all-case optimum of the current evaluator. |
+
+Under the stock metric PRISM is not saturated only because refusing hard cases keeps paying (up to about 46.6). On the
+task as stated (place every model, minimize max KVPR), 26.2559717 is the maximum. The feedback-text ceiling error noted
+above is confirmed: `prism/whitebox.py` prints the old loose bound (29.40); every arm saw the same text. Correct it
+prospectively in a new version, not within this campaign.
+
 ## Evidence links
 
 - [Reconciled assessment and ranked priorities](../ASSESSMENT.md)

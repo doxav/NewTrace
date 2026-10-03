@@ -112,3 +112,12 @@
 {"type": "iteration", "iteration": 93, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 77, "label": "refine", "context_iterations": [46, 84, 90, 47], "child_score": 26.249872365536923}
 {"type": "iteration", "iteration": 94, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 71, "label": "refine", "context_iterations": [38, 76, 13, 36], "child_score": 26.255971749535238}
 {"type": "iteration", "iteration": 95, "attempts": 2, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 29, "label": "diverge", "context_iterations": [12, 83, 44, 92], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 97, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 61, "label": "refine", "context_iterations": [42, 19, 52, 22], "child_score": 26.255971749535238}
+{"type": "trigger", "iteration": 97, "best": 26.255971749535238}
+{"type": "scored", "iteration": 97, "entry": "policy_7", "metrics": {"combined_score": 0.0, "window_start_iteration": 86, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}
+{"type": "proposal", "iteration": 97, "parent": "policy_0", "context": ["policy_1", "policy_7"], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 97, "entry": "policy_8", "ok": true}
+{"type": "iteration", "iteration": 98, "attempts": 1, "error": null, "role": "active", "policy": "policy_8", "parent_iteration": 13, "label": "refine", "context_iterations": [77, 36, 91, 19], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 99, "attempts": 1, "error": null, "role": "active", "policy": "policy_8", "parent_iteration": 32, "label": "refine", "context_iterations": [19, 15, 39, 90], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 100, "attempts": 1, "error": null, "role": "active", "policy": "policy_8", "parent_iteration": 48, "label": "refine", "context_iterations": [28, 55, 34, 23], "child_score": 26.255971749535238}
+{"type": "scored", "iteration": 100, "entry": "policy_8", "metrics": {"combined_score": 0.0, "window_start_iteration": 97, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}

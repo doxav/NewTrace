@@ -1,0 +1,68 @@
+iteration: 1
+diverge_label_length: 2895
+refine_label_length: 2196
+
+diverge_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.
+  This may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.
+  You can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.
+  Think through what is needed to achieve a BREAKTHROUGH SCORE.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  - **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Libraries / solvers**: scipy.signal: savgol_filter, butter+filtfilt (zero-phase), medfilt, wiener ↔ PyWavelets: wavedenc thresholds ↔ scipy.optimize: minimize (tune filter params against the composite metric)
+  - **Zero-phase / offline advantage**: full signal is available; use forward-backward filtering (filtfilt), centered windows, or future-sample lookahead — eliminates phase lag entirely, slashing L_recent and L_avg
+  - **Adaptive estimation**: Kalman filter with tuned process/measurement noise ↔ particle filter ↔ exponentially weighted moving average with adaptive alpha ↔ scipy.signal.lfilter with time-varying coefficients
+  - **Multi-scale denoising**: wavelet thresholding (PyWavelets: wavedec → threshold → waverec) ↔ EMD-like band splitting ↔ multi-resolution moving averages combined
+  - **Smoothness-aware design**: Savitzky-Golay (polynomial fit preserves slopes, kills reversals) ↔ hysteresis/deadband on sign changes ↔ median prefilter + light smoothing (median kills spikes that cause reversals)
+  - **Direct metric optimization**: since test signal families are known (sine, steps, random walk), parametrize a filter (e.g., savgol window/order, Kalman Q/R) and grid/optimize the composite J on self-generated replicas ↔ ensemble: run several filters, pick per-segment by smoothness/lag tradeoff
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken "creative" solution is worthless.
+  
+  Format:
+  1. APPROACH: Describe your different approach.
+  2. CODE: Implementation.
+
+refine_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You should keep the same fundamental approach and algorithm structure.
+  DO NOT switch to a different problem formulation.
+  Focus on REFINING / EXPLOITING the current approach: better inputs, additional polish, etc.
+  Think through what is needed to SQUEEZE the last few percent of performance.
+  Use sufficient computational budget for refinement.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF REFINEMENT strategies (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Libraries / tools for refinement**: scipy.signal: savgol_filter (window/order tuning), filtfilt ↔ scipy.optimize: minimize, differential_evolution (tune filter hyperparams against composite J) ↔ PyWavelets: threshold mode/scale refinement
+  - **Window/parameter sweep**: sweep savgol window length & polyorder, Kalman Q/R ratio, wavelet threshold level — score each on the 4 penalty terms, keep best
+  - **Lag error exploitation**: L_recent/L_avg compare against the NOISY signal — bias output slightly toward raw input (e.g., blend filtered with noisy, small weight) to cut lag penalties without losing smoothness
+  - **Reversal suppression polish**: post-process with tiny deadband (flatten diffs below threshold), sign-change hysteresis, or one extra median/smoothing pass to cut S and R
+  - **Output length & edge handling**: match expected length (len - window + 1) exactly; use reflected/nearest padding at edges so the last sample is accurate (drives L_recent and correlation)
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken solution is worthless.
+  
+  Format:
+  1. REFINEMENT: Describe what you are refining.
+  2. CODE: Implementation with refinement.

@@ -1,0 +1,69 @@
+iteration: 1
+diverge_label_length: 3427
+refine_label_length: 2437
+
+diverge_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You MUST USE a FUNDAMENTALLY DIFFERENT APPROACH to the following code, NOT JUST parameter tweaks or local changes.
+  This may mean using different solver, function, or library, a different algorithm, or a different method entirely; or adding new components that have never been used before.
+  You can replace partial or the entire code if needed (i.e., rewrite a simpler solution from scratch), or build upon / complement it.
+  Think through what is needed to achieve a BREAKTHROUGH SCORE.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  - **Prioritize libraries and functions not already used by the parent program.** Adding new components or changing how existing ones are combined is fine, but prefer approaches that introduce something the parent has never tried.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF DIFFERENT approaches (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Libraries / solvers**: scipy.signal: savgol_filter (window, polyorder tuning), medfilt, wiener, butter+filtfilt (careful: filtfilt is zero-phase, good for lag) ↔ scipy.ndimage: uniform_filter1d, median_filter, gaussian_filter1d ↔ PyWavelets: pywt.wavedec/pywt.threshold (denoise then reconstruct, e.g. 'db4', soft thresholding)
+  - **Adaptive / state-space filtering**: Kalman filter with tuned process/measurement noise ratio (constant-velocity or local-linear model) ↔ one-step-ahead predictor that outputs x̂[n+1] ≈ current noisy value plus small smooth correction ↔ exponential smoothing with adaptive alpha based on local residual variance ↔ simple Savitzky-Golay endpoint extrapolation (fit polynomial in window, take last point → near-zero lag)
+  - **Lag-compensated smoothing**: smooth then add fraction of residual (y = smooth + β·(x − smooth)) to pull output toward noisy input and cut lag error ↔ forward-backward asymmetric smoothing (more weight on recent samples) ↔ zero-phase filtering via filtfilt or centered windows
+  - **Reversal-suppression post-processing**: hysteresis/deadband on slope sign (ignore sign flips below magnitude threshold) ↔ merge monotone runs: enforce minimum run length on diff signs ↔ mild total-variation denoising (scipy only: iterative TV via proximal steps) to produce piecewise-monotone output
+  - **Multi-scale / hybrid pipeline**: median or wavelet denoise → light Savitzky-Golay → residual blending; tune blend weight per signal characteristic (step vs sinusoid) ↔ ensemble: run 2-3 filters, pick per-sample value minimizing predicted composite penalty
+  - **Robust local regression**: LOWESS/LOESS-style weighted polynomial fit per window with tricube weights ↔ Huber-loss local linear fit (robust to step-change signals like signal #3) ↔ robust Theil-Sen slope per window for trend-preserving output
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken "creative" solution is worthless.
+  
+  Format:
+  1. APPROACH: Describe your different approach.
+  2. CODE: Implementation.
+
+refine_label: |
+  ## IMPORTANT: YOU MUST FOLLOW THE FOLLOWING IN YOUR GENERATION, OTHERWISE THE SOLUTION WILL BE REJECTED.
+  
+  ### Goal
+  You should keep the same fundamental approach and algorithm structure.
+  DO NOT switch to a different problem formulation.
+  Focus on REFINING / EXPLOITING the current approach: better inputs, additional polish, etc.
+  Think through what is needed to SQUEEZE the last few percent of performance.
+  Use sufficient computational budget for refinement.
+  
+  **Tools Available:**
+  You have access to a list of libraries. Use these tools to your advantage.
+  - Choose library functions appropriate to the problem's structure and constraints.
+  - Feel free to break from the existing code entirely — focus on correct library usage for the problem, not on preserving the current code's structure.
+  
+  **CRITICAL: IF A LIBRARY EXISTS FOR AN ALGORITHM, USE IT. DO NOT REIMPLEMENT MANUALLY. SEE THE EXAMPLES BELOW FOR RELEVANT LIBRARIES.**
+  
+  ### Examples
+  EXAMPLES OF REFINEMENT strategies (NOT LIMITED TO, PROPOSE YOUR OWN):
+  - **Libraries / tools for refinement**: scipy.signal: savgol_filter (sweep window 5–20, polyorder 1–3), wiener, medfilt ↔ scipy.ndimage: gaussian_filter1d (tune sigma), uniform_filter1d ↔ PyWavelets: pywt.wavedec + pywt.threshold (sweep threshold scale/mode='soft'/'hard')
+  - **Hyperparameter tuning**: grid/random search smoothing strength, Kalman Q/R ratio, blend weight β over all 5 test signals; optimize mean composite score directly
+  - **Lag vs smoothness tradeoff**: tune residual-injection weight β (y = smooth + β·(x−smooth)) to minimize lag terms without raising slope changes; adapt β to local noise estimate
+  - **Post-processing / polish**: sign-flip merging with minimum run length; small-magnitude diff zeroing (deadband); final light SavGol pass; clip output outliers toward window median
+  - **Robustness / reliability**: handle edge cases (short signals, constant segments, step signal #3 with robust loss); ensure exact output length len−window+1; vectorize to stay well under timeout (execution time feeds efficiency)
+  - **Component-aware tuning**: since S and R dominate (0.3+0.3 weights, normalized /50 and /25), prioritize reversal reduction; verify per-signal metric breakdown and tune weakest component
+  
+  ### Output
+  Your solution MUST still be VALID / CORRECT for the same problem. A broken solution is worthless.
+  
+  Format:
+  1. REFINEMENT: Describe what you are refining.
+  2. CODE: Implementation with refinement.

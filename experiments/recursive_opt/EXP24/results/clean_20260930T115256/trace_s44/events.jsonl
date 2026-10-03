@@ -103,3 +103,10 @@
 {"type": "deploy", "iteration": 89, "entry": "policy_7", "ok": true}
 {"type": "iteration", "iteration": 90, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 19, "label": "refine", "context_iterations": [8, 12, 15, 17], "child_score": 25.383670653598823}
 {"type": "iteration", "iteration": 91, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 8, "label": "refine", "context_iterations": [12, 15, 17, 19], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 92, "attempts": 3, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 12, "label": "refine", "context_iterations": [8, 15, 17, 19], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 95, "attempts": 2, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 12, "label": "refine", "context_iterations": [8, 15, 17, 19], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 97, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 8, "label": "refine", "context_iterations": [12, 15, 17, 19], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 98, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 19, "label": "refine", "context_iterations": [8, 12, 15, 17], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 99, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 15, "label": "refine", "context_iterations": [8, 12, 17, 19], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 100, "attempts": 1, "error": null, "role": "active", "policy": "policy_7", "parent_iteration": 17, "label": "refine", "context_iterations": [8, 12, 15, 19], "child_score": 26.249872365536923}
+{"type": "scored", "iteration": 100, "entry": "policy_7", "metrics": {"combined_score": 0.0, "window_start_iteration": 89, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}

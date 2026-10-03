@@ -48,3 +48,45 @@
 {"type": "iteration", "iteration": 57, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 40, "label": "refine", "context_iterations": [29, 49, 6, 13], "child_score": 26.255971749535238}
 {"type": "iteration", "iteration": 58, "attempts": 2, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 29, "label": "diverge", "context_iterations": [45, 16, 49, 30], "child_score": 12.447727699162911}
 {"type": "iteration", "iteration": 60, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 50, "label": "refine", "context_iterations": [30, 54, 42, 33], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 61, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 50, "label": "refine", "context_iterations": [14, 27, 1, 49], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 62, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 30, "label": "diverge", "context_iterations": [27, 26, 2, 14], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 63, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 62, "label": "refine", "context_iterations": [33, 3, 52, 49], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 64, "attempts": 1, "error": null, "role": "active", "policy": "policy_2", "parent_iteration": 50, "label": "refine", "context_iterations": [0, 7, 25, 29], "child_score": 26.255971749535238}
+{"type": "trigger", "iteration": 64, "best": 26.255971749535238}
+{"type": "scored", "iteration": 64, "entry": "policy_2", "metrics": {"combined_score": 0.0, "window_start_iteration": 50, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}
+{"type": "proposal", "iteration": 64, "parent": "policy_1", "context": ["policy_0"], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 64, "entry": "policy_3", "ok": true}
+{"type": "iteration", "iteration": 65, "attempts": 2, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 33, "label": "refine", "context_iterations": [34, 35, 37, 39], "child_score": 25.4037054731086}
+{"type": "iteration", "iteration": 67, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 31, "label": "diverge", "context_iterations": [33, 34, 35, 37], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 68, "attempts": 2, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 33, "label": "refine", "context_iterations": [34, 35, 37, 39], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 70, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 60, "label": "diverge", "context_iterations": [33, 34, 35, 37], "child_score": 1.236814792708521}
+{"type": "iteration", "iteration": 71, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 8, "label": "diverge", "context_iterations": [33, 34, 35, 37], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 72, "attempts": 2, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 34, "label": "refine", "context_iterations": [33, 35, 37, 39], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 74, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 35, "label": "refine", "context_iterations": [33, 34, 37, 39], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 75, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 34, "label": "refine", "context_iterations": [33, 35, 37, 39], "child_score": 25.987210892960764}
+{"type": "iteration", "iteration": 76, "attempts": 3, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 34, "label": "refine", "context_iterations": [33, 35, 37, 39], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 79, "attempts": 1, "error": null, "role": "active", "policy": "policy_3", "parent_iteration": 33, "label": "refine", "context_iterations": [34, 35, 37, 39], "child_score": 25.519694012497798}
+{"type": "trigger", "iteration": 79, "best": 26.255971749535238}
+{"type": "scored", "iteration": 79, "entry": "policy_3", "metrics": {"combined_score": 0.0, "window_start_iteration": 64, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}
+{"type": "proposal", "iteration": 79, "parent": "policy_1", "context": ["policy_2", "policy_0"], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 79, "entry": "policy_4", "ok": true}
+{"type": "iteration", "iteration": 80, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 30, "label": "diverge", "context_iterations": [75, 52, 33, 14], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 81, "attempts": 2, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 37, "label": "refine", "context_iterations": [52, 75, 22, 33], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 83, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 28, "label": "diverge", "context_iterations": [33, 52, 75, 2], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 84, "attempts": 2, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 27, "label": "diverge", "context_iterations": [26, 75, 52, 33], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 86, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 30, "label": "diverge", "context_iterations": [52, 70, 75, 33], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 87, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 27, "label": "diverge", "context_iterations": [58, 52, 33, 75], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 88, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 29, "label": "diverge", "context_iterations": [45, 75, 33, 52], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 89, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 49, "label": "diverge", "context_iterations": [75, 52, 6, 33], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 90, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 27, "label": "diverge", "context_iterations": [33, 52, 75, 26], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 91, "attempts": 1, "error": null, "role": "active", "policy": "policy_4", "parent_iteration": 32, "label": "diverge", "context_iterations": [33, 75, 52, 16], "child_score": 26.255971749535238}
+{"type": "trigger", "iteration": 91, "best": 26.255971749535238}
+{"type": "scored", "iteration": 91, "entry": "policy_4", "metrics": {"combined_score": 0.0, "window_start_iteration": 79, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}
+{"type": "proposal", "iteration": 91, "parent": "policy_1", "context": ["policy_0"], "attempts": 1, "ok": true, "errors": []}
+{"type": "deploy", "iteration": 91, "entry": "policy_5", "ok": true}
+{"type": "iteration", "iteration": 92, "attempts": 2, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 71, "label": "diverge", "context_iterations": [33, 34, 42, 23], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 94, "attempts": 2, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 81, "label": "diverge", "context_iterations": [33, 34, 30, 37], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 96, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 92, "label": "refine", "context_iterations": [33, 34, 5, 64], "child_score": 26.255971749535238}
+{"type": "iteration", "iteration": 97, "attempts": 3, "error": "Evaluator failed after 3 attempts: Program timed out after 360s", "role": "active", "policy": "policy_5", "parent_iteration": 57, "label": "diverge", "context_iterations": [33, 34, 92, 54], "child_score": null}
+{"type": "iteration", "iteration": 100, "attempts": 1, "error": null, "role": "active", "policy": "policy_5", "parent_iteration": 16, "label": "diverge", "context_iterations": [33, 34, 49, 46], "child_score": 26.255971749535238}
+{"type": "scored", "iteration": 100, "entry": "policy_5", "metrics": {"combined_score": 0.0, "window_start_iteration": 91, "search_window_start_score": 26.255971749535238, "search_window_end_score": 26.255971749535238, "search_horizon": 10}}
