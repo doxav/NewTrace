@@ -1,0 +1,222 @@
+{
+  "model": "openrouter/deepseek/deepseek-v4-flash-0731",
+  "n_samples": 5,
+  "menu_scores": {
+    "llm4ad:optimization/tsp_construct": {
+      "nearest": -6.8239686184057184,
+      "farthest": -35.85450182978367,
+      "first_index": -6.8239686184057184,
+      "last_index": -35.85450182978367,
+      "median_dist": -27.26327520388778,
+      "second_nearest": -11.106410912155868,
+      "near3_lowid": -10.889695180528534,
+      "max_rowsum": -14.655761088719313,
+      "min_rowsum": -30.986766219989573
+    },
+    "llm4ad:optimization/cvrp_construct": {
+      "nearest": -13.610775714030819,
+      "farthest": -39.31034208387703,
+      "first_index": -29.07419348580601,
+      "last_index": -29.676456548389076,
+      "median_dist": -31.2145528922564,
+      "second_nearest": -17.457583642222524,
+      "near3_lowid": -16.55849188733925,
+      "max_rowsum": -20.057241608419332,
+      "min_rowsum": -32.429946245825974
+    },
+    "llm4ad:optimization/vrptw_construct": {
+      "nearest": -26.47650755770893,
+      "farthest": -41.55259424870737,
+      "first_index": -32.47105318440174,
+      "last_index": -31.726794046295623,
+      "median_dist": -34.537477134844664,
+      "second_nearest": -30.994812807366223,
+      "near3_lowid": -28.77448401011114,
+      "max_rowsum": -33.20916984389389,
+      "min_rowsum": -29.64419063978575
+    }
+  },
+  "targets": {
+    "llm4ad:optimization/tsp_construct": {
+      "menu_min": -35.85450182978367,
+      "menu_max": -6.8239686184057184,
+      "samples": [
+        {
+          "i": 0,
+          "temp": 0.0,
+          "score": -8.060258218042321,
+          "q_norm": 0.9574141614749239,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 38.8,
+          "code": "import numpy as np\n\ndef select_next_node(current_node: int, destination_node: int, unvisited_nodes: np.ndarray, distance_matrix: np.ndarray) -> int:\n    # If destination is unvisited, go there directly\n    if destination_node in unvisited_nodes:\n        return destination_node\n\n    # Compute the extra distance incurred by visiting each unvisited node\n    # before going to the destination, relative to going directly.\n    # extra = d(current, u) + d(u, dest) - d(current, dest)\n    # We want to minimize this extra distance (i.e., pick the node most \"on the way\").\n    current_dest_dist = distance_matrix[current_node, destination_node]\n    dist_from_current = distance_matrix[current_node, unvisited_nodes]\n    dist_to_dest = distance_matrix[unvisited_nodes, destination_node]\n    extra = dist_from_current + dist_to_dest - current_dest_dist\n\n    # Choose the node with minimum extra distance.\n    # In case of ties, pick the one closest to the current node.\n    min_extra = np.min(extra)\n    candidates = unvisited_nodes[extra == min_extra]\n    if len(candidates) == 1:\n        return int(candidates[0])\n    else:\n        # Among ties, choose the one with smallest distance from current\n        tie_distances = distance_matrix[current_node, candidates]\n        return int(candidates[np.argmin(tie_distances)])"
+        },
+        {
+          "i": 1,
+          "temp": 1.0,
+          "score": -1000000.0,
+          "q_norm": null,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 43.7,
+          "code": "We need answer only fenced code. We need propose better implementation. Need infer task: select next node in TSP-ish route from current_node to destination_node, with unvisited nodes and distance matrix. Need design novel algorithm. We need maximize benchmark score. Need likely evaluation of solution quality? We need implement heuristic. Need know exact benchmark? It says algorithm-discovery benchmark, optimize function. Need select next node in each step. Probably TSP path construction? Need choose next node from unvisited to minimize total path? We don't know full route. We have current, destination, unvisited, distance matrix. Need return one next node. Need maximize score maybe quality of final path. Need build better heuristic than first unvisited. Need consider constraints: only imports provided? \"Use only imports provided by harness\" Current has numpy. We can use numpy. Need no top-level I/O or non-determinism. So deterministic.\n\nWe need craft algorithm. Need think: In constructive heuristic for TSP or shortest Hamiltonian path from start to destination visiting all unvisited? Function called repeatedly. At each step current changes, unvisited shrinks, destination fixed. Need select next node. We need design myopic but effective heuristic: nearest neighbor? Maybe use \"next node\" with lookahead to destination? Common: choose unvisited node minimizing travel + heuristic to destination? E.g., nearest insertion, regret, Christofides? But one-step selection, can use distance matrix.\n\nLet's search memory: There is benchmark \"design novel algorithm\" where function select_next_node used in \"Traveling Salesman Problem\" solver? Need maximize score maybe solving TSP? Maybe they compare route length. Need implement strong next-node selection heuristic.\n\nFunction signature: current_node: int, destination_node: int, unvisited_nodes: np.ndarray, distance_matrix: np.ndarray -> int. It returns next node. Called in sequential construction until all visited? Destination may be "
+        },
+        {
+          "i": 2,
+          "temp": 1.0,
+          "score": -1000000.0,
+          "q_norm": null,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 42.7,
+          "code": "def select_next_node(current_node, destination_node, unvisited_nodes, distance_matrix):\n    n = len(unvisited_nodes)\n    if n == 0: return destination_node? But unvisited shouldn't be empty. If destination is unvisited? If n==0 no node."
+        },
+        {
+          "i": 3,
+          "temp": 1.0,
+          "score": -1000000.0,
+          "q_norm": null,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 40.7,
+          "code": "import numpy as np\n\ndef select_next_node(current_node: int, destination_node: int, unvisited_nodes: np.ndarray, distance_matrix: np.ndarray) -> int:\n    # remove destination from required intermediate nodes\n    arr = np.asarray(unvisited_nodes)\n    dest = int(destination_node)\n    cur = int(current_node)\n    # filter destination if present\n    inter = arr[arr != dest]\n    m = len(inter)\n    if m == 0:\n        return dest\n    # If small, exact\n    if m <= 20:  # maybe 20\n        return exact_path_first(cur, dest, inter, distance_matrix)\n    else:\n        return heuristic_path_first(cur, dest, inter, distance_matrix)"
+        },
+        {
+          "i": 4,
+          "temp": 1.0,
+          "score": -1000000.0,
+          "q_norm": null,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 40.7,
+          "code": "import numpy as np\ndef select_next_node(current_node, destination_node, unvisited_nodes, distance_matrix):\n    # remove destination from candidates unless it is only unvisited\n    dest_in = destination_node in unvisited_nodes? Need membership. unvisited_nodes is np.ndarray; use `np.any(unvisited_nodes == destination_node)`.\n    if dest_in and len(unvisited_nodes) == 1:\n        return destination_node\n    if dest_in:\n        candidates = unvisited_nodes[unvisited_nodes != destination_node]\n    else:\n        candidates = unvisited_nodes\n    if len(candidates)==0: return destination_node? If no unvisited? But function expects next; maybe if unvisited empty? not called.\n    # If only one candidate and destination maybe, return it.\n    if len(candidates)==1: return candidates[0]\n    # Exact DP if n <= MAX_DP\n    ...\n    # Heuristic fallback"
+        }
+      ],
+      "n_valid": 1,
+      "n_invalid": 4,
+      "n_reaches_menu_best": 0,
+      "n_beats_menu_best": 0,
+      "mean_q_norm": 0.9574141614749239,
+      "greedy_q_norm": 0.9574141614749239
+    },
+    "llm4ad:optimization/cvrp_construct": {
+      "menu_min": -39.31034208387703,
+      "menu_max": -13.610775714030819,
+      "samples": [
+        {
+          "i": 0,
+          "temp": 0.0,
+          "score": -13.785434188728551,
+          "q_norm": 0.9932038357307591,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 43.5,
+          "code": "import numpy as np\n\ndef select_next_node(current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, demands: np.ndarray, distance_matrix: np.ndarray) -> int:\n    \"\"\"Select next node using a two-step lookahead heuristic.\"\"\"\n    best_node = -1\n    best_total = float('inf')\n    best_demand = -1\n\n    for node in unvisited_nodes:\n        demand = demands[node]\n        if demand > rest_capacity:\n            continue\n        dist_to_node = distance_matrix[current_node][node]\n        # Remaining capacity after visiting node\n        remaining = rest_capacity - demand\n        # Find best next node from this node (simple nearest feasible)\n        next_dist = 0.0\n        if remaining > 0:\n            best_next = -1\n            best_next_dist = float('inf')\n            for nxt in unvisited_nodes:\n                if nxt == node:\n                    continue\n                if demands[nxt] <= remaining:\n                    d = distance_matrix[node][nxt]\n                    if d < best_next_dist:\n                        best_next_dist = d\n                        best_next = nxt\n            if best_next != -1:\n                next_dist = best_next_dist\n        total = dist_to_node + next_dist\n        # Prefer higher demand on tie\n        if total < best_total or (total == best_total and demand > best_demand):\n            best_total = total\n            best_node = node\n            best_demand = demand\n\n    if best_node == -1:\n        # Fallback to original heuristic if no feasible node found (shouldn't happen)\n        best_score = -1\n        for node in unvisited_nodes:\n            demand = demands[node]\n            distance = distance_matrix[current_node][node]\n            if demand <= rest_capacity:\n                score = demand / distance if distance > 0 else float('inf')\n                if score > best_score:\n                    best_score = score\n                    best_node = node\n    return best_node"
+        },
+        {
+          "i": 1,
+          "temp": 1.0,
+          "score": -14.532297244317046,
+          "q_norm": 0.9641425261024067,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 37.0,
+          "code": "import numpy as np\n\ndef select_next_node(current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, demands: np.ndarray, distance_matrix: np.ndarray) -> int:\n    \"\"\"Select next node based on a savings-weighted demand-to-distance ratio.\"\"\"\n    best_score = -float('inf')\n    next_node = -1\n    eps = 1e-10\n\n    current_to_depot = distance_matrix[current_node][depot]\n\n    for node in unvisited_nodes:\n        demand = demands[node]\n        if demand > rest_capacity:\n            continue\n\n        distance = distance_matrix[current_node][node]\n        if distance < eps:\n            distance = eps\n\n        node_to_depot = distance_matrix[node][depot]\n\n        # Clarke-Wright savings: savings = d_cd + d_nd - d_cn\n        savings = current_to_depot + node_to_depot - distance\n\n        # Normalize by sum of depot distances to get a ratio in [-1, 1] roughly\n        denom = current_to_depot + node_to_depot\n        if denom < eps:\n            denom = eps\n        savings_ratio = savings / denom\n\n        # Score: high demand nearby node, boosted by positive savings, reduced by negative\n        score = (demand / distance) * (1 + savings_ratio)\n\n        if score > best_score:\n            best_score = score\n            next_node = node\n\n    return next_node"
+        },
+        {
+          "i": 2,
+          "temp": 1.0,
+          "score": -1000000.0,
+          "q_norm": null,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 127.7,
+          "code": "block containing the complete replacement module (imports + the function).\" Then Constraints: \"The code should start with: def select_next_node(...):\" Actually contradictory. The \"Current implementation\" includes import numpy as np. They request complete replacement module. But constraint says code should start with def. This likely generated by benchmark wants code definition only? Usually these tasks expect only function code, no imports? However current includes import. To be safe, include import numpy as np then function. But \"code should start with def\" might be strict in tests? It may inspect? Hmm.\n\nWe need optimize function. Let's explore.\n\nWe have VRP with depot and vehicles? This select_next_node called multiple times to build routes? It receives rest_capacity of current vehicle, unvisited_nodes, current_node. It must return next node from unvisited_nodes, presumably feasible with demand<=rest_capacity. If no feasible, returns -1 maybe? Actually if all demands > rest_capacity, it returns -1. Could be okay.\n\nNeed \"Maximise benchmark score\". Possibly tested by route length quality on CVRP instances. We can design a state-of-the-art constructive heuristic: nearest neighbor with savings, Clarke-Wright, Gaskell, Mole-Jameson, etc. But this function only local step, no global route context beyond rest_capacity and current node; no info about full route except current node and unvisited set. However we can still use distance to depot and distance to current, demands, rest capacity. Need decide.\n\nPotential heuristics:\n- Best of nearest neighbor and savings: choose node minimizing distance from current but considering \"regret\" and capacity.\n- A \"look-ahead\" heuristic: score = distance_to_depot - distance_from_current? Wait classic \"savings\" for route construction: s(i,j)=d(depot,i)+d(depot,j)-d(i,j). When extending route from current last node to candidate j, increase cost by d(current,j) vs returning to depot: cost if return to depot from current is d(current, depo"
+        },
+        {
+          "i": 3,
+          "temp": 1.0,
+          "score": -1000000.0,
+          "q_norm": null,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 142.4,
+          "code": "We need answer with code block only. Need propose better implementation for select_next_node. Need understand benchmark likely vehicle routing problem greedy heuristic. Current uses demand/distance ratio (max) among feasible. We need improve. Need think of algorithm.\n\nWe have function signature: select_next_node(current_node, depot, unvisited_nodes, rest_capacity, demands, distance_matrix) -> int. Need return next node ID. We need design novel algorithm to maximize benchmark score. Likely evaluated on solution quality (total distance) or some metric. Need choose next node in constructive heuristic.\n\nWe can use additional imports? Constraint says use only imports provided by harness; avoid top-level I/O. Current imports numpy as np. We can include numpy and maybe math? \"Use only the imports provided by the harness\" means likely allowed numpy? It says Current implementation has import numpy as np. We can keep. Maybe also import? The instruction \"Use only the imports provided by the harness\" suggests not adding arbitrary. We can include numpy as np. Could include from math import? But maybe not.\n\nNeed maximize benchmark score. Need infer objective. It is an algorithm-discovery benchmark. Maybe they compare total route distance for CVRP. Need design better next-node heuristic.\n\nCurrent: choose feasible node with max demand/distance. This is \"savings\"-ish, tends to serve high demand nearby. But doesn't consider depot return, remaining capacity, route shape.\n\nCould implement regret-based, look-ahead, nearest neighbor with capacity utilization, etc.\n\nNeed perhaps adapt from Solomon insertion heuristic? For CVRP construction with capacity constraints, one common heuristic: \"Clark-Wright savings\" or \"nearest neighbor\" with capacity. At each step from current node, choose next node maximizing some criterion.\n\nPotential improvements:\n- Use \"sweep\" or \"modified nearest neighbor\" considering depot distance and capacity.\n- Since only current node and unvisited, no route info. But"
+        },
+        {
+          "i": 4,
+          "temp": 1.0,
+          "error": "RuntimeError: empty completion (finish_reason=length)"
+        }
+      ],
+      "n_valid": 2,
+      "n_invalid": 3,
+      "n_reaches_menu_best": 0,
+      "n_beats_menu_best": 0,
+      "mean_q_norm": 0.978673180916583,
+      "greedy_q_norm": 0.9932038357307591
+    },
+    "llm4ad:optimization/vrptw_construct": {
+      "menu_min": -41.55259424870737,
+      "menu_max": -26.47650755770893,
+      "samples": [
+        {
+          "i": 0,
+          "temp": 0.0,
+          "score": -1000000.0,
+          "q_norm": null,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 40.7,
+          "code": "We need answer code. Need understand problem. Need design algorithm select next node in what likely VRPTW with capacity? We have current_node, depot, unvisited_nodes, rest_capacity, current_time, demands, distance_matrix, time_windows. Need choose next node. Need implement novel algorithm. We need infer objective. Benchmark maybe route construction heuristic. We need maximize score likely total route length? Need implement good heuristic.\n\nNeed produce Python function. We have numpy imported as np presumably? Current code uses np.ndarray. Need maybe import numpy? They said imports provided by harness; final module can include imports maybe. We can include import numpy as np.\n\nWe need design algorithm. Details:\n- Nodes IDs maybe depot as 0, customers 1..n.\n- rest_capacity: scalar? array length? \"Rest capacity of vehicle\" likely scalar or 1-element array? current_time scalar/array. demands array.\n- time_windows: array shape (n,2) perhaps includes depot? Need handle.\n- distance_matrix: square.\n- unvisited_nodes: np.ndarray of candidate nodes.\n\nWe need select next node satisfying constraints? Usually at each step vehicle route construction: from current node, can go to unvisited node if demand <= rest_capacity and arrival_time <= latest? Then update capacity/time; if no feasible, return depot? The function only select next node, maybe if no feasible unvisited then depot? But return should be ID of next node to visit. Maybe benchmark expects selecting one of unvisited_nodes or depot? It says unvisited_nodes array of unvisited nodes; next node maybe from unvisited_nodes only. But if no feasible customer due to capacity/time, should return depot? Need infer.\n\nLet's parse: \"select_next_node(current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, current_time: np.ndarray, demands: np.ndarray, distance_matrix: np.ndarray, time_windows: np.ndarray) -> int\". In construction, at each step choose next node to visit. Rest capacity and current time ar"
+        },
+        {
+          "i": 1,
+          "temp": 1.0,
+          "score": -22.112431015272215,
+          "q_norm": 1.2894701146181655,
+          "beats_menu_best": true,
+          "reaches_menu_best": true,
+          "wall_s": 73.0,
+          "code": "import numpy as np\n\ndef select_next_node(current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, current_time: np.ndarray,\\\n                        demands: np.ndarray, distance_matrix: np.ndarray, time_windows: np.ndarray) -> int:\n    \"\"\"Select the next node using a time-aware nearest neighbor heuristic.\n\n    The heuristic scores each feasible unvisited node by a combination of:\n    - travel distance from the current node,\n    - waiting time until the time window opens,\n    - slack (time until the due date) -- smaller slack (more urgent) is favored.\n\n    Only nodes that respect remaining capacity and can be reached before their\n    due time (allowing waiting for the ready time) are considered.\n    \"\"\"\n    best_node = None\n    best_score = float('inf')\n\n    for node in unvisited_nodes:\n        # Capacity check\n        if demands[node] > rest_capacity:\n            continue\n\n        travel_time = distance_matrix[current_node][node]\n        arrival = current_time + travel_time\n\n        # Time window feasibility: must arrive before or at due time\n        if arrival > time_windows[node][1]:\n            continue\n\n        # Waiting time if arrive before ready time\n        waiting = max(0.0, time_windows[node][0] - arrival)\n        start_service = arrival + waiting\n        slack = time_windows[node][1] - start_service  # >=0 by feasibility\n\n        # Score: distance + waiting penalty + slack penalty (tight slack favored)\n        score = travel_time + 1.0 * waiting + 0.5 * slack\n\n        # Tie-break by smaller due time (urgency) and then smaller distance\n        if score < best_score or (score == best_score and time_windows[node][1] < best_due):\n            best_score = score\n            best_node = node\n            best_due = time_windows[node][1]\n\n    # Fallback (should not happen if called with at least one feasible node)\n    if best_node is None:\n        return unvisited_nodes[0]\n    return best_node"
+        },
+        {
+          "i": 2,
+          "temp": 1.0,
+          "score": -21.959265754177437,
+          "q_norm": 1.2996295985899728,
+          "beats_menu_best": true,
+          "reaches_menu_best": true,
+          "wall_s": 115.6,
+          "code": "import numpy as np\n\ndef select_next_node(current_node: int, depot: int, unvisited_nodes: np.ndarray,\n                     rest_capacity: float, current_time: float,\n                     demands: np.ndarray, distance_matrix: np.ndarray,\n                     time_windows: np.ndarray) -> int:\n    \"\"\"\n    Selects the next node to visit based on a time\u2011window and capacity aware\n    greedy heuristic.  Prefers nodes that are close, cause little waiting,\n    and have a tight time window (small slack).\n    \"\"\"\n    best_score = float('inf')\n    best_node = None\n\n    for node in unvisited_nodes:\n        # capacity check\n        if demands[node] > rest_capacity:\n            continue\n\n        travel = distance_matrix[current_node][node]\n        arrival = current_time + travel\n\n        early, late = time_windows[node]\n\n        # time window feasibility\n        if arrival > late:\n            continue\n\n        # waiting if we arrive before the earliest allowed time\n        if arrival < early:\n            wait = early - arrival\n            effective_arrival = early\n        else:\n            wait = 0\n            effective_arrival = arrival\n\n        slack = late - effective_arrival   # >= 0 by feasibility\n\n        # heuristic score: travel + waiting + penalty for flexibility\n        score = travel + wait + 0.2 * slack\n\n        if score < best_score:\n            best_score = score\n            best_node = node\n\n    # fallback (should never happen in a well\u2011posed problem)\n    if best_node is None:\n        best_node = min(unvisited_nodes, key=lambda n: distance_matrix[current_node][n])\n\n    return int(best_node)"
+        },
+        {
+          "i": 3,
+          "temp": 1.0,
+          "score": -33.9898394826706,
+          "q_norm": 0.5016391137198959,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 143.2,
+          "code": "import numpy as np\n\ndef select_next_node(current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_cpacity: np.ndarray, current_time: np.ndarray,\\\n                        demands: np.ndarray, distance_matrix: np.ndarray, time_windows: np.ndarray) -> int:\n    \"\"\"Select the next node using a time-urgent, capacity-aware heuristic.\n\n    The heuristic prioritizes feasible nodes with the latest service windows that\n    are about to close (smallest slack) and breaks ties by the shortest travel time.\n    Waiting is allowed, and a node is considered feasible only if it can be reached\n    before its deadline and its demand does not exceed the remaining capacity.\n    \"\"\"\n    # Extract scalar values (handle both scalar and single-element array inputs)\n    capacity = float(rest_cpacity) if np.isscalar(rest_cpacity) else float(rest_cpacity[0])\n    cur_time = float(current_time) if np.isscalar(current_time) else float(current_time[0])\n\n    best_node = None\n    best_slack = None\n    best_travel = None\n\n    for node in unvisited_nodes:\n        # Capacity check\n        if demands[node] > capacity + 1e-9:\n            continue\n\n        travel = float(distance_matrix[current_node, node])\n        arrival = cur_time + travel\n\n        # Access time window (handle both numpy indexing and list-of-lists)\n        early = float(time_windows[node][0])\n        late = float(time_windows[node][1])\n\n        # Time window feasibility (allow waiting)\n        if arrival > late + 1e-9:\n            continue\n\n        # Compute slack after possible waiting\n        service_start = max(arrival, early)\n        slack = late - service_start\n\n        # Choose the most urgent node (smallest slack), tie-break by shortest travel\n        if best_node is None or (slack < best_slack) or (slack == best_slack and travel < best_travel):\n            best_node = node\n            best_slack = slack\n            best_travel = travel\n\n    # Fallback (should not happen if at least one feasible node exists)\n    if best_no"
+        },
+        {
+          "i": 4,
+          "temp": 1.0,
+          "score": -33.9898394826706,
+          "q_norm": 0.5016391137198959,
+          "beats_menu_best": false,
+          "reaches_menu_best": false,
+          "wall_s": 59.6,
+          "code": "def select_next_node(current_node: int, depot: int, unvisited_nodes: np.ndarray, rest_capacity: np.ndarray, current_time: np.ndarray,\\\n                        demands: np.ndarray, distance_matrix: np.ndarray, time_windows: np.ndarray) -> int:\n    best_node = None\n    best_score = None\n\n    for node in unvisited_nodes:\n        if demands[node] > rest_capacity:\n            continue\n\n        travel = distance_matrix[current_node, node]\n        arrival = current_time + travel\n        ready = time_windows[node, 0]\n        due = time_windows[node, 1]\n\n        if arrival < ready:\n            arrival = ready\n\n        if arrival <= due:\n            slack = due - arrival\n            # Feasible: prefer smallest slack, then nearest\n            score = (slack, travel)\n        else:\n            # Infeasible: large penalty, but still penalize lateness\n            slack = due - arrival  # negative\n            score = (1000 - slack, travel)\n\n        if best_score is None or score < best_score:\n            best_node = node\n            best_score = score\n\n    if best_node is None:\n        return unvisited_nodes[0]\n    return best_node"
+        }
+      ],
+      "n_valid": 4,
+      "n_invalid": 1,
+      "n_reaches_menu_best": 2,
+      "n_beats_menu_best": 2,
+      "mean_q_norm": 0.8980944851619825,
+      "greedy_q_norm": null
+    }
+  }
+}

@@ -1,0 +1,381 @@
+{
+  "max_examples": 4,
+  "inner_steps": 0,
+  "tasks": {
+    "llm4ad:optimization/tsp_construct": {
+      "t1": {
+        "n_train_inputs_available": 1,
+        "n_train_inputs_used": 1,
+        "input_len_str": [
+          144
+        ],
+        "batch_design": {
+          "distinct_orders": 1,
+          "order_changes_vs_random": {
+            "random": false,
+            "failure_balanced": false,
+            "curriculum": false,
+            "diversity": false
+          }
+        },
+        "batch_size": {
+          "distinct_effective_batches": 1,
+          "effective_batch_sizes": {
+            "1": 1,
+            "2": 1,
+            "4": 1,
+            "8": 1
+          }
+        },
+        "credit_horizon": {
+          "distinct_feedback_strings_raw": 4,
+          "distinct_feedback_strings": 1,
+          "feedback_len": {
+            "episode": 186,
+            "step": 186,
+            "truncated": 186,
+            "full": 186
+          },
+          "public_evaluator_active": true,
+          "sample": "train_dataset: mean over 1 real example(s). TRACE_FEEDBACK_JSON={\"status\": \"ok\", \"phase\": \"evaluate\", \"score\": -6.8239686184057184}\nAutonomous eval OK in 0.07s; score=-6.8239686184057184"
+        }
+      },
+      "t2": {
+        "batch_design": {
+          "rows": {
+            "random": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.08
+            },
+            "failure_balanced": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "curriculum": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.08
+            },
+            "diversity": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.08
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "batch_size": {
+          "rows": {
+            "1": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "2": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.08
+            },
+            "4": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "8": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "credit_horizon": {
+          "rows": {
+            "episode": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "step": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "truncated": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.08
+            },
+            "full": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "trace_type": {
+          "rows": {
+            "internal": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "otel": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 129,
+              "sec": 0.0
+            },
+            "sysmon": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 131,
+              "sec": 0.0
+            },
+            "hybrid": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 131,
+              "sec": 0.0
+            }
+          },
+          "n_valid": 1,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "memory_policy": {
+          "rows": {
+            "none": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "fifo": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "typed": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "retrieval": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.08
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "optimizer": {
+          "rows": {
+            "OptoPrime": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "OptoPrimeMulti": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "OPRO": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "TextGrad": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "trainer": {
+          "rows": {
+            "MinibatchAlgorithm": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "BeamsearchAlgorithm": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.08
+            },
+            "UCBSearchAlgorithm": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "PrioritySearch": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "guide": {
+          "rows": {
+            "LLMJudge": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "ExactMatch": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "deterministic": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "num_threads": {
+          "rows": {
+            "1": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "2": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.06
+            },
+            "4": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            },
+            "8": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.06
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "num_epochs": {
+          "rows": {
+            "1": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.06
+            },
+            "2": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.06
+            },
+            "4": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.07
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "initial_knowledge": {
+          "rows": {
+            "": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 580,
+              "sec": 0.08
+            },
+            "Prefer tight fits.": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 606,
+              "sec": 0.06
+            },
+            "Prefer loose fits.": {
+              "score": -6.8239686184057184,
+              "invalid": false,
+              "note_len": 606,
+              "sec": 0.07
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        }
+      }
+    }
+  }
+}

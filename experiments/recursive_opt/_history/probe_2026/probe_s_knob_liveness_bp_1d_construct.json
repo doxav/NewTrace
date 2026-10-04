@@ -1,0 +1,381 @@
+{
+  "max_examples": 4,
+  "inner_steps": 0,
+  "tasks": {
+    "llm4ad:optimization/bp_1d_construct": {
+      "t1": {
+        "n_train_inputs_available": 1,
+        "n_train_inputs_used": 1,
+        "input_len_str": [
+          1
+        ],
+        "batch_design": {
+          "distinct_orders": 1,
+          "order_changes_vs_random": {
+            "random": false,
+            "failure_balanced": false,
+            "curriculum": false,
+            "diversity": false
+          }
+        },
+        "batch_size": {
+          "distinct_effective_batches": 1,
+          "effective_batch_sizes": {
+            "1": 1,
+            "2": 1,
+            "4": 1,
+            "8": 1
+          }
+        },
+        "credit_horizon": {
+          "distinct_feedback_strings_raw": 4,
+          "distinct_feedback_strings": 1,
+          "feedback_len": {
+            "episode": 160,
+            "step": 160,
+            "truncated": 160,
+            "full": 160
+          },
+          "public_evaluator_active": true,
+          "sample": "train_dataset: mean over 1 real example(s). TRACE_FEEDBACK_JSON={\"status\": \"ok\", \"phase\": \"evaluate\", \"score\": -218.0}\nAutonomous eval OK in 7.56s; score=-218.0"
+        }
+      },
+      "t2": {
+        "batch_design": {
+          "rows": {
+            "random": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 10.64
+            },
+            "failure_balanced": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 10.47
+            },
+            "curriculum": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 10.56
+            },
+            "diversity": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 10.01
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "batch_size": {
+          "rows": {
+            "1": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.78
+            },
+            "2": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.91
+            },
+            "4": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.61
+            },
+            "8": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.55
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "credit_horizon": {
+          "rows": {
+            "episode": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.66
+            },
+            "step": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.62
+            },
+            "truncated": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 10.15
+            },
+            "full": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.65
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "trace_type": {
+          "rows": {
+            "internal": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 10.29
+            },
+            "otel": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 129,
+              "sec": 0.0
+            },
+            "sysmon": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 131,
+              "sec": 0.0
+            },
+            "hybrid": {
+              "score": -1000000000.0,
+              "invalid": true,
+              "note_len": 131,
+              "sec": 0.0
+            }
+          },
+          "n_valid": 1,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "memory_policy": {
+          "rows": {
+            "none": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.76
+            },
+            "fifo": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 10.34
+            },
+            "typed": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 10.68
+            },
+            "retrieval": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.62
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "optimizer": {
+          "rows": {
+            "OptoPrime": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 10.01
+            },
+            "OptoPrimeMulti": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 10.67
+            },
+            "OPRO": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.92
+            },
+            "TextGrad": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.18
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "trainer": {
+          "rows": {
+            "MinibatchAlgorithm": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.14
+            },
+            "BeamsearchAlgorithm": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 8.93
+            },
+            "UCBSearchAlgorithm": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 8.92
+            },
+            "PrioritySearch": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 8.95
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "guide": {
+          "rows": {
+            "LLMJudge": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.25
+            },
+            "ExactMatch": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.01
+            },
+            "deterministic": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 8.97
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "num_threads": {
+          "rows": {
+            "1": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 8.88
+            },
+            "2": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 8.91
+            },
+            "4": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 8.93
+            },
+            "8": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.03
+            }
+          },
+          "n_valid": 4,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "num_epochs": {
+          "rows": {
+            "1": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 8.86
+            },
+            "2": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.25
+            },
+            "4": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 8.89
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        },
+        "initial_knowledge": {
+          "rows": {
+            "": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 556,
+              "sec": 9.05
+            },
+            "Prefer tight fits.": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 582,
+              "sec": 8.91
+            },
+            "Prefer loose fits.": {
+              "score": -218.0,
+              "invalid": false,
+              "note_len": 582,
+              "sec": 8.89
+            }
+          },
+          "n_valid": 3,
+          "distinct_valid_scores": 1,
+          "range": 0.0,
+          "live": false
+        }
+      }
+    }
+  }
+}

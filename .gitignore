@@ -199,3 +199,7 @@ examples/examples/
 memOLD/
 experiments/**/*.json
 experiments/**/*.jsonl
+# ...but the curated _history/ archive is tracked project structure, not byproduct: these
+# result files are the evidence trail behind _history/navigation/RESEARCH_LOG.md. Only the
+# top level is exempt -- per-run */artifacts.jsonl and */events.jsonl stay untracked.
+!experiments/recursive_opt/_history/probe_2026/*.json

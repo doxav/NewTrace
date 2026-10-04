@@ -1,0 +1,54 @@
+{
+  "internal:multiobjective_gsm8k": {
+    "provider_default": {
+      "runs": [
+        -0.262,
+        -0.16075,
+        -0.20475
+      ],
+      "temperature": null,
+      "n_valid": 3,
+      "n_failed": 0,
+      "mean": -0.20916666666666667,
+      "sd": 0.04145295191204388
+    },
+    "temperature_0_2": {
+      "runs": [
+        -0.22875,
+        -0.226,
+        -0.19975
+      ],
+      "temperature": 0.2,
+      "n_valid": 3,
+      "n_failed": 0,
+      "mean": -0.21816666666666668,
+      "sd": 0.013070853920927362
+    }
+  },
+  "hf:qasper": {
+    "provider_default": {
+      "runs": [
+        0.0,
+        0.0,
+        null
+      ],
+      "temperature": null,
+      "n_valid": 2,
+      "n_failed": 1,
+      "mean": 0.0,
+      "sd": 0.0
+    },
+    "temperature_0_2": {
+      "runs": [
+        0.03793103448275861,
+        0.04444444444444444,
+        0.053030303030303025
+      ],
+      "temperature": 0.2,
+      "n_valid": 3,
+      "n_failed": 0,
+      "mean": 0.04513526065250203,
+      "sd": 0.006183574906837321
+    }
+  }
+}
