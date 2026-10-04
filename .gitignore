@@ -203,3 +203,6 @@ experiments/**/*.jsonl
 # result files are the evidence trail behind _history/navigation/RESEARCH_LOG.md. Only the
 # top level is exempt -- per-run */artifacts.jsonl and */events.jsonl stay untracked.
 !experiments/recursive_opt/_history/probe_2026/*.json
+# EXP22 run configs are provenance, not byproduct: they record the exact spec each run
+# executed. EXP22/configs is a symlink to evox/configs, which this rule had left empty.
+!experiments/recursive_opt/EXP22/evox/configs/**/*.json
