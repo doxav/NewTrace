@@ -32,10 +32,14 @@ Initial program: 0.499 (causal). No run produced the truncation exploit: every b
    (`filtfilt`, `savgol_filter`, `medfilt`) that read future samples on every signal. Restricted to causal (real-time)
    candidates, all three arms are equal (medians 0.532–0.537). The task text asks for real-time filtering, but the evaluator
    does not check causality.
-3. **Why EvoX finds SciPy and the native engine does not:** stock EvoX's label generator lists installed libraries and
-   insists on using them; its generated labels name `scipy.signal`, `filtfilt`, `savgol_filter` and `butter`. The native
-   port's label prompt is shorter and never produced SciPy code. This is a fidelity gap in the native O0 operator (EXP23
-   equivalence covered control flow with static labels, not prompt content), not a property of Trace as meta-optimizer.
+3. **Why EvoX uses SciPy and the native engine does not (corrected 2026-10-05):** stock EvoX's label generator injects
+   the environment's installed packages (`get_available_packages()` → `## Available Packages in Environment`) and requires
+   a LIBRARIES/TOOLS bullet ("Do not skip it"); the native `LABEL_GENERATION_SYSTEM` only permits naming libraries. The
+   native labels **did** name SciPy — all 6 Trace `labels.diverge` mention it — but 3 of 6 steer away from it (seed 42:
+   "Use `numpy` only … no scipy dependency needed"). SciPy was importable (the evaluator imports it; the worker has no
+   import restriction). Whether proposals attempted SciPy is **unknown**: `calls.jsonl` records metadata only, no prompt
+   or response text. This is a label-quality fidelity gap in the native O0 operator (EXP23 equivalence covered control
+   flow with static labels, not prompt content), not a property of Trace as meta-optimizer.
 4. **EXP24 treatment versus EXP23 configuration:** slightly higher on valid-any (medians 0.586 vs 0.555), equal when causal.
    Three runs per arm; no significance claimed.
 
