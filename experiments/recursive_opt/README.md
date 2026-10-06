@@ -6,7 +6,7 @@
 - [Experiment catalogue](#experiment-catalogue)
 - [Shared infrastructure and history](#shared-infrastructure-and-history)
 
-Start with the [scientific assessment](ASSESSMENT.md) for the reconciled lessons and limitations. This catalogue is the common navigation and storage home for the numbered studies. EXP22 has two separate studies; UC numbers and control-plane prompt numbers are different namespaces.
+Start with the [scientific assessment](ASSESSMENT.md) for the reconciled lessons and limitations. For EXP22–EXP27 (Trace versus EvoX), see the [2026-10-06 retrospective](_analysis/retrospective_20261006/RETROSPECTIVE.md): impact on recursive_opt itself is flat; the gains are in measurement, the O0 operator and evaluator, and engineering. This catalogue is the common navigation and storage home for the numbered studies. EXP22 has two separate studies; UC numbers and control-plane prompt numbers are different namespaces.
 
 Current verdict (6 October 2026): local task-learning and engineering gains are supported; a reproducible advantage of deeper recursion is not established. EXP23's raw PRISM lead was a scoring exploit; in EXP24 (complete, 9/9) a fixed policy matched both meta arms. EXP25's EvoX lead came from look-ahead SciPy smoothers and vanishes under causality; EXP26 (truncated by a key limit) showed injected stock labels do not close the gap; EXP27 finds the gap is look-ahead only and not a capability limit: Trace's meta-optimizer explores less (refine-locked policies, elite context on DIVERGE).
 

@@ -1,0 +1,766 @@
+{
+ "summary": {
+  "stock EvoX": {
+   "runs": 6,
+   "any@10": 0.5253,
+   "any@25": 0.6461,
+   "any@42": 0.6849,
+   "any@100": 0.7109,
+   "causal@10": 0.5163,
+   "causal@25": 0.5373,
+   "causal@42": 0.5433,
+   "causal@100": 0.5433
+  },
+  "EXP25 trace_exp23": {
+   "runs": 3,
+   "any@10": 0.5308,
+   "any@25": 0.5415,
+   "any@42": 0.5494,
+   "any@100": 0.5553,
+   "causal@10": 0.5301,
+   "causal@25": 0.5315,
+   "causal@42": 0.5315,
+   "causal@100": 0.5315
+  },
+  "EXP25 trace_exp24": {
+   "runs": 3,
+   "any@10": 0.5266,
+   "any@25": 0.5409,
+   "any@42": 0.5552,
+   "any@100": 0.5855,
+   "causal@10": 0.5266,
+   "causal@25": 0.5324,
+   "causal@42": 0.5324,
+   "causal@100": 0.5324
+  },
+  "EXP26 native_pkg": {
+   "runs": 3,
+   "any@10": 0.5448,
+   "any@25": 0.545,
+   "any@42": 0.5523,
+   "any@100": 0.5543,
+   "causal@10": 0.5299,
+   "causal@25": 0.5299,
+   "causal@42": 0.5299,
+   "causal@100": 0.5299
+  },
+  "EXP26 native": {
+   "runs": 3,
+   "any@10": 0.5267,
+   "any@25": 0.6243,
+   "any@42": 0.6516,
+   "any@100": 0.6516,
+   "causal@10": 0.525,
+   "causal@25": 0.525,
+   "causal@42": 0.525,
+   "causal@100": 0.525
+  },
+  "EXP26 native_stocklabels": {
+   "runs": 3,
+   "any@10": 0.5308,
+   "any@25": 0.5507,
+   "any@42": 0.5651,
+   "any@100": 0.5764,
+   "causal@10": 0.5308,
+   "causal@25": 0.5507,
+   "causal@42": 0.5571,
+   "causal@100": 0.5576
+  },
+  "EXP27 trace cue_off": {
+   "runs": 8,
+   "any@10": 0.5474,
+   "any@25": 0.555,
+   "any@42": 0.5756,
+   "any@100": 0.6373,
+   "causal@10": 0.5361,
+   "causal@25": 0.539,
+   "causal@42": 0.539,
+   "causal@100": 0.539
+  },
+  "EXP27 trace cue_on": {
+   "runs": 3,
+   "any@10": 0.532,
+   "any@25": 0.5369,
+   "any@42": 0.5386,
+   "any@100": 0.5478,
+   "causal@10": 0.5214,
+   "causal@25": 0.5249,
+   "causal@42": 0.5249,
+   "causal@100": 0.5249
+  }
+ },
+ "runs": {
+  "EXP25/evox_stock_s42": {
+   "arm": "stock EvoX",
+   "curve": {
+    "10": {
+     "any": 0.503,
+     "causal": 0.503
+    },
+    "25": {
+     "any": 0.675,
+     "causal": 0.5343
+    },
+    "42": {
+     "any": 0.7052,
+     "causal": 0.5343
+    },
+    "100": {
+     "any": 0.7132,
+     "causal": 0.5343
+    }
+   }
+  },
+  "EXP25/evox_stock_s43": {
+   "arm": "stock EvoX",
+   "curve": {
+    "10": {
+     "any": 0.5263,
+     "causal": 0.5263
+    },
+    "25": {
+     "any": 0.6725,
+     "causal": 0.5371
+    },
+    "42": {
+     "any": 0.684,
+     "causal": 0.5371
+    },
+    "100": {
+     "any": 0.7225,
+     "causal": 0.5371
+    }
+   }
+  },
+  "EXP25/evox_stock_s44": {
+   "arm": "stock EvoX",
+   "curve": {
+    "10": {
+     "any": 0.5769,
+     "causal": 0.561
+    },
+    "25": {
+     "any": 0.596,
+     "causal": 0.561
+    },
+    "42": {
+     "any": 0.6753,
+     "causal": 0.561
+    },
+    "100": {
+     "any": 0.6785,
+     "causal": 0.561
+    }
+   }
+  },
+  "EXP25/trace_exp23_s42": {
+   "arm": "EXP25 trace_exp23",
+   "curve": {
+    "10": {
+     "any": 0.5308,
+     "causal": 0.5301
+    },
+    "25": {
+     "any": 0.5415,
+     "causal": 0.5315
+    },
+    "42": {
+     "any": 0.5494,
+     "causal": 0.5315
+    },
+    "100": {
+     "any": 0.5553,
+     "causal": 0.5315
+    }
+   }
+  },
+  "EXP25/trace_exp23_s43": {
+   "arm": "EXP25 trace_exp23",
+   "curve": {
+    "10": {
+     "any": 0.5361,
+     "causal": 0.5361
+    },
+    "25": {
+     "any": 0.553,
+     "causal": 0.5462
+    },
+    "42": {
+     "any": 0.5557,
+     "causal": 0.5557
+    },
+    "100": {
+     "any": 0.5615,
+     "causal": 0.5562
+    }
+   }
+  },
+  "EXP25/trace_exp23_s44": {
+   "arm": "EXP25 trace_exp23",
+   "curve": {
+    "10": {
+     "any": 0.5104,
+     "causal": 0.5104
+    },
+    "25": {
+     "any": 0.5105,
+     "causal": 0.5105
+    },
+    "42": {
+     "any": 0.5242,
+     "causal": 0.521
+    },
+    "100": {
+     "any": 0.5313,
+     "causal": 0.521
+    }
+   }
+  },
+  "EXP25/trace_exp24_s42": {
+   "arm": "EXP25 trace_exp24",
+   "curve": {
+    "10": {
+     "any": 0.5266,
+     "causal": 0.5266
+    },
+    "25": {
+     "any": 0.5409,
+     "causal": 0.5324
+    },
+    "42": {
+     "any": 0.5552,
+     "causal": 0.5324
+    },
+    "100": {
+     "any": 0.5855,
+     "causal": 0.5324
+    }
+   }
+  },
+  "EXP25/trace_exp24_s43": {
+   "arm": "EXP25 trace_exp24",
+   "curve": {
+    "10": {
+     "any": 0.5465,
+     "causal": 0.5465
+    },
+    "25": {
+     "any": 0.5483,
+     "causal": 0.5465
+    },
+    "42": {
+     "any": 0.5636,
+     "causal": 0.5465
+    },
+    "100": {
+     "any": 0.5926,
+     "causal": 0.5465
+    }
+   }
+  },
+  "EXP25/trace_exp24_s44": {
+   "arm": "EXP25 trace_exp24",
+   "curve": {
+    "10": {
+     "any": 0.499,
+     "causal": 0.499
+    },
+    "25": {
+     "any": 0.5313,
+     "causal": 0.5313
+    },
+    "42": {
+     "any": 0.5313,
+     "causal": 0.5313
+    },
+    "100": {
+     "any": 0.5313,
+     "causal": 0.5313
+    }
+   }
+  },
+  "EXP26/evox_stock_s42": {
+   "arm": "stock EvoX",
+   "curve": {
+    "10": {
+     "any": 0.5244,
+     "causal": 0.5244
+    },
+    "25": {
+     "any": 0.6384,
+     "causal": 0.5514
+    },
+    "42": {
+     "any": 0.6859,
+     "causal": 0.5514
+    },
+    "100": {
+     "any": 0.7148,
+     "causal": 0.5514
+    }
+   }
+  },
+  "EXP26/evox_stock_s43": {
+   "arm": "stock EvoX",
+   "curve": {
+    "10": {
+     "any": 0.6287,
+     "causal": 0.499
+    },
+    "25": {
+     "any": 0.6538,
+     "causal": 0.499
+    },
+    "42": {
+     "any": 0.7,
+     "causal": 0.499
+    },
+    "100": {
+     "any": 0.7086,
+     "causal": 0.499
+    }
+   }
+  },
+  "EXP26/evox_stock_s44": {
+   "arm": "stock EvoX",
+   "curve": {
+    "10": {
+     "any": 0.5082,
+     "causal": 0.5082
+    },
+    "25": {
+     "any": 0.5375,
+     "causal": 0.5375
+    },
+    "42": {
+     "any": 0.5844,
+     "causal": 0.5495
+    },
+    "100": {
+     "any": 0.5877,
+     "causal": 0.5495
+    }
+   }
+  },
+  "EXP26/native_pkg_s42": {
+   "arm": "EXP26 native_pkg",
+   "curve": {
+    "10": {
+     "any": 0.5448,
+     "causal": 0.5306
+    },
+    "25": {
+     "any": 0.545,
+     "causal": 0.5306
+    },
+    "42": {
+     "any": 0.5523,
+     "causal": 0.5306
+    },
+    "100": {
+     "any": 0.5543,
+     "causal": 0.5306
+    }
+   }
+  },
+  "EXP26/native_pkg_s43": {
+   "arm": "EXP26 native_pkg",
+   "curve": {
+    "10": {
+     "any": 0.5379,
+     "causal": 0.5299
+    },
+    "25": {
+     "any": 0.5395,
+     "causal": 0.5299
+    },
+    "42": {
+     "any": 0.5439,
+     "causal": 0.5299
+    },
+    "100": {
+     "any": 0.5439,
+     "causal": 0.5299
+    }
+   }
+  },
+  "EXP26/native_pkg_s44": {
+   "arm": "EXP26 native_pkg",
+   "curve": {
+    "10": {
+     "any": 0.5562,
+     "causal": 0.499
+    },
+    "25": {
+     "any": 0.5562,
+     "causal": 0.499
+    },
+    "42": {
+     "any": 0.5594,
+     "causal": 0.499
+    },
+    "100": {
+     "any": 0.5594,
+     "causal": 0.499
+    }
+   }
+  },
+  "EXP26/native_s42": {
+   "arm": "EXP26 native",
+   "curve": {
+    "10": {
+     "any": 0.5267,
+     "causal": 0.525
+    },
+    "25": {
+     "any": 0.5506,
+     "causal": 0.525
+    },
+    "42": {
+     "any": 0.5629,
+     "causal": 0.525
+    },
+    "100": {
+     "any": 0.5805,
+     "causal": 0.525
+    }
+   }
+  },
+  "EXP26/native_s43": {
+   "arm": "EXP26 native",
+   "curve": {
+    "10": {
+     "any": 0.5304,
+     "causal": 0.5276
+    },
+    "25": {
+     "any": 0.6877,
+     "causal": 0.5276
+    },
+    "42": {
+     "any": 0.7025,
+     "causal": 0.5317
+    },
+    "100": {
+     "any": 0.7025,
+     "causal": 0.5317
+    }
+   }
+  },
+  "EXP26/native_s44": {
+   "arm": "EXP26 native",
+   "curve": {
+    "10": {
+     "any": 0.5251,
+     "causal": 0.499
+    },
+    "25": {
+     "any": 0.6243,
+     "causal": 0.499
+    },
+    "42": {
+     "any": 0.6516,
+     "causal": 0.499
+    },
+    "100": {
+     "any": 0.6516,
+     "causal": 0.499
+    }
+   }
+  },
+  "EXP26/native_stocklabels_s42": {
+   "arm": "EXP26 native_stocklabels",
+   "curve": {
+    "10": {
+     "any": 0.5308,
+     "causal": 0.5308
+    },
+    "25": {
+     "any": 0.5507,
+     "causal": 0.5507
+    },
+    "42": {
+     "any": 0.5651,
+     "causal": 0.5651
+    },
+    "100": {
+     "any": 0.6259,
+     "causal": 0.5651
+    }
+   }
+  },
+  "EXP26/native_stocklabels_s43": {
+   "arm": "EXP26 native_stocklabels",
+   "curve": {
+    "10": {
+     "any": 0.5737,
+     "causal": 0.5536
+    },
+    "25": {
+     "any": 0.5755,
+     "causal": 0.5536
+    },
+    "42": {
+     "any": 0.5762,
+     "causal": 0.5536
+    },
+    "100": {
+     "any": 0.5764,
+     "causal": 0.5536
+    }
+   }
+  },
+  "EXP26/native_stocklabels_s44": {
+   "arm": "EXP26 native_stocklabels",
+   "curve": {
+    "10": {
+     "any": 0.5095,
+     "causal": 0.5095
+    },
+    "25": {
+     "any": 0.5204,
+     "causal": 0.5204
+    },
+    "42": {
+     "any": 0.5571,
+     "causal": 0.5571
+    },
+    "100": {
+     "any": 0.5576,
+     "causal": 0.5576
+    }
+   }
+  },
+  "EXP27/cue_off_s42": {
+   "arm": "EXP27 trace cue_off",
+   "curve": {
+    "10": {
+     "any": 0.5474,
+     "causal": 0.5373
+    },
+    "25": {
+     "any": 0.5827,
+     "causal": 0.5373
+    },
+    "42": {
+     "any": 0.6174,
+     "causal": 0.5373
+    },
+    "100": {
+     "any": 0.6174,
+     "causal": 0.5373
+    }
+   }
+  },
+  "EXP27/cue_off_s43": {
+   "arm": "EXP27 trace cue_off",
+   "curve": {
+    "10": {
+     "any": 0.5316,
+     "causal": 0.5316
+    },
+    "25": {
+     "any": 0.5499,
+     "causal": 0.5349
+    },
+    "42": {
+     "any": 0.5526,
+     "causal": 0.5349
+    },
+    "100": {
+     "any": 0.5664,
+     "causal": 0.5349
+    }
+   }
+  },
+  "EXP27/cue_off_s44": {
+   "arm": "EXP27 trace cue_off",
+   "curve": {
+    "10": {
+     "any": 0.5421,
+     "causal": 0.5421
+    },
+    "25": {
+     "any": 0.5531,
+     "causal": 0.5421
+    },
+    "42": {
+     "any": 0.6733,
+     "causal": 0.5421
+    },
+    "100": {
+     "any": 0.7285,
+     "causal": 0.5421
+    }
+   }
+  },
+  "EXP27/cue_off_s45": {
+   "arm": "EXP27 trace cue_off",
+   "curve": {
+    "10": {
+     "any": 0.5439,
+     "causal": 0.5356
+    },
+    "25": {
+     "any": 0.5568,
+     "causal": 0.5356
+    },
+    "42": {
+     "any": 0.5609,
+     "causal": 0.5356
+    },
+    "100": {
+     "any": 0.6377,
+     "causal": 0.5356
+    }
+   }
+  },
+  "EXP27/cue_off_s46": {
+   "arm": "EXP27 trace cue_off",
+   "curve": {
+    "10": {
+     "any": 0.5626,
+     "causal": 0.5366
+    },
+    "25": {
+     "any": 0.5809,
+     "causal": 0.5407
+    },
+    "42": {
+     "any": 0.5863,
+     "causal": 0.5407
+    },
+    "100": {
+     "any": 0.7338,
+     "causal": 0.5407
+    }
+   }
+  },
+  "EXP27/cue_off_s47": {
+   "arm": "EXP27 trace cue_off",
+   "curve": {
+    "10": {
+     "any": 0.5499,
+     "causal": 0.499
+    },
+    "25": {
+     "any": 0.553,
+     "causal": 0.5507
+    },
+    "42": {
+     "any": 0.5648,
+     "causal": 0.5536
+    },
+    "100": {
+     "any": 0.6369,
+     "causal": 0.5536
+    }
+   }
+  },
+  "EXP27/cue_off_s48": {
+   "arm": "EXP27 trace cue_off",
+   "curve": {
+    "10": {
+     "any": 0.5475,
+     "causal": 0.5475
+    },
+    "25": {
+     "any": 0.5493,
+     "causal": 0.5493
+    },
+    "42": {
+     "any": 0.5571,
+     "causal": 0.551
+    },
+    "100": {
+     "any": 0.569,
+     "causal": 0.551
+    }
+   }
+  },
+  "EXP27/cue_off_s49": {
+   "arm": "EXP27 trace cue_off",
+   "curve": {
+    "10": {
+     "any": 0.7003,
+     "causal": 0.499
+    },
+    "25": {
+     "any": 0.7016,
+     "causal": 0.499
+    },
+    "42": {
+     "any": 0.7016,
+     "causal": 0.499
+    },
+    "100": {
+     "any": 0.7024,
+     "causal": 0.499
+    }
+   }
+  },
+  "EXP27/cue_on_s45": {
+   "arm": "EXP27 trace cue_on",
+   "curve": {
+    "10": {
+     "any": 0.6034,
+     "causal": 0.499
+    },
+    "25": {
+     "any": 0.6209,
+     "causal": 0.499
+    },
+    "42": {
+     "any": 0.7252,
+     "causal": 0.499
+    },
+    "100": {
+     "any": 0.7252,
+     "causal": 0.499
+    }
+   }
+  },
+  "EXP27/cue_on_s46": {
+   "arm": "EXP27 trace cue_on",
+   "curve": {
+    "10": {
+     "any": 0.5214,
+     "causal": 0.5214
+    },
+    "25": {
+     "any": 0.528,
+     "causal": 0.528
+    },
+    "42": {
+     "any": 0.528,
+     "causal": 0.528
+    },
+    "100": {
+     "any": 0.5435,
+     "causal": 0.5435
+    }
+   }
+  },
+  "EXP27/cue_on_s47": {
+   "arm": "EXP27 trace cue_on",
+   "curve": {
+    "10": {
+     "any": 0.532,
+     "causal": 0.5249
+    },
+    "25": {
+     "any": 0.5369,
+     "causal": 0.5249
+    },
+    "42": {
+     "any": 0.5386,
+     "causal": 0.5249
+    },
+    "100": {
+     "any": 0.5478,
+     "causal": 0.5249
+    }
+   }
+  }
+ }
+}
