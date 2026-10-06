@@ -12,8 +12,14 @@ cells.append(md("""# Trace recursive_opt vs stock EvoX (EXP22–EXP27): performa
 Both engines use the same LLM (`z-ai/glm-5.3-flash` via Novita, temperature 0.7) and 100 solution calls per run.
 Tasks are SkyDiscover **Signal Processing** (higher is better; start 0.499) and **PRISM** GPU placement.
 **Legitimate** means *causal* on Signal (output never uses future samples; the task asks for real-time
-filtering) and *all 50 cases solved* on PRISM (the stock metric skips failed cases). The **cue** is the
-`causal_fraction` audit metric, which Trace's prompts printed and EvoX's never did."""))
+filtering) and *all 50 cases solved* on PRISM (the stock metric skips failed cases).
+
+**The cue.** In EXP25–EXP27, Trace was scored by a white-box evaluator that also computed `causal_fraction`: the
+share of the 5 test signals whose output does not use future samples. Trace's prompts print every metric, so the LLM
+read, for example, `causal_fraction: 1.0000` next to the score. That is a hint that real-time behaviour is being
+checked. **EvoX never had this cue**: its stock evaluator does not compute the metric.
+*Cue shown* = Trace as run in EXP25, EXP26 and the EXP27 controls. *Cue hidden* = EXP27 Part D, where the metric is
+removed from Trace's prompts but still recorded for the audit, which makes Trace's prompts match EvoX's on this point."""))
 
 cells.append(code(r"""import json, math, glob
 from pathlib import Path
@@ -74,56 +80,80 @@ cells.append(code(r"""plt.rcParams.update({'font.size': 8, 'axes.titlesize': 9, 
 fig, ax = plt.subplots(2, 3, figsize=(13, 7.4), constrained_layout=True)
 it = np.arange(1, 101)
 
-# (a) learning curves
+# (a) Signal learning curves: median and top run per group (benchmark score)
 a = ax[0, 0]
 for g in GROUPS:
     keys = [k for k, r in curves.items() if GROUP(r['arm']) == g]
-    for causal, ls in ((False, '--'), (True, '-')):
-        m = np.array([best_so_far(curves[k]['points'], causal) for k in keys])
-        a.plot(it, np.median(m, 0), ls, color=COL[g], lw=1.6, label=f'{g} ({len(keys)} runs)' if not causal else None)
-        if g != 'Trace, cue hidden':
-            a.fill_between(it, np.percentile(m, 25, 0), np.percentile(m, 75, 0), color=COL[g], alpha=0.12 if causal else 0.05, lw=0)
-a.plot([], [], 'k--', lw=1, label='raw score'); a.plot([], [], 'k-', lw=1, label='causal (real-time) only')
+    m = np.array([best_so_far(curves[k]['points'], False) for k in keys])
+    a.plot(it, np.median(m, 0), '-', color=COL[g], lw=1.8, label=f'{g} ({len(keys)} runs)')
+    a.plot(it, m[m[:, -1].argmax()], ':', color=COL[g], lw=1.2)
+a.plot([], [], 'k-', lw=1.5, label='median run'); a.plot([], [], 'k:', lw=1.2, label='top run')
 a.axhline(INIT, color='grey', lw=0.6, ls=':'); a.text(99, INIT + 0.003, 'initial program', ha='right', color='grey', fontsize=7)
-a.set(title='(a) Signal: best score so far (median; IQR shaded)', xlabel='solution call (iteration)', ylabel='best valid score', ylim=(0.49, 0.75))
-a.legend(fontsize=6.5, loc='upper left', frameon=False, ncol=2)
+a.axhline(MAX_CAUSAL, color='black', lw=0.6, ls='--'); a.text(1, MAX_CAUSAL + 0.004, f'best legitimate (causal) score in any run: {MAX_CAUSAL:.3f}', fontsize=6.5)
+a.set(title='(a) Signal: best benchmark score so far', ylabel='best score (as scored by the benchmark)', xlim=(0, 101), ylim=(0.49, 0.80))
+a.legend(fontsize=6.5, loc='upper left', frameon=False, ncol=3)
 
-# (b) per-run raw vs causal
+# (b) cumulative discovery of look-ahead
 b = ax[0, 1]
 for g in GROUPS:
-    d = runs[runs.Group == g]
-    b.scatter(d['Causal best'], d['Raw best'], s=24, color=COL[g], alpha=0.8, edgecolor='white', lw=0.5, label=f'{g} ({len(d)} runs)')
-b.plot([0.49, 0.76], [0.49, 0.76], color='grey', lw=0.6, ls=':')
-b.axhline(STRONG, color='black', lw=0.6, ls='--'); b.text(0.492, STRONG + 0.004, f'look-ahead threshold {STRONG}', fontsize=7)
-b.set(title='(b) Signal: each run, raw best vs causal best', xlabel='best causal (real-time) score', ylabel='best raw score',
-      xlim=(0.49, 0.6), ylim=(0.49, 0.76))
-b.text(0.597, 0.505, 'height above the diagonal\n= gain from look-ahead', ha='right', fontsize=7, color='grey')
-b.legend(fontsize=7, loc='upper right', frameon=False)
-
-# (c) cumulative discovery of look-ahead
-c = ax[0, 2]
-for g in GROUPS:
     d = runs[runs.Group == g]; found = d['Found at'].dropna()
-    c.step(it, [(found <= k).sum() / len(d) for k in it], where='post', color=COL[g], lw=1.8, label=f'{g}: {len(found)}/{len(d)} runs')
-c.set(title=f'(c) Signal: runs that found look-ahead ≥ {STRONG}', xlabel='solution call (iteration)', ylabel='share of runs', ylim=(0, 1.02))
-c.legend(fontsize=7, loc='upper left', frameon=False)
+    b.step(it, [(found <= k).sum() / len(d) for k in it], where='post', color=COL[g], lw=1.8, label=f'{g}: {len(found)}/{len(d)} runs')
+b.set(title=f'(b) Signal: runs that found look-ahead ≥ {STRONG}', xlabel='solution call (iteration)', ylabel='share of runs', ylim=(0, 1.02))
+b.legend(fontsize=7, loc='upper left', frameon=False)
 
-# (d) instruction mix over time
-d_ = ax[1, 0]; w = np.arange(4); width = 0.38
+# (c) PRISM learning curves on the stock metric (runs with >= 50 iterations and per-iteration logs)
+def prism_points(path):
+    if path.name == 'events.jsonl':
+        evs = [json.loads(l) for l in open(path)]
+        return [(e['iteration'], e['child_score']) for e in evs if e.get('type') == 'iteration' and e.get('child_score') is not None]
+    out = []
+    for line in open(path):
+        r = json.loads(line); cand = r.get('candidate') or {}
+        s = (cand.get('metrics') or {}).get('combined_score')
+        if isinstance(s, (int, float)):
+            out.append((r['iteration'], s))
+    return out
+PINIT = prism_rescore['initial']['metrics']['combined_score']
+prism_groups = {'EvoX': ['EXP22/runs/strict_prism_SD-EVOX_*/candidate_history.jsonl'],
+                'Trace': ['EXP22/runs/strict_prism_TRACE-RECURSIVE_*/candidate_history.jsonl',
+                          'EXP22/artifacts/parallel_trace_*/v9_runtime/runs/strict_prism_TRACE-RECURSIVE_*/candidate_history.jsonl',
+                          'EXP23/results/prism100/*/TRACE-*/candidate_history.jsonl', 'EXP23/results/prism100_v2/*/trace/events.jsonl']}
+c = ax[0, 2]
+for g, pats in prism_groups.items():
+    paths = sorted({Path(h).resolve() for pat in pats for h in glob.glob(str(R / pat))})
+    pts = [pp for pp in (prism_points(h) for h in paths) if pp and max(i_ for i_, _ in pp) >= 50]
+    m = []
+    for pp in pts:
+        by = {}
+        for i_, s in pp:
+            by[i_] = max(by.get(i_, -1), s)
+        best, row = PINIT, []
+        for k in it:
+            best = max(best, by.get(k, -1)); row.append(best)
+        m.append(row)
+    m = np.array(m)
+    c.plot(it, np.median(m, 0), '-', color=COL[g], lw=1.8, label=f'{g} ({len(m)} runs)')
+    c.plot(it, m[m[:, -1].argmax()], ':', color=COL[g], lw=1.2)
+c.plot([], [], 'k-', lw=1.5, label='median run'); c.plot([], [], 'k:', lw=1.2, label='top run')
+c.axhline(OPT, color='black', lw=0.6, ls='--'); c.text(99, OPT - 0.55, f'all-case optimum {OPT:.3f} (above it = cases refused)', ha='right', fontsize=6.5)
+c.axhline(PINIT, color='grey', lw=0.6, ls=':'); c.text(99, PINIT + 0.15, 'initial program', ha='right', color='grey', fontsize=7)
+c.set(title='(c) PRISM: best stock score so far', xlabel='solution call (iteration)', ylabel='best score (stock metric)', ylim=(21, 34))
+c.legend(fontsize=6.5, loc='upper left', frameon=False, ncol=2)
+
+# (d) instruction mix over time, on the same iteration axis as (a)
+d_ = ax[1, 0]; centres = np.array([12.5, 37.5, 62.5, 87.5]); width = 11.5
 kinds = [('unlabelled', 'no instruction', '#bdbdbd'), ('refine', 'REFINE', '#80b1d3'), ('diverge', 'DIVERGE', '#e7298a')]
 for j, eng in enumerate(('stock', 'trace')):
-    bottom = np.zeros(4)
+    bottom = np.zeros(4); name = 'EvoX' if eng == 'stock' else 'Trace'
     for kind, lab, col in kinds:
         v = np.array([row[kind] for row in timeline[eng]])
-        d_.bar(w + (j - 0.5) * width, v, width * 0.95, bottom=bottom, color=col, edgecolor='white', lw=0.5, label=lab if j == 0 else None)
+        d_.bar(centres + (j - 0.5) * width, v, width * 0.95, bottom=bottom, color=col, edgecolor='white', lw=0.5, label=lab if j == 0 else None)
         bottom += v
-    name = 'EvoX' if eng == 'stock' else 'Trace'
-    for x in w:
-        d_.text(x + (j - 0.5) * width, 1.02, name, ha='center', fontsize=6.5, color=COL[name])
-d_.set_xticks(w, [f"{r['iters']}\n({timeline['stock'][i]['runs']} / {timeline['trace'][i]['runs']} runs)" for i, r in enumerate(timeline['stock'])])
-d_.set_ylim(0, 1.09)
-d_.set(title='(d) Instruction attached by the evolved policy', xlabel='iterations (EvoX / Trace runs with data)', ylabel='share of iterations')
-d_.legend(fontsize=7, ncol=3, loc='upper center', bbox_to_anchor=(0.5, -0.27), frameon=False)
+    for i_, x_ in enumerate(centres):
+        d_.text(x_ + (j - 0.5) * width, 1.02, f"{name}\n{timeline[eng][i_]['runs']} runs", ha='center', fontsize=6, color=COL[name])
+d_.set(title='(d) Instruction attached by the evolved policy', xlabel='solution call (iteration)', ylabel='share of iterations',
+       xlim=(0, 101), ylim=(0, 1.13))
+d_.legend(fontsize=7, ncol=3, loc='upper center', bbox_to_anchor=(0.5, -0.17), frameon=False)
 
 # (e) yield per instruction, Wilson 95% CI
 def wilson(k, n, z=1.96):
@@ -199,18 +229,18 @@ display(Markdown(f'''**Findings** (every number computed above).
    {full['EvoX']:.3f} for EvoX and {full['Trace']:.3f} for Trace (optimum {OPT:.3f}). Each engine's PRISM record (EvoX
    {sel['EvoX']['combined_score']:.2f}, Trace {sel['Trace']['combined_score']:.2f}) solves at most
    {round(max(s['success_rate'] for s in sel.values()) * 50)}/50 cases and drops to {sel['EvoX']['valid_score']:.2f} and
-   {sel['Trace']['valid_score']:.2f} on all 50 (a, b, f).
+   {sel['Trace']['valid_score']:.2f} on all 50 (Table 1; c, f).
 2. **EvoX's Signal lead is cheat discovery, not better optimization.** Look-ahead ≥ {STRONG}: EvoX {n['EvoX'][0]}/{n['EvoX'][1]} runs
    (iterations {', '.join(map(str, first['EvoX']))}) vs Trace with the cue shown {n['Trace, cue shown'][0]}/{n['Trace, cue shown'][1]}
    (one-sided Fisher p = {p_evox:.3f}). With the cue hidden, Trace finds look-ahead in {n['Trace, cue hidden'][0]}/{n['Trace, cue hidden'][1]}
    runs (p = {p_cue:.3f} vs all cue-shown runs; p = {p_same:.3f} vs the {n_same[1]} same-configuration runs, {n_same[0]}/{n_same[1]}), but mostly in weaker hand-written forms: median cheating score {cheat['Trace, cue hidden']:.3f} vs EvoX
-   {cheat['EvoX']:.3f} (c). Once Trace finds the SciPy form, it climbs it as far: +{partD['cue_off']['median_climb_after']:.3f} vs EvoX
+   {cheat['EvoX']:.3f} (a, b). Once Trace finds the SciPy form, it climbs it as far: +{partD['cue_off']['median_climb_after']:.3f} vs EvoX
    +{partD['stock']['median_climb_after']:.3f} (Part D).
 3. **What Trace lacks is exploration.** SciPy filters come almost only from DIVERGE calls: EvoX
    {yield_['stock']['diverge']['scipy']}/{yield_['stock']['diverge']['calls']}, Trace {yield_['trace']['diverge']['scipy']}/{yield_['trace']['diverge']['calls']} (e).
    After iteration 25, EvoX's evolved policies attach DIVERGE in {pct(timeline['stock'][1]['diverge'])}–{pct(timeline['stock'][3]['diverge'])}
    of iterations. Trace's OptoPrime-written policies lock into REFINE ({pct(timeline['trace'][1]['refine'])}–{pct(timeline['trace'][3]['refine'])})
-   and always show 4 elite programs (d). The meta level has never beaten a fixed policy (Table 2).
+   and always show 4 elite programs (d, e). The meta level has never beaten a fixed policy (Table 2).
 
 *Limits:* 3 seeds per arm (EvoX 6, cue hidden 8). The look-ahead threshold is data-derived (best causal score seen + 0.05). The
 pre-registered SciPy-only count for cue hidden was {partD['cue_off']['E']}/{partD['cue_off']['runs']}. EXP26 runs stop at iterations 43–70
