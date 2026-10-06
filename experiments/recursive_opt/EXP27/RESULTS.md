@@ -1,6 +1,10 @@
 # EXP27 — results
 
-**Complete.** Part A: logs only, 21 runs. Part B: 72 calls, all succeeded, cost $0.10.
+**Complete.**
+
+- Part A: logs only, 21 runs.
+- Part B: 72 calls, $0.10, underpowered.
+- Part C: powered 2×2 plus an H8 re-test, 1,000 calls, $1.46.
 
 ## Part A — what the logs show (`results/mechanisms.json`)
 
@@ -63,24 +67,63 @@ What Part B changes:
    first SciPy candidate arrives at iteration 16–31, about 3–6% per call. Trace's runs give about 0.7% per call
    (6 discoveries in roughly 900 calls). Telling those rates apart needs about 200 completions per variant, not 24.
 
+## Part C — powered factorial (`results/factorial/`)
+
+Design: 20 prompts × 5 cells × 10 samples, as pre-registered. The first launch stalled because hung requests held
+workers: OpenRouter keep-alive bytes defeat the client's read timeout. It was resumed with a 300 s wall-clock
+deadline per call, after which none was hit. The 82 completions written before the stall were kept; the design is
+deterministic.
+
+| Cell | SciPy (primary) | SciPy look-ahead | Beats parent | Applied | Best valid |
+|---|---:|---:|---:|---:|---:|
+| cue on, Trace parent (as Trace runs) | 12.5% | 9.0% | 34% | 82% | 0.693 |
+| cue on, stock parent | 11.0% | 7.5% | 36% | 78% | 0.674 |
+| cue off, Trace parent | 21.5% | 17.0% | 46% | 82% | 0.700 |
+| cue off, stock parent | 19.0% | 14.0% | 45% | 85% | 0.711 |
+| stock-like, Trace parent | 16.5% | 12.0% | 37% | 84% | — |
+
+Each effect is the mean over prompts of the per-prompt difference, with a 95% bootstrap CI over prompts.
+
+| Effect on SciPy share | Estimate | 95% CI | Prompts +/− | Verdict |
+|---|---:|---|---|---|
+| H6: cue off − cue on | **+0.085** | [+0.053, +0.123] | 16 / 0 | **Supported** |
+| H10: stock parent − Trace parent | −0.020 | [−0.100, +0.052] | 7 / 9 | Inconclusive by rule; no sign of an effect |
+| Interaction | −0.010 | [−0.075, +0.060] | 8 / 8 | none detected |
+| H8: stock-like − cue off (Trace parent) | −0.050 | [−0.100, +0.005] | 5 / 12 | Inconclusive by rule; if anything harmful |
+
+Removing the `causal_fraction` line multiplies SciPy discovery by about 1.7 (12% to 20%). It also raises the share
+of completions that beat their parent by 10 points (CI [+0.055, +0.153]). The effect is the same on Trace and stock
+parents. Swapping in a score-matched stock parent changes nothing, so Trace's larger, hand-tuned programs are not
+the cause (H7/H10).
+
+**Consistency check: does the cue account for the run-level gap?** Per call in the runs, stock discovers SciPy at
+about 3–6% and Trace at about 0.7%. Under DIVERGE, Trace prompts give 12.5% with the cue and 20% without. A rough
+model is: DIVERGE share × the rate under DIVERGE, plus a smaller contribution from other labels. With Trace's DIVERGE
+share (about 13%) and the cue, that gives about 1.6%+. With stock's (15–24%) and no cue, about 3–5%+. That is the
+right order of magnitude for both engines, but it is an estimate, not a test.
+
 ## Status of the root causes
 
 | | Verdict |
 |---|---|
 | Gap = look-ahead loophole (H5) | **Established**: no causal gap in 21 runs |
+| Causal cue in Trace's prompts (H6) | **Established** (Part C): it suppresses SciPy discovery about 1.7× and raises beats-parent by 10 points |
 | DIVERGE rate, label text, LLM settings, parent/context selection (H1–H4) | **Refuted** |
 | Chance (H9) | **Refuted** as sole cause (p ≈ 0.0015) |
-| Stock task text and feedback framing (H8) | **Refuted** (Part B) |
-| Causal cue in Trace prompts (H6) | **Inconclusive.** A weak positive hint, from one prompt |
-| Remaining: per-call SciPy discovery from Trace's own parents (lineage, size: H7) | Untested. Next test below |
+| Parent lineage and size (H7, H10) | **No effect detected**. Estimate −0.02, CI ±0.08 |
+| Stock task text and feedback framing (H8) | **Not a cause**. If anything it lowers discovery (−0.05) |
 
-Next test, if the loophole itself is worth chasing: a powered replay of about 200 completions per arm (about $0.30),
-crossing two factors. The cue is present or absent. The parent is a Trace program or a stock program of equal score.
-This separates the prompt-cue effect from the parent-lineage effect on per-call SciPy discovery.
+**Root cause, in one line:** EXP25's evaluator exposes the audit metric `causal_fraction` to Trace's LLM, and to
+stock's never. Reading "causal_fraction: 1.0000", the LLM avoids the zero-phase SciPy filters that exploit the
+task's look-ahead loophole. Stock, uncued, finds and exploits them.
 
 ## Implication so far
 
 On the signal task, Trace does not trail EvoX at finding legitimate (causal) filters. It trails at finding a scoring
-loophole that the task text ("real-time … minimal phase delay") forbids. Fix F1 (causal scoring for both engines) is
-justified by Part A alone and is the recommended next campaign. Fix F2 (symmetric prompts) is cheap and removes a
-confound; Part B shows it is at most a modest lever, so it should go with F1 rather than be relied on alone.
+loophole that the task text ("real-time … minimal phase delay") forbids. Both fixes are now justified:
+
+- **F1, causal scoring for both engines,** makes the loophole worthless and compares the engines on the stated task.
+- **F2, symmetric prompts,** keeps audit metrics out of LLM-visible metrics for both engines. Part C shows this
+  matters: the cue alone moves discovery about 1.7×.
+
+Run them together. F2 alone would mainly let Trace exploit the loophole as stock does.

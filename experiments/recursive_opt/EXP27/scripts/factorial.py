@@ -10,10 +10,11 @@ else in the prompt (history, context programs, label, task) is the recorded text
 """
 import argparse
 import json
+import os
 import random
 import re
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout, as_completed
 from pathlib import Path
 
 import numpy as np
@@ -108,6 +109,8 @@ def main() -> None:
     parser.add_argument('--samples', type=int, default=10)
     parser.add_argument('--workers', type=int, default=24)
     parser.add_argument('--out', required=True)
+    parser.add_argument('--deadline-s', type=float, default=300.0)
+    parser.add_argument('--retries', type=int, default=3)
     parser.add_argument('--mock', action='store_true')
     parser.add_argument('--summarize', action='store_true')
     args = parser.parse_args()
@@ -131,6 +134,22 @@ def main() -> None:
     llm = (lambda messages, **_: 'no change') if args.mock else A.E25.RoleClient('factorial', 'novita', out / 'calls.jsonl')
     jobs = [(d, cue, parent, s) for d in design for cue, parent in CELLS for s in range(args.samples)]
     random.Random(1).shuffle(jobs)
+    done = set()
+    if (out / 'completions.jsonl').exists():  # resume: the design is deterministic, keep finished completions
+        done = {(r['prompt'], r['cue'], r['parent'], r['sample']) for r in map(json.loads, (out / 'completions.jsonl').read_text().splitlines())}
+    jobs = [j for j in jobs if (j[0]['id'], j[1], j[2], j[3]) not in done]
+    print(f'{len(done)} completions kept, {len(jobs)} to run', flush=True)
+    callers = ThreadPoolExecutor(max_workers=args.workers * 4)  # abandoned (hung) requests keep their thread here
+
+    def call(messages):
+        # OpenRouter keep-alive bytes defeat the client's read timeout: enforce a wall-clock deadline and retry
+        for attempt in range(args.retries):
+            try:
+                return callers.submit(llm, messages).result(timeout=args.deadline_s)
+            except FutureTimeout:
+                with (out / 'deadlines.jsonl').open('a') as stream:
+                    stream.write(json.dumps({'attempt': attempt}) + '\n')
+        return ''
 
     def one(job):
         d, cue, parent, sample = job
@@ -138,8 +157,10 @@ def main() -> None:
         user = rebuild(d['user'], par['source'], par['metrics'], par['artifacts'], cue == 'cue_on', d['label'])
         if cue == 'stock_like':
             user = A.stock_like(user)
-        reply = llm([{'role': 'system', 'content': d['system']}, {'role': 'user', 'content': user}])
+        reply = call([{'role': 'system', 'content': d['system']}, {'role': 'user', 'content': user}])
         child, error = A.apply_search_replace(par['source'], reply)
+        if not reply:
+            error = 'deadline exceeded on every attempt'
         row = {'prompt': d['id'], 'cue': cue, 'parent': parent, 'sample': sample, 'parent_valid': par['metrics']['valid_score'],
                'applied': child is not None, 'apply_error': error}
         if child is not None:
@@ -147,10 +168,12 @@ def main() -> None:
         return row
 
     with ThreadPoolExecutor(args.workers) as pool_, (out / 'completions.jsonl').open('a') as stream:
-        for row in pool_.map(one, jobs):
-            stream.write(json.dumps(row) + '\n')
+        for future in as_completed([pool_.submit(one, j) for j in jobs]):
+            stream.write(json.dumps(future.result()) + '\n')
             stream.flush()
-    print(json.dumps(summarize(out), indent=1))
+    callers.shutdown(wait=False, cancel_futures=True)
+    print(json.dumps(summarize(out), indent=1), flush=True)
+    os._exit(0)  # do not wait for abandoned (hung) request threads
 
 
 def summarize(out: Path, boot: int = 4000) -> dict:
