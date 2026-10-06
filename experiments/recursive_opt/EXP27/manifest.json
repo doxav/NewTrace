@@ -1,12 +1,12 @@
 {
-  "id": "EXP27",
-  "title": "Root causes of Trace's gap to stock EvoX on the signal task",
-  "kind": "coevolution_followup",
-  "report": "RESULTS.md",
-  "evidence": [
-    "results"
-  ],
-  "protocol": "PROTOCOL.md",
-  "predecessor": "EXP26",
-  "status": "Complete: gap is look-ahead only (H5); root cause = causal_fraction audit metric shown only to Trace's LLM, suppressing SciPy discovery ~1.7x (H6 supported, Part C, 1,000 calls); H1-H4, H9 refuted; parent lineage (H10) and stock task text (H8) show no effect. Next: F1 causal scoring + F2 symmetric prompts."
+ "id": "EXP27",
+ "title": "Root causes of Trace's gap to stock EvoX on the signal task",
+ "kind": "coevolution_followup",
+ "report": "RESULTS.md",
+ "evidence": [
+  "results"
+ ],
+ "protocol": "PROTOCOL.md",
+ "predecessor": "EXP26",
+ "status": "Complete: the gap is look-ahead only (H5). It is not a capability limit: once found, Trace climbs the cheat as far as stock (Part D). The causal_fraction cue is minor (1.7x per call, no run-level effect, p=0.82); the earlier 'root cause = cue' is withdrawn. Part E: SciPy comes only from DIVERGE calls (stock 6/8, Trace 8/189). Trace's O1 (OptoPrime, no stock design brief) writes refine-locked, elite-context policies. Next: stock brief in TraceProposer (O1), then a DIVERGE context replay test (O0), trainer-level changes last."
 }

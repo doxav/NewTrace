@@ -1,0 +1,141 @@
+{
+ "runs": {
+  "cue_off_s42": {
+   "E": false,
+   "best_valid": 0.6174,
+   "first_winning_lookahead_scipy": null,
+   "climb_after": null,
+   "iters_after": null,
+   "best_causal": 0.5373,
+   "failed_iterations": 1
+  },
+  "cue_off_s43": {
+   "E": false,
+   "best_valid": 0.5664,
+   "first_winning_lookahead_scipy": null,
+   "climb_after": null,
+   "iters_after": null,
+   "best_causal": 0.5349,
+   "failed_iterations": 0
+  },
+  "cue_off_s44": {
+   "E": true,
+   "best_valid": 0.7285,
+   "first_winning_lookahead_scipy": {
+    "iteration": 42,
+    "score": 0.6733,
+    "best_before": 0.5533
+   },
+   "climb_after": 0.0552,
+   "iters_after": 58,
+   "best_causal": 0.5421,
+   "failed_iterations": 0
+  },
+  "cue_off_s45": {
+   "E": false,
+   "best_valid": 0.6377,
+   "first_winning_lookahead_scipy": null,
+   "climb_after": null,
+   "iters_after": null,
+   "best_causal": 0.5356,
+   "failed_iterations": 2
+  },
+  "cue_off_s46": {
+   "E": true,
+   "best_valid": 0.7338,
+   "first_winning_lookahead_scipy": {
+    "iteration": 43,
+    "score": 0.689,
+    "best_before": 0.5863
+   },
+   "climb_after": 0.0448,
+   "iters_after": 57,
+   "best_causal": 0.5407,
+   "failed_iterations": 0
+  },
+  "cue_off_s47": {
+   "E": false,
+   "best_valid": 0.6369,
+   "first_winning_lookahead_scipy": null,
+   "climb_after": null,
+   "iters_after": null,
+   "best_causal": 0.5536,
+   "failed_iterations": 0
+  },
+  "cue_off_s48": {
+   "E": false,
+   "best_valid": 0.569,
+   "first_winning_lookahead_scipy": null,
+   "climb_after": null,
+   "iters_after": null,
+   "best_causal": 0.551,
+   "failed_iterations": 0
+  },
+  "cue_off_s49": {
+   "E": false,
+   "best_valid": 0.7024,
+   "first_winning_lookahead_scipy": null,
+   "climb_after": null,
+   "iters_after": null,
+   "best_causal": 0.499,
+   "failed_iterations": 0
+  },
+  "cue_on_s45": {
+   "E": true,
+   "best_valid": 0.7252,
+   "first_winning_lookahead_scipy": {
+    "iteration": 31,
+    "score": 0.6694,
+    "best_before": 0.6284
+   },
+   "climb_after": 0.0558,
+   "iters_after": 69,
+   "best_causal": 0.499,
+   "failed_iterations": 0
+  },
+  "cue_on_s46": {
+   "E": false,
+   "best_valid": 0.5435,
+   "first_winning_lookahead_scipy": null,
+   "climb_after": null,
+   "iters_after": null,
+   "best_causal": 0.5435,
+   "failed_iterations": 1
+  },
+  "cue_on_s47": {
+   "E": false,
+   "best_valid": 0.5478,
+   "first_winning_lookahead_scipy": null,
+   "climb_after": null,
+   "iters_after": null,
+   "best_causal": 0.5249,
+   "failed_iterations": 7
+  }
+ },
+ "summary": {
+  "cue_off": {
+   "runs": 8,
+   "E": 2,
+   "median_best_valid": 0.6373,
+   "median_climb_after": 0.05,
+   "median_best_causal": 0.5389999999999999
+  },
+  "cue_on_new": {
+   "runs": 3,
+   "E": 1,
+   "median_best_valid": 0.5478
+  },
+  "cued_trace_all": {
+   "runs": 9,
+   "E": 3
+  },
+  "stock": {
+   "runs": 6,
+   "E": 6,
+   "median_best": 0.7109,
+   "median_climb_after": 0.0454
+  },
+  "fisher_cue_off_vs_cued_one_sided_p": 0.8167,
+  "reading": "INCONCLUSIVE by the pre-registered rules"
+ }
+}

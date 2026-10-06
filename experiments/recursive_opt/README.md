@@ -8,7 +8,7 @@
 
 Start with the [scientific assessment](ASSESSMENT.md) for the reconciled lessons and limitations. This catalogue is the common navigation and storage home for the numbered studies. EXP22 has two separate studies; UC numbers and control-plane prompt numbers are different namespaces.
 
-Current verdict (6 October 2026): local task-learning and engineering gains are supported; a reproducible advantage of deeper recursion is not established. EXP23's raw PRISM lead was a scoring exploit; in EXP24 (complete, 9/9) a fixed policy matched both meta arms. EXP25's EvoX lead came from look-ahead SciPy smoothers and vanishes under causality; EXP26 (truncated by a key limit) showed injected stock labels do not close the gap; EXP27's log analysis finds the gap is look-ahead only, not label selection or content.
+Current verdict (6 October 2026): local task-learning and engineering gains are supported; a reproducible advantage of deeper recursion is not established. EXP23's raw PRISM lead was a scoring exploit; in EXP24 (complete, 9/9) a fixed policy matched both meta arms. EXP25's EvoX lead came from look-ahead SciPy smoothers and vanishes under causality; EXP26 (truncated by a key limit) showed injected stock labels do not close the gap; EXP27 finds the gap is look-ahead only and not a capability limit: Trace's meta-optimizer explores less (refine-locked policies, elite context on DIVERGE).
 
 ## Experiment catalogue
 
@@ -41,7 +41,7 @@ Current verdict (6 October 2026): local task-learning and engineering gains are 
 | [EXP24](EXP24/README.md) | Valid guide, white-box feedback and repair projection for native coevolution | Complete: 9/9 clean runs reach the all-case optimum (26.256); no meta-level gain over a fixed policy; 30+ stock scores are refusal exploits. |
 | [EXP25](EXP25/README.md) | Signal Processing: best Trace configurations versus stock EvoX | Complete: EvoX leads on the stock/valid score through look-ahead SciPy smoothers; all arms equal when restricted to causal filters. |
 | [EXP26](EXP26/README.md) | Label fidelity: does stock EvoX's label contract close EXP25's SciPy gap? | Complete but truncated (key limit at iteration 43–70). Injected stock labels do not close the gap at equal budget; R3 mechanism reading withdrawn (see EXP27). |
-| [EXP27](EXP27/README.md) | Root causes of Trace's gap to stock EvoX (five whys, H1–H9) | Complete: gap is look-ahead only. Root cause: the `causal_fraction` audit metric, shown only to Trace's LLM, suppresses SciPy discovery ~1.7× (powered 2×2, 1,000 calls). Next: causal scoring and symmetric prompts for both engines. |
+| [EXP27](EXP27/README.md) | Root causes of Trace's gap to stock EvoX (five whys, H1–H9, Parts A–E) | Complete: gap is look-ahead only and not a capability limit (same climb once found). The cue is minor. SciPy comes only from DIVERGE calls: stock 6/8, Trace 8/189. Trace's meta-optimizer (OptoPrime without the stock design brief) writes refine-locked, elite-context policies. Next: stock brief at O1, then DIVERGE-context replay at O0. |
 
 ## Shared infrastructure and history
 
