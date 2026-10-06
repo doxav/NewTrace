@@ -8,7 +8,7 @@
 
 Start with the [scientific assessment](ASSESSMENT.md) for the reconciled lessons and limitations. This catalogue is the common navigation and storage home for the numbered studies. EXP22 has two separate studies; UC numbers and control-plane prompt numbers are different namespaces.
 
-Current verdict (6 October 2026): local task-learning and engineering gains are supported; a reproducible advantage of deeper recursion is not established. EXP23's raw PRISM lead was a scoring exploit; in EXP24 (complete, 9/9) a fixed policy matched both meta arms. EXP25's EvoX lead came from look-ahead SciPy smoothers and vanishes under causality; EXP26 (prepared) tests whether label fidelity explains why Trace never used SciPy.
+Current verdict (6 October 2026): local task-learning and engineering gains are supported; a reproducible advantage of deeper recursion is not established. EXP23's raw PRISM lead was a scoring exploit; in EXP24 (complete, 9/9) a fixed policy matched both meta arms. EXP25's EvoX lead came from look-ahead SciPy smoothers and vanishes under causality; in EXP26 (complete, 12/12), stock labels injected into Trace did not close the gap: label selection (rarely DIVERGE), not label content, is implicated.
 
 ## Experiment catalogue
 
@@ -40,7 +40,7 @@ Current verdict (6 October 2026): local task-learning and engineering gains are 
 | [EXP23](EXP23/README.md) | Simulator and upgraded native coevolution | Both native runs complete. Trace 30.8766 exploits the score (3/50 solved); reported best fully solved archive candidates 26.233 vs 26.203, one run each. No established advantage or equivalence. |
 | [EXP24](EXP24/README.md) | Valid guide, white-box feedback and repair projection for native coevolution | Complete: 9/9 clean runs reach the all-case optimum (26.256); no meta-level gain over a fixed policy; 30+ stock scores are refusal exploits. |
 | [EXP25](EXP25/README.md) | Signal Processing: best Trace configurations versus stock EvoX | Complete: EvoX leads on the stock/valid score through look-ahead SciPy smoothers; all arms equal when restricted to causal filters. |
-| [EXP26](EXP26/README.md) | Label fidelity: does stock EvoX's label contract close EXP25's SciPy gap? | Prepared, not run: pre-registered; native arms vary only the label source (native / package-aware / injected stock labels) against stock EvoX. |
+| [EXP26](EXP26/README.md) | Label fidelity: does stock EvoX's label contract close EXP25's SciPy gap? | Complete 12/12: R3. Injected stock labels do not close the gap (P1 0.576 against 0.709, 0% SciPy); runs that selected DIVERGE often reached 0.65–0.70. |
 
 ## Shared infrastructure and history
 
