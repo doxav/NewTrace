@@ -85,13 +85,22 @@ class CoevolutionConfig:
         resolve_patience(self.patience, self.horizon, self.patience_ratio)
 
 
+# Fields added after plans were fingerprinted. Omitted from presets while unset, so existing specs keep their
+# plan fingerprint (the control plane hashes the full engine config). EXP25's fingerprint pins this.
+_UNSET_OMITTED = {'label_packages': None}
+
+
 def evox_preset(horizon: int = 100, summaries: bool = True, generate_labels: bool = True, retries: int = 3, operator_mode: str = 'diff') -> Dict[str, Any]:
     """Configuration reproducing SkyDiscover EvoX's co-evolution controller."""
-    return asdict(CoevolutionConfig(horizon=horizon, trigger='stagnation', patience='auto', patience_ratio=0.10, improvement_threshold=0.01,
+    return _omit_unset(CoevolutionConfig(horizon=horizon, trigger='stagnation', patience='auto', patience_ratio=0.10, improvement_threshold=0.01,
                                     operator_mode=operator_mode, retries=retries, num_context=4, num_previous_attempts=3, max_solution_chars=60000,
                                     seed=42, generate_labels=generate_labels, proposer='llm_rewrite', meta_retries=3, meta_feed_errors=False,
                                     meta_parent='best', meta_num_context=2, window_scorer='log_window', deployment='replace', rollback=True,
                                     summaries=summaries))
+
+
+def _omit_unset(config: CoevolutionConfig) -> Dict[str, Any]:
+    return {k: v for k, v in asdict(config).items() if not (k in _UNSET_OMITTED and v == _UNSET_OMITTED[k])}
 
 
 class _Counted:

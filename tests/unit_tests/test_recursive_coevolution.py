@@ -523,3 +523,17 @@ def test_engine_forwards_label_packages_only_when_configured():
         E.generate_labels = real
     assert [c['packages'] for c in calls] == [None, ('scipy',)]
     assert all('initial_source' not in c for c in calls)  # stock parity: no initial program in label generation
+
+
+def test_evox_preset_key_set_is_frozen_for_plan_fingerprints():
+    """The control plane hashes the full engine config, so a new CoevolutionConfig field silently changes every
+    preset-based plan fingerprint (it changed EXP25's). New fields must be added to _UNSET_OMITTED, or this set
+    updated deliberately, knowing that existing fingerprints change."""
+    from opto.features.recursive_opt.coevolution.engine import CoevolutionConfig, evox_preset
+    assert set(evox_preset()) == {  # keys of the preset at fb9ad806, the code EXP25 ran
+        'archive_seed', 'deployment', 'evaluator_timeout_s', 'generate_labels', 'horizon', 'improvement_threshold',
+        'initial_policy', 'labels', 'language', 'max_solution_chars', 'meta_feed_errors', 'meta_num_context',
+        'meta_parent', 'meta_retries', 'meta_system_prompt', 'num_context', 'num_previous_attempts', 'operator_mode',
+        'patience', 'patience_ratio', 'proposer', 'proposer_memory', 'retries', 'rollback', 'score_key', 'seed',
+        'strict_budget', 'summaries', 'trigger', 'window_scorer'}
+    assert CoevolutionConfig(**evox_preset()).label_packages is None
