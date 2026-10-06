@@ -76,6 +76,14 @@ class RunnerTests(unittest.TestCase):
 
 
 class StockAndAnalysisTests(unittest.TestCase):
+    def test_stock_scripts_start_under_isolated_mode(self) -> None:
+        """The campaign launches every script with `python -I`; an import that only works with the script directory
+        on sys.path must fail here, not at launch."""
+        for script in ('gen_stock_labels.py', 'run_evox_stock.py'):
+            done = subprocess.run([sys.executable, '-I', str(EXP26 / 'scripts' / script), '--help'], capture_output=True, text=True, timeout=300,
+                                  env={**os.environ})
+            self.assertEqual(done.returncode, 0, f'{script}: {done.stderr[-1500:]}')
+
     def test_silent_fallback_is_detected(self) -> None:
         stock = _load('stock')
         from skydiscover.optimize.search.evox.utils.template import DEFAULT_DIVERGE_TEMPLATE, DEFAULT_REFINE_TEMPLATE

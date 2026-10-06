@@ -9,8 +9,10 @@ import argparse
 import asyncio
 import json
 import time
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # `python -I` drops the script dir
 from stock import E25S, K, T, W, labels_of
 
 CAPTURED: dict = {}
