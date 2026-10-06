@@ -75,3 +75,21 @@ def test_summarize_counts(tmp_path):
     (tmp_path / 'completions.jsonl').write_text('\n'.join(map(json.dumps, rows)) + '\n')
     s = A.summarize(tmp_path)['T0_recorded']
     assert (s['n'], s['applied'], s['lookahead'], s['scipy'], s['beats_parent'], s['best_valid']) == (3, 0.667, 0.5, 0.5, 0.5, 0.6)
+
+
+def test_factorial_cells_differ_only_in_cue_and_parent():
+    F = pytest.importorskip('factorial')
+    initial = A.W.INITIAL.read_text()
+    other = initial.replace('window_size=20', 'window_size=21')
+    m1, a1 = F.full_metrics(initial)
+    m2, a2 = F.full_metrics(other)
+    user = PROMPT.replace('```python\nimport numpy as np\n```', '```python\nimport numpy as np\n```')
+    on = F.rebuild(user, initial, m1, a1, True, 'LABEL-D')
+    off = F.rebuild(user, initial, m1, a1, False, 'LABEL-D')
+    stock = F.rebuild(user, other, m2, a2, True, 'LABEL-D')
+    assert 'causal_fraction' in on and 'causal_fraction' not in off
+    assert on.replace('\n  - causal_fraction: 1.0000', '') == off
+    assert A.parent_of(on) == initial and A.parent_of(stock) == other
+    for text in (on, off, stock):
+        assert 'LABEL-D' in text and 'DIVERGE-TEXT' not in text and text.count('## Program Information') == 1
+        assert '## projection' in text and text.endswith(PROMPT[PROMPT.index('\n## projection'):])

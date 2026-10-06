@@ -32,6 +32,7 @@ compared at an equal 42-iteration budget where it matters). Part A uses logs onl
 | H6 | The `causal_fraction` cue steers Trace away from look-ahead | **Part B**: T0 vs T1 | open |
 | H7 | Larger programs hinder rewrites | Part A: source size | weak: Trace 9–13k chars, stock 6–9.5k; not tested causally |
 | H8 | Other prompt differences (audit metrics, evaluator feedback, shorter task text) | **Part B**: T1 vs T2 | open |
+| H10 | Trace's own evolved parents (lineage, size) suppress SciPy discovery | **Part C**: stock vs Trace parent | open |
 | H9 | Chance (3 seeds) | Part A: discovery count | **Refuted** as sole cause: winning SciPy discovery in 6/6 stock runs against 3/15 Trace runs |
 
 ## Part B — prompt ablation (`scripts/prompt_ablation.py`)
@@ -65,3 +66,35 @@ Limits: one task, one model, four prompts. A positive result shows prompt sensit
 | F3 DIVERGE quota | H1 | Refuted | — | Not pursued |
 | F4 Inject stock labels / package-aware labels | H2 | Refuted (EXP26) | — | Keep `label_packages` off by default |
 | F5 Bloat control | H7 | Weak | — | Only if a later test shows an effect |
+
+## Part C — powered factorial (`scripts/factorial.py`), pre-registered 2026-10-06 before any call
+
+Part B could not tell per-call SciPy discovery rates apart: with 4 prompts × 6 samples its power was under 0.5.
+Part C was sized beforehand by simulation (`scripts/power.py`, prompt-clustered outcomes, prompt-bootstrap decision
+rule). With 20 prompts × 10 samples per cell, power is 0.86–0.97 for each of these effects: base rate 3% with odds
+ratio 3.6, 5% with odds ratio 2.5, or 10% with odds ratio 2.0. Prompt heterogeneity was simulated at sd 0.7 and 1.2.
+
+- **Prompts:** 20 distinct recorded EXP26 native parents, up to 4 per run. Each is non-SciPy, causal (1.0) and valid
+  on all 5 signals. Each prompt carries its run's DIVERGE label, fixed across cells.
+- **Factor cue:** the `causal_fraction` lines present or removed. They are removed from the parent and from the
+  context programs.
+- **Factor parent:** the recorded Trace parent, or the stock EvoX program whose valid score is closest. The stock
+  program must be non-SciPy, causal, all-valid and unused; the largest score gap is 0.007. Both parents are
+  re-rendered by the same code from their own whitebox metrics and feedback.
+- **5th cell (powered H8 re-test):** the stock-like prompt (T2 of Part B) on the Trace parent, compared with cue-off
+  on the Trace parent.
+- **Sampling and cost:** 10 samples per cell, 1,000 calls, same model and settings, jobs shuffled, 24 parallel workers.
+
+**Primary endpoint:** SciPy share over all completions; a failed diff counts as no. Effects are the mean over prompts
+of the per-prompt difference, with a 95% bootstrap CI over prompts.
+
+- **Supported** if the estimate is ≥ 0.05 and the CI lower bound is > 0.
+- **Refuted** if the CI lies inside [−0.05, 0.05].
+- **Inconclusive** otherwise.
+- Applied to:
+  - H6: cue off − cue on.
+  - H10 (parent lineage, new): stock parent − Trace parent.
+  - H8: stock-like − cue off, on Trace parents.
+
+The interaction is reported but not decided. Secondary measures: look-ahead SciPy share, beats-parent rate, applied
+rate, best valid score.
