@@ -1,0 +1,185 @@
+{
+  "examples": {
+    "ast_omissions": [
+      {
+        "location": "examples/notebooks/multiobjective_bbeh_langgraph.ipynb#cell-2",
+        "reason": "IPython syntax"
+      },
+      {
+        "location": "examples/notebooks/multiobjective_quickstart.ipynb#cell-0",
+        "reason": "IPython syntax"
+      },
+      {
+        "location": "examples/notebooks/multiobjective_trainers.ipynb#cell-0",
+        "reason": "IPython syntax"
+      },
+      {
+        "location": "examples/textgrad_examples/notebooks/textgrad_test_time_loss_for_code_OptoPrimeMulti.ipynb#cell-0",
+        "reason": "IPython syntax"
+      }
+    ],
+    "direct_calls": {
+      "CodeArtifactLevel": 7,
+      "MemoryLite": 24,
+      "MetaLevel": 2,
+      "compile_level": 6,
+      "optimize": 12
+    },
+    "manual_seed_arm_budget_loops": {
+      "locations": [
+        "examples/recursive_opt_three_way.py:625",
+        "examples/recursive_opt_three_way.py:651",
+        "examples/recursive_opt_three_way.py:816",
+        "examples/recursive_opt_three_way.py:838"
+      ],
+      "total": 4
+    },
+    "private_api_calls": 230
+  },
+  "git_sha": null,
+  "graph": {
+    "accepted_runtime_lines": 384,
+    "removed_from_user_import": 4639,
+    "user_import_source_lines": 5023
+  },
+  "measured_at": "2026-08-22T00:00:00+02:00",
+  "measurement_scope": {
+    "examples_calls": "AST Call nodes in git-tracked .py and .ipynb files below examples; classified by terminal call name.",
+    "notebook_orchestration_helpers": "Top-level function definitions in code cells of examples/recursive_opt_use_cases.ipynb; line counts use AST definition spans.",
+    "public_functions_classes": "Top-level function and class definitions whose name does not start with an underscore in recursive_opt runtime Python files.",
+    "runtime_lines": "Physical lines from Python files directly under opto/features/recursive_opt."
+  },
+  "notebook": {
+    "code_lines": 16,
+    "orchestration_helper_count": 0,
+    "orchestration_helper_lines": 0,
+    "path": "examples/recursive_opt_use_cases.ipynb"
+  },
+  "notebook_removed": {
+    "code_lines": 1876,
+    "helper_lines": 764,
+    "helpers": 75
+  },
+  "runtime": {
+    "by_file": {
+      "opto/features/recursive_opt/__init__.py": 245,
+      "opto/features/recursive_opt/budget.py": 403,
+      "opto/features/recursive_opt/capabilities.py": 404,
+      "opto/features/recursive_opt/decisions.py": 444,
+      "opto/features/recursive_opt/effects.py": 137,
+      "opto/features/recursive_opt/experiments.py": 249,
+      "opto/features/recursive_opt/inspect_utils.py": 116,
+      "opto/features/recursive_opt/levels.py": 915,
+      "opto/features/recursive_opt/memory.py": 531,
+      "opto/features/recursive_opt/numeric_optimizers.py": 243,
+      "opto/features/recursive_opt/optimize.py": 397,
+      "opto/features/recursive_opt/progress.py": 184,
+      "opto/features/recursive_opt/runmode.py": 294,
+      "opto/features/recursive_opt/spec.py": 2766,
+      "opto/features/recursive_opt/tracebench.py": 1327,
+      "opto/features/recursive_opt/traces.py": 195
+    },
+    "lines": 8850,
+    "public_top_level": {
+      "classes": 43,
+      "functions": 113,
+      "total": 156
+    },
+    "public_package_exports": {
+      "baseline": 114,
+      "after": 114,
+      "delta": 0,
+      "added": [
+        "register_dataset",
+        "register_evaluator"
+      ],
+      "removed": [
+        "CANONICAL_SPEC_BLOCKS",
+        "score_spread"
+      ]
+    },
+    "baseline": {
+      "lines": 8803,
+      "spec_lines": 2688
+    },
+    "delta": {
+      "lines": 47,
+      "spec_lines": 44
+    }
+  },
+  "runtime_plus_notebook": {
+    "before": 8819,
+    "after": 8866,
+    "delta": 47
+  },
+  "schema_version": "control-plane-footprint/v1",
+  "worktree": "GEPA 0.1.4 public evaluator contract hotfix worktree; source digests are authoritative",
+  "baseline_sha": "21a0ad3d2f4f835ce2ffb1eef18c36a622265418",
+  "prompt_17_7": {
+    "starting_lines": 8750,
+    "after_lines": 8850,
+    "delta": 100,
+    "limit": 100,
+    "starting_spec_lines": 2633
+  },
+  "gepa_0_1_4_contract_hotfix": {
+    "starting_runtime_lines": 8850,
+    "after_runtime_lines": 8850,
+    "runtime_delta": 0,
+    "starting_spec_lines": 2732,
+    "after_spec_lines": 2732,
+    "spec_delta": 0,
+    "production_scope": [
+      "opto/features/recursive_opt/spec.py"
+    ]
+  },
+  "gepa_0_1_4_reflection_protocol_hotfix": {
+    "starting_runtime_lines": 8850,
+    "after_runtime_lines": 8850,
+    "runtime_delta": 0,
+    "starting_spec_lines": 2732,
+    "after_spec_lines": 2732,
+    "spec_delta": 0,
+    "implementation_lines_added": 19,
+    "blank_separator_lines_removed": 19,
+    "production_scope": [
+      "opto/features/recursive_opt/spec.py"
+    ]
+  },
+  "live_transport_resilience_hotfix": {
+    "starting_runtime_lines": 8850,
+    "after_runtime_lines": 8850,
+    "runtime_delta": 0,
+    "starting_spec_lines": 2732,
+    "after_spec_lines": 2766,
+    "spec_delta": 34,
+    "production_scope": [
+      "opto/features/recursive_opt/runmode.py",
+      "opto/features/recursive_opt/spec.py",
+      "opto/utils/auto_retry.py",
+      "opto/utils/llm.py"
+    ],
+    "note": "Runtime additions are offset by separator-only compaction within runmode.py."
+  },
+  "files": {
+    "opto/features/recursive_opt/__init__.py": 243,
+    "opto/features/recursive_opt/budget.py": 403,
+    "opto/features/recursive_opt/capabilities.py": 367,
+    "opto/features/recursive_opt/decisions.py": 444,
+    "opto/features/recursive_opt/effects.py": 137,
+    "opto/features/recursive_opt/experiments.py": 248,
+    "opto/features/recursive_opt/inspect_utils.py": 116,
+    "opto/features/recursive_opt/levels.py": 1035,
+    "opto/features/recursive_opt/measurement.py": 963,
+    "opto/features/recursive_opt/memory.py": 493,
+    "opto/features/recursive_opt/numeric_optimizers.py": 254,
+    "opto/features/recursive_opt/optimize.py": 397,
+    "opto/features/recursive_opt/optimizer_program.py": 355,
+    "opto/features/recursive_opt/progress.py": 184,
+    "opto/features/recursive_opt/runmode.py": 308,
+    "opto/features/recursive_opt/spec.py": 3035,
+    "opto/features/recursive_opt/tracebench.py": 1361,
+    "opto/features/recursive_opt/traces.py": 195
+  },
+  "total_lines": 10538
+}

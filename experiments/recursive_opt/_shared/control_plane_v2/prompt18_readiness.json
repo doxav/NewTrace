@@ -1,0 +1,57 @@
+{
+  "schema_version": "prompt18-readiness/v2",
+  "verified_runtime_tree_sha256": "1883e80c25cabfee7dd6f02e4fa73244c918bd198d0a84a4e35e86a1b5dc0dd5",
+  "verified_registry_sha256": "f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4",
+  "ready_for_prompt_18": false,
+  "required_ci_run": {
+    "id": 33094071518,
+    "job_id": 98594256090,
+    "job": "recursive-opt v2 offline (required)",
+    "head_sha": "6aa9da041861bf42a2931f2694b5af74076d9e6c",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/doxav/NewTrace/actions/runs/33094071518",
+    "covers_current_tree": false,
+    "note": "Predates the merge of the measurement-certification work; does not certify the current source tree."
+  },
+  "gates": {
+    "canonical_multilevel_schema": true,
+    "single_execution_path": true,
+    "real_trace_engine": true,
+    "portable_evaluator_and_datasets": true,
+    "objective_operational": true,
+    "llm_roles_operational": true,
+    "holdout_isolated": true,
+    "budgets_enforced": true,
+    "seeds_applied": true,
+    "outputs_and_resume": true,
+    "gepa_adapter_ready": true,
+    "single_forward_exact_trace": true,
+    "environment_invariant": true,
+    "request_params_causal": true,
+    "source_provenance": true,
+    "required_gepa_ci": false
+  },
+  "blockers": [
+    "required CI has not been re-run against the merged runtime_tree_sha256"
+  ],
+  "previous_local_verification": {
+    "runtime_tree_sha256": "656521f3cfb7b95f5829a1f265c5990e7a6181f541636e755bbfe15276b2aa10",
+    "registry_sha256": "f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4",
+    "preserved_reason": "Pre-EXP19 source fingerprint; historical CI and earlier experiments remain unchanged."
+  },
+  "local_verification_note": "EXP19-S3: bounded optimizer-visible trace projection and typed curriculum errors; earlier fingerprints and historical CI preserved. Historical frozen runs cannot resume on this version.",
+  "additional_local_verifications": [
+    {
+      "stage": "EXP19-S1",
+      "runtime_tree_sha256": "1e0cc32a015e28f1f64027ef66e878feafae2118546b3d1f71da553318a75e00",
+      "registry_sha256": "f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4"
+    },
+    {
+      "stage": "EXP19-S2",
+      "runtime_tree_sha256": "c2e1a2c60131ddbb91e97e5efa20440b374f68e109c58114fa152c62249dbd5c",
+      "registry_sha256": "f1a94b02c94607c2d22e6f10bce25b10d9b642814915ec01c72765280be26fa4"
+    }
+  ],
+  "exp20_provider_sort_update": "Narrow OpenRouter native sort preference accepted; transport/model/credential identity controls remain prohibited. Previous readiness snapshot preserved in artifacts/o1_learning/exp20/full/before_openrouter_sort_readiness.json."
+}

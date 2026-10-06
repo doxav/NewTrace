@@ -206,3 +206,6 @@ experiments/**/*.jsonl
 # EXP22 run configs are provenance, not byproduct: they record the exact spec each run
 # executed. EXP22/configs is a symlink to evox/configs, which this rule had left empty.
 !experiments/recursive_opt/EXP22/evox/configs/**/*.json
+# Control-plane test fixtures and the provenance seal. Tracked unit tests read these, so they
+# must exist on a fresh checkout (CI); the 2026-09-30 move under experiments/ had untracked them.
+!experiments/recursive_opt/_shared/control_plane_v2/**/*.json

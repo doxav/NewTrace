@@ -1,0 +1,82 @@
+{
+  "schema_version": "control-plane-footprint/v1",
+  "measured_at": "2026-08-21T19:37:14+02:00",
+  "git_sha": "6fc278a398709fe79a0fc9be22bae99bffd8cba6",
+  "baseline_state": "failed_before_patch",
+  "measurement_scope": {
+    "runtime_lines": "Physical lines from git-tracked Python files directly under opto/features/recursive_opt.",
+    "notebook_orchestration_helpers": "Top-level function definitions in code cells of examples/recursive_opt_use_cases.ipynb; line counts use AST definition spans.",
+    "public_functions_classes": "Top-level function and class definitions whose name does not start with an underscore in recursive_opt runtime Python files.",
+    "examples_calls": "AST Call nodes in git-tracked .py and .ipynb files below examples; a direct call is classified by its terminal function/attribute name.",
+    "private_api_calls": "AST Call nodes whose terminal function/attribute name starts with one underscore. This intentionally includes local notebook/example helpers as well as imported private APIs.",
+    "manual_loops": "Distinct AST for/async-for nodes whose loop header mentions seed(s), arm(s), or budget(s)."
+  },
+  "runtime": {
+    "lines": 6824,
+    "by_file": {
+      "opto/features/recursive_opt/__init__.py": 191,
+      "opto/features/recursive_opt/budget.py": 403,
+      "opto/features/recursive_opt/capabilities.py": 404,
+      "opto/features/recursive_opt/decisions.py": 444,
+      "opto/features/recursive_opt/effects.py": 137,
+      "opto/features/recursive_opt/experiments.py": 249,
+      "opto/features/recursive_opt/inspect_utils.py": 116,
+      "opto/features/recursive_opt/levels.py": 915,
+      "opto/features/recursive_opt/memory.py": 393,
+      "opto/features/recursive_opt/numeric_optimizers.py": 243,
+      "opto/features/recursive_opt/optimize.py": 396,
+      "opto/features/recursive_opt/progress.py": 184,
+      "opto/features/recursive_opt/runmode.py": 260,
+      "opto/features/recursive_opt/spec.py": 940,
+      "opto/features/recursive_opt/tracebench.py": 1327,
+      "opto/features/recursive_opt/traces.py": 222
+    },
+    "public_top_level": {
+      "functions": 95,
+      "classes": 37,
+      "total": 132
+    }
+  },
+  "notebook": {
+    "path": "examples/recursive_opt_use_cases.ipynb",
+    "code_lines": 1892,
+    "orchestration_helper_count": 75,
+    "orchestration_helper_lines": 764
+  },
+  "examples": {
+    "direct_calls": {
+      "optimize": 13,
+      "compile_level": 12,
+      "MemoryLite": 32,
+      "CodeArtifactLevel": 8,
+      "MetaLevel": 3
+    },
+    "private_api_calls": 385,
+    "manual_seed_arm_budget_loops": {
+      "total": 7,
+      "by_location": {
+        "examples/recursive_opt_three_way.py": 4,
+        "examples/recursive_opt_use_cases.ipynb#cell-6": 2,
+        "examples/recursive_opt_use_cases.ipynb#cell-10": 1
+      }
+    },
+    "ast_omissions": [
+      {
+        "location": "examples/notebooks/multiobjective_bbeh_langgraph.ipynb#cell-2",
+        "reason": "IPython shell/magic syntax; inspected source contains environment setup, not counted target calls or manual seed/arm/budget loops."
+      },
+      {
+        "location": "examples/notebooks/multiobjective_quickstart.ipynb#cell-0",
+        "reason": "IPython shell/magic syntax; inspected source contains environment setup, not counted target calls or manual seed/arm/budget loops."
+      },
+      {
+        "location": "examples/notebooks/multiobjective_trainers.ipynb#cell-0",
+        "reason": "IPython shell/magic syntax; inspected source contains environment setup, not counted target calls or manual seed/arm/budget loops."
+      },
+      {
+        "location": "examples/textgrad_examples/notebooks/textgrad_test_time_loss_for_code_OptoPrimeMulti.ipynb#cell-0",
+        "reason": "IPython pip magics only."
+      }
+    ]
+  }
+}
