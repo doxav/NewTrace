@@ -1,9 +1,18 @@
 # EXP26 — results
 
 **Complete, 12/12** (campaign `results/runs_20261006T112918`, all twelve runs concurrent, 11:32–13:01 UTC
-2026-10-06, 100 solution attempts each, no run errors, no stock label fallback). Protocol: [PROTOCOL.md](PROTOCOL.md).
+2026-10-06, 100 solution attempts each, no stock label fallback). Protocol: [PROTOCOL.md](PROTOCOL.md).
 
-**Verdict: R3.** Stock EvoX reproduces EXP25 (gate passed), but injecting stock's own labels into the native
+> **Correction (2026-10-06, from the [EXP27](../EXP27/RESULTS.md) log analysis).** (1) The campaign is *truncated*:
+> the OpenRouter key hit its total spend limit (HTTP 403) at one moment for all twelve runs, after iteration 67–70
+> for stock and 43–63 for native arms; every later iteration failed. Each `summary.json` still says `success`. At an
+> equal 42-iteration budget the ranking is unchanged (raw best: evox_stock 0.686, native 0.652, native_stocklabels
+> 0.565, native_pkg 0.552), so R1 and R2 stand. (2) The R3 *interpretation* below is withdrawn: matched by exact
+> label text, stock EvoX itself selects DIVERGE in only 8–23% of iterations (median 14%), the same range as the
+> native arms, so a low DIVERGE rate does not explain the gap. (3) Stock's lead comes from look-ahead SciPy filters
+> (0–8% of stock SciPy candidates are causal); on strictly causal candidates there is no gap. See EXP27.
+
+**Verdict: R3 by the pre-registered rule; its mechanism reading is withdrawn (see the correction above).** Stock EvoX reproduces EXP25 (gate passed), but injecting stock's own labels into the native
 engine does not close the gap (median P1 0.576 against 0.709) and does not bring SciPy in (median share 0%).
 Label *content* is not the cause; the native label *selection* rarely chooses DIVERGE (13%), so the label
 selection policy (M2) is implicated.

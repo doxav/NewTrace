@@ -11,5 +11,5 @@
     "docs/DESIGN_ANALYSIS.md"
   ],
   "predecessor": "EXP25",
-  "status": "Complete 12/12: gate passed (evox_stock 0.709); R3 — injected stock labels do not close the gap (0.576, 0% SciPy); low DIVERGE selection implicated; R5 fails narrowly (P2 spread 0.033)."
+  "status": "Complete but truncated (OpenRouter key limit hit at iteration 43-70 in all runs): R1/R2 hold at equal budget; R3 mechanism reading withdrawn (stock also selects DIVERGE in 8-23%); see EXP27."
 }
