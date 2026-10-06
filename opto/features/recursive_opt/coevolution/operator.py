@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from .policy import Selection
 from .projections import ProjectionError
@@ -73,9 +73,29 @@ Answer exactly in this format:
 <instruction block>"""
 
 
-def generate_labels(llm: LLMText, task: str, evaluator_context: str = '') -> Dict[str, str]:
-    """One LLM call producing task-specific diverge/refine instructions (EvoX variation operators)."""
-    reply = llm(LABEL_GENERATION_SYSTEM, f'## Problem\n{task}\n\n## Evaluator\n{evaluator_context}')
+# Library rules of SkyDiscover's variation_operator_generator, used only when a package list is given.
+LIBRARY_RULES = """
+LIBRARIES / TOOLS (in BOTH blocks when a library solves the problem directly; do not skip it):
+- ONLY name packages listed under "Available Packages in Environment"; never suggest one that is not installed.
+- Format: `library.submodule: func1, func2 <-> other_lib: funcA`; use -> to wire dependent functions.
+- Name functions that directly solve the problem, not low-level building blocks."""
+
+
+def generate_labels(llm: LLMText, task: str, evaluator_context: str = '', packages: Optional[Sequence[str]] = None,
+                    initial_source: str = '') -> Dict[str, str]:
+    """One LLM call producing task-specific diverge/refine instructions (EvoX variation operators).
+
+    ``packages=None`` sends the original native prompt unchanged. A sequence (possibly empty) adds stock EvoX's library
+    contract: the package list and a LIBRARIES/TOOLS rule. ``initial_source`` is optional; stock EvoX's controller does
+    not pass it. EXP26 tests whether this closes EXP25's SciPy gap (1 of 498 Trace candidates imported SciPy).
+    """
+    system, user = LABEL_GENERATION_SYSTEM, f'## Problem\n{task}\n\n## Evaluator\n{evaluator_context}'
+    if packages is not None:
+        system += LIBRARY_RULES
+        user += '\n\n## Available Packages in Environment\n' + ('\n'.join(packages) or 'No packages found')
+        if initial_source:
+            user += f'\n\n## Initial Program (reference implementation)\n```python\n{initial_source}\n```'
+    reply = llm(system, user)
     match = re.search(r'=== DIVERGE ===\s*(.*?)\s*=== REFINE ===\s*(.*)', reply or '', re.DOTALL)
     if not match or not match.group(1).strip() or not match.group(2).strip():
         return dict(DEFAULT_LABELS)

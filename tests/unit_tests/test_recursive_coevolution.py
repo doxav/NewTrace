@@ -472,3 +472,54 @@ def test_engine_reports_deployable_best_program():
                                system_message='T', projections=[lambda source: (source + '\n# deployed', 'tag')])
     report = engine.run()
     assert report['best_source'].endswith('# deployed') and not report['best_editable_source'].endswith('# deployed')
+
+
+def _capturing_llm(reply="=== DIVERGE ===\nd\n=== REFINE ===\nr"):
+    seen = []
+    def llm(system, user):
+        seen.append((system, user))
+        return reply
+    return llm, seen
+
+
+def test_generate_labels_default_prompt_is_unchanged():
+    """packages=None must send exactly the pre-EXP26 native prompt, so EXP23 equivalence and past runs stay valid."""
+    from opto.features.recursive_opt.coevolution.operator import LABEL_GENERATION_SYSTEM, generate_labels
+    llm, seen = _capturing_llm()
+    assert generate_labels(llm, 'TASK', 'EVAL') == {'diverge': 'd', 'refine': 'r'}
+    assert seen == [(LABEL_GENERATION_SYSTEM, '## Problem\nTASK\n\n## Evaluator\nEVAL')]
+
+
+def test_generate_labels_package_aware_mode_matches_stock_contract():
+    from opto.features.recursive_opt.coevolution.operator import LABEL_GENERATION_SYSTEM, LIBRARY_RULES, generate_labels
+    llm, seen = _capturing_llm()
+    generate_labels(llm, 'TASK', 'EVAL', packages=('numpy', 'scipy'), initial_source='def f(): pass')
+    system, user = seen[0]
+    assert system == LABEL_GENERATION_SYSTEM + LIBRARY_RULES
+    assert '## Available Packages in Environment\nnumpy\nscipy' in user
+    assert '## Initial Program (reference implementation)\n```python\ndef f(): pass\n```' in user
+
+    llm, seen = _capturing_llm()
+    generate_labels(llm, 'TASK', packages=())
+    assert seen[0][1].endswith('## Available Packages in Environment\nNo packages found')
+
+
+def test_engine_forwards_label_packages_only_when_configured():
+    import opto.features.recursive_opt.coevolution.engine as E
+    calls = []
+    real = E.generate_labels
+    E.generate_labels = lambda *a, **k: calls.append(k) or {'diverge': 'd', 'refine': 'r'}
+    try:
+        for packages in (None, ('scipy',)):
+            config = E.CoevolutionConfig(**{**E.evox_preset(horizon=1, summaries=False, generate_labels=True, retries=1),
+                                            'label_packages': packages, 'trigger': 'never'})
+            engine = E.CoevolutionEngine(config, lambda s, u: '', lambda s, u: '', lambda src: ({'combined_score': 0.0}, {}),
+                                         'def f(): pass', 'T', feedback_llm=lambda s, u: '')
+            try:
+                engine.run()
+            except Exception:
+                pass  # only the label call matters here
+    finally:
+        E.generate_labels = real
+    assert [c['packages'] for c in calls] == [None, ('scipy',)]
+    assert all('initial_source' not in c for c in calls)  # stock parity: no initial program in label generation

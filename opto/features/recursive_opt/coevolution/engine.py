@@ -54,6 +54,7 @@ class CoevolutionConfig:
     seed: Optional[int] = 42
     labels: Optional[Dict[str, str]] = None
     generate_labels: bool = True
+    label_packages: Optional[Tuple[str, ...]] = None  # None: native label prompt; tuple: stock EvoX package-aware prompt
     initial_policy: str = UNIFORM_POLICY_SOURCE
     proposer: str = 'llm_rewrite'
     meta_retries: int = 3
@@ -149,7 +150,8 @@ class CoevolutionEngine:
         if cfg.labels is not None:
             labels = dict(cfg.labels)
         elif cfg.generate_labels and self.feedback_llm is not None:
-            labels = generate_labels(self.feedback_llm, self.system_message, self.evaluator_context)
+            # Stock EvoX's controller passes no initial program to its label generator; neither do we.
+            labels = generate_labels(self.feedback_llm, self.system_message, self.evaluator_context, packages=cfg.label_packages)
         else:
             labels = dict(DEFAULT_LABELS)
         self.labels = labels
