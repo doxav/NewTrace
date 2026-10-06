@@ -62,3 +62,10 @@ Three runs per arm; no significance test. The five signals are both feedback and
 `evox_stock` keeps SkyDiscover's cascade evaluator and solution-operator prompt; only label content is
 equalised. Transcripts and run data are local (`experiments/**/*.jsonl` is ignored) and summarised in
 RESULTS.md.
+
+## Amendment (2026-10-06, before any run)
+
+Scheduling changed from three per-seed waves to **all twelve runs concurrently** (as EXP25 ran its nine), at the
+operator's request. Every arm still experiences the same endpoint load, so load is not confounded with arm; the
+concurrency differs from EXP25's (12 vs 9). Stock labels for `native_stocklabels` are drawn first, as specified.
+Nothing else changes.
