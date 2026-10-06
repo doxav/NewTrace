@@ -209,3 +209,5 @@ experiments/**/*.jsonl
 # Control-plane test fixtures and the provenance seal. Tracked unit tests read these, so they
 # must exist on a fresh checkout (CI); the 2026-09-30 move under experiments/ had untracked them.
 !experiments/recursive_opt/_shared/control_plane_v2/**/*.json
+# Per-experiment navigation metadata (status line, linked from each README and the index).
+!experiments/recursive_opt/EXP*/manifest.json
