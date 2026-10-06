@@ -41,7 +41,7 @@ Current verdict (6 October 2026): local task-learning and engineering gains are 
 | [EXP24](EXP24/README.md) | Valid guide, white-box feedback and repair projection for native coevolution | Complete: 9/9 clean runs reach the all-case optimum (26.256); no meta-level gain over a fixed policy; 30+ stock scores are refusal exploits. |
 | [EXP25](EXP25/README.md) | Signal Processing: best Trace configurations versus stock EvoX | Complete: EvoX leads on the stock/valid score through look-ahead SciPy smoothers; all arms equal when restricted to causal filters. |
 | [EXP26](EXP26/README.md) | Label fidelity: does stock EvoX's label contract close EXP25's SciPy gap? | Complete but truncated (key limit at iteration 43–70). Injected stock labels do not close the gap at equal budget; R3 mechanism reading withdrawn (see EXP27). |
-| [EXP27](EXP27/README.md) | Root causes of Trace's gap to stock EvoX (five whys, H1–H9) | Part A (logs): gap is look-ahead only; label rate, labels, LLM settings, selection refuted. Part B prompt ablation pending key top-up. |
+| [EXP27](EXP27/README.md) | Root causes of Trace's gap to stock EvoX (five whys, H1–H9) | Complete: gap is look-ahead only; label rate, labels, LLM settings, selection, task text refuted; causal cue in prompts inconclusive. Next: causal scoring for both engines. |
 
 ## Shared infrastructure and history
 
