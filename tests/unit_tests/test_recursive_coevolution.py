@@ -537,3 +537,23 @@ def test_evox_preset_key_set_is_frozen_for_plan_fingerprints():
         'patience', 'patience_ratio', 'proposer', 'proposer_memory', 'retries', 'rollback', 'score_key', 'seed',
         'strict_budget', 'summaries', 'trigger', 'window_scorer'}
     assert CoevolutionConfig(**evox_preset()).label_packages is None
+
+
+def test_injected_labels_reach_the_solution_prompt():
+    """EXP26's native_stocklabels arm injects stock-generated labels via config.labels. The uniform initial policy
+    never selects a label, so prove the path with a policy that always picks 'diverge'."""
+    from opto.features.recursive_opt.coevolution.engine import CoevolutionConfig, CoevolutionEngine, evox_preset
+    always_diverge = UNIFORM_POLICY_SOURCE.replace('return parent, examples, ""', 'return parent, examples, "diverge"')
+    prompts = []
+
+    def solution_llm(system, user):
+        prompts.append(f'{system}\n{user}')
+        return ''
+    config = CoevolutionConfig(**{**evox_preset(horizon=2, summaries=False, generate_labels=True, retries=1), 'trigger': 'never',
+                                  'initial_policy': always_diverge, 'labels': {'diverge': 'INJECTED-DIVERGE', 'refine': 'INJECTED-REFINE'}})
+    generated = []
+    engine = CoevolutionEngine(config, solution_llm, lambda s, u: '', lambda src: ({'combined_score': 0.0}, {}), 'x = 1', 'T',
+                               feedback_llm=lambda s, u: generated.append(1) or '')
+    engine.run()
+    assert not generated, 'labels were injected, so no label-generation call may happen'
+    assert prompts and all('INJECTED-DIVERGE' in p and 'INJECTED-REFINE' not in p for p in prompts)
