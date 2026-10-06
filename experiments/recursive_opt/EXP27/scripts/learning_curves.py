@@ -4,7 +4,7 @@ For each run, candidates in iteration order with their valid score and causal fr
 stock: re-evaluated with EXP25's white-box evaluator). Reports best valid (any) and best valid among causal
 candidates after 10, 25, 42 and 100 iterations, per run and as arm medians. EXP26 runs stop producing candidates
 after iteration 43-70 (key limit), so @42 is the last equal-budget point across all campaigns.
-Writes results/learning_curves.json.
+Writes results/learning_curves.json, including every run's (iteration, valid score, causal) points.
 """
 import functools
 import json
@@ -71,7 +71,9 @@ def main() -> None:
         cname = camp.parent.parent.name
         for run in sorted(p for p in camp.glob('*_s4?') if p.is_dir()):
             stock = (run / 'candidate_history.jsonl').exists()
-            runs[f'{cname}/{run.name}'] = {'arm': arm_of(cname, run.name), 'curve': curve(stock_points(run) if stock else native_points(run))}
+            points = stock_points(run) if stock else native_points(run)
+            runs[f'{cname}/{run.name}'] = {'arm': arm_of(cname, run.name), 'curve': curve(points),
+                                           'points': [[it, round(v, 4), int(c)] for it, v, c in points]}
             print(f'{cname}/{run.name}', json.dumps(runs[f'{cname}/{run.name}']['curve']), flush=True)
     arms = {}
     for r in runs.values():

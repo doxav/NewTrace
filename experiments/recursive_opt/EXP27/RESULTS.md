@@ -130,6 +130,13 @@ No call hit the 600 s deadline. Prior cued runs: EXP25 trace_exp24 ×3 and EXP26
 - **The cue matters at most a little.** Hiding it lifts the median best from 0.586 to 0.638 and makes the cheats
   larger, but it does not change how often the strong cheat is found. Part C's per-call effect is real but is not
   the run-level root cause. **The "root cause = cue" line of the previous version is withdrawn.**
+- **Re-analysis with a data-derived threshold** (`_analysis/retrospective_20261006/key_findings.ipynb`, post hoc).
+  - The threshold counts any look-ahead candidate scoring at least 0.615, i.e. the best causal score ever seen
+    (0.565) plus 0.05.
+  - With the cue hidden, Trace reaches it in 6/8 runs, against 4/18 cue-shown Trace runs (p = 0.017), but against
+    only 3/6 cue-shown runs of the same configuration (`native` + `cue_on`, p = 0.34).
+  - Hiding the cue therefore makes weaker, hand-written look-ahead more frequent (median cheating score 0.670 vs
+    EvoX 0.713), which is consistent with Part C. The strong zero-phase SciPy form stays rare (2/8 pre-registered).
 
 ## Part E — exploration strategies compared (log-only, exploratory, not pre-registered)
 

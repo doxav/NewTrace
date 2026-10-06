@@ -2,7 +2,8 @@
 
 Date 2026-10-06. Sources: each experiment's RESULTS.md and the new learning curves of
 [`EXP27/results/learning_curves.json`](../../EXP27/results/learning_curves.json) (`EXP27/scripts/learning_curves.py`,
-CPU only: every signal candidate of 35 runs scored as valid and as causal). Same LLM throughout
+CPU only: every signal candidate of 32 runs scored as valid and as causal). One-page rendered summary:
+[`key_findings.ipynb`](key_findings.ipynb) ([HTML](key_findings.html)), built by `build_key_findings.py`. Same LLM throughout
 (`z-ai/glm-5.3-flash` via Novita, temperature 0.7), 100 solution calls per run, 3 seeds per arm unless stated.
 
 ## Short answer
