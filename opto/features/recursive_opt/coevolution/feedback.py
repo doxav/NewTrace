@@ -27,6 +27,28 @@ Candidate fields: id, content, metrics (dict, main key 'combined_score'), iterat
 Population: .members (insertion order), .score(candidate), .best(), .get(id), .statistics(). Use rng for every random choice.
 Never modify candidates."""
 
+# Design brief condensed from SkyDiscover's evox_search_sys_prompt.txt (label, context and diversity rules), restated
+# for POLICY_CONTRACT. Used as the TraceProposer instruction when CoevolutionConfig.meta_brief is set.
+EVOX_POLICY_BRIEF = """Rewrite the selection policy so that it improves how fast the best solution improves.
+The policy decides (1) which solution to mutate next (the parent), (2) which other solutions to show as context,
+and (3) which variation instruction (label) to attach.
+
+LABEL RULES:
+- The label MUST be '' (no instruction) by default; let parent and context selection do the work.
+- Use labels only when progress is stagnating, and choose them from the search state, not a fixed rule:
+  'diverge' when the current approaches look fundamentally limited (a new direction is needed);
+  'refine' when a promising, recently found candidate needs a few iterations of refinement to reach its potential.
+- Do not overuse any label or any program as the target of a label.
+- With 'diverge' or 'refine' you may return an empty context list, for a targeted variation of the parent alone.
+
+SELECTION PRINCIPLES:
+- Avoid deterministic selections that always pick the same parent or the same contexts.
+- Context should give complementary perspectives: different approaches, contrasting examples, different score ranges.
+- Exploit or explore? Is the population diverse or converging? Diversity itself can be a selection signal.
+- When progress stalls, ask whether parent/context selection is the issue or the reasonable variations are exhausted.
+- Count improvements as meaningful only above 1% relative or 0.01 absolute. Keep the policy simple.
+Change the policy only as far as the evidence supports, and keep the same interface."""
+
 META_SYSTEM = """You are an expert coder evolving a search algorithm for program optimization.
 The search algorithm is a selection policy: it decides which previously evaluated solution (the parent) an LLM mutates next,
 which other solutions to show as context, and which variation instruction (label) to attach, e.g. a DIVERGE or REFINE instruction.

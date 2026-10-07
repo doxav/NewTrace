@@ -19,7 +19,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 from .feedback import META_SYSTEM, FeedbackComposer
 from .operator import DEFAULT_LABELS, PopulationOperator, generate_labels
-from .policy import UNIFORM_POLICY_SOURCE, PolicyContractError, PolicyRuntimeError, PolicySlot, validate_policy_source
+from .policy import UNIFORM_POLICY_SOURCE, PolicyContractError, PolicyRuntimeError, PolicySlot, Selection, validate_policy_source
 from .proposers import LLMRewriteProposer, TraceProposer
 from .scheduling import DeferredEvaluation, GainScorer, LogWindowScorer, PairedScorer, StrategyArchive, interleave, make_trigger, resolve_patience
 from .state import Candidate, Population
@@ -70,6 +70,9 @@ class CoevolutionConfig:
     strict_budget: bool = False
     meta_system_prompt: Optional[str] = None
     evaluator_timeout_s: Optional[float] = None
+    meta_brief: Optional[str] = None  # TraceProposer #Instruction, e.g. feedback.EVOX_POLICY_BRIEF (proposer='trace' only)
+    diverge_guard: Optional[Dict[str, int]] = None  # {'patience': p, 'num_context': k}: after p iterations without improvement,
+    # the next selection keeps the policy's parent but is relabelled 'diverge' with at most k contexts (policy-independent)
 
     def __post_init__(self) -> None:
         for name, allowed in _CHOICES.items():
@@ -80,6 +83,9 @@ class CoevolutionConfig:
         for name in ('retries', 'meta_retries', 'num_context', 'meta_num_context'):
             if not isinstance(getattr(self, name), int) or getattr(self, name) < (1 if 'retries' in name else 0):
                 raise ValueError(f'{name} is out of range')
+        if self.diverge_guard is not None and (set(self.diverge_guard) - {'patience', 'num_context'}
+                                               or any(not isinstance(v, int) or v < 0 for v in self.diverge_guard.values())):
+            raise ValueError("diverge_guard takes non-negative ints 'patience' and 'num_context'")
         if (self.deployment == 'paired') != (self.window_scorer == 'paired'):
             raise ValueError("deployment='paired' requires window_scorer='paired' and vice versa")
         resolve_patience(self.patience, self.horizon, self.patience_ratio)
@@ -87,7 +93,7 @@ class CoevolutionConfig:
 
 # Fields added after plans were fingerprinted. Omitted from presets while unset, so existing specs keep their
 # plan fingerprint (the control plane hashes the full engine config). EXP25's fingerprint pins this.
-_UNSET_OMITTED = {'label_packages': None}
+_UNSET_OMITTED = {'label_packages': None, 'meta_brief': None, 'diverge_guard': None}
 
 
 def evox_preset(horizon: int = 100, summaries: bool = True, generate_labels: bool = True, retries: int = 3, operator_mode: str = 'diff') -> Dict[str, Any]:
@@ -176,7 +182,7 @@ class CoevolutionEngine:
         composer = FeedbackComposer(self.feedback_llm if cfg.summaries else None, cfg.meta_system_prompt or META_SYSTEM, self.problem_description, self.evaluator_context)
         self.composer = composer
         if cfg.proposer == 'trace':
-            self.proposer = TraceProposer(self.meta_llm, cfg.proposer_memory, cfg.meta_retries, initial_source=cfg.initial_policy)
+            self.proposer = TraceProposer(self.meta_llm, cfg.proposer_memory, cfg.meta_retries, initial_source=cfg.initial_policy, objective=cfg.meta_brief)
         else:
             self.proposer = LLMRewriteProposer(self.meta_llm, cfg.meta_retries, cfg.meta_feed_errors, cfg.language)
         validate = lambda source: validate_policy_source(source, labels, cfg.score_key, self.namespace)  # noqa: E731
@@ -264,6 +270,8 @@ class CoevolutionEngine:
             generate(completed, stats_now)
 
         iteration, total = 1, 1 + cfg.horizon
+        guard = dict(cfg.diverge_guard or {}) if 'diverge' in labels else {}
+        stall = {'best': self._best(), 'count': 0}
         while iteration < total:
             role = 'active'
             if paired and state['challenger'] is not None:
@@ -293,6 +301,15 @@ class CoevolutionEngine:
                     evolve(completed)
                 continue
             best_before = self._best()
+            if guard:
+                if best_before > stall['best'] + cfg.improvement_threshold:
+                    stall.update(best=best_before, count=0)
+                if stall['count'] >= guard.get('patience', 5):
+                    selection = Selection(selection.parent, list(selection.contexts)[:guard.get('num_context', 0)], 'diverge')
+                    stall['count'] = 0
+                    self._event(type='diverge_guard', iteration=iteration)
+                else:
+                    stall['count'] += 1
             retries = min(cfg.retries, total - iteration) if cfg.strict_budget else cfg.retries
             result = operator.run(selection, population, iteration, retries)
             child = result.candidate

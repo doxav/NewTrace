@@ -63,10 +63,13 @@ def policy_window(selection_policy, evidence):
 class TraceProposer:
     """Persistent OptoPrimeV2 over the policy source (Trace as the meta-optimizer)."""
 
-    def __init__(self, llm: LLMText, memory_size: int = 5, retries: int = 3, max_tokens: int = 8000, initial_source: str = UNIFORM_POLICY_SOURCE) -> None:
+    def __init__(self, llm: LLMText, memory_size: int = 5, retries: int = 3, max_tokens: int = 8000, initial_source: str = UNIFORM_POLICY_SOURCE,
+                 objective: Optional[str] = None) -> None:
         self.llm, self.memory_size, self.retries = llm, memory_size, retries
         self.node = node(initial_source, trainable=True, name='selection_policy', description='Complete Python source implementing:\n' + POLICY_CONTRACT)
-        self.optimizer = OptoPrimeV2([self.node], llm=DummyLLM(self._call), memory_size=memory_size, log=False, max_tokens=max_tokens, initial_var_char_limit=100000)
+        # objective (optional) replaces OptoPrimeV2's generic #Instruction, e.g. with feedback.EVOX_POLICY_BRIEF
+        self.optimizer = OptoPrimeV2([self.node], llm=DummyLLM(self._call), memory_size=memory_size, log=False, max_tokens=max_tokens,
+                                     initial_var_char_limit=100000, objective=objective)
         self.prompts: List[Tuple[str, str]] = []
 
     def _call(self, *args: object, **kwargs: object) -> str:

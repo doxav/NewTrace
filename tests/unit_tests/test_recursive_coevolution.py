@@ -557,3 +557,37 @@ def test_injected_labels_reach_the_solution_prompt():
     engine.run()
     assert not generated, 'labels were injected, so no label-generation call may happen'
     assert prompts and all('INJECTED-DIVERGE' in p and 'INJECTED-REFINE' not in p for p in prompts)
+
+
+def test_diverge_guard_relabels_stalled_selections_with_sparse_context():
+    from opto.features.recursive_opt.coevolution.engine import CoevolutionConfig, evox_preset
+    assert 'meta_brief' not in evox_preset() and 'diverge_guard' not in evox_preset()  # fingerprint-neutral when unset
+    seen = []
+    solution = CountingLLM(lambda n, s, u: (seen.append(u), diff_add(1.0 if n <= 2 else 0.0))[1])
+    labels = {'diverge': 'DIVERGE-NOW', 'refine': 'REFINE-NOW'}
+    config = CoevolutionConfig(**{**evox_preset(horizon=10, summaries=False, generate_labels=False, retries=1), 'trigger': 'never',
+                                  'labels': labels, 'diverge_guard': {'patience': 2, 'num_context': 0}})
+    engine = CoevolutionEngine(config, solution_llm=solution, meta_llm=lambda s, u: '', evaluate=toy_evaluate, initial_source='SCORE = 1.0\n# end', system_message='T')
+    report = engine.run()
+    guarded = [e['iteration'] for e in report['events'] if e['type'] == 'diverge_guard']
+    iterations = {e['iteration']: e for e in report['events'] if e['type'] == 'iteration'}
+    assert guarded and all(iterations[i]['label'] == 'diverge' and iterations[i]['context_iterations'] == [] for i in guarded)
+    assert sum('DIVERGE-NOW' in u for u in seen) == len(guarded)
+    with pytest.raises(ValueError):
+        CoevolutionConfig(**{**evox_preset(), 'diverge_guard': {'patience': -1}})
+
+
+@pytest.mark.skipif(not _optoprime_constructible(), reason='litellm is incompatible with the installed openai package')
+def test_trace_proposer_uses_meta_brief_as_instruction():
+    from opto.features.recursive_opt.coevolution import TraceProposer
+    from opto.features.recursive_opt.coevolution.feedback import EVOX_POLICY_BRIEF
+    users = []
+
+    def llm(system, user):
+        import re
+        users.append(user)
+        name = re.search(r'<variable name="(\w+)"', user).group(1)
+        return f'<reasoning>r</reasoning>\n<variable>\n<name>{name}</name>\n<value>\n{GREEDY}\n# b\n</value>\n</variable>'
+    proposer = TraceProposer(llm, objective=EVOX_POLICY_BRIEF)
+    assert proposer.propose(parent_source=UNIFORM_POLICY_SOURCE, context=[], feedback='f', validate=lambda s: None).ok
+    assert "MUST be '' (no instruction) by default" in users[0]
