@@ -15,6 +15,7 @@ corrected instrument.
 | Role | Entry point |
 |---|---|
 | Protocols (reconstructed, one per sub-study) | [PROTOCOL.md](PROTOCOL.md) |
+| Later equivalents of each element | [later_equivalent.md](later_equivalent.md) |
 | Results and validity per sub-study | [RESULTS.md](RESULTS.md) |
 | Navigation metadata | [manifest.json](manifest.json) |
 | August 2026 audit of A–D | [`_history/reviews/recursive_opt_assessment.history_20260929.md`](../_history/reviews/recursive_opt_assessment.history_20260929.md) (§5, §7) |
