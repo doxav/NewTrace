@@ -4,7 +4,7 @@
 
 1. [Verdict and scope](#verdict)
 2. [What was actually optimized](#architecture)
-3. [Experiment register: EXP01–24](#experiment-register)
+3. [Experiment register: EXP00–28](#experiment-register)
 4. [Results that change the conclusion](#findings)
 5. [Ranked lessons: gains, failures and limits](#lessons)
 6. [Short-term priorities](#short-term)
@@ -38,9 +38,23 @@ This document replaces the repeated error catalogue, 62 overlapping lessons, sta
 EXP19–21 retain the `recursive-opt/v2alpha` declarative schema, with study-specific modules, evaluators and configuration extensions. Sharing a dict format does not mean identical runtime behavior or a self-contained portable experiment. The [control-plane migration](_shared/control_plane_v2/migration_report.md) classified 85 files but certified **zero faithful execution replays**. Trace capture, prompt delivery and demonstrated benefit must be checked separately. [EXP19 configuration and execution](EXP19/RESULTS.md), [shared control-plane evidence](_shared/control_plane_v2/README.md).
 
 <a id="experiment-register"></a>
-## 3. Experiment register: EXP01–24
+## 3. Experiment register: EXP00–28
 
 Response counts refer to completed optimizer responses unless specified. They are not total model calls or independent scientific replications. Each experiment link opens its report and raw-evidence links. Accuracy differences are percentage points (**pp**); numerical regret AUC is **lower better**.
+
+<a id="exp00"></a>
+### EXP00: pre-numbered campaigns (June–August 2026)
+
+These notebook campaigns and Experiment 0 predate the numbered series and were documented retroactively in
+[EXP00](EXP00/README.md). EXP01–EXP14 are the probes that later re-measured A–D with a corrected instrument.
+
+| Study | Tested surface and volume | Result and defensible interpretation |
+|---|---|---|
+| [EXP00-A demo](EXP00/RESULTS.md#exp00-a--demo-notebook-executed-version-58a5c0f8ef) | Setup O1, component code O2a, capability, family O2 / prior O3, declarative spec; offline plus a bounded live pass (`gpt-5.4-nano`, at most 64 optimizer calls) | The live LLM rewrote `batch_design` 0.80 → 1.00 on a 12-item toy validator. Setup, family and prior surfaces were flat (every config scored the same); capability was saturated (accuracy 1.0). Mechanics, not efficacy. |
+| [EXP00-B phases](EXP00/RESULTS.md#exp00-b--phase-07-campaign-executed-version-611d31eecf) | Phases 0–7 ADOPT/REJECT on trainer, trace type, warm priors, tools, threads, skills; 3 seeds × 4–8 iterations | Warm priors +0.013 "ADOPT" (1 family) reversed to −0.026 at 8 examples; tools REJECT; the skill and thread records disagree between cell and board. Most searched knobs were causally inactive at `inner_steps=0`. Nothing adoptable. |
+| [EXP00-C phases V2](EXP00/RESULTS.md#exp00-c--phases-v2-notebook-outputs-from-the-30-september-re-execution) | Offline re-run of A–D with a claims table | Non-baseline setups returned −1e9 sentinels; O2/O3 0.0; code gains hand-written. "Positive" O1/O2 claims unsupported by its own outputs. |
+| [EXP00-D use cases](EXP00/RESULTS.md#exp00-d--use-case-suite-uc1uc14) | UC1–UC14, three-way equal-budget benchmark, Stage 2 sweeps, tier follow-ups, outer-optimizer comparisons; n = 3–5; about 90 run directories | UC4 +0.163 "promote" was an arithmetic identity of two task sets (corrected −0.006, EXP02). All other deltas (±0.002–0.12) are below the ≈0.24 resolution. Valid: UC1 saturated, UC13 flat, agentic tool policies never executed (0 tool calls). |
+| [EXP00-E Experiment 0](EXP00/RESULTS.md#exp00-e--experiment-0-reportsprompt18_r3f_main_completion_trajectory_stopmd) | Pre-registered GSM8K two-stage program; fixed / Trace / GEPA / Trace without validation gate; 5 seeds × budgets 6 and 12 = 40 runs (`deepseek-v4-flash`) | Neither engine met the frozen criterion. Trace −0.133 token ratio [−0.249, −0.023] and GEPA −0.257, at no significant accuracy change (baseline 0.99). No validation gate: lowest accuracy (0.888). Stopped for missing candidate provenance. |
 
 <a id="early-lessons"></a>
 ### Early probes and instrument qualification
@@ -84,8 +98,32 @@ Response counts refer to completed optimizer responses unless specified. They ar
 | [EXP23][exp23] | Simulator studies; 120 live policy-model calls evaluated in simulation; later two native PRISM runs × 100 solution attempts | Native runs complete; claimed Trace advantage invalidated by the metric exploit. Simulation and integration evidence remain separately useful. |
 | [EXP24][exp24] | Pilot: one run/arm; clean: fixed / llm_rewrite / trace × seeds 42/43/44, 100 solution calls planned each | At 12:12 UTC, 4/9 terminal runs, but all 9 already reached the ceiling. First-hit medians fixed/rewrite/Trace **12/12/22** calls. Descriptive checkpoint, no demonstrated meta-level gain. |
 
+<a id="exp25-28"></a>
+### EXP25–EXP28: Trace vs stock EvoX on Signal Processing and PRISM (October 2026)
+
+| Study | Tested surface and volume | Result and defensible interpretation |
+|---|---|---|
+| [EXP25](EXP25/RESULTS.md) | Signal: stock EvoX vs two Trace coevolution configurations; 3 seeds × 100 calls each | EvoX leads on the benchmark score (0.713 vs 0.586 / 0.555) entirely through look-ahead (non-causal) SciPy filters. Causal-only medians are equal (0.537 / 0.532 / 0.532). |
+| [EXP26](EXP26/RESULTS.md) | Label fidelity: native, package-aware and stock labels in the Trace engine (12 runs, truncated by a key limit) | Labels do not close the gap; causal scores are equal. |
+| [EXP27](EXP27/RESULTS.md) | Root causes: prompt ablations (1,072 calls), 11 full runs with the causality cue hidden, strategy logs | Not a capability limit (same climb once found). The causality cue suppresses look-ahead per call but is minor per run. SciPy arrives almost only via DIVERGE (EvoX 6/8, Trace 8/189); Trace's meta-optimizer writes REFINE-locked, elite-context policies. |
+| [EXP28](EXP28/RESULTS.md) | EvoX-style exploration for Trace: `VariationSearch` trainer (6 configurations) and coevolution brief / diverge guard; Signal 30 runs, PRISM 21 runs | With an instruction-leak fix, `VariationSearch`'s default (DIVERGE after a stall) gives Signal median 0.758 (EvoX 0.711) with DIVERGE yielding SciPy 32% vs 3%. PRISM's all-case optimum is reached at calls 3/3/4 (EXP24: 12–22; stock EvoX 1/3). An explicit "combine" instruction limits DIVERGE; EvoX-style context does not. No causal Signal gain. |
+
 <a id="findings"></a>
 ## 4. Results that change the conclusion
+
+### EXP00: the notebook campaigns measured mechanics, and their one robust "win" was an artifact
+
+The June–July notebooks (EXP00-A–D) showed that recursive levels can be expressed and executed:
+- a live LLM rewrote component code to the validator's maximum;
+- specs, budgets, memory lineage and a causal-effect contract work.
+
+Every setup, family-policy and prior surface they searched was flat, saturated or causally inactive. The
+programme's flagship, UC4's +0.163 with a stable budget sweep, compared a two-family mean against a one-family
+score; the corrected comparison is −0.006 (EXP02). Phase-style ADOPT decisions taken on one small evaluation
+reversed on confirmation (warm priors +0.013 → −0.026).
+
+Experiment 0 (EXP00-E) was the first pre-registered comparison. On a near-saturated GSM8K baseline, Trace and
+GEPA traded a little accuracy for fewer tokens and met no success criterion. [EXP00 results](EXP00/RESULTS.md).
 
 ### EXP15–18: optimizer search is useful locally; feedback's added value is unresolved or adverse
 
@@ -144,6 +182,7 @@ Ratings express **strength of evidence for the stated lesson**, not a probabilit
 | 8 | Count the right replication unit and full cost. | **5/5** | Hundreds of trajectories can come from six search seeds; retries and meta/reader calls exceed solution budgets. Keep failures and distinguish physical calls, allocations, tokens, cost and wall time. |
 | 9 | Policy credit and scheduling can constrain online learning. | **3/5** | EXP23 stage-bias simulations and few triggered proposals. Pair or otherwise calibrate credit on fresh live episodes; simulator success is insufficient. |
 | 10 | A shared control plane is useful infrastructure, not reproduced science. | **4/5** | Declarative runs, typed outcomes and provenance are reusable; migration certified zero historical replays. Maintain source/version-specific tests and avoid turning test counts into performance evidence. |
+| 11 | Confirm a decision on a larger evaluation before adopting it, and check that compared arms score the same tasks. | **5/5** | EXP00-B warm priors +0.013 → −0.026 at 8 examples; EXP00-D UC4 +0.163 from comparing a two-family mean with a one-family score (−0.006 corrected, EXP02). A stable budget sweep does not protect against a comparison that measures different things. |
 
 <a id="short-term"></a>
 ## 6. Short-term priorities

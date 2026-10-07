@@ -1,0 +1,18 @@
+{
+ "id": "EXP00",
+ "title": "Pre-numbered campaigns: recursive_opt demo, phases, phases V2, use cases UC1-UC14, Experiment 0",
+ "kind": "historical_campaigns",
+ "report": "RESULTS.md",
+ "protocol": "PROTOCOL.md",
+ "evidence": [
+  "../../../examples/recursive_opt_demo.ipynb",
+  "../../../examples/recursive_opt_phases.ipynb",
+  "../../../examples/recursive_opt_phases_V2.ipynb",
+  "git:5a148ddba9:examples/recursive_opt_use_cases.ipynb",
+  "../../../examples/notebook_outputs/recursive_opt_use_cases/",
+  "../multiobjective_reasoning/",
+  "../../../outputs/recursive_opt/experiment_0/"
+ ],
+ "successor": "EXP01",
+ "status": "Historical (June-August 2026). A-D: mechanics only; flat or saturated setup surfaces; UC4 +0.163 invalid (corrected -0.006, EXP02); other deltas below the ~0.24 resolution. E (Experiment 0): neither Trace nor GEPA met the pre-registered criterion; Trace -13% and GEPA -26% tokens at no significant accuracy change; stopped for trajectory provenance."
+}

@@ -17,7 +17,8 @@
 | Root ZIP exports | [_history/worktree_exports](_history/worktree_exports/) | Five original Trace-experiment0 snapshots moved from `/home/xav/code`; local-only backups. |
 | Distinct worktree versions | [_history/worktree_versions](_history/worktree_versions/README.md) | Both versions preserved where the two checkouts differed. |
 | EXP16 workbook deliverables | [EXP16/presentation](EXP16/presentation/) | Previously under an opaque UUID directory in `outputs/`. |
-| Experiment-0 implementation | [multiobjective_reasoning](multiobjective_reasoning/) | Existing shared experiment package. Its existing `outputs/recursive_opt/experiment_0` run tree remains an explicit project output location, indexed from the shared entry. |
+| Experiment-0 implementation | [multiobjective_reasoning](multiobjective_reasoning/) | Code of **EXP00-E** ([EXP00](EXP00/README.md)), kept at this path because it is imported by `o1_qa/task.py` and by the `_history` probe/audit scripts, and recorded in frozen run plans. Its `outputs/recursive_opt/experiment_0` run tree remains an explicit project output location, indexed from the shared entry. |
+| Pre-numbered notebook campaigns | `examples/recursive_opt_demo.ipynb`, `examples/recursive_opt_phases*.ipynb`, `examples/recursive_opt_use_cases.ipynb` (outputs at commit `5a148ddba9`), `examples/notebook_outputs/recursive_opt_use_cases/` | Reported as EXP00-A–D in [EXP00](EXP00/README.md); sources stay in `examples/`. |
 | Earlier example output | [_history/use_cases](_history/use_cases/README.md) | UC identifiers remain distinct from numbered experiments; outputs retained beside their example runners. |
 
 ## Removed locations and runtime dependencies
@@ -46,3 +47,4 @@ The original 548 MB EXP18 ZIP and five worktree export ZIPs are retained locally
 - [Untracked-file decisions](_reorganization/20260930/untracked_decisions.json)
 - [Current experiment catalogue](_reorganization/20260930/catalog.json)
 - [September 29 inventory and first migration](_reorganization/20260929/): historical checkpoint, superseded where September 30 removes compatibility paths.
+

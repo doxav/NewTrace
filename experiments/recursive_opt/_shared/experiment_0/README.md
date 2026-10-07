@@ -1,5 +1,7 @@
 # _shared/experiment_0 — supporting documents
 
+Experiment 0 is reported as **EXP00-E**: protocol and results in [EXP00](../../EXP00/README.md).
+
 Documents retain their original scope and date. Older conclusions may be superseded by the [current assessment](../../ASSESSMENT.md). Protocols and runtime-dependent files remain at stable paths; principal results are in each experiment’s RESULTS.md.
 
 | Document | Preserved origin |

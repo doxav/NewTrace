@@ -8,12 +8,13 @@
 
 Start with the [scientific assessment](ASSESSMENT.md) for the reconciled lessons and limitations. For EXP22–EXP27 (Trace versus EvoX), see the [2026-10-06 retrospective](_analysis/retrospective_20261006/RETROSPECTIVE.md): impact on recursive_opt itself is flat; the gains are in measurement, the O0 operator and evaluator, and engineering. This catalogue is the common navigation and storage home for the numbered studies. EXP22 has two separate studies; UC numbers and control-plane prompt numbers are different namespaces.
 
-Current verdict (6 October 2026): local task-learning and engineering gains are supported; a reproducible advantage of deeper recursion is not established. EXP23's raw PRISM lead was a scoring exploit; in EXP24 (complete, 9/9) a fixed policy matched both meta arms. EXP25's EvoX lead came from look-ahead SciPy smoothers and vanishes under causality; EXP26 (truncated by a key limit) showed injected stock labels do not close the gap; EXP27 finds the gap is look-ahead only and not a capability limit: Trace's meta-optimizer explores less (refine-locked policies, elite context on DIVERGE). EXP28 adds an explicit mutation intent at the Trainer level (VariationSearch): with it, Trace matches EvoX's discovery speed on Signal and reaches PRISM's all-case optimum in 3–4 calls, ahead of stock EvoX, but no exploration setting improves the legitimate (causal) Signal score.
+Current verdict (8 October 2026): local task-learning and engineering gains are supported; a reproducible advantage of deeper recursion is not established. EXP23's raw PRISM lead was a scoring exploit; in EXP24 (complete, 9/9) a fixed policy matched both meta arms. EXP25's EvoX lead came from look-ahead SciPy smoothers and vanishes under causality; EXP26 (truncated by a key limit) showed injected stock labels do not close the gap; EXP27 finds the gap is look-ahead only and not a capability limit: Trace's meta-optimizer explores less (refine-locked policies, elite context on DIVERGE). EXP28 adds an explicit mutation intent at the Trainer level (VariationSearch): with it, Trace matches EvoX's discovery speed on Signal and reaches PRISM's all-case optimum in 3–4 calls, ahead of stock EvoX, but no exploration setting improves the legitimate (causal) Signal score. The pre-numbered notebook campaigns and Experiment 0 (EXP00, June–August) fit the same pattern: code rewriting works on clear-feedback surfaces, setup and prior search showed no resolvable gain, and their flagship UC4 result was a comparison artifact.
 
 ## Experiment catalogue
 
 | Experiment | Subject | Status |
 |---|---|---|
+| [EXP00](EXP00/README.md) | Pre-numbered campaigns (Jun–Aug 2026): `examples/recursive_opt_demo`, `_phases`, `_phases_V2` and `_use_cases` notebooks (UC1–UC14, three-way benchmark) and Experiment 0 (`multiobjective_reasoning`) | Historical, documented retroactively. A–D: mechanics only; setup/family/prior surfaces flat or saturated; UC4 +0.163 was an arithmetic identity (corrected −0.006, EXP02); other deltas below resolution. E: Trace −13% and GEPA −26% tokens at no significant accuracy change; no success criterion met. |
 | [EXP01](EXP01/README.md) | Prompt signal versus evaluation noise | Historical; use corrected interpretation in the result entry, not the old registry verdict. |
 | [EXP02](EXP02/README.md) | Corrected same-holdout UC4 | Historical; use corrected interpretation in the result entry, not the old registry verdict. |
 | [EXP03](EXP03/README.md) | Certified prompt optimization | Historical; use corrected interpretation in the result entry, not the old registry verdict. |
@@ -51,7 +52,7 @@ Current verdict (6 October 2026): local task-learning and engineering gains are 
 - [Control-plane engineering evidence](_shared/control_plane_v2/README.md)
 - [Numerical optimizer benchmark and Phase 0](_shared/optimizer_discovery/README.md)
 - [Early probes and auxiliary diagnostics](_shared/early_probes/README.md)
-- [Experiment 0](_shared/experiment_0/README.md) and [shared QA implementation](o1_qa)
+- [Experiment 0](_shared/experiment_0/README.md): reported as **[EXP00-E](EXP00/README.md)**. Its code is the [`multiobjective_reasoning`](multiobjective_reasoning/) package, kept at its path because `o1_qa/task.py`, the `_history` probe/audit scripts and the frozen run plans import or record it. It ran 23–31 August 2026, between the use-case notebooks (EXP00-D) and the EXP01–EXP14 audit probes. Also see the [shared QA implementation](o1_qa).
 - [Earlier UC campaigns](_history/use_cases/README.md), [historical reviews](_history/research_reviews/README.md), and [retired navigation](_history/navigation)
 - [Distinct versions preserved from the second worktree](_history/worktree_versions/README.md)
 

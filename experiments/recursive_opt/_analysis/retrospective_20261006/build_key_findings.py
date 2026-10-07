@@ -371,7 +371,7 @@ print('Refusing hard cases (each solved case placed optimally):'); print('\n'.jo
 
 
 cells.append(md("""---
-## Register of EXP01–EXP28: what was optimized, what it gained, what limited it
+## Register of EXP00–EXP28: what was optimized, what it gained, what limited it
 
 Rows come from [`experiment_register.json`](experiment_register.json), transcribed from each study's RESULTS.md and the
 reconciled `ASSESSMENT.md` register. Each row names its source. **Level** is the layer of the stack the study varied:
