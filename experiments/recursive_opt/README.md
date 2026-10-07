@@ -42,6 +42,7 @@ Current verdict (6 October 2026): local task-learning and engineering gains are 
 | [EXP25](EXP25/README.md) | Signal Processing: best Trace configurations versus stock EvoX | Complete: EvoX leads on the stock/valid score through look-ahead SciPy smoothers; all arms equal when restricted to causal filters. |
 | [EXP26](EXP26/README.md) | Label fidelity: does stock EvoX's label contract close EXP25's SciPy gap? | Complete but truncated (key limit at iteration 43–70). Injected stock labels do not close the gap at equal budget; R3 mechanism reading withdrawn (see EXP27). |
 | [EXP27](EXP27/README.md) | Root causes of Trace's gap to stock EvoX (five whys, H1–H9, Parts A–E) | Complete: gap is look-ahead only and not a capability limit (same climb once found). The cue is minor. SciPy comes only from DIVERGE calls: stock 6/8, Trace 8/189. Trace's meta-optimizer (OptoPrime without the stock design brief) writes refine-locked, elite-context policies. Next: stock brief at O1, then DIVERGE-context replay at O0. |
+| [EXP28](EXP28/README.md) | EvoX-style exploration for Trace: VariationSearch trainer (stagnation / combine) vs coevolution EvoX brief / diverge guard | Complete 12/12. Stagnation trainer and EvoX brief reach look-ahead in 3/3 runs (raw medians 0.748 / 0.663 vs EvoX 0.711), but via ordinary calls or weak forms; no arm improves the causal score. Diverge guard with no context: 0/37 SciPy, refuting context anchoring. |
 
 ## Shared infrastructure and history
 

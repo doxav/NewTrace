@@ -3,8 +3,10 @@
  "title": "EvoX-style exploration for Trace: VariationSearch trainer vs coevolution meta brief / diverge guard",
  "kind": "coevolution_followup",
  "report": "RESULTS.md",
- "evidence": ["results"],
+ "evidence": [
+  "results"
+ ],
  "protocol": "PROTOCOL.md",
  "predecessor": "EXP27",
- "status": "Pre-registered; 4 arms x 3 seeds x 100 calls on Signal, awaiting credit top-up"
+ "status": "Complete 12/12: VariationSearch-stagnation (trainer) and EvoX brief (recursive_opt) reach look-ahead in 3/3 runs (raw medians 0.748, 0.663 vs EvoX 0.711), but via ordinary calls / weak forms; no arm improves the causal score (medians 0.519-0.554). Brief makes Trace's policies EvoX-like (84% unlabelled); diverge guard with no context yields 0/37 SciPy, refuting context anchoring."
 }

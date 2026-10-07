@@ -247,6 +247,70 @@ pre-registered SciPy-only count for cue hidden was {partD['cue_off']['E']}/{part
 (key limit; best carried forward). The Signal causal ceiling is unknown. Sources: `EXP24`–`EXP27/results/`, `EXP27/scripts/`.'''))"""))
 
 cells.append(md("""---
+## EXP28: adding EvoX-style exploration to Trace (4 new approaches × 3 seeds × 100 calls, Signal, cue hidden)
+
+**Trainer level:** `VariationSearch`, a `PrioritySearch` subclass that adds a per-step REFINE / DIVERGE / COMBINE
+instruction to OptoPrimeV2's prompt.
+- *stagnation*: DIVERGE after 5 steps without improvement.
+- *combine*: every 3rd step, DIVERGE plus 2 random non-elite candidates shown as inspirations.
+
+**recursive_opt level:** two coevolution engine options.
+- *brief*: EvoX's label and diversity rules as the instruction of Trace's policy meta-optimizer.
+- *guard*: after 5 iterations without improvement, the next step is forced to DIVERGE with no context.
+
+**References (not re-run):** EvoX; Trace with the cue hidden (EXP27, the same engine configuration as brief and
+guard); Trace with the cue shown; EXP22's Trace runs with a fixed policy and with recursion (stock evaluator, so no
+cue either; re-scored with the same evaluator)."""))
+cells.append(code(r"""e28 = load('EXP28/results/runs_20261007T125224/analysis.json')
+NEW = {'vs_stagnation': ('Trainer: VariationSearch stagnation', '#7570b3'), 'vs_combine': ('Trainer: VariationSearch combine', '#e7298a'),
+       'coevo_brief': ('recursive_opt: EvoX brief', '#7570b3'), 'coevo_guard': ('recursive_opt: diverge guard', '#e7298a'),
+       'EXP22 Trace fixed policy': ('EXP22 Trace, fixed policy', '#666666'), 'EXP22 Trace recursive': ('EXP22 Trace, recursive', '#666666')}
+def curve_of(points):
+    return best_so_far([tuple(p) for p in points], False)
+fig, axs = plt.subplots(1, 2, figsize=(13, 3.9), constrained_layout=True, sharey=True)
+for ax_, arms, ref_extra in ((axs[0], ['vs_stagnation', 'vs_combine'], 'EXP22 Trace fixed policy'), (axs[1], ['coevo_brief', 'coevo_guard'], 'EXP22 Trace recursive')):
+    for g in ('EvoX', 'Trace, cue hidden'):  # references from EXP25-27
+        m = np.array([best_so_far(curves[k]['points'], False) for k, r in curves.items() if GROUP(r['arm']) == g])
+        ax_.plot(it, np.median(m, 0), '-', color=COL[g], lw=1.4, alpha=0.8, label=f'{g} ({len(m)} runs, median)')
+    for arm in arms + [ref_extra]:
+        rs = [r for r in e28['runs'].values() if r['arm'] == arm]
+        m = np.array([curve_of(r['points']) for r in rs]); name, colour = NEW[arm]
+        ls = '-' if arm in arms else '-.'
+        ax_.plot(it, np.median(m, 0), ls, color=colour, lw=2.2 if arm in arms else 1.4, label=f'{name} ({len(rs)} runs, median)')
+        if arm in arms:
+            ax_.plot(it, m[m[:, -1].argmax()], ':', color=colour, lw=1.2)
+    ax_.plot([], [], 'k:', lw=1.2, label='top run of each new arm')
+    ax_.axhline(MAX_CAUSAL, color='black', lw=0.6, ls='--'); ax_.axhline(INIT, color='grey', lw=0.6, ls=':')
+    ax_.text(99, MAX_CAUSAL + 0.004, f'best legitimate (causal) score in EXP25–27: {MAX_CAUSAL:.3f}', ha='right', fontsize=6.5)
+    ax_.set(xlabel='solution call (iteration)', xlim=(0, 101), ylim=(0.49, 0.82))
+    ax_.legend(fontsize=6.5, loc='upper left', frameon=False, ncol=2)
+axs[0].set(title='(a) Signal: best benchmark score so far — Trainer level', ylabel='best score (as scored by the benchmark)')
+axs[1].set(title='(a) Signal: best benchmark score so far — recursive_opt level')
+plt.show()
+
+rows = []
+for arm in ['vs_stagnation', 'vs_combine', 'coevo_brief', 'coevo_guard', 'EXP22 Trace fixed policy', 'EXP22 Trace recursive']:
+    s = e28['summary'][arm]; rs = [r for r in e28['runs'].values() if r['arm'] == arm]
+    mix = {}
+    for r in rs:
+        for k, v in (r.get('mode_mix') or {}).items():
+            mix[k] = mix.get(k, 0) + v
+    total = sum(v for k, v in mix.items() if k != 'guard_events') or 1
+    rows.append({'Arm': NEW[arm][0], 'Runs': s['runs'], 'Best (median)': s['median_best_valid'], 'Best (top run)': max(r['best_valid'] for r in rs),
+                 'Look-ahead ≥ 0.615': s['lookahead_runs'] + (f" (calls {', '.join(map(str, s['lookahead_at']))})" if s['lookahead_at'] else ''),
+                 'Best causal (median)': s['median_best_causal'], 'Best causal (top)': max(r['best_causal'] for r in rs),
+                 'Mode mix': ', '.join(f'{k} {v / total:.0%}' for k, v in sorted(mix.items()) if k != 'guard_events') or '–',
+                 'SciPy introduced per mode': ', '.join(f'{k} {v}' for k, v in s['scipy_yield'].items()) or '–'})
+for g in ('EvoX', 'Trace, cue hidden'):
+    d = runs[runs.Group == g]
+    rows.append({'Arm': f'{g} (EXP25–27 reference)', 'Runs': len(d), 'Best (median)': d['Raw best'].median(), 'Best (top run)': d['Raw best'].max(),
+                 'Look-ahead ≥ 0.615': f"{int(d['Look-ahead'].sum())}/{len(d)} (calls {', '.join(str(int(x)) for x in sorted(d['Found at'].dropna()))})",
+                 'Best causal (median)': d['Causal best'].median(), 'Best causal (top)': d['Causal best'].max(), 'Mode mix': '–',
+                 'SciPy introduced per mode': (f"diverge {yield_['stock']['diverge']['scipy']}/{yield_['stock']['diverge']['calls']}" if g == 'EvoX' else '–')})
+display(pd.DataFrame(rows).style.hide(axis='index').format({c: '{:.3f}' for c in ['Best (median)', 'Best (top run)', 'Best causal (median)', 'Best causal (top)']})
+        .background_gradient(subset=['Best (median)'], cmap='Oranges', vmin=0.5, vmax=0.78).set_table_styles(small if 'small' in globals() else
+        [{'selector': 'td, th', 'props': 'font-size: 8pt; padding: 1px 4px; text-align: left'}]))"""))
+cells.append(md("""---
 ## Appendix — the two tasks and their loopholes (code excerpts are read from the source files)"""))
 cells.append(code(r"""import sys, os, io, contextlib, re, importlib.util
 SKY = Path('/home/xav/code/evo-compare/repos/skydiscover/benchmarks')   # SkyDiscover checkout used by every run
@@ -307,7 +371,7 @@ print('Refusing hard cases (each solved case placed optimally):'); print('\n'.jo
 
 
 cells.append(md("""---
-## Register of EXP01–EXP27: what was optimized, what it gained, what limited it
+## Register of EXP01–EXP28: what was optimized, what it gained, what limited it
 
 Rows come from [`experiment_register.json`](experiment_register.json), transcribed from each study's RESULTS.md and the
 reconciled `ASSESSMENT.md` register. Each row names its source. **Level** is the layer of the stack the study varied:
