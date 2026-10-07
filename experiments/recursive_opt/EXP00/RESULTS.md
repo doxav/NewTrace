@@ -43,6 +43,8 @@ Score differences below that are unresolved by construction.
 **Lesson the notebook itself recorded:** "A/D/E may legitimately stay near 0.0 … that is a score-surface
 diagnosis." The only climbable surface was a deterministic toy validator.
 
+**Later re-tests (EXP00-A):** setup search → EXP10/EXP11/EXP21; code rewriting → EXP15–EXP18, EXP23–EXP24, EXP28; capability → EXP00-E; O2/O3 → EXP02, EXP08, EXP22-QA; declarative spec → control plane v2. See [PROTOCOL](PROTOCOL.md#later-re-designs-and-equivalents).
+
 ## EXP00-B — Phase 0→7 campaign (executed version `611d31eecf`)
 
 | Phase | Result (cell output) | Decision board (saved `phase*.json`) | Decision then | Valid reading |
@@ -66,6 +68,13 @@ diagnosis." The only climbable surface was a deterministic toy validator.
 Most knobs searched in A/D and Phases 1–6 therefore could not move the score. A fixed O0 bug was also shown:
 `agent_fn` now injects the artifact (ALPHA vs BETA outputs differ).
 
+**Later re-tests (EXP00-B):**
+- trainer choice → EXP24 and EXP28;
+- trace type → EXP16 and EXP19;
+- warm priors and skills → EXP18, EXP19 and EXP20;
+- threads → EXP05 (concurrency changes evaluation noise);
+- tools and Terminal-Bench 2 → never re-tested.
+
 ## EXP00-C — phases V2 notebook (outputs from the 30 September re-execution)
 
 | Example | Result |
@@ -79,6 +88,8 @@ The notebook's claims table lists O0 "yes", O1 "yes", O2 "yes", O3 "partially". 
 "the code surface can hold a better implementation", and the improvements were written by hand. The three
 recommended specs (HF QA, multi-objective, `llm4ad` transfer) were not executed. EXP19–EXP22 later pursued
 that direction.
+
+**Later re-tests (EXP00-C):** its recommended HF-QA / multi-objective / `llm4ad` specs were not run as such. The QA direction became EXP20–EXP22-QA; multi-objective GSM8K became EXP00-E.
 
 ## EXP00-D — use-case suite UC1–UC14
 
@@ -148,6 +159,17 @@ that direction.
 - **The method of `CURRENT_LIMITS.MD` was sound**: a reliability gate before the promotion gate, and paired seed
   deltas. It became the basis of EXP01–EXP14.
 
+**Later re-tests (EXP00-D):**
+- UC4 → EXP02 (same task set: −0.006);
+- UC2/UC6/UC11 QASPER → EXP12, EXP13 and EXP03;
+- UC7/UC14 routing and transfer → EXP07–EXP09;
+- three-way standard-vs-recursive → EXP22, EXP24 and EXP28;
+- UC12/UC13 primitives → control plane v2 and `numeric_optimizers.py`;
+- UC8/UC10 policies → `decisions.py` (library only);
+- UC5/UC9 tools → never re-tested.
+
+The current `examples/recursive_opt_use_cases.ipynb` is a control-plane smoke notebook for the UC4/UC14 golden specs, not a re-run.
+
 ## EXP00-E — Experiment 0 (`reports/prompt18_r3f_main_completion_trajectory_stop.md`)
 
 The 40/40 canonical units completed and every infrastructure gate passed. One unit was interrupted by a local
@@ -176,6 +198,8 @@ Paired deltas against A, with 95% CIs:
   trajectories, so candidate-level analysis was impossible without inference. The fix, persisting
   `candidate_trajectory`, followed on 27 August (`6aa9da0418`).
 - **Cost:** token-price proxy $0.414.
+
+**Later re-tests (EXP00-E):** no repeat of the engine comparison on GSM8K. Its infrastructure was reused: the GEPA engine in the control plane, candidate-trajectory persistence, frozen manifests (EXP15–EXP28), and `o1_qa/` for EXP20–EXP22-QA.
 
 ## What EXP00 contributed to the later series
 

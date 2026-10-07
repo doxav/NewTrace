@@ -62,7 +62,7 @@ opto/features/recursive_opt/
   tracebench.py    # turns real Trace-Bench task ids into inner_runner / code- and
                    #   multi-objective evaluators (section D)
 examples/          # A/B/C/D, each documented, runnable offline
-examples/recursive_opt_demo.ipynb    # Colab/local walkthrough
+experiments/recursive_opt/EXP00/notebooks/recursive_opt_demo.ipynb  # historical walkthrough (June 2026, EXP00-A)
 REPORT.md          # the 3-approach comparison, conformity tables, convergence
 ```
 
@@ -164,7 +164,9 @@ Trace-Bench adapter. If the model is inaccessible or Trace-Bench cannot be
 initialized, the run fails early instead of silently reporting synthetic scores.
 
 ### 4.4 Notebook (Colab or local)
-Open `examples/recursive_opt_demo.ipynb`. The setup cell clones OpenTrace,
+The June 2026 walkthrough is archived with its outputs as `experiments/recursive_opt/EXP00/notebooks/recursive_opt_demo.ipynb`
+(EXP00-A; its cells assume the repository root as working directory and `examples/` on `sys.path`).
+For the current control-plane API see `examples/recursive_opt_use_cases.ipynb`. The setup cell of the archived notebook clones OpenTrace,
 installs OpenTelemetry, ensures `recursive_opt` is under `opto/features/`, and
 runs A/B/C/D. A final cell reads `OPENAI_API_KEY` via `getpass` for the live pass.
 

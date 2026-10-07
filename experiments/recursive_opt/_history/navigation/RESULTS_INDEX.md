@@ -28,7 +28,7 @@ contient pas un second registre d’hypothèses : il renvoie au
 | [numeric_optimizers.py](../../../../opto/features/recursive_opt/numeric_optimizers.py) | Route vers solveurs numériques pour knobs actifs | Réutilisable ; ne pas attribuer automatiquement le gain à la récursion |
 | [traces.py](../../../../opto/features/recursive_opt/traces.py) | Connexion de sources de traces, export interne | OTEL/sysmon/hybrid vérifiés dans EXP-19 ; SDK OTEL dans `humanllm`, absent du venv Phase 0 ; gain d’apprentissage non établi |
 | [examples A/B/C/D/E](../../../../examples) | Comprendre les différentes surfaces et déclarations | Démonstrateurs historiques ; ne pas relancer tous les scripts pour « confirmer » les anciens résultats |
-| [recursive_opt_phases_V2.ipynb](../../../../examples/recursive_opt_phases_V2.ipynb) | Carte d’origine O0/O1/O2a/O2b/O3 | Commentaires « positive claim » historiques, pas conclusions actuelles |
+| [recursive_opt_phases_V2.ipynb](../../EXP00/notebooks/recursive_opt_phases_V2.ipynb) | Carte d’origine O0/O1/O2a/O2b/O3 | Commentaires « positive claim » historiques, pas conclusions actuelles |
 | [recursive_opt_use_cases.ipynb](../../../../examples/recursive_opt_use_cases.ipynb) | Client minimal du control plane | **Deux tests artificiels UC4/UC14**, pas la suite scientifique d’origine |
 | [XP_1stattempt/recursive_opt_use_cases.ipynb](../../../../examples/XP_1stattempt/recursive_opt_use_cases.ipynb) | Première suite UC1–6 | Archive de conception ; Git `8c78e1b46` contient la suite ultérieure UC1–13 et three-way |
 | [recursive_opt_three_way.py](../../../../examples/recursive_opt_three_way.py) | Comparabilité, construction des bras, comptabilité historique | Résumé de vitesse première graine : à corriger avant réemploi scientifique |

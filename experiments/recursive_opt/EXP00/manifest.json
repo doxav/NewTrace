@@ -5,14 +5,15 @@
  "report": "RESULTS.md",
  "protocol": "PROTOCOL.md",
  "evidence": [
-  "../../../examples/recursive_opt_demo.ipynb",
-  "../../../examples/recursive_opt_phases.ipynb",
-  "../../../examples/recursive_opt_phases_V2.ipynb",
-  "git:5a148ddba9:examples/recursive_opt_use_cases.ipynb",
+  "notebooks/recursive_opt_demo.ipynb",
+  "notebooks/recursive_opt_phases.ipynb",
+  "notebooks/recursive_opt_phases_V2.ipynb",
+  "notebooks/recursive_opt_use_cases_executed_5a148ddba9.ipynb",
   "../../../examples/notebook_outputs/recursive_opt_use_cases/",
   "../multiobjective_reasoning/",
   "../../../outputs/recursive_opt/experiment_0/"
  ],
  "successor": "EXP01",
- "status": "Historical (June-August 2026). A-D: mechanics only; flat or saturated setup surfaces; UC4 +0.163 invalid (corrected -0.006, EXP02); other deltas below the ~0.24 resolution. E (Experiment 0): neither Trace nor GEPA met the pre-registered criterion; Trace -13% and GEPA -26% tokens at no significant accuracy change; stopped for trajectory provenance."
+ "status": "Historical (June-August 2026). A-D: mechanics only; flat or saturated setup surfaces; UC4 +0.163 invalid (corrected -0.006, EXP02); other deltas below the ~0.24 resolution. E (Experiment 0): neither Trace nor GEPA met the pre-registered criterion; Trace -13% and GEPA -26% tokens at no significant accuracy change; stopped for trajectory provenance.",
+ "later_equivalents": "PROTOCOL.md#later-re-designs-and-equivalents"
 }

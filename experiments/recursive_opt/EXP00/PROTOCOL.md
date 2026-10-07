@@ -1,7 +1,7 @@
 # EXP00 — protocols of the pre-numbered campaigns (June–August 2026)
 
-These campaigns ran before the numbered EXP series, from notebooks in `examples/` and from the
-`multiobjective_reasoning` package. None was pre-registered as an EXP. The protocols below are
+These campaigns ran before the numbered EXP series, from notebooks now archived in [`notebooks/`](notebooks/)
+(moved from `examples/`) and from the `multiobjective_reasoning` package. None was pre-registered as an EXP. The protocols below are
 **reconstructed from the executed notebooks, the persisted run outputs and the commit history**: what was
 actually run, not what was planned. Sub-studies are labelled A–E in chronological order.
 
@@ -24,7 +24,7 @@ Level vocabulary used by these notebooks:
 
 ---
 
-## EXP00-A — `examples/recursive_opt_demo.ipynb`: the four meta-optimization types (7–11 June 2026)
+## EXP00-A — [`notebooks/recursive_opt_demo.ipynb`](notebooks/recursive_opt_demo.ipynb) (formerly `examples/`): the four meta-optimization types (7–11 June 2026)
 
 **Question:** can each recursion type be expressed and executed on Trace, and does it improve its target?
 
@@ -45,7 +45,7 @@ Level vocabulary used by these notebooks:
 
 ---
 
-## EXP00-B — `examples/recursive_opt_phases.ipynb`: the Phase 0→7 campaign (10–13 June 2026)
+## EXP00-B — [`notebooks/recursive_opt_phases.ipynb`](notebooks/recursive_opt_phases.ipynb) (formerly `examples/`): the Phase 0→7 campaign (10–13 June 2026)
 
 **Question:** which O1 choices should be adopted (trainer, trace type, warm priors, optimizer tools,
 threads, distilled skills), decided phase by phase?
@@ -74,7 +74,7 @@ The campaign closes with a causal-effect contract demo: which `LevelConfig` fiel
 
 ---
 
-## EXP00-C — `examples/recursive_opt_phases_V2.ipynb`: level-by-level evidence notebook (12 June; re-executed 30 September 2026)
+## EXP00-C — [`notebooks/recursive_opt_phases_V2.ipynb`](notebooks/recursive_opt_phases_V2.ipynb) (formerly `examples/`): level-by-level evidence notebook (12 June; re-executed 30 September 2026)
 
 **Question:** for each level (O0–O3), what has the branch demonstrated, with numbers?
 
@@ -96,7 +96,7 @@ committed in `0f6786f127` (30 September); they reference post-restructuring path
 
 ---
 
-## EXP00-D — `examples/recursive_opt_use_cases.ipynb`: use-case suite UC1–UC14 (15 June – 5 July 2026)
+## EXP00-D — use-case suite ([`notebooks/recursive_opt_use_cases_executed_5a148ddba9.ipynb`](notebooks/recursive_opt_use_cases_executed_5a148ddba9.ipynb), archived from commit `5a148ddba9`): use-case suite UC1–UC14 (15 June – 5 July 2026)
 
 **Question:** in which concrete use cases does recursive optimization beat standard (one-level) Trace at
 equal budget?
@@ -178,3 +178,40 @@ accuracy and token cost, and does Trace's validation gate matter?
   efficiency).
 - **Execution:** `main_experiment.py`. Stop and amendment decisions are in `reports/prompt18_*.md`. Run data in
   `outputs/recursive_opt/experiment_0/experiment-0-v2/`.
+
+---
+
+## Later re-designs and equivalents
+
+Most EXP00 questions were re-asked later with a corrected instrument, pre-registration, the control plane or a
+different implementation. **No EXP00 run was replayed as-is.** The control-plane v2 migration (21–22 August,
+[`_shared/control_plane_v2/migration_report.md`](../_shared/control_plane_v2/migration_report.md)) classified the
+85 tracked use-case specs as:
+- 0 execution-replayable;
+- 10 normalized-only;
+- 23 missing a dependency (unpinned task, evaluator or provider);
+- 46 historical-only;
+- 6 local and non-portable.
+
+| EXP00 element | Later equivalent | Same or different |
+|---|---|---|
+| A/C/D task and score surfaces (Trace-Bench eval-only adapter) | [EXP01](../EXP01/README.md) prompt signal vs noise, [EXP05](../EXP05/README.md) concurrency noise, [EXP10](../EXP10/README.md) knob liveness | **Re-measured the instrument** that A–D relied on: noise floors and whether knobs reach the score |
+| A setup search (O1 config: batch size/design, memory policy, trainer) | [EXP10](../EXP10/README.md), [EXP11](../EXP11/README.md) knobs; [EXP21](../EXP21/README.md) development axes; control-plane `fixed`/`trace` engines | Different: liveness checked first; config axes run through declarative specs |
+| A-B / UC1 component code (`CodeArtifactLevel`, hard-item validator, BBEH solver) | [EXP04](../EXP04/README.md) packing code search; [EXP06](../EXP06/README.md) code menus; [EXP15–EXP18](../EXP15/README.md) optimizer-program discovery; [EXP23–EXP24](../EXP24/README.md) native coevolution on PRISM; [EXP28](../EXP28/README.md) `VariationSearch` | Same idea (LLM rewrites code against an evaluator), scaled to real benchmarks with fixed and independent-generation controls |
+| A-C / UC3 capability under accuracy + cost | **EXP00-E Experiment 0** (section above) (weighted accuracy + token ratio, hard invalid-rate constraint); [`docs/multi_objective_scores.md`](../../../docs/multi_objective_scores.md) | Direct successor: same multi-objective GSM8K question, pre-registered, with GEPA and a no-validation-gate control |
+| A-D / UC4 family policy O2 and prior O3 (`FamilyPolicyLevel`, `PriorInductionLevel`) | [EXP02](../EXP02/README.md) corrected UC4; [EXP07](../EXP07/README.md)/[EXP08](../EXP08/README.md) routing-menu optimum and prior amortization; [EXP22-QA](../EXP22/qa/README.md) learned O1 instruction/selector; control-plane golden specs `uc4_positive` / `uc14_negative` (deterministic contracts, `historical_replay=false`) | EXP02 re-scored UC4 on the same task set (−0.006). EXP08 is the first clean prior-transfer test (on a finite menu) |
+| A-E declarative spec (`run_spec`, budgets, prior promotion, warm-start) | Control plane v2 ([`_shared/control_plane_v2/`](../_shared/control_plane_v2/README.md), `opto/features/recursive_opt/spec.py`), used by EXP19–EXP21 and by the coevolution engine in EXP23–EXP28 | Re-implemented: v2alpha schema, typed outcomes, provenance and budget guards; zero historical replays certified |
+| B Phase 1 trainer choice / D three-way "standard vs recursive" at equal budget | [EXP24](../EXP24/README.md) fixed vs `llm_rewrite` vs Trace at 100 calls; [EXP22-EvoX](../EXP22/evox/README.md) recursive vs fixed; [EXP28](../EXP28/README.md) trainer arms | Same comparison, now with a fixed-policy control, the same evaluator for every arm, and a known optimum |
+| B Phase 2 / UC6 trace type (internal/otel/hybrid) | [EXP16](../EXP16/README.md) rich vs compact feedback; [EXP19](../EXP19/README.md) Trace capture | Different: feedback richness tested on code-discovery surfaces |
+| B Phase 3 warm priors, Phase 6 skills, UC2 `initial_knowledge` | [EXP18](../EXP18/README.md) archive memory; [EXP19](../EXP19/README.md) S3 recursive preparation; [EXP20](../EXP20/README.md) curriculum | Different surfaces; memory and curriculum remain unresolved |
+| B Phase 4 / UC5 / UC9 optimizer-side tools and agentic policies | `opto/features/recursive_opt/capabilities.py` (`AgenticOptimizer`) | **No later experiment.** UC5/UC9 policies were never executed (0 tool calls) |
+| B Phase 5 threads | [EXP05](../EXP05/README.md) concurrency-dependent evaluation noise | EXP05 showed parallel evaluation changes the noise (packing SD 0 serial vs 4.41 at 8 workers) |
+| B Phase 7 Terminal-Bench 2 | — | Never implemented |
+| D UC2 / UC6 / UC11 QASPER prompt and config | [EXP12](../EXP12/README.md) paired QASPER smoke; [EXP13](../EXP13/README.md) found prompt vs noise; [EXP03](../EXP03/README.md) certified GSM8K prompt search | Same surfaces with paired design and certified noise |
+| D UC7 graph routing / UC14 code transfer | [EXP07](../EXP07/README.md)–[EXP09](../EXP09/README.md) routing menus, prior and generated routing code (0/22 transfers executable) | Different tasks (routing); transfer still unshown |
+| D UC8 / UC10 guarded campaign and promotion policies | `opto/features/recursive_opt/decisions.py` (`GuardedDecisionEvaluator`, `ConfidenceGate`) | Kept as library code; no later experiment |
+| D UC12 promoted primitives | Control plane v2 (budget dict, multi-seed, numeric routing, effect contract) | Absorbed into the runtime |
+| D UC13 numeric config search | `opto/features/recursive_opt/numeric_optimizers.py`; [EXP10](../EXP10/README.md)/[EXP11](../EXP11/README.md) knobs | Library kept; no live gain was ever shown (flat objective) |
+| D use-case notebook itself | `examples/recursive_opt_use_cases.ipynb` is now a 5-cell **control-plane v2 smoke notebook** that normalizes, explains and runs the UC4/UC14 golden specs | Different: offline contract checks, not the historical runs |
+| D audit | [EXP01–EXP14](../EXP01/README.md) (probes A–L, `_history/probe_2026/`), assessment of 29–30 August | The corrected measurements that supersede A–D |
+| E Experiment 0 (Trace vs GEPA vs fixed, frozen manifests) | Control-plane `gepa_optimize_anything` engine; candidate-trajectory persistence (`6aa9da0418`); pre-registration and frozen-manifest discipline of EXP15–EXP28; [`o1_qa/`](../o1_qa) (imports it) for EXP20–EXP22-QA | Infrastructure reused; the engine comparison was not repeated on GSM8K |

@@ -14,7 +14,7 @@ Current verdict (8 October 2026): local task-learning and engineering gains are 
 
 | Experiment | Subject | Status |
 |---|---|---|
-| [EXP00](EXP00/README.md) | Pre-numbered campaigns (Jun–Aug 2026): `examples/recursive_opt_demo`, `_phases`, `_phases_V2` and `_use_cases` notebooks (UC1–UC14, three-way benchmark) and Experiment 0 (`multiobjective_reasoning`) | Historical, documented retroactively. A–D: mechanics only; setup/family/prior surfaces flat or saturated; UC4 +0.163 was an arithmetic identity (corrected −0.006, EXP02); other deltas below resolution. E: Trace −13% and GEPA −26% tokens at no significant accuracy change; no success criterion met. |
+| [EXP00](EXP00/README.md) | Pre-numbered campaigns (Jun–Aug 2026): the `recursive_opt_demo`, `_phases`, `_phases_V2` and `_use_cases` notebooks (now in `EXP00/notebooks/`; UC1–UC14, three-way benchmark) and Experiment 0 (`multiobjective_reasoning`); later re-designs mapped in its PROTOCOL | Historical, documented retroactively. A–D: mechanics only; setup/family/prior surfaces flat or saturated; UC4 +0.163 was an arithmetic identity (corrected −0.006, EXP02); other deltas below resolution. E: Trace −13% and GEPA −26% tokens at no significant accuracy change; no success criterion met. |
 | [EXP01](EXP01/README.md) | Prompt signal versus evaluation noise | Historical; use corrected interpretation in the result entry, not the old registry verdict. |
 | [EXP02](EXP02/README.md) | Corrected same-holdout UC4 | Historical; use corrected interpretation in the result entry, not the old registry verdict. |
 | [EXP03](EXP03/README.md) | Certified prompt optimization | Historical; use corrected interpretation in the result entry, not the old registry verdict. |
