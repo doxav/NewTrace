@@ -305,5 +305,81 @@ print(f"Trace 'record' program: stock score {rec['combined_score']:.3f}, success
 demo = (R / 'EXP24/results/analysis/metric_exploit_demo.txt').read_text().splitlines()
 print('Refusing hard cases (each solved case placed optimally):'); print('\n'.join([demo[3]] + demo[5:10]))"""))
 
+
+cells.append(md("""---
+## Register of EXP01–EXP27: what was optimized, what it gained, what limited it
+
+Rows come from [`experiment_register.json`](experiment_register.json), transcribed from each study's RESULTS.md and the
+reconciled `ASSESSMENT.md` register. Each row names its source. **Level** is the layer of the stack the study varied:
+- *instrument*: measurement only.
+- *O0 artifact*: the task solution itself (a prompt, code or configuration).
+- *O0 operator/evaluator*: how solutions are generated or scored.
+- *O1 policy*: the selection or search policy chosen by a meta-optimizer.
+- *O2 recursion*: an extra nested level or curriculum.
+
+**Verdict:**
+- *established*: confidence interval excludes 0, or the mechanism is verified on every run; this includes null results.
+- *unresolved*: the interval crosses 0, or n is too small.
+- *withdrawn*: an artifact or exploit.
+- *incomplete*: stopped before a result.
+- *engineering*: no efficacy test.
+
+Three views follow, then a combined table."""))
+cells.append(code(r"""reg = pd.DataFrame(load('_analysis/retrospective_20261006/experiment_register.json')['rows'])
+LEVELS = ['instrument', 'O0 artifact', 'O0 operator/evaluator', 'O1 policy', 'O2 recursion']
+VERDICT_COL = {'established': '#c7e9c0', 'unresolved': '#fdd0a2', 'withdrawn': '#fcbba1', 'incomplete': '#d9d9d9', 'engineering': '#deebf7'}
+EXPLORE_COL = {'exploration deficit': '#fb6a4a', 'exploitation feedback hurt': '#fc9272', 'low diversity': '#fc9272',
+               'diversity mechanisms: no effect': '#fdd0a2', 'meta adds no exploration': '#fdd0a2', 'meta adds waste, not speed': '#fdd0a2',
+               'unguided sampling ≈ guided search': '#fdd0a2', 'unguided sampling: local gain only': '#fdd0a2',
+               'bounded (fixed menu)': '#d9d9d9', 'parent selection matters': '#c7e9c0', 'found a loophole': '#ffeda0', 'not studied': '#ffffff'}
+small = [{'selector': 'td, th', 'props': 'font-size: 8pt; padding: 1px 4px; vertical-align: top; text-align: left'}]
+paint = lambda colours: (lambda v: f'background-color: {colours.get(v, "")}')"""))
+
+cells.append(md("""### View 1: chronological ledger (complete, for audit)
+One row per study, with every field, so each claim can be checked against its source."""))
+cells.append(code(r"""v1 = reg[['exp', 'task', 'level', 'surface', 'alternatives', 'volume', 'range', 'gain', 'verdict', 'limit']]
+v1.columns = ['Exp', 'Task', 'Level', 'Surface optimized', 'Alternatives compared', 'Volume', 'Score range observed', 'Gain', 'Verdict', 'Main limit']
+display(v1.style.hide(axis='index').map(paint(VERDICT_COL), subset=['Verdict']).set_table_styles(small))"""))
+
+cells.append(md("""### View 2: evidence map by level (where gains did and did not come from)
+Counts of studies per stack level and verdict, plus the established gains and the most frequent limits. Read it as:
+*which layer has ever produced a replicated gain?*"""))
+cells.append(code(r"""v2 = pd.crosstab(pd.Categorical(reg.level, LEVELS, ordered=True), reg.verdict).reindex(columns=list(VERDICT_COL), fill_value=0)
+v2['Studies'] = v2.sum(axis=1)
+est = reg[reg.verdict == 'established']
+null = est.gain.str.startswith(('none', 'diagnosis'))
+v2['Established gains'] = [' · '.join(f'{r.exp}: {r.gain}' for r in est[(est.level == lvl) & ~null].itertuples()) or '–' for lvl in v2.index]
+v2['Established nulls / diagnoses'] = [' · '.join(f'{r.exp}: {r.gain}' for r in est[(est.level == lvl) & null].itertuples()) or '–' for lvl in v2.index]
+v2['Most frequent limits'] = [', '.join(f'{k} ({n})' for k, n in reg[reg.level == lvl].limit_tag.value_counts().head(3).items()) for lvl in v2.index]
+v2.index.name = 'Level'
+display(v2.reset_index().style.hide(axis='index').background_gradient(subset=['established'], cmap='Greens', vmin=0, vmax=4)
+        .background_gradient(subset=['unresolved', 'withdrawn', 'incomplete'], cmap='Oranges', vmin=0, vmax=6).set_table_styles(small))
+print('Studies per primary limit:', reg.limit_tag.value_counts().to_dict())"""))
+
+cells.append(md("""### View 3: exploration lens (what each study showed about exploring the search space)
+Only studies with a diversity mechanism or exploration evidence are listed. Red means exploration was missing or
+harmful, orange means a mechanism with no measurable benefit, grey means bounded by a fixed menu, green means it
+helped, and yellow means it found a loophole."""))
+cells.append(code(r"""v3 = reg[reg.explore_tag != 'not studied'][['exp', 'level', 'task', 'exploration', 'explore_tag']]
+v3.columns = ['Exp', 'Level', 'Task', 'Diversity mechanism and evidence', 'Exploration verdict']
+display(v3.style.hide(axis='index').map(paint(EXPLORE_COL), subset=['Exploration verdict']).set_table_styles(small))
+print('Exploration verdicts:', v3['Exploration verdict'].value_counts().to_dict())"""))
+
+cells.append(md("""### Combined table (recommended)
+This keeps the Verdict, Limit and Exploration columns, colour-coded, on one line per study, and adds a tally per level.
+It replaces View 1 for everyday use. Views 2 and 3 stay useful as the two aggregations it is built from."""))
+cells.append(code(r"""mix = reg.assign(Optimized=reg.task + ' · ' + reg.surface, Compared=reg.alternatives + ' (' + reg.volume + ')',
+                 Result=reg.gain + ' [' + reg.range + ']')
+mix = mix[['exp', 'level', 'Optimized', 'Compared', 'Result', 'verdict', 'limit_tag', 'explore_tag']]
+mix.columns = ['Exp', 'Level', 'Task · surface', 'Compared (volume)', 'Gain [range]', 'Verdict', 'Limit', 'Exploration']
+display(mix.style.hide(axis='index').map(paint(VERDICT_COL), subset=['Verdict']).map(paint(EXPLORE_COL), subset=['Exploration'])
+        .set_table_styles(small))
+tally = reg.groupby(pd.Categorical(reg.level, LEVELS, ordered=True), observed=False).agg(
+    studies=('exp', 'size'), established=('verdict', lambda s: (s == 'established').sum()),
+    exploration_problem=('explore_tag', lambda s: s.isin(['exploration deficit', 'exploitation feedback hurt', 'low diversity', 'diversity mechanisms: no effect',
+                                                          'meta adds no exploration', 'meta adds waste, not speed', 'unguided sampling ≈ guided search']).sum()))
+display(Markdown('**Tally:** ' + '; '.join(f'{lvl}: {r.studies} studies, {r.established} established, {r.exploration_problem} with an exploration problem'
+                                         for lvl, r in tally.iterrows())))"""))
+
 nb = nbf.v4.new_notebook(cells=cells, metadata={'kernelspec': {'name': 'python3', 'display_name': 'Python 3', 'language': 'python'}})
 nbf.write(nb, 'key_findings.ipynb')
