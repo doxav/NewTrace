@@ -1,5 +1,12 @@
 # EXP28 — results
 
+> **Correction (2026-10-07, see PROTOCOL Part B).** The two trainer arms below ran with an instruction-leak bug. Once
+> a candidate created on an exploration step was expanded, its later "free" calls still carried the DIVERGE/COMBINE
+> instruction, sometimes stacked. Leaks occurred in 5 of 6 runs, from calls 4–37 on (52–65 of 67–81 free calls). The
+> trainer rows therefore measure a contaminated treatment, and their "free vs diverge" yields are not interpretable.
+> The first SciPy candidates at call 9 (stagnation seeds 42 and 43) came before any leak. Part B re-runs the trainer
+> arms with the fix. The recursive_opt rows are unaffected.
+
 **Complete, 12/12.** Campaign `results/runs_20261007T125224`: 12 runs concurrent, 12:52–14:37 UTC on 2026-10-07,
 100 solution calls each. There were 0 failed calls and 0 deadlines; cost $2.18. Analysis: `scripts/analyze.py` writes
 [`analysis.json`](results/runs_20261007T125224/analysis.json). Figure (a) and the table are in

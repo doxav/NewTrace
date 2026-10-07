@@ -43,7 +43,13 @@ CUE = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(CUE)
 MODEL, HIDDEN = CUE.E25.MODEL, CUE.HIDDEN
 ARMS = {'vs_stagnation': {'variation_schedule': 'stagnation', 'patience': 5, 'refine_after_gain': 2, 'num_inspirations': 0},
-        'vs_combine': {'variation_schedule': 'periodic', 'period': 3, 'refine_after_gain': 2, 'num_inspirations': 2}}
+        'vs_combine': {'variation_schedule': 'periodic', 'period': 3, 'refine_after_gain': 2, 'num_inspirations': 2, 'inspiration_mode': 'always'},
+        # ablation 2026-10-07: inspirations decoupled from the schedule (inspiration_mode / inspiration_style)
+        'vs_default': {},  # VariationSearch defaults = vs_stagnation (regression check of the winner)
+        'vs_stag_alt_combine': {'inspiration_mode': 'alternate', 'inspiration_style': 'combine'},
+        'vs_stag_alt_context': {'inspiration_mode': 'alternate', 'inspiration_style': 'context'},
+        'vs_stag_always_context': {'inspiration_mode': 'always', 'inspiration_style': 'context'},
+        'vs_periodic_diverge': {'variation_schedule': 'periodic', 'period': 3}}
 
 
 class SignalGuide(Guide):

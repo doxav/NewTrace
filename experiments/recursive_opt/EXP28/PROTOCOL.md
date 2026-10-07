@@ -81,3 +81,43 @@ code / text / numeric / categorical parameters.
   the references' (0.539 cue hidden, 0.543 EvoX) by more than 0.02.
 - **Caveat on what exploration finds:** on this benchmark, more exploration mainly finds the look-ahead loophole faster.
   Look-ahead discovery measures exploration, not legitimate progress, and the causal endpoint guards that distinction.
+
+## Part B — inspiration ablation and leak fix (pre-registered 2026-10-07, before any paid call)
+
+**Bug found while preparing Part B.** In the Part A trainer arms, the instruction leaked. A candidate created on an
+exploration step kept a deep copy of the optimizer with that step's instruction attached. Whenever the candidate was
+expanded later, its "free" calls still carried the instruction, sometimes several stacked. Leaked free calls per run:
+
+| | seed 42 | seed 43 | seed 44 |
+|---|---|---|---|
+| stagnation | 60/81 | 52/81 | 0/81 |
+| combine | 57/67 | 63/67 | 65/67 |
+
+The fix records each optimizer's base instruction once, rebuilds the instruction from it at every step, and resets
+the optimizers of new candidates. A regression test fails on the old code and passes now. The Part A trainer results
+therefore describe a contaminated treatment; Part B re-runs them.
+
+**New options:** `inspiration_mode` (`never` (default) / `always` / `alternate`) and `inspiration_style`
+(`combine` (default) / `context`, the EvoX-like plain context). The defaults are unchanged: stagnation schedule,
+patience 5, plain DIVERGE.
+
+**Arms** (3 seeds: 42, 43, 44; 100 solution calls each; 18 runs, all concurrent):
+
+| Arm | Schedule | Inspirations | Purpose |
+|---|---|---|---|
+| `vs_default` | stagnation | never | the winner, re-run with the fix (regression check) |
+| `vs_stag_alt_combine` | stagnation | alternate, combine | does combine help when alternated? |
+| `vs_stag_alt_context` | stagnation | alternate, context | EvoX-like inspirations, alternated |
+| `vs_stag_always_context` | stagnation | always, context | EvoX-like inspirations on every exploration step |
+| `vs_periodic_diverge` | periodic (3) | never | separates the schedule from combine (Part A confound) |
+| `vs_combine` | periodic (3) | always, combine | Part A's combine arm, re-run with the fix |
+
+**Endpoints:** as in Part A, plus the realized instruction per call, checked so that free calls carry no instruction.
+
+**Reading (descriptive, n = 3):**
+- *Inspirations:* compare each stagnation inspiration arm with `vs_default`, and `vs_combine` with
+  `vs_periodic_diverge`.
+- *Schedule:* compare `vs_default` with `vs_periodic_diverge`.
+- *Regression check:* "performance maintained" means `vs_default`'s median best benchmark score is within 0.05 of
+  Part A's 0.748, and at least 2/3 runs reach look-ahead within 50 calls. Part A was contaminated, so a difference
+  will be attributed to the fix, not to noise alone.
