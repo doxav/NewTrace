@@ -8,5 +8,5 @@
  ],
  "protocol": "PROTOCOL.md",
  "predecessor": "EXP27",
- "status": "Complete. Part A 12/12 (trainer arms contaminated by an instruction leak, fixed). Part B 18/18 with the fix: VariationSearch default (stagnation, plain DIVERGE) median 0.758, 3/3 look-ahead by call 22, DIVERGE calls bring SciPy 32% vs 3% for free calls; explicit 'combine' sentence limits it to 7%, EvoX-like 'context' inspirations 38-44%. No configuration improves the causal score (0.499-0.538)."
+ "status": "Complete. Signal (Parts A-B): VariationSearch default (stagnation, plain DIVERGE) median 0.758, look-ahead 3/3 by call 22; DIVERGE yields SciPy 32% vs 3% free; explicit combine sentence limits it. PRISM (Part C): default reaches the all-case optimum at calls 3/3/4 (EXP24: 12-22); stock EvoX 1/3 (call 37), others exploit refusals. No causal Signal gain."
 }

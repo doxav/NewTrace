@@ -130,3 +130,50 @@ at the end of [`key_findings.ipynb`](../_analysis/retrospective_20261006/key_fin
   avoid the explicit `'combine'` style.
 - On this benchmark, the extra exploration mostly buys faster loophole discovery. Testing legitimate gains needs a
   causality-enforcing score (F1 in EXP27).
+
+## Part C — the same configurations on PRISM, plus stock EvoX (`results/prism_20261007T200146`)
+
+All 21 runs launched concurrently at 20:01 UTC on 2026-10-07. EvoX completed 100 calls per run. The 18 trainer runs
+were **stopped at 21:10 UTC by request**, once almost all had reached the all-case optimum, after 14–52 calls each.
+The optimum cannot be exceeded, so later calls could not change the primary endpoint. Cost $0.89. Analysis:
+`scripts/analyze_prism.py` writes [`analysis.json`](results/prism_20261007T200146/analysis.json); EvoX candidates are
+re-scored with EXP24's white-box evaluator.
+
+| Configuration (3 seeds) | Reached the all-case optimum 26.256 | Calls to optimum | Median best all-case | Median best stock |
+|---|---|---|---|---|
+| **VariationSearch default** (stagnation, no inspirations) | **3/3** | **3, 3, 4** | 26.256 | 26.256 |
+| periodic diverge | 3/3 | 2, 3, 7 | 26.256 | 26.256 |
+| stag + always context | 3/3 | 3, 5, 9 | 26.256 | 26.256 |
+| periodic combine | 3/3 | 6, 7, 7 | 26.256 | 26.256 |
+| stag + alternate combine | 2/3 (third at 26.232 when stopped at call 18) | 6, 7 | 26.256 | 26.282 |
+| stag + alternate context | 2/3 (third at 26.250 when stopped at call 17) | 4, 14 | 26.256 | 26.355 |
+| **stock EvoX** (100 calls) | **1/3** | 37 | **24.149** | 25.877 |
+| *EXP24 reference, same evaluator and feedback (coevolution engine)* | 3/3 each | fixed 12, llm_rewrite 12, Trace 22 (medians) | 26.256 | — |
+
+**Readings** (n = 3, descriptive):
+
+1. **VariationSearch is the fastest configuration measured on PRISM.**
+   - The default reaches the all-case optimum at calls 3, 3 and 4. EXP24 needed a median of 12 (fixed policy and
+     `llm_rewrite`) or 22 (Trace's meta level) with the same evaluator and feedback.
+   - All six configurations reach it in 3/3 runs, or 2/3 where the third run was stopped near the optimum.
+   - Caveat: the trainer also differs from EXP24's coevolution engine (full-program rewrites, a single lineage), so
+     the speed-up is not attributable to the variation schedule alone.
+2. **Inspirations neither help nor hurt much here.**
+   - PRISM is solved within about 10 calls, and the "combine" variants are slightly slower (6–7 calls).
+   - The Signal finding (the explicit combine sentence lowers productivity) is consistent with this, but PRISM has
+     too little headroom to separate the configurations.
+3. **Stock EvoX is behind, and exploits.**
+   - Only 1 of 3 runs reached the optimum (call 37). The other two top out at 23.69 and 24.15 on all 50 cases.
+   - Their best stock scores (24.64 and 25.88) come from skipping 22–50% of the cases, the refusal loophole. In
+     seed 42 too, the stock record 26.39 is a refusal program (78% solved), while its fully solved best is 26.256.
+4. **The trainer's stock scores slightly above the optimum are incidental.**
+   - Values such as 26.56 and 26.60 occur in a few trainer runs, whose best all-case score is still 26.256.
+   - A case that exceeds the per-case time limit is skipped even under the fallback projection. The trainer optimized
+     the all-case score, which counts such cases, so it did not target this.
+
+**Overall (Signal and PRISM):** `VariationSearch`'s default is the best Trace configuration on both tasks.
+- On **Signal** it matches or exceeds EvoX's discovery speed, which there means finding the look-ahead loophole.
+- On **PRISM** it reaches the legitimate optimum in 3–4 calls, where EvoX reaches it in 1 of 3 runs.
+
+On both tasks the real-time (causal) Signal score and the all-case PRISM optimum are unchanged by exploration: Signal
+stays near 0.54 and PRISM's ceiling is reached by everyone who solves it.

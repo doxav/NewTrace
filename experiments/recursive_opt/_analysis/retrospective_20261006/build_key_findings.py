@@ -519,5 +519,62 @@ else:
     display(pd.DataFrame(rows).style.hide(axis='index').format({c: '{:.3f}' for c in ['Best (median)', 'Best (top run)', 'Best causal (median)', 'Best causal (top)']})
             .background_gradient(subset=['Best (median)'], cmap='Oranges', vmin=0.5, vmax=0.78).set_table_styles(small))"""))
 
+cells.append(md("""---
+## EXP28 Part C: the same VariationSearch configurations on PRISM, plus stock EvoX (7 arms × 3 seeds × 100 calls)
+
+The trainer runs use EXP24's lower-level treatment: all-case valid score, per-case feedback, and a fallback projection,
+so refusing hard cases cannot pay. EvoX optimizes the stock metric and is free to exploit it. Each candidate is scored
+both ways: the *stock* metric (as reported by the benchmark) and the *all-case* score (every one of the 50 cases
+counts; optimum 26.256)."""))
+cells.append(code(r"""PC = sorted((R / 'EXP28/results').glob('prism_*/analysis.json'))
+eC = json.loads(PC[-1].read_text()) if PC else None
+ARMS_C = {**ARMS_B, 'evox_stock': ('stock EvoX', 'black')}
+def prism_curve(points, idx):
+    by = {}
+    for p in points:
+        by[p[0]] = max(by.get(p[0], -1), p[idx])
+    best, row = prism_rescore['initial']['metrics']['valid_score'], []
+    for k in it:
+        best = max(best, by.get(k, -1)); row.append(best)
+    return np.array(row)
+if eC is None:
+    print('Part C analysis not available yet')
+else:
+    S = eC['summary']
+    order = [a for a in ARMS_C if a in S]
+    fast = [a for a in order if S[a]['median_calls_to_optimum'] is not None]
+    display(Markdown('**Summary (computed from the Part C analysis).**\n' + '\n'.join(
+        f"- **{ARMS_C[a][0]}**: optimum (all-case {OPT:.3f}) reached in {S[a]['reached_optimum']} runs"
+        + (f", at calls {', '.join(map(str, S[a]['calls_to_optimum']))}" if S[a]['calls_to_optimum'] else '')
+        + f"; median best stock {S[a]['median_best_stock']:.2f}, median best all-case {S[a]['median_best_allcase']:.3f}." for a in order)
+        + f"\n- Reference (EXP24, same lower level, 3 seeds): median calls to optimum fixed 12, llm_rewrite 12, Trace 22."))
+    fig, axs = plt.subplots(1, 2, figsize=(13, 3.9), constrained_layout=True)
+    for ax_, idx, title, ylim in ((axs[0], 1, '(a) PRISM: best benchmark (stock) score so far', (21, 28)),
+                                  (axs[1], 2, '(a) PRISM: best all-case score so far (every case counts)', (21, 27))):
+        for arm in order:
+            rs = [r for r in eC['runs'].values() if r['arm'] == arm]
+            m = np.array([prism_curve(r['points'], idx) for r in rs]); name, colour = ARMS_C[arm]
+            ax_.plot(it, np.median(m, 0), '-', color=colour, lw=2.2 if arm in ('evox_stock', 'vs_default') else 1.4, label=f'{name} ({len(rs)} runs, median)')
+            ax_.plot(it, m[m[:, -1].argmax()], ':', color=colour, lw=1.0)
+        ax_.plot([], [], 'k:', lw=1.0, label='top run of each configuration')
+        ax_.axhline(OPT, color='grey', lw=0.8, ls='--', label=f'all-case optimum {OPT:.3f}')
+        ax_.set(title=title, xlabel='solution call (iteration); trainer runs stopped at calls 14–52, once the optimum was reached', xlim=(0, 60), ylim=ylim)
+        ax_.legend(fontsize=6.3, loc='lower right', frameon=False, ncol=2)
+    axs[0].set_ylabel('best score')
+    plt.show()
+    rows = [{'Configuration': ARMS_C[a][0], 'Runs': S[a]['runs'], 'Best stock (median)': S[a]['median_best_stock'],
+             'Best all-case (median)': S[a]['median_best_allcase'], 'Reached optimum': S[a]['reached_optimum'],
+             'Calls to optimum': ', '.join(map(str, S[a]['calls_to_optimum'])) or '–',
+             'Mode mix': ', '.join(f'{k} {v}' for k, v in sorted(sum((list(r['mode_mix'].items()) for r in eC['runs'].values() if r['arm'] == a), []),
+                                                              key=lambda kv: kv[0])) or '–'} for a in order]
+    for r in rows:
+        if r['Mode mix'] != '–':
+            agg = {}
+            for k_v in r['Mode mix'].split(', '):
+                k, v = k_v.rsplit(' ', 1); agg[k] = agg.get(k, 0) + int(v)
+            total = sum(agg.values()); r['Mode mix'] = ', '.join(f'{k} {v / total:.0%}' for k, v in sorted(agg.items()))
+    display(pd.DataFrame(rows).style.hide(axis='index').format({'Best stock (median)': '{:.3f}', 'Best all-case (median)': '{:.3f}'})
+            .set_table_styles(small))"""))
+
 nb = nbf.v4.new_notebook(cells=cells, metadata={'kernelspec': {'name': 'python3', 'display_name': 'Python 3', 'language': 'python'}})
 nbf.write(nb, 'key_findings.ipynb')
