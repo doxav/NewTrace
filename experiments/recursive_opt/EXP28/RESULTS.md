@@ -87,3 +87,46 @@ but not the EvoX–Trace gap.
 
 **Scope reminder:** on this benchmark, faster exploration mostly means finding the look-ahead loophole faster. None
 of the four approaches improved the real-time (causal) score beyond run-to-run noise.
+
+## Part B — inspiration ablation with the leak fixed (`results/partB_20261007T160822`)
+
+**Complete, 18/18.** All runs ran concurrently, 16:08–17:38 UTC, 100 solution calls each, about $2.5. There were 0
+instruction leaks (free calls carrying an instruction). Failed calls: 0–2 per run, all retried. Analysis:
+`scripts/analyze.py` writes [`analysis.json`](results/partB_20261007T160822/analysis.json). The figure and table are
+at the end of [`key_findings.ipynb`](../_analysis/retrospective_20261006/key_findings.ipynb).
+
+| Configuration (3 seeds) | Best, median | Look-ahead ≥ 0.615 (calls) | Best causal, median | SciPy introduced on exploration calls | on free calls |
+|---|---|---|---|---|---|
+| **default**: stagnation, no inspirations | **0.758** | 3/3 (2, 6, 22) | 0.523 | diverge **14/44 (32%)** | 6/189 (3%) |
+| stag + alternate combine | 0.760 | 3/3 (2, 3, 26) | 0.502 | diverge 3/8, combine 1/6 | 8/64 |
+| stag + alternate context | 0.757 | 3/3 (3, 3, 6) | 0.499 | diverge 4/11, context 4/9 | 9/89 |
+| stag + always context | 0.725 | 3/3 (4, 6, 7) | 0.499 | context 8/21 (38%) | 18/91 |
+| periodic diverge | 0.751 | 3/3 (1, 1, 7) | 0.499 | diverge 16/48 (33%) | 1/97 |
+| periodic combine (Part A arm, fixed) | 0.718 | 3/3 (2, 8, 85) | 0.537 | combine **5/69 (7%)** | 1/140 |
+| *EvoX (6, reference)* | 0.711 | 5/6 (5–29) | 0.543 | diverge 6/8 | — |
+
+**Readings** (n = 3; differences in the best score of a few hundredths are within run-to-run noise):
+
+1. **Regression check passed.** The default re-run has a median of 0.758, against Part A's 0.748, and 3/3 runs reach
+   look-ahead within 50 calls. The default remains the winner, together with the two "alternate" variants.
+2. **With the leak fixed, DIVERGE works as designed.**
+   - In the default, DIVERGE calls introduce a SciPy filter in 32% of cases (14/44), against 3% for free calls.
+   - Periodic DIVERGE does the same (33%).
+   - This is the EvoX-like productivity that Trace's coevolution engine never reached (Trace 4–7%, EvoX 75% on 8
+     calls).
+3. **The explicit "combine" sentence is the limiter.**
+   - Combine calls with that sentence yield 7% (5/69 periodic) and 1/6 (alternate).
+   - The same inspirations shown as plain context (EvoX-style) yield 38–44% (8/21, 4/9), as good as plain DIVERGE.
+   - The inspirations themselves do not hurt. The instruction to synthesize from them does.
+4. **The schedule matters little here.** Stagnation and periodic DIVERGE give similar medians (0.758 / 0.751) and
+   yields (32% / 33%).
+5. **No legitimate gain.** Every configuration reaches look-ahead (the loophole) in 3/3 runs, mostly within the first
+   10 calls. The median best causal scores are 0.499–0.537, not above the references (0.539 / 0.543). Once look-ahead
+   wins, causal candidates stop being explored.
+
+**Recommendation for VariationSearch:**
+- Keep the default: stagnation, `inspiration_mode='never'`.
+- If inspirations are wanted, use `inspiration_style='context'`, which is EvoX-like. `alternate` or `always` work;
+  avoid the explicit `'combine'` style.
+- On this benchmark, the extra exploration mostly buys faster loophole discovery. Testing legitimate gains needs a
+  causality-enforcing score (F1 in EXP27).

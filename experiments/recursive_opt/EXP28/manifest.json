@@ -8,5 +8,5 @@
  ],
  "protocol": "PROTOCOL.md",
  "predecessor": "EXP27",
- "status": "Complete 12/12: VariationSearch-stagnation (trainer) and EvoX brief (recursive_opt) reach look-ahead in 3/3 runs (raw medians 0.748, 0.663 vs EvoX 0.711), but via ordinary calls / weak forms; no arm improves the causal score (medians 0.519-0.554). Brief makes Trace's policies EvoX-like (84% unlabelled); diverge guard with no context yields 0/37 SciPy, refuting context anchoring."
+ "status": "Complete. Part A 12/12 (trainer arms contaminated by an instruction leak, fixed). Part B 18/18 with the fix: VariationSearch default (stagnation, plain DIVERGE) median 0.758, 3/3 look-ahead by call 22, DIVERGE calls bring SciPy 32% vs 3% for free calls; explicit 'combine' sentence limits it to 7%, EvoX-like 'context' inspirations 38-44%. No configuration improves the causal score (0.499-0.538)."
 }

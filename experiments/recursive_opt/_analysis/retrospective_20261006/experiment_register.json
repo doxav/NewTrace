@@ -456,12 +456,12 @@
    "surface": "mutation intent: VariationSearch trainer; coevolution meta brief / diverge guard",
    "alternatives": "trainer stagnation / combine; recursive_opt EvoX brief / diverge guard",
    "volume": "4 arms x 3 seeds x 100 calls",
-   "range": "raw medians 0.748 / 0.591 / 0.663 / 0.606; causal 0.544 / 0.554 / 0.536 / 0.519",
-   "gain": "faster look-ahead discovery (stagnation, brief); no causal gain",
+   "range": "Part B (leak fixed): raw medians 0.718-0.760 (default 0.758); causal 0.499-0.537",
+   "gain": "VariationSearch default: look-ahead 3/3 by call 22; DIVERGE yields SciPy 32% vs 3% free; no causal gain",
    "verdict": "established",
    "limit_tag": "exploration deficit",
-   "limit": "schedule effect not isolated (no plain PrioritySearch); DIVERGE productivity still low in coevolution",
-   "exploration": "brief makes policies EvoX-like (84% unlabelled); sparse-context DIVERGE 0/37 SciPy; trainer free calls found look-ahead",
+   "limit": "explicit 'combine' sentence limits DIVERGE (7%); coevolution DIVERGE still unproductive; loophole-dominated benchmark",
+   "exploration": "trainer DIVERGE now EvoX-like productive (32%); EvoX-style context inspirations 38-44%; coevolution brief: EvoX-like policies; guard 0/37",
    "explore_tag": "exploration deficit",
    "source": "EXP28/RESULTS.md"
   }

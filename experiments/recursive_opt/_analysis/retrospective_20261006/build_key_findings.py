@@ -445,5 +445,79 @@ tally = reg.groupby(pd.Categorical(reg.level, LEVELS, ordered=True), observed=Fa
 display(Markdown('**Tally:** ' + '; '.join(f'{lvl}: {r.studies} studies, {r.established} established, {r.exploration_problem} with an exploration problem'
                                          for lvl, r in tally.iterrows())))"""))
 
+cells.append(md("""---
+## EXP28 Part B: VariationSearch inspiration ablation (6 configurations × 3 seeds × 100 calls, Signal, cue hidden)
+
+All runs use the fixed `VariationSearch`: a step's instruction no longer leaks into later steps (the Part A trainer
+arms above were affected). Configurations:
+- *default*: the winner, re-run as a regression check. Diverge after 5 steps without improvement, no inspirations.
+- *stag + alternate combine*: exploration steps alternate plain diverge and diverge with 2 inspirations plus an
+  explicit "combine" instruction.
+- *stag + alternate context* and *stag + always context*: inspirations listed as plain context, EvoX-like.
+- *periodic diverge*: diverge every 3rd step, no inspirations.
+- *periodic combine*: Part A's combine arm, re-run with the fix."""))
+cells.append(code(r"""import os
+PB = R / 'EXP28/results/partB_20261007T160822/analysis.json'
+eB = json.loads(PB.read_text()) if PB.exists() else None
+ARMS_B = {'vs_default': ('default: stagnation, no inspirations', '#1b9e77'), 'vs_stag_alt_combine': ('stag + alternate combine', '#d95f02'),
+          'vs_stag_alt_context': ('stag + alternate context', '#7570b3'), 'vs_stag_always_context': ('stag + always context', '#e7298a'),
+          'vs_periodic_diverge': ('periodic diverge', '#66a61e'), 'vs_combine': ('periodic combine', '#a6761d')}
+if eB is None:
+    print('Part B analysis not available yet:', PB)
+else:
+    S = eB['summary']
+    def rate(arm, *modes):
+        k = n = 0
+        for m in modes:
+            if m in S[arm]['scipy_yield']:
+                a_, b_ = map(int, S[arm]['scipy_yield'][m].split('/')); k += a_; n += b_
+        return f'{k}/{n} ({k / n:.0%})' if n else '–'
+    display(Markdown(f'''**Summary (computed from the Part B analysis).**
+- **Regression check:** the default re-run has a median best of {S['vs_default']['median_best_valid']:.3f} (Part A: 0.748),
+  with look-ahead in {S['vs_default']['lookahead_runs']} runs, at calls {', '.join(map(str, S['vs_default']['lookahead_at']))}.
+- **DIVERGE works once the leak is fixed:** it introduces a SciPy filter in {rate('vs_default', 'diverge')} of calls in the
+  default, against {rate('vs_default', 'free')} for free calls. Periodic DIVERGE gives {rate('vs_periodic_diverge', 'diverge')}.
+- **The explicit combine sentence limits it:** periodic combine gives {rate('vs_combine', 'combine')}. EvoX-style context
+  inspirations do not: always-context gives {rate('vs_stag_always_context', 'combine')}, alternate-context {rate('vs_stag_alt_context', 'combine')}.
+- **No legitimate gain:** median best causal scores are {min(S[a]['median_best_causal'] for a in ARMS_B):.3f}–{max(S[a]['median_best_causal'] for a in ARMS_B):.3f}.
+  Look-ahead is found in every run, mostly within 10 calls.'''))
+    fig, axs = plt.subplots(1, 2, figsize=(13, 3.9), constrained_layout=True, sharey=True)
+    groups = (['vs_default', 'vs_stag_alt_combine', 'vs_stag_alt_context', 'vs_stag_always_context'], ['vs_default', 'vs_periodic_diverge', 'vs_combine'])
+    titles = ('(a) Signal: best benchmark score so far — inspirations (stagnation schedule)', '(a) Signal: best benchmark score so far — schedule')
+    for ax_, arms, title in zip(axs, groups, titles):
+        m = np.array([best_so_far(curves[k]['points'], False) for k, r in curves.items() if GROUP(r['arm']) == 'EvoX'])
+        ax_.plot(it, np.median(m, 0), '-', color=COL['EvoX'], lw=1.2, alpha=0.6, label=f'EvoX ({len(m)} runs, median)')
+        for arm in arms:
+            rs = [r for r in eB['runs'].values() if r['arm'] == arm]
+            if not rs:
+                continue
+            m = np.array([best_so_far([tuple(p) for p in r['points']], False) for r in rs]); name, colour = ARMS_B[arm]
+            ax_.plot(it, np.median(m, 0), '-', color=colour, lw=2, label=f'{name} ({len(rs)} runs, median)')
+            ax_.plot(it, m[m[:, -1].argmax()], ':', color=colour, lw=1.1)
+        ax_.plot([], [], 'k:', lw=1.1, label='top run of each configuration')
+        ax_.axhline(MAX_CAUSAL, color='black', lw=0.6, ls='--'); ax_.axhline(INIT, color='grey', lw=0.6, ls=':')
+        ax_.text(99, MAX_CAUSAL + 0.004, f'best legitimate (causal) score in EXP25–27: {MAX_CAUSAL:.3f}', ha='right', fontsize=6.5)
+        ax_.set(title=title, xlabel='solution call (iteration)', xlim=(0, 101), ylim=(0.49, 0.87))
+        ax_.legend(fontsize=6.5, loc='upper left', frameon=False, ncol=2)
+    axs[0].set_ylabel('best score (as scored by the benchmark)')
+    plt.show()
+    rows = []
+    for arm in ARMS_B:
+        if arm not in eB['summary']:
+            continue
+        s = eB['summary'][arm]; rs = [r for r in eB['runs'].values() if r['arm'] == arm]
+        mix = {}
+        for r in rs:
+            for k, v in (r.get('mode_mix') or {}).items():
+                mix[k] = mix.get(k, 0) + v
+        total = sum(mix.values()) or 1
+        rows.append({'Configuration': ARMS_B[arm][0], 'Runs': s['runs'], 'Best (median)': s['median_best_valid'], 'Best (top run)': max(r['best_valid'] for r in rs),
+                     'Look-ahead ≥ 0.615': s['lookahead_runs'] + (f" (calls {', '.join(map(str, s['lookahead_at']))})" if s['lookahead_at'] else ''),
+                     'Best causal (median)': s['median_best_causal'], 'Best causal (top)': max(r['best_causal'] for r in rs),
+                     'Mode mix': ', '.join(f'{k} {v / total:.0%}' for k, v in sorted(mix.items())),
+                     'SciPy introduced per mode': ', '.join(f'{k} {v}' for k, v in s['scipy_yield'].items()) or '–'})
+    display(pd.DataFrame(rows).style.hide(axis='index').format({c: '{:.3f}' for c in ['Best (median)', 'Best (top run)', 'Best causal (median)', 'Best causal (top)']})
+            .background_gradient(subset=['Best (median)'], cmap='Oranges', vmin=0.5, vmax=0.78).set_table_styles(small))"""))
+
 nb = nbf.v4.new_notebook(cells=cells, metadata={'kernelspec': {'name': 'python3', 'display_name': 'Python 3', 'language': 'python'}})
 nbf.write(nb, 'key_findings.ipynb')
