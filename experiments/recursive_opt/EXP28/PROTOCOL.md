@@ -121,3 +121,34 @@ patience 5, plain DIVERGE.
 - *Regression check:* "performance maintained" means `vs_default`'s median best benchmark score is within 0.05 of
   Part A's 0.748, and at least 2/3 runs reach look-ahead within 50 calls. Part A was contaminated, so a difference
   will be attributed to the fix, not to noise alone.
+
+## Part C — the same VariationSearch configurations on PRISM, plus stock EvoX (pre-registered 2026-10-07, before any paid call)
+
+**Arms**, 3 seeds each (42, 43, 44), 100 solution calls per run, 21 runs, all concurrent with one worker per run:
+- the six Part B configurations: `vs_default`, `vs_stag_alt_combine`, `vs_stag_alt_context`, `vs_stag_always_context`,
+  `vs_periodic_diverge`, `vs_combine`;
+- stock SkyDiscover EvoX (`run_evox_prism.py`: EXP25's audited harness with only the task changed).
+
+**Trainer arms** (`run_trainer_signal.py --task prism`) reuse EXP24's lower-level treatment:
+- white-box evaluator;
+- valid all-case score as the score;
+- per-case feedback;
+- compile check and per-call fallback projection (a crashing or invalid case falls back to the baseline placement,
+  so refusing hard cases cannot pay);
+- the task's system message in the instruction.
+
+**EvoX** optimizes the stock metric, which it is free to exploit, as in EXP22.
+
+**Endpoints:**
+- Best-so-far by solution call of (i) the stock metric and (ii) the all-case score, re-scored with EXP24's white-box
+  evaluator for EvoX candidates.
+- Calls to the all-case optimum 26.2559717 (EXP24's primary endpoint).
+- The mode mix.
+
+**References (not re-run):** EXP24 fixed / `llm_rewrite` / Trace, whose median calls to the optimum were 12 / 12 / 22;
+and EXP22's EvoX PRISM runs.
+
+**Reading (descriptive, n = 3):**
+- A configuration is "as fast as EXP24's best" if its median calls to the optimum are at most 12 and 3/3 runs reach
+  it.
+- EvoX "exploits" if its best stock score exceeds the all-case optimum while its own best fully-solved score is lower.

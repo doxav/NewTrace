@@ -11,7 +11,10 @@ Scoring matches the coevolution arms: same projections (compile check + per-call
 valid_score as the score, white-box per-signal feedback, causal_fraction hidden from the LLM (EXP27 Part D condition).
 Every evaluation is logged with the number of solution calls made so far, for best-so-far curves per call.
 
-Usage: python run_trainer_signal.py --arm vs_stagnation --seed 42 --out DIR [--steps 100] [--mock]
+--task prism runs the same arms on PRISM with EXP24's white-box evaluator (valid all-case score, per-case feedback,
+compile check + per-call fallback projection), i.e. EXP24's lower-level treatment with VariationSearch on top.
+
+Usage: python run_trainer_signal.py --arm vs_stagnation --seed 42 --out DIR [--task signal|prism] [--steps 100] [--mock]
 """
 import argparse
 import hashlib
@@ -27,8 +30,24 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 EXP = HERE.parents[1]
 sys.path.insert(0, os.environ.get('TRACE_ROOT', str(Path.home() / 'code' / 'Trace')))
-sys.path.insert(0, str(EXP / 'EXP25' / 'signal'))
-import whitebox as W  # noqa: E402
+
+def _load_whitebox(path: Path, name: str):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+TASK = sys.argv[sys.argv.index('--task') + 1] if '--task' in sys.argv else 'signal'
+if TASK == 'prism':
+    W = _load_whitebox(EXP / 'EXP24' / 'prism' / 'whitebox.py', 'prism_whitebox')
+    W.SKY, W.PROJECTIONS, ENTRY = W.SKY_PRISM, W.projections_config(), 'compute_model_placement'
+    MOCK_EDIT = ('sorted_models = sorted(models, key=lambda m: (m.req_rate / m.slo), reverse=True)',
+                 'sorted_models = sorted(models, key=lambda m: (m.req_rate / m.slo / max(m.model_size, 1)), reverse=True)')
+else:
+    W = _load_whitebox(EXP / 'EXP25' / 'signal' / 'whitebox.py', 'signal_whitebox')
+    ENTRY = 'run_signal_processing'
+    MOCK_EDIT = ('np.linspace(-2, 0, window_size)', 'np.linspace(-3, 0, window_size)')
 import yaml  # noqa: E402
 
 from opto import trace  # noqa: E402
@@ -90,7 +109,7 @@ class SignalGuide(Guide):
 class SignalProgram:
     def __init__(self, source: str):
         self.program = trace.node(source, trainable=True, name='program',
-                                  description='Complete Python program for the task; it must keep run_signal_processing(...) and its output format.')
+                                  description=f'Complete Python program for the task; it must keep {ENTRY}(...) and its output format.')
 
     def forward(self, _):
         return self.program
@@ -99,7 +118,7 @@ class SignalProgram:
 def mock_llm(messages, **kwargs):
     user = messages[-1]['content']
     name = re.search(r'<variable name="(\w+)"', user).group(1)
-    source = W.INITIAL.read_text().replace('np.linspace(-2, 0, window_size)', f'np.linspace(-{random.choice([2.5, 3, 3.5])}, 0, window_size)')
+    source = W.INITIAL.read_text().replace(*MOCK_EDIT) + f'\n# mock {random.random()}\n'
     return f'<reasoning>mock</reasoning>\n<variable>\n<name>{name}</name>\n<value>\n{source}\n</value>\n</variable>'
 
 
@@ -107,6 +126,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--arm', choices=sorted(ARMS), required=True)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--task', choices=('signal', 'prism'), default='signal')
     parser.add_argument('--steps', type=int, default=100)
     parser.add_argument('--provider', default='novita')
     parser.add_argument('--out', required=True)
@@ -133,7 +153,7 @@ def main() -> None:
     optimizer.objective = f'{optimizer.objective}\n\nTask:\n{system_message}'
     guide = SignalGuide(out, calls)
     algo = VariationSearch(agent, optimizer)
-    manifest = {'experiment': 'EXP28', 'arm': args.arm, 'seed': args.seed, 'steps': args.steps, 'model': MODEL, 'provider': args.provider, 'mock': args.mock,
+    manifest = {'experiment': 'EXP28', 'task': args.task, 'arm': args.arm, 'seed': args.seed, 'steps': args.steps, 'model': MODEL, 'provider': args.provider, 'mock': args.mock,
                 'trainer': 'VariationSearch', 'trainer_kwargs': ARMS[args.arm], 'hidden_metrics': list(HIDDEN), 'started': time.strftime('%Y-%m-%dT%H:%M:%S%z')}
     (out / 'run_manifest.json').write_text(json.dumps(manifest, indent=1) + '\n')
     started, status, error = time.time(), 'success', None
