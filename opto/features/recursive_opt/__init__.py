@@ -241,3 +241,4 @@ from .experiments import (
 )
 
 from .numeric_optimizers import (OptunaOptimizer, LeastSquaresOptimizer, route_optimizers, field_search_space, is_numeric_field)
+from . import patches, child_spec  # noqa: E402,F401 - registers recursive_opt.module/evaluator.child_spec@1

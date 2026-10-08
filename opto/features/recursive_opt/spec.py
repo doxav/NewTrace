@@ -1198,6 +1198,18 @@ def _gepa_best_candidate(result: Any) -> Any:
         return result.best_candidate
     raise TypeError('GEPA result does not expose best_candidate')
 def _run_module_engine(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping[str, Any], *, fit: bool) -> RunResult:
+    """Run the level with its declared code patches applied (see patches.py), reporting patch fallbacks."""
+    from . import patches as P
+    declared = level.spec['engine']['config'].get('patches', []) if level.spec['engine']['name'] == 'trace' else []
+    before = dict(P.FAILURES)
+    with P.applied(_thaw(declared)):
+        result = _run_module_engine_unpatched(unit, level, resources, fit=fit)
+    if not declared:
+        return result
+    failures = {k: v - before.get(k, 0) for k, v in P.FAILURES.items() if v != before.get(k, 0)}
+    return RunResult(**{**result.__dict__, 'metadata': _freeze({**_thaw(result.metadata), 'patches': {'fingerprint': P.fingerprint(_thaw(declared)), 'fallbacks': failures}})})
+
+def _run_module_engine_unpatched(unit: _ExecutionUnit, level: _LevelPlan, resources: Mapping[str, Any], *, fit: bool) -> RunResult:
     """Run fixed evaluation or the existing Trace optimizer over one level."""
     spec = level.spec
     guard: _BudgetGuard = resources['_budget']
@@ -2041,7 +2053,7 @@ def _normalize_level(raw_level: Mapping[str, Any], global_spec: Mapping[str, Any
     level['llm_roles'] = {role: _materialize_role(value, global_spec['llm_profiles'], role) for role, value in level['llm_roles'].items()}
     level['bindings'] = [{'ordering_only': False, **_thaw(binding)} for binding in level['bindings']]
     if level['engine']['name'] == 'trace':
-        trace_defaults = {'optimizer': 'OptoPrimeV2', 'trainer': 'PrioritySearch', 'iterations': 4, 'num_candidates': 4, 'optimizer_kwargs': {}, 'trainer_kwargs': {}, 'validation_gate': True}
+        trace_defaults = {'optimizer': 'OptoPrimeV2', 'trainer': 'PrioritySearch', 'iterations': 4, 'num_candidates': 4, 'optimizer_kwargs': {}, 'trainer_kwargs': {}, 'validation_gate': True, 'patches': []}
         level['engine']['config'] = _merge_defaults(trace_defaults, level['engine']['config'], f'levels[{index}].engine.config')
     return level
 def _normalize_objective(objective: Mapping[str, Any]) -> Dict[str, Any]:
@@ -2254,7 +2266,9 @@ def _validate_level_semantics(level: Mapping[str, Any], profiles: Mapping[str, A
         raise ValueError(f'levels[{index}].engine.name must be non-empty')
     if engine['name'] == 'trace':
         config = engine['config']
-        _reject_unknown_keys(config, {'optimizer', 'trainer', 'iterations', 'num_candidates', 'optimizer_kwargs', 'trainer_kwargs', 'validation_gate'}, f'levels[{index}].engine.config')
+        _reject_unknown_keys(config, {'optimizer', 'trainer', 'iterations', 'num_candidates', 'optimizer_kwargs', 'trainer_kwargs', 'validation_gate', 'patches'}, f'levels[{index}].engine.config')
+        from .patches import validate as _validate_patches
+        _validate_patches(config['patches'])
         for name in ('iterations', 'num_candidates'):
             if not isinstance(config[name], int) or config[name] <= 0:
                 raise ValueError(f'levels[{index}].engine.config.{name} must be positive')
