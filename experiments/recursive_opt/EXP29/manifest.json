@@ -1,8 +1,8 @@
 {
- "id": "EXP29",
- "title": "Where meta / recursive optimization can pay: certified-headroom tasks, VariationSearch isolation, replay-based and cross-episode meta-learning",
- "kind": "planning",
- "report": "prior_analysis.md",
- "predecessor": "EXP28",
- "status": "Planning: prior analysis written; P0 (certified-headroom task pool) and P1 (isolate VariationSearch vs plain PrioritySearch vs coevolution diff/rewrite) first."
+  "id": "EXP29",
+  "title": "What recursive_opt should discover: control-plane recursion targets, certified tasks and budgets",
+  "kind": "planning",
+  "report": "prior_analysis.md",
+  "predecessor": "EXP28",
+  "status": "Planning (prior analysis v2): P0 portable child-spec evaluator + code-hook refs + headroom certificates; P1 O1 discovers the optimizer evidence/update rule on QA; P2 trainer search policy; P3 tracing; P4 memory/capitalisation (O2)."
 }

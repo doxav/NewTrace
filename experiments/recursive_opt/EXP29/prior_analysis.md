@@ -1,292 +1,332 @@
-# EXP29 — prior analysis: what to re-test, and where meta / recursive optimization can pay
+# EXP29 — prior analysis (v2): what recursive_opt should discover, on which surfaces, tasks and budgets
 
-Date: 2026-10-08. Inputs: EXP00 (with `EXP00/later_equivalent.md`) to EXP28, `ASSESSMENT.md`, and the EXP22–EXP28
-retrospective (`_analysis/retrospective_20261006/`). No new runs. The goal is to challenge the working
-assumptions before spending budget, then rank what EXP29 should test.
+Date: 2026-10-08. Supersedes v1 of the same day (commit `632b5e0426`). No new runs.
 
----
+Inputs:
+- the four EXP00 notebooks in `EXP00/notebooks/`, re-read cell by cell, including unexecuted cells;
+- `EXP00/later_equivalent.md` and `EXP00/PROTOCOL.md`;
+- EXP01–EXP28 reports and `ASSESSMENT.md`;
+- the control plane v2 code (`opto/features/recursive_opt/spec.py`) and its registries.
 
-## 1. What EXP27–EXP28 actually established, and what they did not
+## 0. What v1 got wrong
 
-The request starts from the premise that EXP27–EXP28 *solved* Trace's exploration limitation, and that this
-limitation is why Trace could not beat EvoX. The evidence supports a narrower statement.
-
-**Established:**
-
-| Claim | Evidence |
+| v1 position | Correction |
 |---|---|
-| Trace's coevolution engine explored less than EvoX: its policy optimizer locked into REFINE and its DIVERGE calls were unproductive | EXP27: SciPy filters introduced by DIVERGE calls 6/8 for EvoX vs 8/189 for Trace; Trace's evolved policies used REFINE about 72% of the time |
-| An explicit, per-step mutation intent in a trainer makes DIVERGE productive | EXP28 Part B, after the leak fix: SciPy introduced by 32% of DIVERGE calls vs 3% of free calls |
-| The wording of the instruction is high-leverage | Explicit "combine" sentence: 7% (5/69). Same inspirations shown as plain context: 38–44% |
-| `VariationSearch`'s default (DIVERGE after a stall) is the best Trace configuration measured | Signal median 0.758 (EvoX 0.711); PRISM all-case optimum at calls 3, 3 and 4 (EXP24: 12–22; stock EvoX 1 of 3 runs) |
+| P1 compared `VariationSearch`, `PrioritySearch` and the **coevolution engine** | Coevolution is one engine of recursive_opt, specialised in EvoX-style online selection-policy evolution (§1). It is the narrowest meta surface in the package. EXP29 should be about the general control-plane recursion. |
+| P4/P5 proposed that *we* build a helper/lessons library and tools | The purpose of recursive_opt is that an upper level **discovers** such mechanisms from a declared experiment (control-plane spec + task family). We should only provide the surface, the evaluator and the holdout. |
+| Mostly read EXP00 through its RESULTS summary | Re-reading the notebooks changes the picture (§2):<br>• the memory, batch-design and credit-horizon knobs were **never active**, so they were never tested;<br>• trace type was only tested on single-call prompt tasks, where it cannot matter;<br>• the under-iteration A/B (use-case notebook, cell 71) was written but **never executed**. |
+| Treated EXP21 and EXP22-QA as minor | They are the only studies that are both (a) built on the control plane with a real lower-level learner and (b) on a task with **demonstrated headroom**. Their O1/O2 stages were implemented but stopped by credit, not by a negative result. |
 
-**Not established:**
+---
 
-| Assumption | Why it is not established |
+## 1. recursive_opt vs coevolution vs VariationSearch
+
+| Term | What it is | Level |
+|---|---|---|
+| **recursive_opt** | The package plus the control plane v2 (`run_spec` / `compile_plan` / `execute_plan`). | All levels |
+| **Episodic recursion (O1, O2, …)** | An upper level whose candidate is scored by running the lower level. EXP15–18, EXP19 S3, EXP21 `o1_qa.meta O1/O2`, EXP22-QA. | O1 over O0 |
+| **Coevolution** (`recursive_opt/coevolution`, engine `coevolution`) | The **online** special case: during **one** O0 run, O1 rewrites a population-selection policy (EvoX reproduction). EXP22-EvoX to EXP28. | O1 inside one O0 run |
+| **VariationSearch** (`opto/trainer/algorithms`) | An ordinary O0 trainer (EXP28). | A **target** of recursion, not recursion |
+
+**Episodic recursion in detail.**
+- A spec declares a level graph. Each level is a `trace.Module` with:
+  - a module ref and a surface;
+  - an engine (`fixed`, `trace`, `gepa_optimize_anything`, `coevolution`);
+  - an objective, with evaluator, metrics, selection and `trace_config`;
+  - datasets with holdout gating, LLM roles, knowledge, budget, and experiment arms/seeds.
+- Recursion means an upper level's parameters define the lower level, and its evaluator runs the lower level.
+- O2 learns the O1 output per task family. O3 learns transferable priors.
+
+**Coevolution's scope.** It reaches only the parent/context/label selection policy, and only within one run. That gives about 10 noisy meta evaluations per run (v1 §5, still valid). v1 analysed the series through it because EXP22–28 used it.
+
+### What the control plane can target today
+
+| Target | Control-plane field | Status |
+|---|---|---|
+| Trainer choice and its kwargs (e.g. `VariationSearch` schedule, patience, `inspiration_mode`) | `engine.config.trainer`, `trainer_kwargs` | Exists. Categorical/numeric only |
+| Optimizer choice, kwargs, objective text | `engine.config.optimizer`, `optimizer_kwargs`, `objective.intent` | Exists |
+| Tracing per level | `objective.trace_config` = `{mode: internal\|otel\|sysmon\|hybrid, detail, credit_horizon, max_nodes, max_chars, semantic_names}` (EXP19) | Exists, tested |
+| Feedback channels | `objective.feedback_channels` | Exists |
+| Curriculum / batch | `trainer_kwargs.curriculum`, `batch_size` (EXP19–21) | Exists |
+| Knowledge / memory | `knowledge` = store, retrieval, statuses, scope, top_k, injection codec | Exists. **`promotion_rule` and `rollback_rule` are rejected** unless placed under `extensions` |
+| Arbitrary code components (an optimizer program, an evidence selector, a summariser) | `recursive_opt.module.reasoning_workflow@1`, `components: {name: source}` | Exists (EXP15 `optimizer_spec`, EXP22-QA `selector_source`) |
+| A portable O1 level whose evaluator runs a child spec | `recursive_opt.module.recursive_level@1` | **Limited to `config`, `family_policy`, `prior`** |
+| Code hooks consumed by a trainer or optimizer (a schedule function, a parent-score function, a memory policy) | — | **Missing:** no registry ref passes a validated source into `trainer_kwargs` |
+
+**The structural gap.** Every real O1 study wrote its own nested evaluator:
+- `o1_qa/meta.py` (EXP21);
+- `_shared/optimizer_discovery/exp15.py` (EXP15);
+- `EXP23/src/control_plane.py`.
+
+The migration report found 0 of 85 specs replayable. So recursive_opt today mainly **declares** O0. Recursion is still bespoke code per study. This, not exploration, is the first engineering blocker for "discover via the control plane".
+
+---
+
+## 2. EXP00 re-read: what the original programme set out to discover, and why it could not
+
+The A-list in `LevelConfig` (A.1–A.7) and the B/C/D surfaces are exactly the targets the user names. Each row gives the reason found in the notebooks and the closest later study.
+
+| Original target (notebook) | What actually happened | Why no discovery was possible | Later equivalent and its state |
+|---|---|---|---|
+| A.1 starting artifact, initial knowledge (demo A, Phase 3, UC2) | ties or reversal (warm +0.013 then −0.026) | saturated or flat tasks; resolution ≈0.24 | EXP20/21: real gain from O0 learning (27 → 54 %), not from O1 |
+| A.2 batch size / design (demo A, UC2) | inactive at `inner_steps=0`; **`batch_design` inactive in both modes** | the knob was not wired to the trainer | EXP19–21 curriculum: wired; `batch4` −7.1, `curriculum2` −4.8 pp (2 seeds) |
+| A.3 trace type and horizon (Phase 2, UC6) | internal/otel/hybrid tie | O0 was **one prompt call**: OTEL/SysMon see nothing the Trace graph lacks. `credit_horizon` inactive | EXP19 made capture real; EXP21: sysmon +0.6, otel −0.9 pp (2 seeds), still on a prompt+ranker task |
+| A.4 memory policy (demo A) | **inactive in both modes** | not wired | EXP18 archive memory (numeric optimisers): CI crosses 0; EXP21 `optimizer_memory3` incomplete |
+| A.5 optimizer + tools (Phase 4, UC5, UC9, T3.6) | tools −0.014; **0 tool calls executed** | tool "policies" were text, never executed | never re-tested |
+| A.6 guide | not tested | — | EXP24: evaluator feedback was the largest effect in the series |
+| A.7 trainer, threads (Phase 1, 5) | ties on a saturating validator; inconsistent records | headroom: the toy validator reaches 1.0 | EXP24, EXP28, now with fixed-policy controls |
+| B code of a component (demo B, UC1) | 0.80 → 1.00 | 12-item toy, hard items named in the feedback | EXP15–18 (optimizer programs): better than seed, mechanisms unresolved |
+| C capability under cost (demo C, UC3) | accuracy 1.0 everywhere | saturated | EXP00-E: no criterion met |
+| D family policy / prior O2–O3 (UC4) | +0.163 | arithmetic identity of two task sets (corrected −0.006) | EXP02, EXP08 (fixed `nearest` = learned) |
+| UC7 sub-optimizer routing | initial = final = 1.0 | the initial route was already optimal | EXP07–09 |
+| UC8 campaign policy, UC10 promotion policy | standard wins / not LCB-safe | policies scored on hand-labelled cases, not on campaign outcomes | `decisions.py`, never re-tested |
+| UC11 code-emitted prompt | standard wins (−0.118) | QASPER noise | EXP03/12/13 |
+| Three-way benchmark, Stage 2 | recursive arm under-iterated at equal total budget | user's hypothesis, **never tested** (cell 71 has no output) | none |
+| Phase 7 Terminal-Bench 2 | template only | — | none |
+
+**What the re-read changes.**
+1. The memory, batch-design and credit-horizon targets were **untested, not refuted**.
+2. Trace type was tested only where it is irrelevant by construction. It can only matter when O0 is a multi-step program with calls the Trace graph does not capture (library code, LangGraph nodes, tools).
+3. Agentic optimizer tools were never executed.
+4. "Too few iterations for the recursive arm" was formulated but never measured.
+
+So most of the original design space is **open**, not closed.
+
+---
+
+## 3. The user's hypotheses, challenged
+
+| Hypothesis | Verdict | Evidence and nuance |
+|---|---|---|
+| Too few iterations / steps | **True at O1, ambiguous at O0** | O0: PRISM is solved in 3 calls and Signal keeps improving past 50–100 calls. EXP20/21 stopped QA runs at 6 optimizer responses, so whether QA would keep improving is unmeasured. O1:<br>• EXP21 planned only **3 O1 proposals and 2 O2 proposals** (`o1_qa/axes.py`, `meta`) and ran none;<br>• coevolution gets about 10 per run;<br>• EXP00 cell 71 was never run.<br>The child-run length must come from the standard arm's iterations-to-peak, measured per task. |
+| Tasks too basic | **True for most of the series, false for the QA task** | Saturated: GSM8K 0.99, DROP 1.0, demo C, UC1, PRISM. Exploitable: Signal, PRISM.<br>Not basic: the EXP20/21 HotpotQA task (unchanged 27 % → standard 54 %). EXP22-QA showed hand-written selector + instruction changes worth +17 pp (8 → 12/24), with an oracle-document ceiling of 58 %. |
+| Surfaces and ranges badly designed | **True, in three distinct ways** | (a) **inactive** knobs: batch design, memory, horizon in EXP00;<br>(b) **irrelevant** pairing of surface and task: trace type on single-call prompts;<br>(c) **coarse menus** whose default is already near the best: EXP08, EXP10, EXP21 axes. EXP21 shows axes with large *negative* effects (prompt-only −19.6, minimal goal −10.7 pp), so the surface has variance. A menu can still teach O1 to avoid bad settings, but not to exceed the default. |
+| (implicit) Exploration was the main limit | **Only for EXP23–27** | v1 §1–2 still hold: EXP28 fixed the operator; no legitimate-score gain followed. |
+
+**A fourth constraint the user did not name:** there is no portable child-spec evaluator (§1). Each attempt re-implemented recursion, so each was small, bespoke and not replayable.
+
+---
+
+## 4. Meta targets: what optimizing a trainer, optimizer, trace or memory could deeply change
+
+A target is worth an O1 level only if **all three** checks pass:
+
+| Check | Meaning |
 |---|---|
-| "Exploration was why Trace could not beat EvoX" | On the legitimate metrics there was nothing to beat. EvoX's Signal lead was the look-ahead loophole (causal medians 0.537 vs 0.532), and its PRISM records were refusal exploits. Better exploration made Trace find the **loophole** faster; it did not raise the causal Signal score (0.499–0.554 for every configuration) |
-| "`VariationSearch`'s schedule is the cause of the gain" | No plain-`PrioritySearch` arm was run. The trainer also differs from the coevolution engine in edit format (full-program rewrite vs SEARCH/REPLACE diff) and in having no elite-context prompt. The schedule's own effect is not isolated |
-| "PRISM shows a real speed-up from exploration" | PRISM is solved by every configuration within about 10 calls, and EXP24's fixed policy also reached the optimum in 3/3 runs. The task has no headroom left to discriminate |
-| "The exploration deficit also limited the earlier recursive / meta experiments" | Only EXP23–EXP27 show it. EXP00–EXP22 failed for other, better-documented reasons (§2) |
+| (i) Certificate | A **hand-written or known variant** of the target already changes O0 performance on the task family. |
+| (ii) Encoding | The target can be stated as a validated code or text artifact, not only a menu pick. |
+| (iii) Budget | The O1 evaluation fits the budget at the required number of O1 steps. |
 
-**Working conclusion.** EXP28 gives a better operator (DIVERGE that works, and evidence that instruction text matters).
-It does not give evidence that meta-optimization works. Every legitimate-score comparison to date (causal Signal,
-all-case PRISM, GSM8K) is still a tie.
+Per-target lists:
 
----
+**T1. Optimizer evidence and update rule** (`OptoPrimeV2` instruction and objective sections, evidence selection, problem rendering)
+- Surface: text + small code.
+- Certificate: **yes**. EXP22-QA: selector code +8 pp, instruction +8 pp, both +17 pp (n = 24, single pilot). EXP21 goal axis: −10.7 pp. EXP28: wording takes productive diverge from 7 % to 38–44 %.
+- What it could change: what the LLM sees and is asked to do. Strongest lever measured.
+- Control-plane status: `reasoning_workflow@1` components plus optimizer kwargs (EXP22-QA wiring).
 
-## 2. Why the earlier meta / recursive experiments failed: the binding constraint per study
+**T2. Trainer search policy** (`VariationSearch`/`PrioritySearch` hooks)
+- Hooks:
+  - when to diverge, refine or combine;
+  - the instruction texts;
+  - parent score (TRAIN vs common panel vs VAL);
+  - which inspirations are shown.
+- Surface: small code (`mode(state)`, `parent_score(candidate)`) + text.
+- Certificate: **partial**. EXP19 S4: parent selection 72 → 100 % (toy). EXP28: diverge 3 % → 32 % productive calls, but no legitimate-score gain on Signal.
+- What it could change: sample efficiency of every O0 run. A policy is cheap to transfer.
+- Control-plane status: kwargs exist; a **code-hook ref is missing**.
 
-Each row names the constraint that, by the evidence, prevented a meta-level effect from showing. Most studies had
-several; this is the first one that bites.
+**T3. A library method** (feedback summariser, batch sampler / curriculum rule, candidate deduplication)
+- Surface: code.
+- Certificate: toy only (UC1 batch design, trace summariser 0.82 → 0.96, hand-written).
+- What it could change: input quality to T1 and T2.
+- Control-plane status: `reasoning_workflow@1`; needs a hook ref.
 
-| Study | Meta surface | Binding constraint | Evidence |
-|---|---|---|---|
-| EXP00-A/B/C (notebooks) | categorical setup knobs; O2/O3 menus | **inactive or flat surface** | every setup scored the same (−2091.8); causal-effect contract: most knobs did not reach the score at `inner_steps=0` |
-| EXP00-D (UC1–UC14) | config, code, policies | **instrument resolution** (≈0.24 at n = 5) and an **invalid comparison** | UC4 +0.163 was an arithmetic identity, corrected −0.006 (EXP02) |
-| EXP00-E (Experiment 0) | two prompt instructions | **no headroom** | baseline accuracy 0.99 on GSM8K |
-| EXP01–EXP14 (probes) | prompts, menus, knobs | **instrument and menus** | signal/noise 0.96 and 0.74 (EXP01); fixed menus with few distinct scores (EXP06, 07, 14); inactive knobs (EXP10) |
-| EXP08 | routing order learned across tasks | **fixed menu**: the informed simple default matched it | fixed `nearest` matches the learned prior at no meta cost |
-| EXP15–EXP18 | generated optimizer code; feedback, memory, Pareto | **effect below replication** (5–6 seeds) | feedback vs independent generation unresolved (EXP15); rich feedback worse (EXP16); memory and Pareto CIs cross 0 (EXP18) |
-| EXP19 S3 / EXP20 / EXP21 | nested preparation, curriculum, development axes | **no resolved increment** and **unexecuted stages** | curriculum − standard −3.4 pp [−8.5, +2.4]; EXP21's O1/O2 stages never ran |
-| EXP22-EvoX / EXP23 / EXP24 | selection-policy code (meta level) | **budget split** plus **saturated task** | fixed policy ≥ recursive (EXP22); fixed as fast as both meta arms with fewer wasted attempts (EXP24) |
-| EXP25–EXP27 | coevolution policy code | **loophole** plus **exploration deficit** | look-ahead lead; REFINE-locked policies |
-| EXP28 | mutation intent (trainer); EvoX brief / diverge guard (meta) | **loophole** and **no headroom on PRISM** | no causal gain; PRISM solved by every configuration |
+**T4. Tracing per family** (`trace_config`)
+- Surface: mixed categorical + numeric.
+- Certificate: **none yet, and never tested on a fitting task**.
+- What it could change: credit assignment on multi-step programs (agents, LangGraph, library-heavy code).
+- Control-plane status: exists (EXP19).
 
-Three constraints recur across the whole programme:
-1. **Measurement:** noise, invalid comparisons, exploitable metrics.
-2. **Headroom:** saturated tasks or flat surfaces.
-3. **Too few meta-level evaluations per run:** §5.
+**T5. Memory mechanism** (optimizer memory, archive of attempts, knowledge retrieval and injection)
+- Surface: code (selection / retrieval rule) + numeric.
+- Certificate: weak. EXP18 contrasts cross 0; EXP00 warm prior reversed; never tested as an active knob in EXP00.
+- What it could change: reuse within and across runs.
+- Control-plane status: knowledge block exists; promotion and rollback rules need an `extensions` namespace.
 
-Surface design (categorical knobs) explains the early studies. It does not explain EXP15–EXP18 or EXP22–EXP28, whose
-meta surfaces were code and which still showed no meta gain.
+**T6. Capitalisation across runs** (O2: which T1–T5 artifact to promote for a family; when to stop or switch)
+- Surface: policy over artifacts.
+- Certificate: none valid (UC4 invalid; EXP08: the fixed default equals the learned one).
+- What it could change: amortises O1 cost over many tasks. This is where recursion pays, if anywhere.
+- Control-plane status: knowledge plus `recursive_level@1` `family_policy` / `prior`.
 
----
+**T7. Online selection policy** (coevolution)
+- Surface: code.
+- Certificate: none on legitimate scores (EXP22–28).
+- What it could change: within-run adaptation, starved at about 10 evaluations.
+- Control-plane status: engine `coevolution`.
 
-## 3. The hypotheses in the request, challenged
+**Ranking by the three checks:** T1 > T2 > T4 (after a certificate) > T5 > T3 > T6 (needs one O1 success first) > T7.
 
-| # | Hypothesis | Verdict | Reasoning |
-|---|---|---|---|
-| H1 | Too few iterations / steps | **Supported, but at the meta level, not the base level** | 100 base calls were enough to reach PRISM's optimum in 3 calls and Signal's loophole in about 10. The meta level is what starves: a policy is evaluated on about 10-call windows, giving 6–8 noisy evaluations per run (EXP27: 6–8 deployments; EXP23: few triggered proposals). More base iterations alone do not fix this |
-| H2 | Tasks too basic | **Supported** | PRISM saturated; GSM8K at 0.99; Signal's legitimate ceiling unknown and nearly reached by the starting program (0.499 → ~0.55); toy validators in EXP00. No task in the series had certified, legitimate headroom *and* an un-exploitable metric |
-| H3 | Surfaces badly designed (categorical values instead of deep code / strategy strings) | **Partly supported** | True for EXP00-A–D, EXP06–EXP11 and EXP13. But EXP15–EXP18 (optimizer code) and EXP22–EXP28 (policy code) had deep surfaces and still showed no meta gain. Deep surfaces are necessary, not sufficient |
-| H4 | The exploration deficit limited meta-optimization | **Supported only for EXP23–EXP27** | There, the meta level itself was the cause: OptoPrime without a design brief wrote REFINE-locked policies. Elsewhere the binding constraint was measurement or headroom (§2) |
-| H5 | `VariationSearch` fixes exploration | **Supported for the operator, not yet for search outcomes** | DIVERGE productivity 32% vs 3%. Legitimate scores unchanged; schedule effect not isolated |
-| H6 | Recursive (O2+) optimization is achievable / useful | **Not within a single bounded run; plausible across episodes** | §5–§6 |
-
-Two further assumptions are worth stating because they have quietly shaped the programme:
-
-- **"Meta-optimization should improve the same run it is in."** Every meta level so far (EXP22–EXP28) adapted
-  *inside* one 100-call run, competing with the base level for budget. The one positive-looking amortization result
-  (EXP08, break-even 2.25 deployments) came from learning *across* tasks.
-- **"A higher benchmark score is progress."** Five headlines were withdrawn for this (EXP22, EXP23, EXP25, EXP26 R3,
-  EXP27 "root cause = cue"). Any EXP29 claim must be on an enforced, legitimate metric.
-
----
-
-## 4. The goal, restated, and which axes of "optimizing a trainer / optimizer" have shown leverage
-
-**Goal of the programme:** make Trace's optimization *process* better (faster, more reliable, more transferable) by
-optimizing the process itself (O1), and ideally by learning how to do that (O2+), at a cost that pays back.
-
-Axes of the optimization process, ranked by the effect sizes actually measured:
-
-| Axis (what a meta level could change) | Largest measured effect | Where | Status |
-|---|---|---|---|
-| **Evaluator feedback and validity** (white-box per-case feedback, valid guide, repair projection) | PRISM optimum reached 1/7 → 9/9 runs | EXP24 | strong, at O0 design time; never meta-optimized |
-| **Mutation intent and instruction wording** (DIVERGE/REFINE timing, inspiration framing) | SciPy introduced 3% → 32% of calls; framing 7% vs 38–44% | EXP28 | strong per call; outcome effect not isolated |
-| **Parent selection and comparability** (which candidate to expand, scored on a common panel) | +27.8 pp TEST [22.9, 31.3] | EXP19 S4 | strong, on a small task |
-| **Information budget given to the solver** (documents, context) | +14.6 pp, but confounded with 10 documents | EXP20 | real, attribution open |
-| **Context / memory content** (lessons, archive, failures) | none resolved | EXP18, EXP00-B | unresolved |
-| **Feedback richness** (more trace text) | negative: rich feedback worse | EXP16 | adverse |
-| **Configuration knobs** (batch size, trainer name, trace type) | none | EXP00, EXP10, EXP11 | flat |
-| **Selection-policy code optimized at run time** (EvoX-style meta level) | none vs fixed policy | EXP22, EXP24, EXP28 | no gain |
-
-The strong effects are all **operator and evaluator design** (what the optimizer is asked to do and what evidence it
-sees), not **knob selection** and not **run-time policy evolution**. That is the most important input for EXP29: a
-meta level should search the high-leverage axes (instructions, operator logic, feedback/evidence design, parent
-selection), not menus.
+Categorical menus of existing components (the EXP00 A-list as enums) are kept only as a **baseline** O1 surface, not as the target.
 
 ---
 
-## 5. Budget arithmetic: why within-run meta-optimization is starved
+## 5. Tasks
 
-For a run of `T` base calls, with the meta level re-evaluating its artifact on windows of `w` calls:
-- Meta evaluations per run ≈ `T / w`. EvoX defaults give `w ≈ 0.1 T`, so about 10.
-- Each meta evaluation is a best-score improvement over `w` calls, and that is mostly noise. Improvements are rare
-  and lumpy: one discovery event per run on Signal, the optimum within 3–10 calls on PRISM.
-- Credit is confounded with search stage: early windows improve easily and late ones rarely (EXP23 simulator: stage
-  bias).
+A task family qualifies for EXP29 if:
+- it has ≥ 6 related instances with TRAIN / VAL / HOLDOUT;
+- the score is legitimate and audited against known exploits;
+- a hand-written variant of the target changes the score (the certificate);
+- O0 evaluation is cheap enough for ≥ 20 O1 evaluations × 3 seeds.
 
-With T = 100 and w = 10, the meta optimizer gets about 10 noisy, stage-biased samples. That is fewer than any base-level
-optimizer would be given to learn a code artifact. Raising T to 1,000 helps only if the task keeps headroom that long;
-PRISM and Signal do not.
-
-**Consequences:**
-1. Within-run meta-optimization can at best help by *structural* priors (good defaults such as EvoX's brief or
-   `VariationSearch`'s schedule). It cannot learn much from its own run. EXP22, EXP24 and EXP28 agree: fixed or
-   brief-guided policies matched or beat learned ones.
-2. Learning a process requires **many cheap episodes**: many short inner runs across a family of tasks, or replay.
-3. **Replay is the cheapest meta signal available.**
-   - EXP27 Part C measured instruction effects from 1,000 replayed calls (20 recorded prompts × 10 samples × 5 cells)
-     for $1.46. That is about 50× more meta-level samples per dollar than full runs.
-   - Per-call yields ("did this call introduce a new method family?", "did it beat its parent?") are dense signals
-     that the base score is not.
-
----
-
-## 6. Is recursive optimization achievable and useful?
-
-**Within one bounded run: no, by the arithmetic above.** An O2 level that learns how O1 learns would get one or two
-evaluations per run, so it cannot be identified. The repeated null results (EXP22, EXP24, EXP28 meta arms) are what
-this predicts.
-
-**Across episodes: plausibly yes, on specific axes, if amortized.** Recursion is useful when the artifact a meta level
-produces is reused many times. Each artifact below is cheap to evaluate per call, reusable across tasks, and on an axis
-that has shown leverage (§4):
-
-| Artifact (meta output) | Evaluated by | Why it may pay |
+| Family | Status | Best for |
 |---|---|---|
-| Mutation-instruction texts (DIVERGE/REFINE/context framing) | replayed per-call yields on recorded prompts, then full runs on held-out tasks | text was worth 5× per-call productivity in EXP28 |
-| Mode policy code (when to diverge, what context, which inspirations) | short inner runs across a task family | EvoX's advantage was its policy; `VariationSearch` is a hand-written one |
-| Lessons / helper library (functions, idioms, "what worked" notes) carried to new tasks | held-out tasks, with vs without the library | capitalization that EXP00-B Phase 6 attempted only as text, on a flat surface |
-| Feedback / evidence formatter (what the solver sees per candidate) | held-out tasks, same budget | evaluator feedback was the largest effect measured (EXP24) |
-
-O2 (learning how to learn these) is only worth attempting once an O1 artifact shows a resolved held-out gain. That
-has not happened yet. Until then, O2 is the lowest priority.
-
-**Amortization test.** Report break-even deployments = meta-training cost / per-deployment saving at matched quality,
-as EXP08 did (2.25 on its finite menu).
+| **HotpotQA-style document QA**, fixed 4 documents (EXP20–22-QA) | certified for T1 (+17 pp hand-written, n = 24 pilot); O0 headroom 27 → 54 %; reader cost dominated by Qwen calls. The fixed document count removes EXP20's confound | T1, T2, T5 |
+| **Numeric black-box optimiser programs** (EXP15–18: 6 families × dimensions, 24 TRAIN / 12 VAL instances, local evaluation) | O0 headroom vs seed shown (EXP15); headroom vs a strong reference (CMA-ES, SciPy) **not measured**. Cheapest evaluation in the series | T2, T3, T5 |
+| **Multi-step agent / graph programs** (e.g. LangGraph PAL on BBEH, `examples/OpenTrace_LangGraph_…_curriculum_clean.ipynb`, untracked; Trace-Bench graph tasks) | never used for meta; needed for T4. Certificate to obtain | T4, T3 |
+| **Signal with causality enforced in the evaluator** | legitimate headroom unknown (all configurations 0.50–0.55 causal). Needs a causal hand-written reference first | T2 only after a certificate |
+| PRISM all-case | saturated (optimum in 3–4 calls) | regression check only |
+| GSM8K, DROP, toy validators, `multi_param` | saturated or flat | excluded |
+| `llm4ad` families, Terminal-Bench 2 | `llm4ad` gave −1e6 sentinels in EXP00; TB2 never onboarded | later |
 
 ---
 
-## 7. EXP00 / later-equivalent items: which to re-test, re-design or drop
+## 6. Budget and the shape of recursion
 
-From [`EXP00/later_equivalent.md`](../EXP00/later_equivalent.md), judged against §2–§6:
+O1 evaluation cost:
 
-| Item | Decision | Why / how |
-|---|---|---|
-| Capability with accuracy + cost (Experiment 0) | **Drop as is** | GSM8K saturated; nothing to learn. Revisit only on a task with headroom |
-| Family policy / prior transfer (UC4, EXP02, EXP08) | **Re-design (priority)** | As cross-episode meta-learning of a `VariationSearch` mode policy or instruction texts, trained on a task family and tested on held-out tasks (P3) |
-| Component code rewriting (EXP04, EXP06, EXP15–18, EXP23–24, EXP28) | **Keep as the base level** | The surface where optimization reliably works; use it as O0 for every EXP29 arm |
-| Trainer choice and standard-vs-recursive (Phase 1, EXP22, EXP24, EXP28) | **Re-test first (P1)** | Close EXP28's gap: plain `PrioritySearch` vs `VariationSearch` vs coevolution (diff vs rewrite) on tasks with certified headroom |
-| Priors and skills (Phase 3, Phase 6, EXP18–20) | **Re-design (P4)** | As an executable helper / lessons library carried across tasks, not a prompt prefix on a flat surface |
-| Optimizer-side tools and agentic policies (Phase 4, UC5, UC9) | **Re-design later (P5)** | Never actually executed (0 tool calls). Test only real, executed tools (subset evaluation, retrieval of past candidates) |
-| Trace type / feedback richness (Phase 2, UC6, EXP16, EXP19) | **Re-design (P2b)** | As a learned *compact* evidence formatter; rich feedback was adverse |
-| QASPER prompt / config (UC2/6/11, EXP03, 12, 13) | **Drop** | Noisy, slow, small effects; no path to a resolved meta effect |
-| Routing and code transfer (UC7, UC14, EXP07–09) | **Fold into P3 / P4** | Transfer is the question P3/P4 ask with a better surface |
-| Guarded policies, numeric search (UC8, UC10, UC13) | **Drop** | Toy evaluators; numeric search over categorical knobs had no live signal |
-| Threads (Phase 5, EXP05) | **Drop as science** | Engineering only: calibrate noise under the execution conditions used |
-| Terminal-Bench 2 (Phase 7) | **Park** | Interesting task family with headroom, but needs an adapter first; candidate for the P0 task pool |
+> cost = (instances per evaluation) × (child seeds) × (child-run length) × (cost per O0 call)
 
----
+**Plain episodic O1 is affordable at roughly 20 O1 evaluations if child runs are short.** Example on QA:
+- each O1 evaluation = 2 child seeds × the 6-response child run EXP21 used (`CALLS = 6`, `DEV_SEEDS`), so 12 optimizer calls plus reader calls;
+- × 20 evaluations ≈ 240 optimizer calls per O1 seed, against the 3 O1 proposals EXP21 had planned (36 calls);
+- that is about 7× EXP21's O1 plan, within the order of EXP21's whole development budget (235 DeepSeek optimizer responses, $6.8 in total).
 
-## 8. Prioritized EXP29 programme
+**Replay as a cheap proxy for text and code targets (T1, T2).**
+- Score a candidate instruction or selector on **recorded** prompts from earlier runs.
+- EXP27 replayed about 1,000 calls for $1.46, roughly 50× cheaper per O1 sample than full child runs.
+- Use: rank many candidates by replay, then confirm the top few with full child runs.
+- Proxy validity must be checked: rank correlation between replay and full runs on ≥ 5 candidates.
 
-All arms:
-- Run on tasks with **certified legitimate headroom** and an **enforced metric** (P0).
-- Report equal total calls, including meta calls.
-- Use at least 5 seeds for any claim; report n = 3 as descriptive only.
-- Pre-register the success and kill thresholds below.
+**Is recursion achievable and useful? Revised verdict.**
 
-### P0 — Task pool with certified headroom (prerequisite; no LLM cost beyond probes)
+| Form | Verdict |
+|---|---|
+| **O1 episodic** over a task family, with a portable child-spec evaluator, replay pre-screening and holdout instances | **Achievable now.** It is the main EXP29 line. |
+| **O2** (per-family choice among O1 artifacts; promotion rule) | Useful only after one O1 artifact beats its default on holdout. Before that, O2 has nothing to select. |
+| **Online coevolution** | Kept as an existing engine. Not a development target. |
 
-- **Candidates:**
-  - Signal with causality **enforced** in the score (F1 from EXP27);
-  - PRISM with harder generated cases and the all-case score;
-  - two or three LLM4AD code tasks, e.g. online bin packing and admissible set, already wired in Trace-Bench;
-  - optionally a Terminal-Bench-like sandboxed task.
-- **Certification for each task:**
-  1. The initial program's score.
-  2. A reference upper level: a known bound, an exact optimum, or the best of strong references such as EvoX plus
-     long runs.
-  3. Headroom of at least 3× the run-to-run SD at n = 5.
-  4. The metric checked against the known loopholes: look-ahead, refusals, truncation, format.
-- **Kill:** drop any task where a plain fixed policy reaches 90% of the headroom within 30 calls.
-
-### P1 — Isolate what `VariationSearch` changes (closes EXP28's gap; about 4 arms × 3 tasks × 5 seeds)
-
-- **Arms:**
-  1. plain `PrioritySearch`;
-  2. `VariationSearch` default;
-  3. coevolution with diffs;
-  4. coevolution with `operator_mode='rewrite'`.
-- **Endpoint:** best legitimate score by call; calls to 90% of certified headroom.
-- **H1:** `VariationSearch` beats plain `PrioritySearch` on at least 2 of 3 tasks.
-  - Success: CI of the paired difference above 0.
-  - Kill: CI within ±0.25 SD of the task. If it dies, the EXP28 gain was the trainer format, not the schedule.
-
-### P2 — Replay-based optimization of the mutation instructions (cheap meta signal; O1 on text)
-
-- **Data:** recorded prompts from P1 runs (and EXP27/EXP28 logs) at matched decision points.
-- **Surface:** the DIVERGE, REFINE and context-framing texts of `VariationSearch`, as trainable strings.
-- **Optimizer:** an LLM proposes variants. Each variant is scored by per-call yield on 20+ held-out recorded prompts
-  × 10 samples: new-method-family rate and beats-parent rate, measured on the legitimate metric.
-- **Then:** deploy the best texts in full runs on held-out tasks against the default texts.
-- **Success:** a per-call yield gain that survives in full runs (paired CI above 0).
-- **Kill:** replay gains that do not transfer to full runs, which would mean replay is a misleading proxy.
-- **Variant P2b:** the same procedure applied to a compact per-candidate evidence formatter (what the solver sees)
-  instead of the instructions.
-
-### P3 — Cross-episode meta-learning of the mode policy (the recursive question, done where it can pay)
-
-- **Surface:** `VariationSearch`'s mode-policy function as **code**: when to diverge or refine, what context and
-  inspirations to show, when to restart.
-- **Meta training:** many short inner runs (e.g. 30 calls) on a training family of tasks. The meta optimizer gets the
-  per-call yields and per-run outcomes of each episode.
-- **Test:** full runs on held-out tasks against the hand-written default and the EvoX-brief variant.
-- **Success:** a held-out gain at matched cost, with break-even below 10 deployments.
-- **Kill:** no held-out gain after 3 meta rounds.
-- **O2** (learning the meta optimizer's own instruction) is only allowed if P3 succeeds.
-
-### P4 — Capitalization: an executable lessons / helper library carried across tasks
-
-- **Surface:** a library the solver can import or read. It holds helper functions (e.g. a local-search routine, a
-  validated filter family, scoring utilities) and short lessons, both extracted by an LLM from successful candidates of
-  previous tasks.
-- **Test:** held-out tasks with vs without the library, the same `VariationSearch` and the same budget.
-- **Must separate:** information access from learning. Control arm: the library contents shuffled or taken from an
-  unrelated family (the EXP20 lesson).
-
-### P5 — Real executed tools for the optimizer (later)
-
-- **Tools:** evaluate a candidate on a small subset before committing, and retrieve past candidates by similarity.
-  Count actual tool calls; policy text that names a tool does not count.
-- **Comparison:** with vs without tools at equal total calls, *including* tool-triggered evaluations.
-
-### Order and budget
-
-P0, then P1 (one batch), then P2 (cheapest meta signal), then P3 or P4 depending on P2, then P5. At about $0.15–0.20 per
-100-call run, P1 is about 60 runs (≈ $10–12). P2's replay is about 1,000–2,000 calls (≈ $1.5–3) plus a deployment batch.
-P3 and P4 are about 50–100 short runs each.
+**"Discover, don't build" is compatible with this budget**, provided the discovered object is a **small artifact** (a hook of 10–60 lines or a paragraph of instruction). A whole trainer rewritten from scratch would need far more than 20 evaluations to be distinguished from noise.
 
 ---
 
-## 9. Pre-commitments (lessons from five withdrawn headlines)
+## 7. Keep / re-design / drop: the `later_equivalent.md` items
 
-1. **Score legitimacy first:** every task passes a loophole audit before any comparison.
-2. **Same tasks, same scorer, same budget for every arm;** the three-way harness check for identical
-   `scored_task_ids` stays on.
-3. **Fixed-policy and plain-trainer controls in every comparison.**
-4. **Confirm on a larger evaluation and on held-out tasks before adopting anything** (EXP00-B warm priors reversed).
-5. **Count meta calls and tool calls in the budget;** report break-even for any meta artifact.
-6. **Record per-call decisions** (mode, context, instruction, parent, child scores) so replay and credit analysis are
-   possible. Experiment 0 stopped for lacking this.
-7. **Check the treatment actually reaches the prompt,** and check later prompts for leaks (the EXP28 leak).
+| EXP00 element (later equivalent) | Decision for EXP29 |
+|---|---|
+| Trainer choice / standard vs recursive (EXP22, EXP24, EXP28) | **Re-design as T2:** discover `VariationSearch` / `PrioritySearch` hooks, not pick a trainer name |
+| Component code rewriting (EXP15–18, EXP28) | **Keep as T3** on the numeric family; add the CMA-ES/SciPy reference |
+| Trace type (EXP16, EXP19, EXP21) | **Re-design as T4** on a multi-step family, after a certificate |
+| Priors and skills, memory (EXP18–20) | **Re-design as T5**, with the memory / retrieval rule as code; promotion via `extensions` |
+| Family policy / prior transfer (EXP02, EXP07–08, EXP22-QA) | **Defer to O2 (T6)** until an O1 success |
+| Declarative spec (control plane v2) | **Extend:** portable child-spec evaluator + code-hook refs (§8) |
+| QASPER prompt / config (EXP03, 12, 13) | drop (noise) |
+| Threads (EXP05) | drop as a target; fix concurrency in the instrument |
+| Routing / code transfer (EXP07–09) | drop until T6 |
+| UC8 / UC10 policies (`decisions.py`) | fold into T6: score them on **campaign outcomes**, not hand labels |
+| Optimizer tools / agentic, Terminal-Bench 2 (never re-tested) | later; needs executed tool calls first |
+| Under-iteration A/B (cell 71, never run) | **Run in P0** as the child-run-length calibration |
 
 ---
 
-## 10. One-paragraph conclusion
+## 8. Programme, in order
 
-Trace's measurable bottleneck was never raw optimizing power. It was what the optimizer was *asked* to do (mutation
-intent and wording) and what *evidence* it saw (feedback and context). The meta-optimization attempts failed mainly
-because:
-- they searched low-leverage knobs or adapted within a single run, which gives the meta level about 10 noisy
-  evaluations;
-- the tasks had no legitimate headroom, or had exploitable metrics.
+### P0 — make recursion declarable and certify targets
 
-EXP28 shows that operator-level choices move per-call behaviour a lot (3% → 32%; 7% vs 38–44%). That makes the
-instruction texts, the mode policy, the evidence formatter and a reusable helper library the most promising meta
-surfaces. They should be learned **across episodes** (replay first, then short runs on a task family), tested on
-held-out tasks with certified headroom, and judged against plain-trainer and fixed-policy controls. Recursion beyond
-that (O2) is only justified after one of these O1 artifacts shows a resolved, amortized held-out gain.
+Engineering:
+- A portable `recursive_opt.evaluator.child_spec@1`. It:
+  - takes a child-spec template and a **binding path** (where the O1 artifact goes, e.g. `levels[0].engine.config.trainer_kwargs.<hook>` or `levels[0].objective.trace_config`);
+  - takes TRAIN instances and child seeds;
+  - returns the mean child validation score.
+  - The child holdout stays closed.
+- A versioned **code-hook ref**: validated source in, callable injected by the runner. Generic for trainer, optimizer and memory hooks; no callable in the spec.
+- `extensions.recursive_opt.knowledge_rules` for promotion and rollback.
+- Port `o1_qa.meta` (EXP21) and the EXP15 nested evaluator onto it, as proof of generality. This also gives the first replayable recursive specs.
+
+Measurement:
+- Child-run length from the standard arm's iterations-to-peak on QA and numeric.
+- Certificates: hand-written variants per target × family. QA/T1 is already done (EXP22-QA). Still needed:
+  - T2 on numeric and QA;
+  - T4 on a multi-step family;
+  - T5 on QA.
+
+Kill rule: a target without a certificate does not enter P1–P3.
+
+### P1 — O1 discovers the optimizer evidence and update rule (T1) on QA
+
+Completes EXP21/EXP22-QA through the control plane.
+
+Arms, at equal budget:
+
+| Arm | Content |
+|---|---|
+| (a) | default `OptoPrimeV2` |
+| (b) | hand-written certificate |
+| (c) | O1 over EXP21's categorical axes (baseline surface) |
+| (d) | O1 Trace engine over selector code + update instruction (EXP22-QA's PC arm) |
+| (e) | (d) with replay pre-screening |
+
+Success: (d) or (e) beats (a) on **holdout** questions by more than the paired seed noise, and is ≥ (b).
+
+### P2 — O1 discovers the trainer search policy (T2)
+
+- Surface: the `VariationSearch` / `PrioritySearch` hook sources: mode schedule, instruction texts, parent score.
+- Families: numeric (cheap) and QA.
+- Arms: plain `PrioritySearch`, default `VariationSearch`, O1-discovered, plus coevolution as an online reference (numeric only).
+- Success: holdout instances in **both** families improve, i.e. the discovered policy transfers across families.
+
+### P3 — tracing per family (T4), only after its certificate passes
+
+- Family: multi-step graph/agent programs.
+- O1 surface: the `trace_config` fields plus a summariser hook.
+- Question: does the best tracing differ by family, and does O1 find it?
+
+### P4 — memory and capitalisation (T5 → T6, O2)
+
+- Discover the retrieval/injection rule and the promotion rule across a **sequence** of tasks in a family.
+- Score on later held-out tasks: cold vs warm-default vs discovered.
+- O2 starts only if P1 or P2 produced a holdout-positive artifact.
+
+**Not in EXP29:**
+- coevolution development;
+- PRISM as a discriminator;
+- categorical-menu O1 as a target;
+- optimizer tools (until tool calls actually execute);
+- Terminal-Bench 2.
+
+---
+
+## 9. Decisions and pre-commitments
+
+1. **Recursion is declared, not scripted.** Every O1/O2 arm runs from a control-plane spec through the shared child-spec evaluator. Bespoke nested runners are not accepted as evidence.
+2. **Certificate before discovery.** No O1 run on a target/family pair without a hand-written variant that moves O0.
+3. **Holdout or nothing.** O1 selection sees TRAIN/VAL only. Claims use holdout instances; O2 claims use held-out family members.
+4. **Equal budget, counted in O0 calls**, including the O1 evaluations, against a standard arm given the same total.
+5. **Fixed-default and hand-written arms are mandatory.** A discovered artifact must beat the default and not lose to the hand-written one.
+6. **Exploit audit** on every new task before use (lesson of Signal and PRISM).
+7. **Child-run length from iterations-to-peak**, not from a constant (EXP00 cell 71).
+8. **Small artifacts:** discovered objects are hooks or texts with a validated contract. Whole-class rewrites only after a hook-level success.
+
+## 10. Conclusion
+
+- The main limit of recursive_opt was not exploration. It was the combination of:
+  - targets that were inactive, irrelevant or menu-shaped;
+  - tasks that were saturated or exploitable;
+  - O1 stages that were bespoke and, on the one good task (QA), never executed.
+- The control plane already declares most of the right targets: trainer kwargs, `trace_config`, knowledge, code components.
+- It lacks two generic pieces: a **child-spec evaluator** and **code-hook refs**.
+- With those, EXP29 should first let O1 discover:
+  1. the optimizer evidence/update rule on QA, where headroom is certified (+17 pp hand-written);
+  2. then the trainer search policy across QA and numeric families;
+  3. then tracing on multi-step programs and the memory/capitalisation rules, each after its own certificate.
