@@ -1,0 +1,71 @@
+diff --git a/opto/optimizers/optoprime_v2.py b/opto/optimizers/optoprime_v2.py
+index 77dfb4c048..6b725c8fdc 100644
+--- a/opto/optimizers/optoprime_v2.py
++++ b/opto/optimizers/optoprime_v2.py
+@@ -373,6 +373,9 @@ class OptoPrimeV2(OptoPrime):
+         """
+     )
+ 
++    # Methods a meta-optimizer may replace with validated code (recursive_opt hooks).
++    hookable_methods = ('problem_instance',)
++
+     def __init__(
+             self,
+             parameters: List[ParameterNode],
+diff --git a/opto/trainer/algorithms/priority_search.py b/opto/trainer/algorithms/priority_search.py
+index 087158f0ec..f8d8d0059d 100644
+--- a/opto/trainer/algorithms/priority_search.py
++++ b/opto/trainer/algorithms/priority_search.py
+@@ -325,6 +325,10 @@ class PrioritySearch(SearchTemplate):
+         `compute_exploration_priority`, `compute_exploitation_priority` can be overridden to implement different strategies for computing the priority and selecting the best candidate.
+     """
+ 
++    # Methods a meta-optimizer may replace with validated code (recursive_opt hooks).
++    # Subclasses inherit this list and only add their own new extension points.
++    hookable_methods = ('compute_exploitation_priority', 'compute_exploration_priority', 'filter_candidates')
++
+     @save_train_config
+     def train(self,
+               guide, # guide to provide feedback
+diff --git a/opto/trainer/algorithms/variation_search.py b/opto/trainer/algorithms/variation_search.py
+index 30c54170ed..78792a276e 100644
+--- a/opto/trainer/algorithms/variation_search.py
++++ b/opto/trainer/algorithms/variation_search.py
+@@ -50,6 +50,8 @@ synthesize a new approach that is not present in any of them, and keep it valid
+ class VariationSearch(PrioritySearch):
+     """PrioritySearch plus an explicit mutation intent chosen per step (see module docstring)."""
+ 
++    hookable_methods = ('next_mode', 'instruction')
++
+     def train(self, guide, train_dataset, *,
+               variation_schedule: str = 'stagnation',  # 'stagnation' | 'periodic' | 'free'
+               patience: int = 5,  # stagnation: steps without improvement before diverging
+@@ -80,7 +82,7 @@ class VariationSearch(PrioritySearch):
+         return super().train(guide=guide, train_dataset=train_dataset, **kwargs)
+ 
+     # ---- mode choice
+-    def _next_mode(self) -> str:
++    def next_mode(self) -> str:
+         if self.variation_schedule == 'free':
+             return 'free'
+         if self._variation_refine_left > 0:
+@@ -128,7 +130,7 @@ class VariationSearch(PrioritySearch):
+         self._variation_rng.shuffle(pool)
+         return pool[:self.num_inspirations]
+ 
+-    def _instruction(self, mode: str) -> str:
++    def instruction(self, mode: str) -> str:
+         if mode == 'free':
+             return ''
+         if mode != 'combine':
+@@ -145,8 +147,8 @@ class VariationSearch(PrioritySearch):
+ 
+     def propose(self, samples, verbose: bool = False, **kwargs):
+         self._record_outcome()
+-        mode = self._next_mode()
+-        instruction = self._instruction(mode)
++        mode = self.next_mode()
++        instruction = self.instruction(mode)
+         optimizers = [o for o in [self.optimizer] + [c.optimizer for c in self._exploration_candidates if c.optimizer is not None]
+                       if hasattr(o, 'objective')]
+         for o in optimizers:  # the base instruction is recorded once; deep copies of the optimizer inherit it

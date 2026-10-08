@@ -187,3 +187,43 @@ class OptoPrimeV2(...):
 | D6 | Fate of `recursive_level@1` | keep / deprecate | **Keep** as a legacy route; document `child_spec@1` as the portable recursion route. |
 
 D1 and D2 are the only decisions that change the core library or its safety posture. D3–D6 have defaults that can be revised later.
+
+---
+
+## Appendix A — D1 and D2 made concrete (2026-10-08)
+
+Material for this appendix:
+- the exact core diff for option (a): [option_a_core.diff](option_a_core.diff), produced in a throwaway worktree and **not applied**;
+- the materializer prototype: [scripts/hooks_prototype.py](scripts/hooks_prototype.py), tested against that worktree.
+
+**What the three D1 options change**
+
+| | (a) declared hook points | (b) any method ("monkey-patch anything") | (c) base-class denylist |
+|---|---|---|---|
+| Core-library diff | 13 lines added, 4 changed, in 3 files. `hookable_methods` on `PrioritySearch` (3 methods its docstring already names as override points), `VariationSearch` (`next_mode`, `instruction`, made public) and `OptoPrimeV2` (`problem_instance`) | none | one `hook_exclude` tuple on `Trainer` and `Optimizer` |
+| Dynamic? | **Yes, for subclasses and for hook code.**<br>• The list is collected along the MRO, so all 7 existing `PrioritySearch` subclasses expose the 3 hooks without edits.<br>• New strategies are new hook **code** in the spec, never a core change.<br>• Only a new extension **point** (a method nobody declared) needs one line | yes, fully | yes, except for excluded names |
+| What O1 may replace in `VariationSearch` | 5 methods | **26 methods**, including `evaluate`, `_record_outcome`, `_initialize_search_parameters` and static helpers | about 24 |
+| Main risk | missing a useful point until someone declares it | O1 can rewrite **scoring and budget code**. The prototype accepted an `evaluate()` override that returns 1.0 for every sample: a built-in exploit path (lesson 1) | the same as (b), unless the denylist is complete, which is hard to keep true |
+
+**Recommendation:** (a) by default. Option (b) remains available as an explicit opt-in: a spec field such as `extensions.recursive_opt.unsafe_hook_points`. A run that uses it is marked `portable=false` / `promotable=false`, like the existing legacy compatibility path.
+
+**D2 is a separate axis from D1.**
+- D1 decides **which** methods may be replaced.
+- D2 decides **in which process** the replacement runs.
+- Both (a) and (b) install the hook the same way: a generated subclass (`VariationSearchHooked`), which is in-process "monkey patching" without mutating the original class.
+- A subprocess per call is not practical. The hook receives `self`, the live trainer with LLM clients, locks and the candidate heap, which cannot be shipped to another process on every call.
+- So D2 = in-process for any hook choice. Safety comes from three things, not from isolation:
+  - the static checks (single function, same parameters, denylisted imports and names, no dunder access);
+  - the fallback to the original method;
+  - the D1 allowlist.
+
+**Prototype checks** (run against the worktree; nothing applied to the repository):
+
+| Check | Result |
+|---|---|
+| A hooked `next_mode` | changes the returned mode |
+| Hooked instance | survives `deepcopy` |
+| A failing hook | falls back to the original; failures are counted per instance |
+| An `import os` hook | rejected |
+| A changed signature | rejected |
+| `train` under (a) | rejected |
