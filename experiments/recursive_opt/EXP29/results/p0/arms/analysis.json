@@ -1,0 +1,175 @@
+{
+ "seed_holdout": {
+  "mixC": 1.4262,
+  "mixA": 1.2164,
+  "mixB": 1.3189
+ },
+ "arms": {
+  "a_priority": {
+   "n": 6,
+   "valid": 6,
+   "mean_holdout": 1.3124,
+   "mean_gain_vs_seed": -0.0081,
+   "gain_sd": 0.061,
+   "paired_vs_a_priority": 0.0,
+   "paired_wins": "0/6",
+   "calls": 42,
+   "wall_s_mean": 1589.0
+  },
+  "b_variation_default": {
+   "n": 6,
+   "valid": 6,
+   "mean_holdout": 1.4929,
+   "mean_gain_vs_seed": 0.1724,
+   "gain_sd": 0.2099,
+   "paired_vs_a_priority": 0.1805,
+   "paired_wins": "3/6",
+   "calls": 42,
+   "wall_s_mean": 1597.0
+  },
+  "c_variation_hand_schedule": {
+   "n": 6,
+   "valid": 6,
+   "mean_holdout": 1.5145,
+   "mean_gain_vs_seed": 0.1939,
+   "gain_sd": 0.2338,
+   "paired_vs_a_priority": 0.202,
+   "paired_wins": "5/6",
+   "calls": 42,
+   "wall_s_mean": 1660.0
+  },
+  "d_priority_hand_objective": {
+   "n": 6,
+   "valid": 6,
+   "mean_holdout": 1.7448,
+   "mean_gain_vs_seed": 0.4243,
+   "gain_sd": 0.5959,
+   "paired_vs_a_priority": 0.4324,
+   "paired_wins": "5/6",
+   "calls": 42,
+   "wall_s_mean": 1687.0
+  }
+ },
+ "per_run": {
+  "a_priority__mixA__r1": {
+   "holdout": 1.3006431100485714,
+   "valid": true,
+   "error": null
+  },
+  "a_priority__mixA__r2": {
+   "holdout": 1.1107309322679717,
+   "valid": true,
+   "error": null
+  },
+  "a_priority__mixB__r1": {
+   "holdout": 1.3189214495282136,
+   "valid": true,
+   "error": null
+  },
+  "a_priority__mixB__r2": {
+   "holdout": 1.3189214495282136,
+   "valid": true,
+   "error": null
+  },
+  "a_priority__mixC__r1": {
+   "holdout": 1.426236566169825,
+   "valid": true,
+   "error": null
+  },
+  "a_priority__mixC__r2": {
+   "holdout": 1.3991992205609671,
+   "valid": true,
+   "error": null
+  },
+  "b_variation_default__mixA__r1": {
+   "holdout": 1.2624959426635929,
+   "valid": true,
+   "error": null
+  },
+  "b_variation_default__mixA__r2": {
+   "holdout": 1.5980533110958082,
+   "valid": true,
+   "error": null
+  },
+  "b_variation_default__mixB__r1": {
+   "holdout": 1.3189214495282136,
+   "valid": true,
+   "error": null
+  },
+  "b_variation_default__mixB__r2": {
+   "holdout": 1.3189214495282136,
+   "valid": true,
+   "error": null
+  },
+  "b_variation_default__mixC__r1": {
+   "holdout": 1.546846686060811,
+   "valid": true,
+   "error": null
+  },
+  "b_variation_default__mixC__r2": {
+   "holdout": 1.9122144342515142,
+   "valid": true,
+   "error": null
+  },
+  "c_variation_hand_schedule__mixA__r1": {
+   "holdout": 1.3374834080089022,
+   "valid": true,
+   "error": null
+  },
+  "c_variation_hand_schedule__mixA__r2": {
+   "holdout": 1.1285383384407142,
+   "valid": true,
+   "error": null
+  },
+  "c_variation_hand_schedule__mixB__r1": {
+   "holdout": 1.8424916337176167,
+   "valid": true,
+   "error": null
+  },
+  "c_variation_hand_schedule__mixB__r2": {
+   "holdout": 1.3189214495282136,
+   "valid": true,
+   "error": null
+  },
+  "c_variation_hand_schedule__mixC__r1": {
+   "holdout": 1.6337258046349916,
+   "valid": true,
+   "error": null
+  },
+  "c_variation_hand_schedule__mixC__r2": {
+   "holdout": 1.825669271764635,
+   "valid": true,
+   "error": null
+  },
+  "d_priority_hand_objective__mixA__r1": {
+   "holdout": 1.475643259000327,
+   "valid": true,
+   "error": null
+  },
+  "d_priority_hand_objective__mixA__r2": {
+   "holdout": 1.1796707087059437,
+   "valid": true,
+   "error": null
+  },
+  "d_priority_hand_objective__mixB__r1": {
+   "holdout": 1.3189214495282136,
+   "valid": true,
+   "error": null
+  },
+  "d_priority_hand_objective__mixB__r2": {
+   "holdout": 2.690460663131011,
+   "valid": true,
+   "error": null
+  },
+  "d_priority_hand_objective__mixC__r1": {
+   "holdout": 2.378127519010102,
+   "valid": true,
+   "error": null
+  },
+  "d_priority_hand_objective__mixC__r2": {
+   "holdout": 1.426236566169825,
+   "valid": true,
+   "error": null
+  }
+ }
+}

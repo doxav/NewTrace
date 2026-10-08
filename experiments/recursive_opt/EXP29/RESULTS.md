@@ -89,3 +89,28 @@ Step-by-step record of P0–P4 (plan: [prior_analysis.md](prior_analysis.md) §8
 - An example `{"episodes": [...]}` runs several episodes in parallel workers from one call. A single-threaded O1 parent therefore still evaluates episodes in parallel, avoiding a fork from threads.
 - `timeout_s` kills a hung child; it becomes an invalid candidate.
 - 16 tests pass; full unit suite 1,017 passed.
+
+## P0.3 — certificates: hand-written variants of the O1 targets (live, 24 children, $0.61)
+
+**Setup:**
+- 8-iteration O0 children on the three O1 holdout episodes (mixA / mixB / mixC, episode seed 3), 2 repeats each.
+- Score = held-out child score. Gain = score minus the seed program's held-out score (mixA 1.216, mixB 1.319, mixC 1.426).
+- Script: `numeric/p0_arms.py`; analysis: `numeric/analyze_arms.py` → `results/p0/arms/analysis.json`.
+
+| Arm | Mean holdout | Gain over seed (sd) | Paired vs (a) | Wins |
+|---|---:|---:|---:|---:|
+| (a) `PrioritySearch` | 1.312 | −0.008 (0.06) | — | — |
+| (b) `VariationSearch` default | 1.493 | +0.172 (0.21) | +0.181 | 3/6 |
+| (c) `VariationSearch` + hand-written `_next_mode` patch (diverge after 2 stalled steps) | 1.515 | +0.194 (0.23) | +0.202 | 5/6 |
+| (d) `PrioritySearch` + hand-written optimizer instruction (strategy hints) | **1.745** | **+0.424 (0.60)** | **+0.432** | 5/6 |
+
+**What this shows:**
+- Outcomes are **heavy-tailed**. 9 of 24 children end exactly at the seed's score: the validation gate kept the initial program. A few jump far, up to 2.69 (d, mixB) and 2.38 (d, mixC).
+- **T1 certificate passes:** the optimizer instruction (`optimizer_kwargs.objective`) moves O0 most.
+- **T2 certificate passes weakly:**
+  - the scheduler patch, and `VariationSearch` itself, beat plain `PrioritySearch` in 5/6 and 3/6 pairs;
+  - (c) vs (b) is a tie.
+- With n = 6 and these tails, none of these differences is statistically resolved. They clear the P0 bar of "a hand-written variant moves O0", so both targets enter P1.
+- Cost: $0.0036 per optimizer call; one child ≈ 7 calls ≈ $0.025, 25–28 min wall time with 24 children running concurrently.
+
+**Offline O1 dry run** (no LLM at either level, 1 O1 iteration) passed end to end: slots injected into the child's patches and objective, two meta-train episodes run in parallel workers, meta-validation, meta-holdout. Its holdout equals the seed's (1.2164), as expected.

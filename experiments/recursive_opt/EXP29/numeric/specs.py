@@ -57,22 +57,23 @@ TEXTS_TARGET = 'opto.trainer.algorithms.variation_search:VARIATION_INSTRUCTIONS'
 O1_OBJECTIVE = ('You are optimizing HOW a lower-level optimizer learns, not a solution. The variables are (a) `next_mode`, the '
                 'VariationSearch method that picks the mutation intent of each step (it must return one of "free", "refine", '
                 '"diverge", "combine" and may read self._variation_stall, self._variation_step, self._variation_best, '
-                'self.patience, self.period, self.variation_schedule and self.variation_log), (b) `instructions`, the dict of '
-                'texts appended to the lower optimizer prompt for "refine", "diverge" and "combine", and (c) `objective`, the '
+                'self.patience, self.period, self.variation_schedule and self.variation_log), (b) `diverge_text`, the text appended '
+                'to the lower optimizer prompt on "diverge" steps, and (c) `objective`, the '
                 'lower optimizer\'s task instruction. Each evaluation runs the whole lower-level learning of a numeric black-box '
                 'optimizer program on new test functions and returns its held-out score (higher is better). Keep the code valid '
                 'Python with the same signature; prefer general changes that help any task.')
 
 
 def o1_spec(train_episodes: list, validation_episodes: list, holdout_episodes: list, *, seed: int, child_iterations: int,
-            o1_iterations: int, slots: tuple = ('next_mode', 'instructions', 'objective'), timeout_s: float = 3600, offline: bool = False) -> dict:
+            o1_iterations: int, slots: tuple = ('next_mode', 'diverge_text', 'objective'), timeout_s: float = 3600, offline: bool = False) -> dict:
     from opto.features.recursive_opt import patches as P
     from opto.trainer.algorithms import variation_search as V
     child = o0_spec(episode('mixA', 0), seed=seed, iterations=child_iterations, trainer='VariationSearch',
                     trainer_kwargs={'num_threads': 8, 'variation_seed': seed},
                     patches=[{'target': MODE_TARGET, 'source': P.default_source(MODE_TARGET)},
                              {'target': TEXTS_TARGET, 'value': dict(V.VARIATION_INSTRUCTIONS)}], offline=offline)
-    paths = {'next_mode': 'levels.O0.engine.config.patches.0.source', 'instructions': 'levels.O0.engine.config.patches.1.value',
+    paths = {'next_mode': 'levels.O0.engine.config.patches.0.source', 'diverge_text': 'levels.O0.engine.config.patches.1.value.diverge',
+             'combine_text': 'levels.O0.engine.config.patches.1.value.combine',
              'objective': 'levels.O0.engine.config.optimizer_kwargs.objective'}
     wrap = lambda names: [{'episodes': [{'levels.O0.datasets': episode(n, s), 'runtime.seed': s} for n, s in names]}]  # noqa: E731  (parallel)
     return {'schema_version': S.SCHEMA_VERSION, 'kind': S.SPEC_KIND,
