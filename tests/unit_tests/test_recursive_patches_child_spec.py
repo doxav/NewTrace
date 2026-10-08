@@ -166,3 +166,12 @@ def test_invalid_slot_value_is_an_invalid_candidate_not_a_crash(monkeypatch) -> 
     raw['levels'][0]['module']['config']['slots'] = {'diverge': 'levels.O0.engine.config.patches.0'}
     result = C._evaluate({'components': {'diverge': {'target': 'os:getcwd', 'value': 1}}}, {}, {'spec': S.normalize_spec(raw)['levels'][0]})
     assert not result.valid and 'under opto.' in result.error
+
+
+def test_child_spec_runs_several_episodes_in_parallel_and_averages(monkeypatch) -> None:
+    monkeypatch.setattr(C, 'CHILD_RESOURCES', {'optimizer': _NoLLMOptimizer})
+    ep = lambda q: {'levels.O0.datasets': {'train': [{'q': q}], 'validation': [], 'holdout': [{'q': q}]}}  # noqa: E731
+    raw = _parent([{'episodes': [ep(1), ep(2)]}], {**V.VARIATION_INSTRUCTIONS, 'diverge': '1234'})
+    (result,) = S.execute_plan(S.compile_plan(raw), {})
+    assert result.valid and result.evaluation.metrics['score'] == 4.0
+    assert 'per unit [4.0, 4.0]' in str(result.evaluation.feedback)

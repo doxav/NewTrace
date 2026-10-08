@@ -1,0 +1,268 @@
+{
+ "budget": 64,
+ "bounds": [
+  -5.0,
+  5.0
+ ],
+ "instances_per_stratum": 4,
+ "overall_auc": {
+  "random": {
+   "auc": 0.2893,
+   "log_auc": -1.054
+  },
+  "seed": {
+   "auc": 0.2281,
+   "log_auc": -1.375
+  },
+  "es_hand": {
+   "auc": 0.2438,
+   "log_auc": -1.388
+  },
+  "surrogate_hand": {
+   "auc": 0.2051,
+   "log_auc": -1.635
+  }
+ },
+ "strata": {
+  "ackley-2d": {
+   "random": {
+    "auc": 0.4379,
+    "log": -0.427,
+    "final": 0.2886,
+    "hits": 0,
+    "n": 4
+   },
+   "seed": {
+    "auc": 0.3394,
+    "log": -0.57,
+    "final": 0.1457,
+    "hits": 0,
+    "n": 4
+   },
+   "es_hand": {
+    "auc": 0.2597,
+    "log": -0.88,
+    "final": 0.0224,
+    "hits": 1,
+    "n": 4
+   },
+   "surrogate_hand": {
+    "auc": 0.2054,
+    "log": -1.002,
+    "final": 0.0173,
+    "hits": 0,
+    "n": 4
+   }
+  },
+  "ackley-5d": {
+   "random": {
+    "auc": 0.6273,
+    "log": -0.22,
+    "final": 0.5086,
+    "hits": 0,
+    "n": 4
+   },
+   "seed": {
+    "auc": 0.5089,
+    "log": -0.319,
+    "final": 0.318,
+    "hits": 0,
+    "n": 4
+   },
+   "es_hand": {
+    "auc": 0.5781,
+    "log": -0.265,
+    "final": 0.3362,
+    "hits": 0,
+    "n": 4
+   },
+   "surrogate_hand": {
+    "auc": 0.5439,
+    "log": -0.295,
+    "final": 0.2643,
+    "hits": 0,
+    "n": 4
+   }
+  },
+  "rastrigin-2d": {
+   "random": {
+    "auc": 0.263,
+    "log": -0.708,
+    "final": 0.1043,
+    "hits": 0,
+    "n": 4
+   },
+   "seed": {
+    "auc": 0.2121,
+    "log": -0.843,
+    "final": 0.1302,
+    "hits": 0,
+    "n": 4
+   },
+   "es_hand": {
+    "auc": 0.3516,
+    "log": -0.626,
+    "final": 0.2074,
+    "hits": 0,
+    "n": 4
+   },
+   "surrogate_hand": {
+    "auc": 0.2719,
+    "log": -0.679,
+    "final": 0.1674,
+    "hits": 0,
+    "n": 4
+   }
+  },
+  "rastrigin-5d": {
+   "random": {
+    "auc": 0.5387,
+    "log": -0.275,
+    "final": 0.4808,
+    "hits": 0,
+    "n": 4
+   },
+   "seed": {
+    "auc": 0.4095,
+    "log": -0.413,
+    "final": 0.3152,
+    "hits": 0,
+    "n": 4
+   },
+   "es_hand": {
+    "auc": 0.4012,
+    "log": -0.436,
+    "final": 0.1967,
+    "hits": 0,
+    "n": 4
+   },
+   "surrogate_hand": {
+    "auc": 0.339,
+    "log": -0.516,
+    "final": 0.2464,
+    "hits": 0,
+    "n": 4
+   }
+  },
+  "rosenbrock-2d": {
+   "random": {
+    "auc": 0.0548,
+    "log": -3.14,
+    "final": 0.0002,
+    "hits": 4,
+    "n": 4
+   },
+   "seed": {
+    "auc": 0.0141,
+    "log": -3.542,
+    "final": 0.0,
+    "hits": 4,
+    "n": 4
+   },
+   "es_hand": {
+    "auc": 0.0541,
+    "log": -3.518,
+    "final": 0.0001,
+    "hits": 4,
+    "n": 4
+   },
+   "surrogate_hand": {
+    "auc": 0.0535,
+    "log": -3.696,
+    "final": 0.0001,
+    "hits": 4,
+    "n": 4
+   }
+  },
+  "rosenbrock-5d": {
+   "random": {
+    "auc": 0.0489,
+    "log": -1.618,
+    "final": 0.0149,
+    "hits": 2,
+    "n": 4
+   },
+   "seed": {
+    "auc": 0.0666,
+    "log": -2.118,
+    "final": 0.0015,
+    "hits": 4,
+    "n": 4
+   },
+   "es_hand": {
+    "auc": 0.0356,
+    "log": -2.277,
+    "final": 0.0006,
+    "hits": 4,
+    "n": 4
+   },
+   "surrogate_hand": {
+    "auc": 0.0328,
+    "log": -2.333,
+    "final": 0.0005,
+    "hits": 4,
+    "n": 4
+   }
+  },
+  "sphere-2d": {
+   "random": {
+    "auc": 0.1235,
+    "log": -1.267,
+    "final": 0.0196,
+    "hits": 0,
+    "n": 4
+   },
+   "seed": {
+    "auc": 0.0596,
+    "log": -2.273,
+    "final": 0.0003,
+    "hits": 4,
+    "n": 4
+   },
+   "es_hand": {
+    "auc": 0.0953,
+    "log": -2.011,
+    "final": 0.0004,
+    "hits": 4,
+    "n": 4
+   },
+   "surrogate_hand": {
+    "auc": 0.0732,
+    "log": -2.903,
+    "final": 0.0002,
+    "hits": 4,
+    "n": 4
+   }
+  },
+  "sphere-5d": {
+   "random": {
+    "auc": 0.2206,
+    "log": -0.774,
+    "final": 0.1136,
+    "hits": 0,
+    "n": 4
+   },
+   "seed": {
+    "auc": 0.2142,
+    "log": -0.92,
+    "final": 0.0295,
+    "hits": 0,
+    "n": 4
+   },
+   "es_hand": {
+    "auc": 0.1744,
+    "log": -1.094,
+    "final": 0.0211,
+    "hits": 1,
+    "n": 4
+   },
+   "surrogate_hand": {
+    "auc": 0.1209,
+    "log": -1.654,
+    "final": 0.0018,
+    "hits": 3,
+    "n": 4
+   }
+  }
+ }
+}

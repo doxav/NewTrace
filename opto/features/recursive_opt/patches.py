@@ -172,13 +172,13 @@ def _child(connection, function: Callable, args: tuple, kwargs: dict) -> None:
     connection.close()
 
 
-def run_isolated(calls: Sequence[Tuple[Callable, tuple, dict]], workers: int = 1) -> List[Any]:
+def run_isolated(calls: Sequence[Tuple[Callable, tuple, dict]], workers: int = 1, timeout_s: float | None = None) -> List[Any]:
     """Run ``function(*args, **kwargs)`` calls, each in its own fresh forked process, at most ``workers`` at a time.
 
     Forking keeps registries (evaluators, datasets, modules) registered by the parent; each process can apply its own
     patch set without affecting the parent or its siblings, and may fork again (nested recursion). Results must be
-    picklable; an exception in a call is re-raised in the parent as RuntimeError. Without ``fork`` the calls run
-    sequentially in-process (one patch set at a time).
+    picklable; an exception, or a call exceeding ``timeout_s`` (its process group is killed), is raised in the parent as
+    RuntimeError. Without ``fork`` the calls run sequentially in-process (one patch set at a time).
     """
     if 'fork' not in multiprocessing.get_all_start_methods():
         return [function(*args, **kwargs) for function, args, kwargs in calls]
@@ -196,7 +196,11 @@ def run_isolated(calls: Sequence[Tuple[Callable, tuple, dict]], workers: int = 1
             running.append((index, process, parent_end))
         index, process, connection = running.pop(0)
         try:
-            ok, value = connection.recv()
+            if timeout_s is not None and not connection.poll(timeout_s):
+                process.kill()
+                ok, value = False, f'worker exceeded {timeout_s}s'
+            else:
+                ok, value = connection.recv()
         except EOFError:
             ok, value = False, f'worker exited with code {process.exitcode}'
         process.join()

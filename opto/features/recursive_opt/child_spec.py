@@ -19,6 +19,7 @@ the cost of recursion. Identical child specs are run once per process (cache by 
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import threading
@@ -32,7 +33,7 @@ from . import spec as S
 CHILD_RESOURCES: Dict[str, Any] = {}  # test-only runtime resources for children (e.g. a scripted llm_factory)
 _CACHE: Dict[str, Dict[str, Any]] = {}
 _CACHE_LOCK = threading.Lock()
-_CONFIG_KEYS = {'child', 'slots', 'example_paths', 'score', 'workers'}
+_CONFIG_KEYS = {'child', 'slots', 'example_paths', 'score', 'timeout_s'}
 
 
 def _get(value: Any, path: str) -> Any:
@@ -108,25 +109,54 @@ def _run_child(child: Dict[str, Any], score_path: str) -> Dict[str, Any]:
             'patch_fallbacks': fallbacks}
 
 
+def _merge(results: list) -> Dict[str, Any]:
+    """Combine episode results: invalid if any is invalid, else mean score, concatenated feedback, summed usage."""
+    fallbacks: Dict[str, int] = {}
+    for result in results:
+        for name, count in (result.get('patch_fallbacks') or {}).items():
+            fallbacks[name] = fallbacks.get(name, 0) + count
+    bad = [r for r in results if not r['valid']]
+    if bad:
+        return {'valid': False, 'error': bad[0]['error'], 'patch_fallbacks': fallbacks}
+    usage: Dict[str, float] = {}
+    for result in results:
+        for name, value in result['usage'].items():
+            usage[name] = usage.get(name, 0) + value
+    return {'valid': True, 'score': sum(r['score'] for r in results) / len(results), 'scores': [s for r in results for s in r['scores']],
+            'feedback': [f for r in results for f in r['feedback']], 'usage': usage, 'patch_fallbacks': fallbacks}
+
+
 def _evaluate(output: Any, example: Any, context: Mapping[str, Any]) -> EvaluationResult:
     config = context['spec']['module']['config']
     data = getattr(output, 'data', output)
-    child = S._thaw(config['child'])
+    base = S._thaw(config['child'])
     for name, path in config['slots'].items():
-        _set(child, path, data['components'][name])
-    example = getattr(example, 'data', example) or {}
+        _set(base, path, data['components'][name])
+    example = dict(getattr(example, 'data', example) or {})
+    episodes = example.pop('episodes', None) or [example]  # {"episodes": [...]} runs several episodes in parallel workers
     allowed = tuple(config.get('example_paths') or ())
-    for path, value in dict(example).items():
-        if not any(path == p or path.startswith(p + '.') for p in allowed):
-            raise ValueError(f'episode override {path!r} is outside example_paths {allowed}')
-        _set(child, path, value)
-    key = hashlib.sha256(json.dumps(child, sort_keys=True, default=str).encode()).hexdigest()
+    children, keys = [], []
+    for overrides in episodes:
+        child = copy.deepcopy(base)
+        for path, value in dict(overrides).items():
+            if not any(path == p or path.startswith(p + '.') for p in allowed):
+                raise ValueError(f'episode override {path!r} is outside example_paths {allowed}')
+            _set(child, path, value)
+        children.append(child)
+        keys.append(hashlib.sha256(json.dumps(child, sort_keys=True, default=str).encode()).hexdigest())
     with _CACHE_LOCK:
-        cached = _CACHE.get(key)
-    if cached is None:
-        cached = P.run_isolated([(_run_child, (child, config.get('score', 'evaluation.metrics.score')), {})])[0]
+        todo = [i for i, key in enumerate(keys) if key not in _CACHE]
+    if todo:
+        score_path = config.get('score', 'evaluation.metrics.score')
+        try:
+            fresh = P.run_isolated([(_run_child, (children[i], score_path), {}) for i in todo], workers=len(todo), timeout_s=config.get('timeout_s'))
+        except RuntimeError as error:
+            fresh = [{'valid': False, 'error': str(error)}] * len(todo)
         with _CACHE_LOCK:
-            _CACHE[key] = cached
+            _CACHE.update({keys[i]: result for i, result in zip(todo, fresh)})
+    results = [_CACHE[key] for key in keys]
+    key = keys[0] if len(keys) == 1 else hashlib.sha256(''.join(keys).encode()).hexdigest()
+    cached = _merge(results)
     if not cached['valid']:
         return EvaluationResult(valid=False, status='invalid', feedback=f'child run invalid: {cached["error"]}',
                                 error=cached['error'], artifacts={'child_key': key, 'patch_fallbacks': cached.get('patch_fallbacks', {})})

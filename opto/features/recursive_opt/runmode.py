@@ -194,7 +194,7 @@ def preflight_model(model: Optional[str] = None) -> None:
         or os.environ.get("TRACE_LITELLM_MODEL")
         or "gpt-5.4-nano"
     )
-    if model_name in _PREFLIGHTED_MODELS:
+    if model_name in _PREFLIGHTED_MODELS or _env_flag("RECURSIVE_OPT_SKIP_MODEL_PREFLIGHT", False):
         return
     try:
         llm = make_live_llm(

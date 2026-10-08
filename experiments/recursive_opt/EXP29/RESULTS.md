@@ -47,3 +47,45 @@ Step-by-step record of P0–P4 (plan: [prior_analysis.md](prior_analysis.md) §8
 **Full unit suite:** 1,014 passed, 2 skipped. The runtime file inventory and the provenance seal (`prompt18_readiness.json`) were updated because new runtime files were added.
 
 **Known limit:** forking from a multi-threaded parent can deadlock (Python's `DeprecationWarning`). O1 parents therefore run single-threaded, and parallelism comes from separate seed/arm processes and from the child workers.
+
+## P0.2 — numeric task family, live child runs, calibration
+
+**Task** (`EXP29/numeric/task.py`):
+- Black-box optimizer programs `propose(history, bounds, seed)` (the EXP15–18 interface), on sphere, Rosenbrock, Rastrigin and Ackley.
+- Shifts are in [−4, 4], so starting at the centre is no shortcut. The budget is 64 evaluations.
+- Evaluator `exp29.evaluator.bbo@1`. Score = minus the mean log10 normalized best-so-far regret, floored at 1e-6: higher is better, 6 is perfect.
+
+**Headroom probe** (`numeric/probe_headroom.py`, no LLM; 8 strata × 4 instances):
+
+| Program | Score (32 instances) |
+|---|---:|
+| random | 1.05 |
+| seed (EXP15) | 1.38 |
+| hand-written ES | 1.39 |
+| hand-written quadratic surrogate | 1.64 |
+
+- Under the plain regret AUC at 32 evaluations, the same programs spanned only 0.370 → 0.302: the first random draws dominate it. That metric was rejected.
+- The log score keeps order-of-magnitude precision. Example: sphere-5D, seed 0.92 → surrogate 1.65.
+
+**Live child through the control plane** (`numeric/specs.py`, `numeric/run_child.py`):
+- Setup: `z-ai/glm-5.3-flash` via OpenRouter, low reasoning, cheapest provider, `OptoPrimeV2` + `PrioritySearch`, one candidate per step.
+- 12 iterations on episode mixA-s1:
+
+  | Measure | Value |
+  |---|---|
+  | Optimizer calls | 11 |
+  | Cost (key delta) | **$0.029** (≈ $0.0026 per call) |
+  | Wall time | 16 min, dominated by LLM latency |
+  | Train score | 1.26 → best 2.20, peak after about 4–10 proposals |
+  | Holdout score | seed 1.125 → **1.494** |
+
+- So O0 learning moves the score. P0 children use 8 iterations.
+
+**Fixes needed on the way:**
+- **Preflight:** the control-plane LLM preflight sends `max_tokens=8`, which a reasoning model consumes entirely, and it ignored its own documented `RECURSIVE_OPT_SKIP_MODEL_PREFLIGHT` flag. `runmode.preflight_model` now honours the flag.
+- **Reasoning effort:** with OpenRouter it must go in `request_params.extra_body.reasoning`.
+
+**`child_spec@1` additions:**
+- An example `{"episodes": [...]}` runs several episodes in parallel workers from one call. A single-threaded O1 parent therefore still evaluates episodes in parallel, avoiding a fork from threads.
+- `timeout_s` kills a hung child; it becomes an invalid candidate.
+- 16 tests pass; full unit suite 1,017 passed.
