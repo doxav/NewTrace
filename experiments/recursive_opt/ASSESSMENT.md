@@ -165,6 +165,28 @@ A remaining reproducibility defect is explicit: the EXP24 white-box feedback sti
 
 EXP23's simulator results remain evidence about its simulator: stage-dependent policy credit, noisy short windows and across-episode selection. Some simulated PRISM scores exceed the subsequently established live ceiling, so these worlds are not a physically bounded forecast of corrected PRISM performance. The 120 live calls were **policy proposals with simulated task evaluation**, not 120 live task-search comparisons. [Score validation](EXP23/results/score_validation.json), [meta comparison](EXP23/results/meta_comparison.json), [live-policy summary](EXP23/results/live_schedule/live/summary.json).
 
+### Task suitability for meta-optimization (added 2026-10-08, EXP29)
+
+Only two task families in the series combine **demonstrated O0 headroom**, **held-out instances** and **no known
+exploit**. **Neither has had an O1/O2 stage executed:**
+- EXP21 planned 3 O1 and 2 O2 proposals and ran none (credit);
+- EXP22-QA's O1 pilot stopped at the key limit.
+
+| Family | O0 headroom (measured) | Status as a meta testbed |
+|---|---|---|
+| Numeric optimizer programs (EXP15–18) | regret AUC: seed 0.144 → hand-written B2 0.041 → LLM-written 0.034 (EXP18); target hits 86 → 135 / 144 | cheapest (local evaluation, ≈ $0.04 per 16-proposal child run); final regret nearly saturated, so harder functions are needed. **First EXP29 testbed** |
+| Document QA, fixed 4 documents (EXP20–22-QA) | unchanged 28.5 % → 43.1 % TEST curve (EXP20); 27 → 54 % (EXP21); hand-written ranker + reader-instruction edits +17 pp, ceiling 58 % when the supporting documents are given (EXP22-QA pilot, n = 24) | realistic, but reader-heavy (up to 828 reader calls per O0 chain); **second EXP29 testbed** |
+
+The EXP22-QA +17 pp certifies **O0** edits (ranker code, reader instruction). It does not yet certify the O1 targets
+(the optimizer's update instruction and evidence selector).
+
+The other families are unsuitable as discriminators:
+- **Signal Processing:** hand-written causal filters score 0.467–0.539 and the best LLM causal program 0.565, against a seed spread of 0.499–0.554 and a 0.723 look-ahead exploit. One fixed set of 5 signals, so no held-out instances (EXP29 probe).
+- **PRISM:** saturated (optimum in 3–4 calls).
+- **GSM8K, DROP, toy validators:** saturated or flat.
+
+See [EXP29 prior analysis §5](EXP29/prior_analysis.md).
+
 <a id="lessons"></a>
 ## 5. Ranked lessons: gains, failures and limits
 
@@ -183,6 +205,7 @@ Ratings express **strength of evidence for the stated lesson**, not a probabilit
 | 9 | Policy credit and scheduling can constrain online learning. | **3/5** | EXP23 stage-bias simulations and few triggered proposals. Pair or otherwise calibrate credit on fresh live episodes; simulator success is insufficient. |
 | 10 | A shared control plane is useful infrastructure, not reproduced science. | **4/5** | Declarative runs, typed outcomes and provenance are reusable; migration certified zero historical replays. Maintain source/version-specific tests and avoid turning test counts into performance evidence. |
 | 11 | Confirm a decision on a larger evaluation before adopting it, and check that compared arms score the same tasks. | **5/5** | EXP00-B warm priors +0.013 → −0.026 at 8 examples; EXP00-D UC4 +0.163 from comparing a two-family mean with a one-family score (−0.006 corrected, EXP02). A stable budget sweep does not protect against a comparison that measures different things. |
+| 12 | Meta-optimize only on task families with measured O0 headroom, held-out instances and no exploit. | **4/5** | Most meta studies used saturated (GSM8K, PRISM), flat (EXP00 A/D) or exploitable (Signal) tasks. Numeric optimizer programs and 4-document QA qualify; their O1 stages were never run (EXP21, EXP22-QA). Certify O0 headroom, then the O1 target, with hand-written variants before any O1 run (EXP29). |
 
 <a id="short-term"></a>
 ## 6. Short-term priorities

@@ -23,3 +23,11 @@ different implementation. **None was re-run as-is.** The control-plane v2 migrat
 
 The detailed version, with how each later study is the same or different, is in
 [PROTOCOL.md](PROTOCOL.md#later-re-designs-and-equivalents).
+
+**Re-test priority (2026-10-08, [EXP29](../EXP29/prior_analysis.md)).** Of the later equivalents, two task families
+have measured O0 headroom, held-out instances and no known exploit:
+- the numeric optimizer programs of EXP15–18 (component code rewriting);
+- the 4-document QA of EXP20–22-QA (QASPER/prompt successors).
+
+Neither has had its O1/O2 stage run. EXP29 re-tests the EXP00 meta targets (trainer, optimizer, trace type, memory,
+capitalisation) on them, in that order, through a new `child_spec@1` control-plane module.

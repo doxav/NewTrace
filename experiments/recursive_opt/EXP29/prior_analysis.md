@@ -1,6 +1,10 @@
-# EXP29 — prior analysis (v2): what recursive_opt should discover, on which surfaces, tasks and budgets
+# EXP29 — prior analysis (v3): what recursive_opt should discover, on which surfaces, tasks and budgets
 
-Date: 2026-10-08. Supersedes v1 of the same day (commit `632b5e0426`). No new runs.
+Date: 2026-10-08.
+- v3 refines v2 (`ecb415041c`), which superseded v1 (`632b5e0426`).
+- v3 adds the task order (§5), the tracing clarification (§5.3) and the design of the two missing pieces ([design_recursion_pieces.md](design_recursion_pieces.md)).
+- v3 corrects one v2 claim (§0).
+- New measurement: one local, LLM-free probe of Signal's causal headroom (§5.1).
 
 Inputs:
 - the four EXP00 notebooks in `EXP00/notebooks/`, re-read cell by cell, including unexecuted cells;
@@ -15,7 +19,8 @@ Inputs:
 | P1 compared `VariationSearch`, `PrioritySearch` and the **coevolution engine** | Coevolution is one engine of recursive_opt, specialised in EvoX-style online selection-policy evolution (§1). It is the narrowest meta surface in the package. EXP29 should be about the general control-plane recursion. |
 | P4/P5 proposed that *we* build a helper/lessons library and tools | The purpose of recursive_opt is that an upper level **discovers** such mechanisms from a declared experiment (control-plane spec + task family). We should only provide the surface, the evaluator and the holdout. |
 | Mostly read EXP00 through its RESULTS summary | Re-reading the notebooks changes the picture (§2):<br>• the memory, batch-design and credit-horizon knobs were **never active**, so they were never tested;<br>• trace type was only tested on single-call prompt tasks, where it cannot matter;<br>• the under-iteration A/B (use-case notebook, cell 71) was written but **never executed**. |
-| Treated EXP21 and EXP22-QA as minor | They are the only studies that are both (a) built on the control plane with a real lower-level learner and (b) on a task with **demonstrated headroom**. Their O1/O2 stages were implemented but stopped by credit, not by a negative result. |
+| Treated EXP21 and EXP22-QA as minor | They are the only studies that are both (a) built on the control plane with a real lower-level learner and (b) on a task with **demonstrated O0 headroom**. Their O1/O2 stages were implemented but stopped by credit, not by a negative result. |
+| **(v2 → v3)** "EXP22-QA certifies T1: hand-written selector + instruction +17 pp" | **Wrong attribution.** The +17 pp pilot (8 → 12 of 24) changed the **O0 program**: the ranker code and the *reader* instruction. It certifies that the QA task has O0 headroom reachable by admissible edits.<br>The O1 targets (the optimizer's `update_instruction` and `selector_source`) have a mechanism argument (the optimizer must see the bridge-document failures to fix the ranker), but **no hand-written O1 certificate yet**.<br>The numeric task also has demonstrated O0 headroom (seed → hand-written B2 → LLM programs, §5), so QA is not "the only one". |
 
 ---
 
@@ -99,11 +104,11 @@ So most of the original design space is **open**, not closed.
 | Hypothesis | Verdict | Evidence and nuance |
 |---|---|---|
 | Too few iterations / steps | **True at O1, ambiguous at O0** | O0: PRISM is solved in 3 calls and Signal keeps improving past 50–100 calls. EXP20/21 stopped QA runs at 6 optimizer responses, so whether QA would keep improving is unmeasured. O1:<br>• EXP21 planned only **3 O1 proposals and 2 O2 proposals** (`o1_qa/axes.py`, `meta`) and ran none;<br>• coevolution gets about 10 per run;<br>• EXP00 cell 71 was never run.<br>The child-run length must come from the standard arm's iterations-to-peak, measured per task. |
-| Tasks too basic | **True for most of the series, false for the QA task** | Saturated: GSM8K 0.99, DROP 1.0, demo C, UC1, PRISM. Exploitable: Signal, PRISM.<br>Not basic: the EXP20/21 HotpotQA task (unchanged 27 % → standard 54 %). EXP22-QA showed hand-written selector + instruction changes worth +17 pp (8 → 12/24), with an oracle-document ceiling of 58 %. |
+| Tasks too basic | **True for most of the series, false for the QA task** | Saturated: GSM8K 0.99, DROP 1.0, demo C, UC1, PRISM. Exploitable: Signal, PRISM.<br>Not basic:<br>• the EXP20/21 HotpotQA task: unchanged 27 % → standard 54 %. In EXP22-QA, hand-written O0 ranker + reader-instruction edits gave +17 pp (8 → 12 of 24), with a ceiling of 58 % when the supporting documents are given;<br>• the EXP15–18 numeric optimizer-program family: regret AUC seed 0.144 → hand-written 0.041 → LLM-written 0.034 (EXP18). |
 | Surfaces and ranges badly designed | **True, in three distinct ways** | (a) **inactive** knobs: batch design, memory, horizon in EXP00;<br>(b) **irrelevant** pairing of surface and task: trace type on single-call prompts;<br>(c) **coarse menus** whose default is already near the best: EXP08, EXP10, EXP21 axes. EXP21 shows axes with large *negative* effects (prompt-only −19.6, minimal goal −10.7 pp), so the surface has variance. A menu can still teach O1 to avoid bad settings, but not to exceed the default. |
 | (implicit) Exploration was the main limit | **Only for EXP23–27** | v1 §1–2 still hold: EXP28 fixed the operator; no legitimate-score gain followed. |
 
-**A fourth constraint the user did not name:** there is no portable child-spec evaluator (§1). Each attempt re-implemented recursion, so each was small, bespoke and not replayable.
+**A fourth constraint the user did not name:** there is no portable way to run a child spec as an upper level's evaluation (§1). Each attempt re-implemented recursion, so each was small, bespoke and not replayable.
 
 ---
 
@@ -119,46 +124,49 @@ A target is worth an O1 level only if **all three** checks pass:
 
 Per-target lists:
 
-**T1. Optimizer evidence and update rule** (`OptoPrimeV2` instruction and objective sections, evidence selection, problem rendering)
+**T1. Optimizer evidence and update rule** (`OptoPrimeV2` objective/instruction, `problem_instance` rendering, evidence selection)
 - Surface: text + small code.
-- Certificate: **yes**. EXP22-QA: selector code +8 pp, instruction +8 pp, both +17 pp (n = 24, single pilot). EXP21 goal axis: −10.7 pp. EXP28: wording takes productive diverge from 7 % to 38–44 %.
-- What it could change: what the LLM sees and is asked to do. Strongest lever measured.
-- Control-plane status: `reasoning_workflow@1` components plus optimizer kwargs (EXP22-QA wiring).
+- Certificate: **indirect only**.
+  - EXP21 goal axis: a minimal optimizer goal costs −10.7 pp.
+  - EXP28: instruction wording takes productive diverge from 7 % to 38–44 %.
+  - EXP22-QA's +17 pp is an **O0** certificate, not a T1 one (§0).
+- What it could change: what the LLM sees and is asked to do.
+- Control-plane status: `optimizer_kwargs.objective` exists (text). Rendering and selection need the `OptoPrimeV2` hook (design §2).
 
 **T2. Trainer search policy** (`VariationSearch`/`PrioritySearch` hooks)
 - Hooks:
   - when to diverge, refine or combine;
   - the instruction texts;
-  - parent score (TRAIN vs common panel vs VAL);
+  - exploration and exploitation priority (parent score);
   - which inspirations are shown.
-- Surface: small code (`mode(state)`, `parent_score(candidate)`) + text.
-- Certificate: **partial**. EXP19 S4: parent selection 72 → 100 % (toy). EXP28: diverge 3 % → 32 % productive calls, but no legitimate-score gain on Signal.
+- Surface: small code + text.
+- Certificate: **partial**. EXP19 S4: parent selection 72 → 100 % (toy). EXP28: diverge 3 % → 32 % productive calls, with no legitimate-score gain on Signal.
 - What it could change: sample efficiency of every O0 run. A policy is cheap to transfer.
-- Control-plane status: kwargs exist; a **code-hook ref is missing**.
+- Control-plane status: kwargs exist; code hooks missing (design §2).
 
-**T3. A library method** (feedback summariser, batch sampler / curriculum rule, candidate deduplication)
+**T3. A library method** (feedback summariser, batch sampler / curriculum rule, candidate filtering)
 - Surface: code.
 - Certificate: toy only (UC1 batch design, trace summariser 0.82 → 0.96, hand-written).
 - What it could change: input quality to T1 and T2.
-- Control-plane status: `reasoning_workflow@1`; needs a hook ref.
+- Control-plane status: via hooks (`filter_candidates`, `problem_instance`).
 
 **T4. Tracing per family** (`trace_config`)
-- Surface: mixed categorical + numeric.
-- Certificate: **none yet, and never tested on a fitting task**.
-- What it could change: credit assignment on multi-step programs (agents, LangGraph, library-heavy code).
-- Control-plane status: exists (EXP19).
+- Surface: mixed categorical + numeric, plus a summariser hook.
+- Certificate: **none yet, and never tested where it can matter** (§5.3).
+- What it could change: which execution facts reach the optimizer.
+- Control-plane status: exists (EXP19), but it captures the evaluator *process*, not code run in a worker (§5.3).
 
 **T5. Memory mechanism** (optimizer memory, archive of attempts, knowledge retrieval and injection)
 - Surface: code (selection / retrieval rule) + numeric.
 - Certificate: weak. EXP18 contrasts cross 0; EXP00 warm prior reversed; never tested as an active knob in EXP00.
 - What it could change: reuse within and across runs.
-- Control-plane status: knowledge block exists; promotion and rollback rules need an `extensions` namespace.
+- Control-plane status: knowledge block exists; promotion and rollback rules need `extensions` (design §2).
 
 **T6. Capitalisation across runs** (O2: which T1–T5 artifact to promote for a family; when to stop or switch)
 - Surface: policy over artifacts.
 - Certificate: none valid (UC4 invalid; EXP08: the fixed default equals the learned one).
 - What it could change: amortises O1 cost over many tasks. This is where recursion pays, if anywhere.
-- Control-plane status: knowledge plus `recursive_level@1` `family_policy` / `prior`.
+- Control-plane status: knowledge, then `child_spec@1` applied twice (O2).
 
 **T7. Online selection policy** (coevolution)
 - Surface: code.
@@ -166,7 +174,9 @@ Per-target lists:
 - What it could change: within-run adaptation, starved at about 10 evaluations.
 - Control-plane status: engine `coevolution`.
 
-**Ranking by the three checks:** T1 > T2 > T4 (after a certificate) > T5 > T3 > T6 (needs one O1 success first) > T7.
+**Ranking by the three checks:** T2 ≥ T1 > T5 > T3 > T4 (after a certificate) > T6 (needs one O1 success first) > T7.
+- T2 moves ahead of T1 because its certificates are direct, and the numeric task (§5) can test it cheaply.
+- T1 needs its own hand-written certificate, now part of P0.
 
 Categorical menus of existing components (the EXP00 A-list as enums) are kept only as a **baseline** O1 surface, not as the target.
 
@@ -177,18 +187,84 @@ Categorical menus of existing components (the EXP00 A-list as enums) are kept on
 A task family qualifies for EXP29 if:
 - it has ≥ 6 related instances with TRAIN / VAL / HOLDOUT;
 - the score is legitimate and audited against known exploits;
-- a hand-written variant of the target changes the score (the certificate);
-- O0 evaluation is cheap enough for ≥ 20 O1 evaluations × 3 seeds.
+- a hand-written variant changes the score (O0 headroom), and then a hand-written variant of the **O1 target** does too (the certificate);
+- a child run is cheap enough for ≥ 20 O1 evaluations × 3 seeds.
 
-| Family | Status | Best for |
+### 5.1 Signal Processing: keep as a smoke test, not as the validation task
+
+New probe ([script](scripts/signal_causal_headroom.py), [results](results/signal_causal_headroom.json); local, no LLM, 6 s). It evaluates 34 hand-written **causal** filters with the EXP25 white-box evaluator: EMA, Butterworth `lfilter`, alpha-beta tracker, endpoint polynomial + EMA, each over a small parameter grid. All are causal by the probe (causal fraction 1.0).
+
+| Program | Score |
+|---|---:|
+| initial program (trailing weighted average) | 0.499 |
+| 34 classical causal filters | **0.467 – 0.539** |
+| best LLM-found causal program in the whole series (EXP26) | 0.565 |
+| run-to-run spread of the best causal score, every EXP28 configuration | 0.499 – 0.554 |
+| look-ahead cheat (`filtfilt`, EvoX EXP25) | 0.723 |
+
+Consequences:
+- **Narrow range.** The legitimate range above the start is about 0.04–0.07. The seed-to-seed spread of one configuration covers almost all of it, so an O1 effect cannot be resolved at 3 seeds.
+- **No held-out instances.** The task is one fixed set of 5 signals.
+- **Exploit-prone.** The score rewards a non-causal shortcut, so a causality guard is mandatory.
+
+Keep Signal for engineering smoke tests (children run in seconds), for EvoX comparability and as an exploit regression check. It is not the first validation task.
+
+### 5.2 Order: numeric first, then document QA
+
+| | Numeric optimizer programs (EXP15–18) | Document QA, 4 documents (EXP20–22-QA) |
 |---|---|---|
-| **HotpotQA-style document QA**, fixed 4 documents (EXP20–22-QA) | certified for T1 (+17 pp hand-written, n = 24 pilot); O0 headroom 27 → 54 %; reader cost dominated by Qwen calls. The fixed document count removes EXP20's confound | T1, T2, T5 |
-| **Numeric black-box optimiser programs** (EXP15–18: 6 families × dimensions, 24 TRAIN / 12 VAL instances, local evaluation) | O0 headroom vs seed shown (EXP15); headroom vs a strong reference (CMA-ES, SciPy) **not measured**. Cheapest evaluation in the series | T2, T3, T5 |
-| **Multi-step agent / graph programs** (e.g. LangGraph PAL on BBEH, `examples/OpenTrace_LangGraph_…_curriculum_clean.ipynb`, untracked; Trace-Bench graph tasks) | never used for meta; needed for T4. Certificate to obtain | T4, T3 |
-| **Signal with causality enforced in the evaluator** | legitimate headroom unknown (all configurations 0.50–0.55 causal). Needs a causal hand-written reference first | T2 only after a certificate |
-| PRISM all-case | saturated (optimum in 3–4 calls) | regression check only |
-| GSM8K, DROP, toy validators, `multi_param` | saturated or flat | excluded |
-| `llm4ad` families, Terminal-Bench 2 | `llm4ad` gave −1e6 sentinels in EXP00; TB2 never onboarded | later |
+| O0 artifact | `propose(history, bounds, seed)` program, standard library only | ranker code + reader instruction |
+| Evaluation | local, deterministic; the program never sees the objective | Qwen reader, ≈100 reader calls per O0 step |
+| Cost per child run (measured) | EXP18: 16 proposals × $0.0024 ≈ **$0.04**; no LLM in evaluation | EXP20: $2.85 / 72 runs ≈ **$0.04**. Up to 828 reader calls per O0 chain; long latencies (responses up to 470 s) |
+| O0 headroom | AUC 0.144 → 0.041 (hand-written B2) → 0.034 (LLM). Target hits 86 → 93 → 135 / 144 | 27 % → 54 % (EXP21); hand-written +17 pp at fixed 4 documents (EXP22-QA) |
+| Remaining headroom | **AUC yes; final regret nearly saturated** (best arm 0.0026 vs target 0.01). Add harder families: multimodal Rastrigin/Ackley, 8-D, noisy | large (54 % vs 58 % with the supporting documents given; exact match on hard bridge questions) |
+| Family / holdout | built in: 3 functions × 2 dimensions, 24 TRAIN / 12 VAL / fresh TEST instances, local seeds | episodes of new questions (EXP22-QA META-TRAIN / VALIDATION / TEST design) |
+| Exploit risk | low: the host evaluates; the program sees only history and bounds | low at fixed 4 documents; answer leakage audited in EXP22-QA |
+| Already on the control plane | `optimizer_program.py`, `optimizer_spec()` | EXP21 `o1_qa` modules |
+| Fits | T2, T3, T5, T1 (update instruction) | T1, T2, T5; real LLM-in-the-loop transfer |
+
+**Recommendation: numeric first, then QA if the numeric O1 shows a holdout gain.**
+- The numeric family is the "complex optimization code task, easy at first stage but not saturated" the request asks for, once the harder families are added.
+- It is the fastest way to debug `child_spec@1` and the hooks on real children. The cost per child is about the same as QA, but numeric children take minutes, not hours.
+- QA is the realistic confirmation: a different modality, LLM-evaluated, with large headroom. Running it second avoids paying its wall time while the infrastructure is still being debugged.
+- If numeric is null, run QA anyway on T1 before concluding. A null on numeric could come from the task ceiling, not the method.
+
+**A multi-step agent task is not needed** for P1–P2. It is LLM-hungry: every O0 evaluation is several model calls per example. The tracing target T4 does not require one either (§5.3).
+
+### 5.3 Clarification: when can the choice of tracing matter?
+
+| Source | Captures | Present when |
+|---|---|---|
+| Trace graph (`internal`) | operations on Trace nodes: `@bundle` calls and trainable parameters | always; this is what `OptoPrimeV2` reads |
+| OTEL | spans from instrumented code: bundles, LangGraph nodes, LLM / tool clients | only for instrumented libraries |
+| SysMon (`sys.monitoring`, Python ≥ 3.12) | call/return events of **any** Python function in the observed thread | arbitrary unbundled code in-process |
+
+Tracing can only help if O0's execution has internal structure that (a) drives the score, (b) is invisible in the Trace graph and (c) is not already in the evaluator's feedback.
+
+**Why EXP00/EXP21 ties were expected:**
+- In single-call prompt tasks the program is one LLM call, so all three sources see the same thing.
+- On code tasks, today's capture misses the candidate entirely. `capture_evaluation` wraps the evaluator in the parent process (`spec.py`, `_evaluate_example`). The Signal white box and `optimizer_program` run the candidate in a **subprocess**, and SysMon sees only the observed thread (EXP19 limit).
+- The evaluators already return rich per-case diagnostics (per-signal metrics, the optimization history). These compete with any trace projection.
+
+**So T4 needs code-level capture inside the worker, not a multi-step agent.**
+1. Run SysMon (or OTEL) inside the worker process.
+2. Return a bounded call/return profile with the result.
+3. Feed it through `trace_config`.
+
+The numeric and Signal tasks then become valid T4 testbeds at no extra LLM cost. Multi-step agents (LangGraph, tools) matter only for the OTEL-span question, which is later.
+
+**T4 certificate, cheap (replay):**
+- Take recorded optimizer prompts.
+- Add or remove the worker trace projection at an equal character budget.
+- Measure the improvement rate of the proposals.
+- Run O1 over `trace_config` only if this differs.
+
+| Other families | Status |
+|---|---|
+| PRISM all-case | saturated (optimum in 3–4 calls): regression check only |
+| GSM8K, DROP, toy validators, `multi_param` | saturated or flat: excluded |
+| Multi-step agents (LangGraph PAL on BBEH, Trace-Bench graph tasks) | later, for OTEL-span tracing and agent-level T3 |
+| `llm4ad` families, Terminal-Bench 2 | later (`llm4ad` gave −1e6 sentinels in EXP00; TB2 never onboarded) |
 
 ---
 
@@ -198,10 +274,16 @@ O1 evaluation cost:
 
 > cost = (instances per evaluation) × (child seeds) × (child-run length) × (cost per O0 call)
 
-**Plain episodic O1 is affordable at roughly 20 O1 evaluations if child runs are short.** Example on QA:
+**Plain episodic O1 is affordable at roughly 20 O1 evaluations if child runs are short.**
+
+Numeric:
+- 20 O1 evaluations × 3 training episodes × one 16-proposal child ≈ 960 proposals, about $2.3 per O1 seed at the EXP18 price;
+- local evaluation only.
+
+QA:
 - each O1 evaluation = 2 child seeds × the 6-response child run EXP21 used (`CALLS = 6`, `DEV_SEEDS`), so 12 optimizer calls plus reader calls;
 - × 20 evaluations ≈ 240 optimizer calls per O1 seed, against the 3 O1 proposals EXP21 had planned (36 calls);
-- that is about 7× EXP21's O1 plan, within the order of EXP21's whole development budget (235 DeepSeek optimizer responses, $6.8 in total).
+- EXP22-QA's full plan (24 O1 proposals and confirmation) was 654 optimizer responses plus up to 86,940 reader responses. Its authors estimated about $30 of credit. Wall time, not money, is the constraint.
 
 **Replay as a cheap proxy for text and code targets (T1, T2).**
 - Score a candidate instruction or selector on **recorded** prompts from earlier runs.
@@ -213,7 +295,7 @@ O1 evaluation cost:
 
 | Form | Verdict |
 |---|---|
-| **O1 episodic** over a task family, with a portable child-spec evaluator, replay pre-screening and holdout instances | **Achievable now.** It is the main EXP29 line. |
+| **O1 episodic** over a task family, with `child_spec@1`, replay pre-screening and holdout instances | **Achievable now.** It is the main EXP29 line. |
 | **O2** (per-family choice among O1 artifacts; promotion rule) | Useful only after one O1 artifact beats its default on holdout. Before that, O2 has nothing to select. |
 | **Online coevolution** | Kept as an existing engine. Not a development target. |
 
@@ -226,11 +308,11 @@ O1 evaluation cost:
 | EXP00 element (later equivalent) | Decision for EXP29 |
 |---|---|
 | Trainer choice / standard vs recursive (EXP22, EXP24, EXP28) | **Re-design as T2:** discover `VariationSearch` / `PrioritySearch` hooks, not pick a trainer name |
-| Component code rewriting (EXP15–18, EXP28) | **Keep as T3** on the numeric family; add the CMA-ES/SciPy reference |
-| Trace type (EXP16, EXP19, EXP21) | **Re-design as T4** on a multi-step family, after a certificate |
+| Component code rewriting (EXP15–18, EXP28) | **Keep:** the numeric family becomes the first O0 task family; add harder functions and a strong hand-written reference |
+| Trace type (EXP16, EXP19, EXP21) | **Re-design as T4:** capture inside the worker on code tasks (§5.3), after a replay certificate |
 | Priors and skills, memory (EXP18–20) | **Re-design as T5**, with the memory / retrieval rule as code; promotion via `extensions` |
 | Family policy / prior transfer (EXP02, EXP07–08, EXP22-QA) | **Defer to O2 (T6)** until an O1 success |
-| Declarative spec (control plane v2) | **Extend:** portable child-spec evaluator + code-hook refs (§8) |
+| Declarative spec (control plane v2) | **Extend:** `child_spec@1` module + declared code hooks ([design](design_recursion_pieces.md)) |
 | QASPER prompt / config (EXP03, 12, 13) | drop (noise) |
 | Threads (EXP05) | drop as a target; fix concurrency in the instrument |
 | Routing / code transfer (EXP07–09) | drop until T6 |
@@ -242,65 +324,60 @@ O1 evaluation cost:
 
 ## 8. Programme, in order
 
-### P0 — make recursion declarable and certify targets
+### P0 — make recursion declarable, calibrate and certify (mostly local, little LLM)
 
-Engineering:
-- A portable `recursive_opt.evaluator.child_spec@1`. It:
-  - takes a child-spec template and a **binding path** (where the O1 artifact goes, e.g. `levels[0].engine.config.trainer_kwargs.<hook>` or `levels[0].objective.trace_config`);
-  - takes TRAIN instances and child seeds;
-  - returns the mean child validation score.
-  - The child holdout stays closed.
-- A versioned **code-hook ref**: validated source in, callable injected by the runner. Generic for trainer, optimizer and memory hooks; no callable in the spec.
-- `extensions.recursive_opt.knowledge_rules` for promotion and rollback.
-- Port `o1_qa.meta` (EXP21) and the EXP15 nested evaluator onto it, as proof of generality. This also gives the first replayable recursive specs.
+Engineering (see [design_recursion_pieces.md](design_recursion_pieces.md); decisions D1 and D2 first):
+- `recursive_opt.module.child_spec@1`: slots of a child-spec template are the O1 parameters; `forward` runs the child.
+- Declared hook points (`HOOKS`) + a generic materializer under `engine.config.hooks`.
+- `VariationSearch(variation_instructions=...)` as a text surface.
+- Proof of generality: port the EXP15/18 numeric study and EXP21 `o1_qa.meta` onto `child_spec@1`. These become the first replayable recursive specs.
 
 Measurement:
-- Child-run length from the standard arm's iterations-to-peak on QA and numeric.
-- Certificates: hand-written variants per target × family. QA/T1 is already done (EXP22-QA). Still needed:
-  - T2 on numeric and QA;
-  - T4 on a multi-step family;
-  - T5 on QA.
+- Numeric family hardening:
+  - add multimodal (Rastrigin, Ackley), 8-D and noisy instances;
+  - check the gaps seed < hand-written < reference with **no LLM**, as done for Signal in §5.1.
+- Child-run length from the standard arm's iterations-to-peak (EXP00 cell 71).
+- Certificates, each by a hand-written variant or a replay:
+  - T2 on numeric: e.g. stagnation-diverge vs free vs a hand-written parent score;
+  - T1 on numeric and QA: hand-written update instruction / evidence rendering;
+  - T4 by trace replay (§5.3);
+  - T5 on numeric: an archive of past programs shown vs not.
 
 Kill rule: a target without a certificate does not enter P1–P3.
 
-### P1 — O1 discovers the optimizer evidence and update rule (T1) on QA
-
-Completes EXP21/EXP22-QA through the control plane.
-
-Arms, at equal budget:
+### P1 — O1 discovers the trainer search policy (T2) and update instruction (T1) on the numeric family
 
 | Arm | Content |
 |---|---|
-| (a) | default `OptoPrimeV2` |
-| (b) | hand-written certificate |
-| (c) | O1 over EXP21's categorical axes (baseline surface) |
-| (d) | O1 Trace engine over selector code + update instruction (EXP22-QA's PC arm) |
+| (a) | plain `PrioritySearch` |
+| (b) | default `VariationSearch` |
+| (c) | hand-written certificate variant |
+| (d) | O1 (`child_spec@1` + Trace engine) over the hook / text slots |
 | (e) | (d) with replay pre-screening |
+| (f) | coevolution as an online reference |
 
-Success: (d) or (e) beats (a) on **holdout** questions by more than the paired seed noise, and is ≥ (b).
+Success: (d) or (e) beats (a) and (b) on **holdout episodes** (new instances, and one held-out function family) by more than the paired seed noise, and is ≥ (c), at equal total budget including O1.
 
-### P2 — O1 discovers the trainer search policy (T2)
+### P2 — the same on document QA, if P1 is positive (or for T1 regardless)
 
-- Surface: the `VariationSearch` / `PrioritySearch` hook sources: mode schedule, instruction texts, parent score.
-- Families: numeric (cheap) and QA.
-- Arms: plain `PrioritySearch`, default `VariationSearch`, O1-discovered, plus coevolution as an online reference (numeric only).
-- Success: holdout instances in **both** families improve, i.e. the discovered policy transfers across families.
+- Completes EXP21 / EXP22-QA through `child_spec@1`, with EXP22-QA's META-TRAIN / VALIDATION / TEST episodes.
+- Arms: (a), (b), (c), (d), plus EXP21's categorical axes as the menu baseline.
+- Transfer test: apply the P1 numeric-discovered policy unchanged to QA.
 
-### P3 — tracing per family (T4), only after its certificate passes
+### P3 — tracing per family (T4), only after its replay certificate passes
 
-- Family: multi-step graph/agent programs.
-- O1 surface: the `trace_config` fields plus a summariser hook.
-- Question: does the best tracing differ by family, and does O1 find it?
+- Worker-side SysMon capture on numeric/Signal programs.
+- O1 surface: `trace_config` fields plus a summariser hook.
 
 ### P4 — memory and capitalisation (T5 → T6, O2)
 
-- Discover the retrieval/injection rule and the promotion rule across a **sequence** of tasks in a family.
-- Score on later held-out tasks: cold vs warm-default vs discovered.
-- O2 starts only if P1 or P2 produced a holdout-positive artifact.
+- Discover the retrieval/injection rule and the promotion rule across a **sequence** of episodes.
+- Score on later held-out episodes: cold vs warm-default vs discovered.
+- O2 (`child_spec@1` over an O1 spec) only if P1 or P2 produced a holdout-positive artifact.
 
 **Not in EXP29:**
 - coevolution development;
-- PRISM as a discriminator;
+- Signal and PRISM as discriminators (smoke and regression only);
 - categorical-menu O1 as a target;
 - optimizer tools (until tool calls actually execute);
 - Terminal-Bench 2.
@@ -309,7 +386,7 @@ Success: (d) or (e) beats (a) on **holdout** questions by more than the paired s
 
 ## 9. Decisions and pre-commitments
 
-1. **Recursion is declared, not scripted.** Every O1/O2 arm runs from a control-plane spec through the shared child-spec evaluator. Bespoke nested runners are not accepted as evidence.
+1. **Recursion is declared, not scripted.** Every O1/O2 arm runs from a control-plane spec through the shared `child_spec@1` module. Bespoke nested runners are not accepted as evidence.
 2. **Certificate before discovery.** No O1 run on a target/family pair without a hand-written variant that moves O0.
 3. **Holdout or nothing.** O1 selection sees TRAIN/VAL only. Claims use holdout instances; O2 claims use held-out family members.
 4. **Equal budget, counted in O0 calls**, including the O1 evaluations, against a standard arm given the same total.
@@ -322,11 +399,12 @@ Success: (d) or (e) beats (a) on **holdout** questions by more than the paired s
 
 - The main limit of recursive_opt was not exploration. It was the combination of:
   - targets that were inactive, irrelevant or menu-shaped;
-  - tasks that were saturated or exploitable;
-  - O1 stages that were bespoke and, on the one good task (QA), never executed.
+  - tasks that were saturated, exploitable or single-instance;
+  - O1 stages that were bespoke and never executed on the tasks with real headroom.
 - The control plane already declares most of the right targets: trainer kwargs, `trace_config`, knowledge, code components.
-- It lacks two generic pieces: a **child-spec evaluator** and **code-hook refs**.
-- With those, EXP29 should first let O1 discover:
-  1. the optimizer evidence/update rule on QA, where headroom is certified (+17 pp hand-written);
-  2. then the trainer search policy across QA and numeric families;
-  3. then tracing on multi-step programs and the memory/capitalisation rules, each after its own certificate.
+- It lacks two generic pieces: a **`child_spec@1` module** and **declared code hooks**. Both are small; two core-library decisions (D1, D2) come first.
+- EXP29 should then let O1 discover:
+  1. the trainer search policy and the update instruction on the numeric optimizer-program family (cheap, wide range, built-in holdout);
+  2. then the same on document QA, the realistic confirmation;
+  3. then tracing (worker-side capture) and the memory/capitalisation rules, each after its own certificate.
+- Signal stays a smoke and exploit-regression task: its legitimate range (classical causal filters 0.47–0.54, best LLM 0.565) is narrower than its seed spread.

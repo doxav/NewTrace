@@ -128,3 +128,5 @@ It is the only Trace-specific weakness established, but it is not the only findi
    design brief (or run `llm_rewrite` with the full brief). Then compare fixed, stock-brief Trace and current Trace
    on the enforced metric, with calls-to-threshold and best@k as endpoints.
 4. **Test DIVERGE context anchoring offline (about $0.40)** before changing the O0 contract.
+
+**Addendum 2026-10-08 ([EXP29](../../EXP29/prior_analysis.md)).** The flat EXP22–28 impact is also a task effect. Signal's legitimate range (hand-written causal filters 0.467–0.539, best LLM 0.565) is inside its seed spread, and PRISM is saturated. The meta studies that could resolve an effect (numeric optimizer programs, 4-document QA) never ran their O1 stage.
